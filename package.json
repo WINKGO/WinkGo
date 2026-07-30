@@ -1,13 +1,31 @@
 {
   "name": "wink-go",
   "version": "2.1.45",
-  "description": "WINK GO brings AI agents, models and local desktop tools into one workspace.",
-  "keywords": [],
+  "description": "WINK GO — a local-first AI agent workspace for agents, models, skills, MCP, files, automation, and Dynamic Island.",
+  "keywords": [
+    "acp",
+    "agent-workspace",
+    "ai-agent",
+    "desktop-app",
+    "dynamic-island",
+    "electron",
+    "local-first",
+    "mcp",
+    "multi-agent",
+    "rust"
+  ],
   "homepage": "https://winkgo.top/",
+  "bugs": {
+    "url": "https://github.com/xuweihafeichangniu-lab/wink-go/issues"
+  },
   "license": "Apache-2.0",
   "author": {
     "name": "WINK GO",
     "url": "https://winkgo.top/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xuweihafeichangniu-lab/wink-go.git"
   },
   "workspaces": [
     "packages/*"

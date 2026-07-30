@@ -293,7 +293,7 @@ describe('LocalAgents', () => {
 
     fireEvent.click(screen.getByText('settings.agentManagement.localAgentsSetupLink'));
 
-    expect(openExternalUrl).toHaveBeenCalledWith('https://github.com/xuweihafeichangniu-lab/wink/wiki/ACP-Setup');
+    expect(openExternalUrl).toHaveBeenCalledWith('https://github.com/xuweihafeichangniu-lab/wink-go/wiki/ACP-Setup');
   });
 
   it('binds assistants to managed agents by agent_id instead of runtime backend', () => {

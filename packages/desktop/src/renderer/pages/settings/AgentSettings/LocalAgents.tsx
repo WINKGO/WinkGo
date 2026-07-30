@@ -30,7 +30,7 @@ import {
   type AgentAvailabilityFilter,
 } from './agentFilters';
 
-const LOCAL_AGENT_SETUP_GUIDE_URL = 'https://github.com/xuweihafeichangniu-lab/wink/wiki/ACP-Setup';
+const LOCAL_AGENT_SETUP_GUIDE_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go/wiki/ACP-Setup';
 
 const LocalAgents: React.FC = () => {
   const { t, i18n } = useTranslation();

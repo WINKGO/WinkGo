@@ -12,7 +12,7 @@
 #   7. (可選) 建立桌面捷徑
 #
 # 用法：
-#   curl -fsSL https://raw.githubusercontent.com/xuweihafeichangniu-lab/wink/main/scripts/install-ubuntu.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/xuweihafeichangniu-lab/wink-go/main/scripts/install-ubuntu.sh | bash
 #   # 或指定版本：
 #   WINKGO_VERSION=1.8.25 bash install-ubuntu.sh
 #   # 僅安裝桌面版（跳過 headless 設定）：
@@ -93,10 +93,10 @@ resolve_version() {
         info "正在查詢最新版本..."
         # 透過 GitHub API 取得 latest release tag
         if command -v curl &>/dev/null; then
-            VERSION=$(curl -fsSL "https://api.github.com/repos/xuweihafeichangniu-lab/wink/releases/latest" \
+            VERSION=$(curl -fsSL "https://api.github.com/repos/xuweihafeichangniu-lab/wink-go/releases/latest" \
                 | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')
         elif command -v wget &>/dev/null; then
-            VERSION=$(wget -qO- "https://api.github.com/repos/xuweihafeichangniu-lab/wink/releases/latest" \
+            VERSION=$(wget -qO- "https://api.github.com/repos/xuweihafeichangniu-lab/wink-go/releases/latest" \
                 | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')
         else
             die "需要 curl 或 wget 來下載，請先安裝: sudo apt-get install -y curl"
@@ -109,7 +109,7 @@ resolve_version() {
     fi
 
     DEB_FILENAME="WinkGo-${VERSION}-linux-${DEB_ARCH}.deb"
-    DOWNLOAD_URL="https://github.com/xuweihafeichangniu-lab/wink/releases/download/v${VERSION}/${DEB_FILENAME}"
+    DOWNLOAD_URL="https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/v${VERSION}/${DEB_FILENAME}"
 }
 
 # ─── 下載 .deb 套件 ──────────────────────────────────────────────────────────
@@ -301,7 +301,7 @@ create_systemd_service() {
     $SUDO tee "$service_path" > /dev/null << 'SERVICE_EOF'
 [Unit]
 Description=WinkGo AI Agent Desktop App (WebUI Mode)
-Documentation=https://github.com/xuweihafeichangniu-lab/wink
+Documentation=https://github.com/xuweihafeichangniu-lab/wink-go
 After=network-online.target
 Wants=network-online.target
 
@@ -393,8 +393,8 @@ print_summary() {
         echo ""
     fi
 
-    echo -e "  ${BOLD}📖 文件:${NC}  https://github.com/xuweihafeichangniu-lab/wink"
-    echo -e "  ${BOLD}🐛 回報:${NC}  https://github.com/xuweihafeichangniu-lab/wink/issues"
+    echo -e "  ${BOLD}📖 文件:${NC}  https://github.com/xuweihafeichangniu-lab/wink-go"
+    echo -e "  ${BOLD}🐛 回報:${NC}  https://github.com/xuweihafeichangniu-lab/wink-go/issues"
     echo ""
 
     if [[ "${MODE}" == "headless" ]]; then

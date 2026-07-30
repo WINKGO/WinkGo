@@ -1,31 +1,38 @@
-# WinkGo Docs
+# WINK GO 文档中心
 
-Documentation is organized by reader intent, not by document type.
+这里收录 WINK GO · AI 智能体工作台的产品说明、用户指南、开发规范、设计文档与多语言摘要。
 
-| Directory                       | For whom                 | What lives here                                                                                                               |
-| ------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| [`guides/`](guides)             | Users & operators        | How to deploy, test, and run the product. Server deployment, WebUI, Hub testing, CDP debugging.                               |
-| [`contributing/`](contributing) | Contributors             | Dev environment setup, file-structure conventions, PR automation workflow.                                                    |
-| [`architecture/`](architecture) | Engineers & architects   | System architecture overview, subsystem deep-dives (ACP, queue, team mode), and supporting research notes.                    |
-| [`specs/`](specs)               | Engineering-driven specs | Feature design docs, requirements, implementation plans (ACP rewrite, extension market, remote agent, wake prompt, PR notes). |
-| [`prds/`](prds)                 | Product team             | Formal Product Requirement Documents maintained by the product team. **Do not reorganize without their consent.**             |
-| [`readme/`](readme)             | Global users             | Translated copies of the root `readme.md` (Chinese, Japanese, Korean, Spanish, etc.).                                         |
+## 从这里开始
 
-## Quick pointers
+- 了解产品能力：[功能全景与产品路线图](guides/product-overview.zh-CN.md)
+- 下载与使用：[项目首页](../readme.md)
+- 配置开发环境：[开发指南](contributing/development.md)
+- 使用 WebUI：[WebUI 指南](guides/webui.md)
+- 准备本地运行资产：[本地运行资产说明](guides/local-runtime-assets.md)
+- 参与项目：[贡献指南](../CONTRIBUTING.md)
 
-- New to the project? Start with [`architecture/overview.md`](architecture/overview.md).
-- Setting up a dev environment? See [`contributing/development.md`](contributing/development.md).
-- Writing code? The entry point for code-style, linting, formatting, and commit rules is [`AGENTS.md`](../AGENTS.md) at the repo root.
-- Deploying a server? [`guides/deploy-server.md`](guides/deploy-server.md).
+## 文档目录
 
-## Where to put new docs
+| 目录                            | 面向对象               | 内容                                                      |
+| ------------------------------- | ---------------------- | --------------------------------------------------------- |
+| [`guides/`](guides)             | 用户、部署者与产品读者 | 产品全景、WebUI、服务器部署、本地运行资产、Hub 与调试指南 |
+| [`contributing/`](contributing) | 开发者与贡献者         | 开发环境、目录结构和工程规范                              |
+| [`prds/`](prds)                 | 产品与研发             | 对话、团队、定时任务、设置、远程能力等正式需求与设计记录  |
+| [`adr/`](adr)                   | 架构维护者             | 重要架构决策记录                                          |
+| [`theming/`](theming)           | UI 与主题开发者        | 设计令牌与主题规范                                        |
+| [`readme/`](readme)             | 全球用户               | 项目摘要的多语言版本                                      |
+| [`vendor/`](vendor)             | 运行资产维护者         | 已隔离第三方运行资产的来源、版本和准备说明                |
 
-| Content type                                               | Destination                 |
-| ---------------------------------------------------------- | --------------------------- |
-| User/ops-facing how-to                                     | `guides/`                   |
-| Contributor convention, workflow, or tooling rule          | `contributing/`             |
-| System or subsystem design, technical analysis             | `architecture/`             |
-| Exploratory research, analysis reports                     | `architecture/research/`    |
-| Feature requirements / design drafts driven by engineering | `specs/<feature-name>/`     |
-| Formal PRD owned by product team                           | `prds/` (coordinate first)  |
-| README translation                                         | `readme/readme_<locale>.md` |
+## 文档放置规则
+
+| 内容类型                       | 放置位置        |
+| ------------------------------ | --------------- |
+| 产品说明、使用、部署或排障指南 | `guides/`       |
+| 开发环境、代码规范或贡献流程   | `contributing/` |
+| 正式产品需求与设计稿           | `prds/`         |
+| 架构决策                       | `adr/`          |
+| 主题与设计令牌                 | `theming/`      |
+| README 多语言摘要              | `readme/`       |
+| 第三方运行资产说明             | `vendor/`       |
+
+新增文档前请先确认已有目录是否覆盖同一主题，避免重复维护互相冲突的说明。

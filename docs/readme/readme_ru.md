@@ -7,4 +7,4 @@ WINK GO — кроссплатформенная настольная рабоч
 - **Free 2.1.45: полный доступ.** Сейчас включает все функции, доступные в сборке Pro.
 - **Pro: зарезервирована на будущее.** В настоящее время не открывает дополнительных функций.
 
-[Сайт](https://winkgo.top) · [Репозиторий](https://github.com/xuweihafeichangniu-lab/wink) · [Загрузки](https://github.com/xuweihafeichangniu-lab/wink/releases) · [README](../../readme.md)
+[Сайт](https://winkgo.top) · [Репозиторий](https://github.com/xuweihafeichangniu-lab/wink-go) · [Загрузки](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)

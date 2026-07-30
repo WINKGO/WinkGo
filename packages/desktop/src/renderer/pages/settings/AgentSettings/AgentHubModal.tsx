@@ -13,7 +13,7 @@ interface AgentHubModalProps {
   onCancel: () => void;
 }
 
-const WINKGO_HUB_REPO_URL = 'https://github.com/xuweihafeichangniu-lab/wink';
+const WINKGO_HUB_REPO_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go';
 
 export const AgentHubModal: React.FC<AgentHubModalProps> = ({ visible, onCancel }) => {
   const { t } = useTranslation();

@@ -123,7 +123,7 @@ describe('updateBridge official WINK GO manifest', () => {
 
     try {
       const handler = await getCheckHandler();
-      const result = await handler({ repo: 'xuweihafeichangniu-lab/wink' });
+      const result = await handler({ repo: 'xuweihafeichangniu-lab/wink-go' });
 
       expect(result.success).toBe(true);
       expect(result.data?.currentVersion).toBe('1.0.0');
@@ -156,7 +156,7 @@ describe('updateBridge official WINK GO manifest', () => {
 
     try {
       const handler = await getCheckHandler();
-      const result = await handler({ repo: 'xuweihafeichangniu-lab/wink' });
+      const result = await handler({ repo: 'xuweihafeichangniu-lab/wink-go' });
       expect(result.success).toBe(true);
       expect(result.data?.latest?.version).toBe('1.9.22');
       expect(result.data?.latest?.tagName).toBe('v1.9.22');

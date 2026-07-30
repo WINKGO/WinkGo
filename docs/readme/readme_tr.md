@@ -7,4 +7,4 @@ WINK GO; ajanları, dosyaları, araçları, becerileri, zamanlanmış görevleri
 - **Free 2.1.45: tam erişim.** Şu anda Pro derlemesindeki tüm özellikleri içerir.
 - **Pro: gelecek için ayrılmıştır.** Şimdilik ek özellik açmaz.
 
-[Web sitesi](https://winkgo.top) · [Depo](https://github.com/xuweihafeichangniu-lab/wink) · [İndirmeler](https://github.com/xuweihafeichangniu-lab/wink/releases) · [README](../../readme.md)
+[Web sitesi](https://winkgo.top) · [Depo](https://github.com/xuweihafeichangniu-lab/wink-go) · [İndirmeler](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)

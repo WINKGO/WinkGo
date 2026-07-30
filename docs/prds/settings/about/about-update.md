@@ -15,7 +15,7 @@
 2. 页面顶部居中显示应用名 "WinkGo"（h3 标题）
 3. 下方显示应用描述（通过 i18n 系统，随语言设置变化）
 4. 显示当前版本号 badge（格式 `v{x.y.z}`），版本号来自打包时的 `package.json`
-5. 版本号旁有 GitHub 图标，点击在系统浏览器中打开项目仓库 `https://github.com/xuweihafeichangniu-lab/wink`
+5. 版本号旁有 GitHub 图标，点击在系统浏览器中打开项目仓库 `https://github.com/xuweihafeichangniu-lab/wink-go`
 
 **异常情况**：
 
@@ -381,14 +381,14 @@
 
 **链接列表**：
 
-| 序号 | 标题     | 行为               | 目标                                                      |
-| ---- | -------- | ------------------ | --------------------------------------------------------- |
-| 1    | 帮助文档 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink/wiki`     |
-| 2    | 更新日志 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink/releases` |
-| 3    | 意见反馈 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink/issues`   |
-| 4    | 问题报告 | **打开应用内弹窗** | FeedbackReportModal（见 F-ABOUT-11）                      |
-| 5    | 联系我们 | 打开外部链接       | `https://winkgo.top`                                      |
-| 6    | 官网     | 打开外部链接       | `https://winkgo.top`                                      |
+| 序号 | 标题     | 行为               | 目标                                                         |
+| ---- | -------- | ------------------ | ------------------------------------------------------------ |
+| 1    | 帮助文档 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink-go/wiki`     |
+| 2    | 更新日志 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink-go/releases` |
+| 3    | 意见反馈 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink-go/issues`   |
+| 4    | 问题报告 | **打开应用内弹窗** | FeedbackReportModal（见 F-ABOUT-11）                         |
+| 5    | 联系我们 | 打开外部链接       | `https://winkgo.top`                                         |
+| 6    | 官网     | 打开外部链接       | `https://winkgo.top`                                         |
 
 **打开机制**：
 

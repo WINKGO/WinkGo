@@ -22,7 +22,7 @@ WebUI mode starts WinkGo with an embedded web server, allowing you to:
 - Use WinkGo from remote devices on the same network (with `--remote` flag)
 - Run the application headless on servers
 
-Default access URL: `http://localhost:3000` (port may vary, check the application output)
+Default access URL: `http://localhost:25808` (check the application output if the configured port differs)
 
 ---
 
@@ -224,7 +224,7 @@ sudo systemctl status winkgo-webui.service
 >
 > **Original Tutorial**: [Running WinkGo WebUI on Android via Termux + Proot Ubuntu](https://gist.github.com/Manamama/b4f903c279b5e73bdad4c2c0a58d5ddd)
 >
-> **Related Issues**: [#217 - Android Support Discussion](https://github.com/xuweihafeichangniu-lab/wink/issues/217)
+> **Related Issues**: [#217 - Android Support Discussion](https://github.com/xuweihafeichangniu-lab/wink-go/issues/217)
 
 ### Prerequisites
 
@@ -285,11 +285,11 @@ apt install -y \
 
 ```bash
 # Download the ARM64 .deb package (replace VERSION with the actual version)
-# Check latest version at: https://github.com/xuweihafeichangniu-lab/wink/releases
-wget https://github.com/xuweihafeichangniu-lab/wink/releases/download/vVERSION/WinkGo_VERSION_arm64.deb
+# Check latest version at: https://github.com/xuweihafeichangniu-lab/wink-go/releases
+wget https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/vVERSION/WinkGo_VERSION_arm64.deb
 
 # Example (replace VERSION with the release tag, e.g. v1.5.2):
-wget https://github.com/xuweihafeichangniu-lab/wink/releases/download/vVERSION/WinkGo_VERSION_arm64.deb
+wget https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/vVERSION/WinkGo_VERSION_arm64.deb
 
 # Install the package
 apt install -y ./WinkGo_*.deb
@@ -418,7 +418,7 @@ proot-distro login ubuntu -- bash -c "WinkGo --no-sandbox --webui --remote"
 If you encounter issues or have suggestions for improving Android support:
 
 1. Check the [original community guide](https://gist.github.com/Manamama/b4f903c279b5e73bdad4c2c0a58d5ddd)
-2. Report issues at [GitHub Issues #217](https://github.com/xuweihafeichangniu-lab/wink/issues/217)
+2. Report issues at [GitHub Issues #217](https://github.com/xuweihafeichangniu-lab/wink-go/issues/217)
 3. Share your experience to help other Android users!
 
 ---
@@ -467,7 +467,7 @@ ip addr show
 
 Look for `inet` address (e.g., `192.168.1.100`).
 
-Access from other devices: `http://YOUR_IP_ADDRESS:3000`
+Access from other devices: `http://YOUR_IP_ADDRESS:25808`
 
 ---
 
@@ -475,7 +475,7 @@ Access from other devices: `http://YOUR_IP_ADDRESS:3000`
 
 ### Port Already in Use
 
-If port 3000 is already in use, the application will automatically try the next available port. Check the console output for the actual port number.
+If port 25808 is already in use, the application will automatically try the next available port. Check the console output for the actual port number.
 
 ### Cannot Access from Browser
 
@@ -494,13 +494,13 @@ If port 3000 is already in use, the application will automatically try the next 
 
 ```cmd
 # Allow through Windows Firewall
-netsh advfirewall firewall add rule name="WinkGo WebUI" dir=in action=allow protocol=TCP localport=3000
+netsh advfirewall firewall add rule name="WinkGo WebUI" dir=in action=allow protocol=TCP localport=25808
 ```
 
 **Linux (UFW):**
 
 ```bash
-sudo ufw allow 3000/tcp
+sudo ufw allow 25808/tcp
 ```
 
 **macOS:**
@@ -675,10 +675,10 @@ npm run resetpass -- username
 
 ## Additional Resources
 
-- [Main README](../readme.md)
-- [中文说明](./readme/readme_ch.md)
-- [日本語ドキュメント](./readme/readme_jp.md)
-- [GitHub Issues](https://github.com/xuweihafeichangniu-lab/wink/issues)
+- [Main README](../../readme.md)
+- [中文说明](../readme/readme_ch.md)
+- [日本語ドキュメント](../readme/readme_jp.md)
+- [GitHub Issues](https://github.com/xuweihafeichangniu-lab/wink-go/issues)
 
 ---
 
@@ -687,8 +687,8 @@ npm run resetpass -- username
 If you encounter any issues:
 
 1. Check the [Troubleshooting](#troubleshooting) section
-2. Search [existing issues](https://github.com/xuweihafeichangniu-lab/wink/issues)
-3. Create a [new issue](https://github.com/xuweihafeichangniu-lab/wink/issues/new) with:
+2. Search [existing issues](https://github.com/xuweihafeichangniu-lab/wink-go/issues)
+3. Create a [new issue](https://github.com/xuweihafeichangniu-lab/wink-go/issues/new) with:
    - Your OS and version
    - WinkGo version
    - Steps to reproduce

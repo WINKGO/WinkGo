@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Node.js** 22 or higher
+- **Node.js** 22–24
 - **bun** — Package manager & runtime ([install](https://bun.sh))
 - **Rust stable + Cargo** — Required to build the local WINK GO Core backend ([install](https://rustup.rs))
 - **Python** 3.11+ (for native module compilation)
@@ -12,47 +12,42 @@ On Windows, install the Rust MSVC toolchain. If Rust compilation fails because n
 
 ## Repository Layout
 
-WinkGo development uses two repositories:
-
-- **WINK GO Core** (`https://github.com/xuweihafeichangniu-lab/wink.git`) builds the local backend binary: `winkgo-core` on macOS/Linux and `winkgo-core.exe` on Windows.
-- **WinkGo** (`https://github.com/xuweihafeichangniu-lab/wink.git`) starts the Electron desktop app and launches the backend binary automatically.
-
-Keep the repositories side by side when possible:
+WINK GO is maintained as one monorepo:
 
 ```text
-workspace/
-|-- WINK GO Core/
-`-- WinkGo/
+wink-go/
+|-- packages/desktop/   # Electron desktop app
+|-- packages/web-host/  # WebUI host and backend lifecycle
+|-- backend/            # Rust winkgo_core and Agent Runtime
+|-- mobile/             # Expo / React Native client
+`-- tests/              # Shared test suites
 ```
 
-The desktop development server resolves the backend from the `PATH` inherited by `bun run start`. Install WINK GO Core first, verify the binary is discoverable in the same terminal, then start WinkGo.
+The desktop development server resolves `winkgo-core` from the `PATH` inherited by `bun run start`. Build and install the backend from the repository's `backend/` workspace, verify that the binary is discoverable in the same terminal, and then start the desktop app.
 
 ## Quick Start
 
-### 1. Clone Both Repositories
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/xuweihafeichangniu-lab/wink.git
-git clone https://github.com/xuweihafeichangniu-lab/wink.git
+git clone https://github.com/xuweihafeichangniu-lab/wink-go.git
+cd wink-go
+bun install
 ```
-
-Use the `main` branch for both repositories unless a maintainer asks you to test another branch.
 
 ### 2. Build and Install WINK GO Core
 
-Run these commands from the `WINK GO Core` repository.
+Run these commands from the repository root.
 
 #### macOS / Linux
 
 ```bash
-cd WINK GO Core
-cargo clean
-cargo install --path crates/winkgo-app --locked
+cargo install --manifest-path backend/crates/winkgo-app/Cargo.toml --locked
 
 # Make Cargo-installed binaries visible to this shell if needed.
 export PATH="$HOME/.cargo/bin:$PATH"
 
-# Verify that WinkGo will be able to find the backend.
+# Verify that WINK GO will be able to find the backend.
 which winkgo-core
 winkgo-core --help
 ```
@@ -62,45 +57,35 @@ If `which winkgo-core` prints nothing, add `export PATH="$HOME/.cargo/bin:$PATH"
 #### Windows PowerShell
 
 ```powershell
-cd WINK GO Core
-cargo clean
-cargo install --path crates/winkgo-app --locked
+cargo install --manifest-path backend/crates/winkgo-app/Cargo.toml --locked
 
 # Make Cargo-installed binaries visible to this PowerShell session if needed.
 $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
 
-# Verify that WinkGo will be able to find the backend.
+# Verify that WINK GO will be able to find the backend.
 where.exe winkgo-core
 winkgo-core --help
 ```
 
 If `where.exe winkgo-core` prints nothing, make sure `%USERPROFILE%\.cargo\bin` is in your user `Path`, open a new PowerShell window, and verify again.
 
-### 3. Start WinkGo
+### 3. Start WINK GO
 
-Run these commands from the `WinkGo` repository in a terminal where `winkgo-core` is discoverable.
+From the repository root, in a terminal where `winkgo-core` is discoverable:
 
 ```bash
-cd WinkGo
-
-# Install dependencies
-bun install
-
 # Start the Electron desktop app in development mode
 bun run start
 ```
 
-During startup, WinkGo launches `winkgo-core` automatically and passes the backend port to the renderer. You do not need to start WINK GO Core in a separate terminal.
+During startup, WINK GO launches `winkgo-core` automatically and passes the backend port to the renderer. You do not need to start WINK GO Core in a separate terminal.
 
 ## Updating the Local Backend
 
-When you pull or change WINK GO Core, reinstall the backend binary and restart WinkGo:
+When you pull or change code under `backend/`, reinstall the backend binary from the repository root and restart WINK GO:
 
 ```bash
-cd ../WINK GO Core
-cargo install --path crates/winkgo-app --locked --force
-
-cd ../WinkGo
+cargo install --manifest-path backend/crates/winkgo-app/Cargo.toml --locked --force
 bun run start
 ```
 
@@ -110,9 +95,9 @@ Use `--force` when rebuilding local changes with the same WINK GO Core package v
 
 ### `Cannot find "winkgo-core" binary`
 
-WinkGo cannot find the backend from the `PATH` inherited by `bun run start`.
+WINK GO cannot find the backend from the `PATH` inherited by `bun run start`.
 
-Check from the same terminal where you start WinkGo:
+Check from the same terminal where you start WINK GO:
 
 ```bash
 # macOS / Linux
@@ -130,7 +115,7 @@ Make sure you start `bun run start` from the same terminal environment that can 
 
 ### Backend Changes Do Not Show Up
 
-Quit WinkGo, reinstall WINK GO Core with `cargo install --path crates/winkgo-app --locked --force`, then start WinkGo again. The Electron app owns the backend subprocess during development, so a running WinkGo instance will not pick up a newly installed binary until it restarts.
+Quit WINK GO, reinstall WINK GO Core with `cargo install --manifest-path backend/crates/winkgo-app/Cargo.toml --locked --force`, then start WINK GO again. The Electron app owns the backend subprocess during development, so a running WINK GO instance will not pick up a newly installed binary until it restarts.
 
 ### Windows Rust Build Errors
 
