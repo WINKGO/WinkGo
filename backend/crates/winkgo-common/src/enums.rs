@@ -11,6 +11,7 @@ pub enum AgentType {
     OpenclawGateway,
     Nanobot,
     Remote,
+    #[serde(rename = "winkgo_agent", alias = "winkgoagent")]
     WinkGoAgent,
     /// Legacy Gemini conversations. Kept solely so that historical rows
     /// with `type='gemini'` remain readable in the conversation list and
@@ -138,6 +139,7 @@ pub enum ConversationStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ConversationSource {
+    #[serde(rename = "winkgo", alias = "winkgoui")]
     WinkGoui,
     Telegram,
     Lark,
@@ -288,8 +290,10 @@ pub enum McpSource {
     CodeBuddy,
     #[serde(rename = "opencode")]
     OpenCode,
+    #[serde(rename = "winkgo_agent", alias = "winkgoagent")]
     WinkGoAgent,
     Nanobot,
+    #[serde(rename = "winkgo", alias = "winkgoui")]
     WinkGoui,
 }
 

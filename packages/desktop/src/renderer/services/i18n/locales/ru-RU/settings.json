@@ -1288,5 +1288,13 @@
     "solveWithButler": "Спросить дворецкого"
   },
   "providerIdConflict": "Provider ID уже существует. Повторите попытку.",
-  "autoInjectedSkillsHint": "Автоматически загружаются в каждый диалог — включать не нужно; агент сам решает, когда их использовать."
+  "autoInjectedSkillsHint": "Автоматически загружаются в каждый диалог — включать не нужно; агент сам решает, когда их использовать.",
+  "legal": {
+    "title": "Правовая информация",
+    "summary": "Часть кода WINK GO создана на основе AionUi и по-прежнему распространяется по лицензии Apache License 2.0.",
+    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "apacheLicense": "Лицензия Apache 2.0",
+    "notice": "Уведомление о распространении",
+    "thirdPartyNotices": "Уведомления третьих сторон"
+  }
 }

@@ -102,7 +102,10 @@ jobs:
             --pattern "*.msi" \
             --pattern "*.deb" \
             --pattern "*.zip" \
-            --pattern "latest*.yml"
+            --pattern "latest*.yml" \
+            --pattern "LICENSE" \
+            --pattern "NOTICE" \
+            --pattern "THIRD_PARTY_NOTICES.md"
           echo "Downloaded files:"
           ls -la dist
 

@@ -113,11 +113,11 @@ mod tests {
     fn test_update_check_request_with_options() {
         let raw = json!({
             "include_prerelease": true,
-            "repo": "xuweihafeichangniu-lab/WinkGo"
+            "repo": "xuweihafeichangniu-lab/wink-go"
         });
         let req: UpdateCheckRequest = serde_json::from_value(raw).unwrap();
         assert!(req.include_prerelease);
-        assert_eq!(req.repo.as_deref(), Some("xuweihafeichangniu-lab/WinkGo"));
+        assert_eq!(req.repo.as_deref(), Some("xuweihafeichangniu-lab/wink-go"));
     }
 
     // -- UpdateCheckResult --
@@ -145,7 +145,7 @@ mod tests {
                 version: "2.0.0".into(),
                 name: Some("Version 2.0.0".into()),
                 body: Some("Major release".into()),
-                html_url: "https://github.com/xuweihafeichangniu-lab/WinkGo/releases/tag/v2.0.0".into(),
+                html_url: "https://github.com/xuweihafeichangniu-lab/wink-go/releases/tag/v2.0.0".into(),
                 published_at: Some("2026-04-01T00:00:00Z".into()),
                 prerelease: false,
                 draft: false,

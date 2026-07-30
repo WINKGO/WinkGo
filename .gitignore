@@ -192,7 +192,8 @@ tests/e2e/report/
 /.tmp-debug-release-assets-*/
 
 # Local-only external/generated product assets
-/docs/vendor/
+/docs/vendor/*
+!/docs/vendor/aionui-source-notice-manifest.txt
 /public/knowledge-canvas/
 /resources/winkgo/provider-skills/
 /packages/desktop/winkgo_native_drop.node

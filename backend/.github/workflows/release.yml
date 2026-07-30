@@ -152,9 +152,11 @@ jobs:
         env:
           VERSION: ${{ needs.prepare-release.outputs.version }}
         run: |
-          mkdir -p dist
+          mkdir -p dist/package
           ARCHIVE="winkgo_core-v${VERSION}-${{ matrix.target }}.tar.gz"
-          tar -C target/${{ matrix.target }}/release -czf "dist/${ARCHIVE}" ${{ matrix.binary_name }}
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" dist/package/
+          cp LICENSE dist/package/
+          tar -czf "dist/${ARCHIVE}" -C dist/package ${{ matrix.binary_name }} LICENSE
           echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
 
       - name: Package binary (Windows)
@@ -163,9 +165,11 @@ jobs:
         env:
           VERSION: ${{ needs.prepare-release.outputs.version }}
         run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          New-Item -ItemType Directory -Force -Path dist/package | Out-Null
           $archive = "winkgo_core-v${env:VERSION}-${{ matrix.target }}.zip"
-          Compress-Archive -Path "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" -DestinationPath "dist/${archive}" -Force
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/package/" -Force
+          Copy-Item LICENSE "dist/package/LICENSE" -Force
+          Compress-Archive -Path "dist/package/*" -DestinationPath "dist/${archive}" -Force
           "ARCHIVE=${archive}" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Upload release artifact

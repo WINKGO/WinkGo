@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AgentErrorOwnership {
+    #[serde(rename = "winkgo", alias = "wink_goui", alias = "winkgoui")]
     WinkGoui,
     UserAgent,
     UserLlmProvider,
@@ -12,10 +13,15 @@ pub enum AgentErrorOwnership {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AgentErrorCode {
+    #[serde(rename = "WINKGO_CONVERSATION_BUSY", alias = "WINK_GOUI_CONVERSATION_BUSY")]
     WinkGouiConversationBusy,
+    #[serde(rename = "WINKGO_STREAM_BROKEN", alias = "WINK_GOUI_STREAM_BROKEN")]
     WinkGouiStreamBroken,
+    #[serde(rename = "WINKGO_STATE_INCONSISTENT", alias = "WINK_GOUI_STATE_INCONSISTENT")]
     WinkGouiStateInconsistent,
+    #[serde(rename = "WINKGO_PERMISSION_ERROR", alias = "WINK_GOUI_PERMISSION_ERROR")]
     WinkGouiPermissionError,
+    #[serde(rename = "WINKGO_INTERNAL_ERROR", alias = "WINK_GOUI_INTERNAL_ERROR")]
     WinkGouiInternalError,
     #[serde(alias = "WORKSPACE_PATH_CONTAINS_WHITESPACE_RUNTIME_UNSUPPORTED")]
     WorkspacePathRuntimeUnavailable,

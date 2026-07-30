@@ -37,7 +37,7 @@ Leader prompt (`lead.txt`) 规则 9/10 和 87-88 行要求先提方案等确认�
 
 ### 前端待做
 
-前端需监听 `team.created` + `conversation.listChanged` 实现自动跳转。已提 issue: https://github.com/xuweihafeichangniu-lab/WinkGo/issues/2734
+前端需监听 `team.created` + `conversation.listChanged` 实现自动跳转。已提 issue: https://github.com/xuweihafeichangniu-lab/wink-go/issues/2734
 
 ---
 
@@ -218,4 +218,4 @@ crates/winkgo-app/src/guide_stdio.rs       — forward_tool 重试逻辑
 - Frontend: `/Users/testuser/project/WinkGo` branch `feat/backend-migration`
 - Backend fix branch: `fix/team-communication-bugs`
 - Log file: `/Users/testuser/Library/Logs/WinkGo-Dev/2026-05-02.backend.log`
-- Frontend issue: https://github.com/xuweihafeichangniu-lab/WinkGo/issues/2734
+- Frontend issue: https://github.com/xuweihafeichangniu-lab/wink-go/issues/2734

@@ -23,7 +23,5 @@
     "environmentSetup": "راه‌اندازی سریع محیط {{platform}}",
     "downloadFailed": "باز کردن پیوند دانلود ناموفق بود",
     "recommended": "پیشنهادشده"
-  },
-  "openSourceLicense": "این نرم‌افزار بر پایه پروژه متن‌باز WinkGo تغییر یافته و تحت مجوز Apache License 2.0 ارائه می‌شود.",
-  "openSourceCopyright": "Copyright 2025 WinkGo (winkgo.top) · تغییر یافته توسط WINK GO، ۲۰۲۶."
+  }
 }

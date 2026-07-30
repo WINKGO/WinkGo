@@ -19,7 +19,7 @@ The list was last reviewed on 2026-07-15 against these provider-owned references
 - Anthropic and Bedrock model IDs: https://platform.claude.com/docs/en/about-claude/models/overview
 - Amazon Bedrock image messages: https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages.html
 - Gemini: https://ai.google.dev/gemini-api/docs/models
-- WinkGo provider presets: https://github.com/xuweihafeichangniu-lab/WinkGo/blob/main/packages/desktop/src/renderer/utils/model/modelPlatforms.ts
+- WinkGo provider presets: https://github.com/xuweihafeichangniu-lab/wink-go/blob/main/packages/desktop/src/renderer/utils/model/modelPlatforms.ts
 - Novita model library and vision guide: https://novita.ai/models and https://novita.ai/docs/guides/llm-vision
 - OpenRouter model catalog and image inputs: https://openrouter.ai/api/v1/models and https://openrouter.ai/docs/guides/overview/multimodal/image-understanding
 - MiniMax OpenAI-compatible Chat Completions schema: https://platform.minimaxi.com/docs/api-reference/text/api/openapi-chat-openai.json

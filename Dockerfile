@@ -1,47 +1,56 @@
-FROM node:20-slim AS builder
+FROM node:22-bookworm-slim AS builder
+
+ARG TARGETARCH
+ENV PATH="/root/.cargo/bin:${PATH}"
 WORKDIR /app
 
-# Install bun
-RUN npm install -g bun
-
-# Install all dependencies (including devDeps for build)
-COPY package.json bun.lock ./
-COPY patches/ ./patches/
-RUN bun install --ignore-scripts
-
-# Copy source
-COPY . .
-
-# Build renderer (no Electron needed) and server bundle
-RUN bun run build:renderer:web
-RUN node scripts/build-server.mjs
-
-# ---- Runtime image ----
-FROM oven/bun:latest AS runtime
-WORKDIR /app
-
-# officecli (the Office preview component, auto-installed at runtime by the
-# backend) is a .NET binary that aborts on startup without ICU, and Debian
-# base images don't ship it. libicu-dev is version-agnostic so it keeps
-# resolving the right libicuNN when the base image bumps Debian releases.
+# Build the same standalone WebUI bundle used by GitHub Releases. Rust is
+# required when no prebuilt winkgo_core release is available for the commit.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libicu-dev \
+    && apt-get install -y --no-install-recommends \
+      build-essential \
+      ca-certificates \
+      clang \
+      cmake \
+      curl \
+      git \
+      libssl-dev \
+      pkg-config \
+      python3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install --global bun@1.3.11 \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+      | sh -s -- -y --profile minimal --default-toolchain 1.95.0
+
+COPY . .
+RUN bun install --frozen-lockfile
+RUN WINKGO_EDITION=free NODE_OPTIONS=--max-old-space-size=8192 \
+    bunx electron-vite build --config packages/desktop/electron.vite.config.ts
+RUN case "${TARGETARCH:-amd64}" in \
+      amd64) export PACK_ARCH=x64 ;; \
+      arm64) export PACK_ARCH=arm64 ;; \
+      *) echo "Unsupported Docker architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && PACK_PLATFORM=linux node scripts/pack-web-cli.js \
+    && mkdir -p /bundle \
+    && tar -xzf "dist-web-cli/winkgo-web-$(node -p "require('./package.json').version")-linux-$([ "$PACK_ARCH" = x64 ] && echo x86_64 || echo arm64).tar.gz" \
+      -C /bundle
+
+FROM debian:bookworm-slim AS runtime
+
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libicu-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only build artifacts and production deps
-COPY --from=builder /app/dist-server ./dist-server
-COPY --from=builder /app/out/renderer ./out/renderer
-COPY package.json bun.lock ./
-COPY patches/ ./patches/
-RUN bun install --production --ignore-scripts
+COPY --from=builder /bundle/winkgo-web/ ./
 
-ENV PORT=3000
-ENV NODE_ENV=production
-ENV ALLOW_REMOTE=true
-ENV DATA_DIR=/data
+ENV WINKGO_PORT=25808
+ENV WINKGO_ALLOW_REMOTE=1
+ENV WINKGO_DATA_DIR=/data
 
-# SQLite data volume — mount with: -v $(pwd)/data:/data
 VOLUME ["/data"]
-EXPOSE 3000
+EXPOSE 25808
 
-CMD ["bun", "dist-server/server.mjs"]
+ENTRYPOINT ["./winkgo-web"]
+CMD ["start", "--remote", "--data-dir", "/data", "--no-open"]

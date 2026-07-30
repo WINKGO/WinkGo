@@ -2,6 +2,7 @@
 name = "winkgo-ai-agent"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 async-trait.workspace = true

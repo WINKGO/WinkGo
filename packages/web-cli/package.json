@@ -2,7 +2,16 @@
   "name": "@winkgo/web-cli",
   "version": "1.9.26",
   "private": true,
-  "description": "WinkGo WebUI CLI - standalone web runtime (no Electron)",
+  "description": "WINK GO WebUI CLI - standalone web runtime (no Electron)",
+  "homepage": "https://winkgo.top/",
+  "bugs": {
+    "url": "https://github.com/xuweihafeichangniu-lab/wink-go/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xuweihafeichangniu-lab/wink-go.git"
+  },
   "bin": {
     "winkgo-web": "./bin/winkgo-web.js"
   },

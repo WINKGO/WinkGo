@@ -89,6 +89,28 @@ describe('final release privacy audit', () => {
     }
   });
 
+  it('allows the official WINK GO repositories but blocks the legacy repository path', () => {
+    const root = mkdtempSync(join(tmpdir(), 'winkgo-official-repositories-'));
+    const fixture = join(root, 'payload.txt');
+
+    try {
+      writeFileSync(
+        fixture,
+        [
+          'https://github.com/xuweihafeichangniu-lab/wink-go',
+          'https://github.com/xuweihafeichangniu-lab/WinkGoCore',
+          'https://github.com/xuweihafeichangniu-lab/winkgo_agent',
+        ].join('\n')
+      );
+      expect(audit.scanFileContent(fixture)).not.toContain('personal-github-account');
+
+      writeFileSync(fixture, 'https://github.com/xuweihafeichangniu-lab/wink/wiki/ACP-Setup');
+      expect(audit.scanFileContent(fixture)).toContain('personal-github-account');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('allows localized example profile names that are not developer identities', () => {
     const root = mkdtempSync(join(tmpdir(), 'winkgo-privacy-placeholders-'));
     const fixture = join(root, 'placeholder.txt');

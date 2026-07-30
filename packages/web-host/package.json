@@ -3,6 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "description": "WebUI host package - spawns backend and reverse-proxies to it; serves static files (no Electron dependency)",
+  "homepage": "https://winkgo.top/",
+  "bugs": {
+    "url": "https://github.com/xuweihafeichangniu-lab/wink-go/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xuweihafeichangniu-lab/wink-go.git"
+  },
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

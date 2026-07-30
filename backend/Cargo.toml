@@ -31,7 +31,7 @@ exclude = ["agent-runtime"]
 [workspace.package]
 version = "0.1.52"
 edition = "2024"
-license = "MIT"
+license = "Apache-2.0"
 
 [workspace.dependencies]
 # Internal crates

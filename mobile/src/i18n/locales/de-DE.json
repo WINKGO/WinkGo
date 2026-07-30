@@ -137,6 +137,13 @@
     "changeServer": "Server ändern",
     "about": "Über",
     "version": "Version",
-    "language": "Sprache"
+    "language": "Sprache",
+    "legal": {
+      "title": "Rechtliche Informationen",
+      "apacheLicense": "Apache-2.0-Lizenz",
+      "notice": "Verteilungshinweis",
+      "thirdPartyNotices": "Hinweise zu Drittanbietern",
+      "unavailable": "Das Rechtsdokument ist in diesem Build nicht verfügbar."
+    }
   }
 }

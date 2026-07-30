@@ -1288,5 +1288,13 @@
     "emptyOverridesError": "Enter a launch path or at least one environment variable before saving."
   },
   "providerIdConflict": "Provider-ID existiert bereits. Bitte erneut versuchen.",
-  "autoInjectedSkillsHint": "Werden automatisch in jede Unterhaltung geladen – kein Aktivieren nötig; der Agent entscheidet, wann er sie nutzt."
+  "autoInjectedSkillsHint": "Werden automatisch in jede Unterhaltung geladen – kein Aktivieren nötig; der Agent entscheidet, wann er sie nutzt.",
+  "legal": {
+    "title": "Rechtliche Informationen",
+    "summary": "Teile des WINK GO-Codes basieren auf AionUi und bleiben unter der Apache License 2.0 lizenziert.",
+    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "apacheLicense": "Apache-2.0-Lizenz",
+    "notice": "Verteilungshinweis",
+    "thirdPartyNotices": "Hinweise zu Drittanbietern"
+  }
 }

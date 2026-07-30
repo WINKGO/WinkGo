@@ -23,7 +23,7 @@ const path = require('path');
 const { verifyBundledWinkGoCoreResources } = require('./verify-bundled-winkgo-core-resources');
 
 const GITHUB_OWNER = 'xuweihafeichangniu-lab';
-const GITHUB_REPO = 'wink';
+const GITHUB_REPO = 'wink-go';
 
 const ACTIONS_ARTIFACT_TARGETS = {
   'darwin-arm64': {

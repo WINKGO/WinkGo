@@ -137,6 +137,13 @@
     "changeServer": "Change Server",
     "about": "About",
     "version": "Version",
-    "language": "Language"
+    "language": "Language",
+    "legal": {
+      "title": "Legal information",
+      "apacheLicense": "Apache 2.0 License",
+      "notice": "Distribution notice",
+      "thirdPartyNotices": "Third-party notices",
+      "unavailable": "The legal document is unavailable in this build."
+    }
   }
 }

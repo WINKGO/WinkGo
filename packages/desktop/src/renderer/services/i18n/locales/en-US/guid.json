@@ -23,7 +23,5 @@
     "environmentSetup": "Quick setup for {{platform}}",
     "downloadFailed": "Failed to open the download link",
     "recommended": "Recommended"
-  },
-  "openSourceLicense": "This software is based on the WinkGo open-source project and is licensed under Apache License 2.0.",
-  "openSourceCopyright": "Copyright 2025 WinkGo (winkgo.top) · Modified by WINK GO, 2026."
+  }
 }

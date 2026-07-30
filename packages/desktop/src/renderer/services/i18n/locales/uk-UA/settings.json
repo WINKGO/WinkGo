@@ -1289,5 +1289,13 @@
   "providerIdConflict": "Provider ID вже існує. Спробуйте ще раз.",
   "channels.wecomTitle": "WeCom",
   "channels.wecomDesc": "Chat with WINK GO assistant via WeCom (Enterprise WeChat AI Bot)",
-  "autoInjectedSkillsHint": "Автоматично завантажуються в кожну розмову — вмикати не потрібно; агент сам вирішує, коли їх використовувати."
+  "autoInjectedSkillsHint": "Автоматично завантажуються в кожну розмову — вмикати не потрібно; агент сам вирішує, коли їх використовувати.",
+  "legal": {
+    "title": "Правова інформація",
+    "summary": "Частину коду WINK GO змінено на основі AionUi та й надалі надано за ліцензією Apache License 2.0.",
+    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "apacheLicense": "Ліцензія Apache 2.0",
+    "notice": "Повідомлення про розповсюдження",
+    "thirdPartyNotices": "Повідомлення третіх сторін"
+  }
 }

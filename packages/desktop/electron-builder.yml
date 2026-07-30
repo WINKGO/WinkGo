@@ -105,6 +105,14 @@ extraResources:
     to: .
   - from: resources/app.png
     to: app.png
+  # License and attribution documents must remain readable outside app.asar
+  # in every installer format.
+  - from: LICENSE
+    to: legal/LICENSE
+  - from: NOTICE
+    to: legal/NOTICE
+  - from: THIRD_PARTY_NOTICES.md
+    to: legal/THIRD_PARTY_NOTICES.md
   # winkgo_core binary (pre-compiled per platform/arch, ships its own bun runtime)
   - from: resources/bundled-winkgo-core
     to: bundled-winkgo-core

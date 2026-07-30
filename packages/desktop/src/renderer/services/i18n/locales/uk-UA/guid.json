@@ -23,7 +23,5 @@
     "environmentSetup": "Швидке налаштування для {{platform}}",
     "downloadFailed": "Не вдалося відкрити посилання для завантаження",
     "recommended": "Рекомендовано"
-  },
-  "openSourceLicense": "Це програмне забезпечення створено на основі відкритого проєкту WinkGo та ліцензовано за Apache License 2.0.",
-  "openSourceCopyright": "Copyright 2025 WinkGo (winkgo.top) · Змінено WINK GO, 2026."
+  }
 }

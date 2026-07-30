@@ -1,3 +1,9 @@
+/**
+ * Derived from AionUi v2.1.41 and modified by WINK GO in 2026.
+ * Modifications Copyright 2026 WINK GO (winkgo.top)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

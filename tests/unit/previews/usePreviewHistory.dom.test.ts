@@ -1,6 +1,7 @@
 /**
  * @license
- * Copyright 2025 WINK GO (winkgo.top)
+ * Copyright 2025 AionUi (aionui.com)
+ * Modifications Copyright 2026 WINK GO (winkgo.top)
  * SPDX-License-Identifier: Apache-2.0
  *
  * N4c V2: usePreviewHistory hook export-shape smoke test.

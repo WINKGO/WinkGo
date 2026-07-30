@@ -1288,5 +1288,13 @@
     "solveWithButler": "Demander au majordome"
   },
   "providerIdConflict": "L'ID du fournisseur existe déjà. Veuillez réessayer.",
-  "autoInjectedSkillsHint": "Chargé automatiquement dans chaque conversation – pas besoin de les activer ; l'agent décide quand les utiliser."
+  "autoInjectedSkillsHint": "Chargé automatiquement dans chaque conversation – pas besoin de les activer ; l'agent décide quand les utiliser.",
+  "legal": {
+    "title": "Informations légales",
+    "summary": "Certaines parties du code de WINK GO sont dérivées d’AionUi et restent sous licence Apache License 2.0.",
+    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "apacheLicense": "Licence Apache 2.0",
+    "notice": "Avis de distribution",
+    "thirdPartyNotices": "Avis de tiers"
+  }
 }

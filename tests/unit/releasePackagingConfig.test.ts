@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -28,7 +28,8 @@ describe('release packaging configuration', () => {
     expect(viteConfig).toContain("process.env.WINKGO_EDITION || 'free'");
     expect(viteConfig).toContain('WINKGO_ALLOW_PRO_DEV_BUILD');
     expect(viteConfig).toContain('isCiEnvironment');
-    expect(viteConfig).toContain("rmSync(resolve(__dirname, '../../out/.winkgo-vite-build.json')");
+    expect(viteConfig).toContain("const editionMarker = resolve(projectRoot, 'out/.winkgo-vite-build.json')");
+    expect(viteConfig).toContain('unlinkSync(editionMarker)');
     expect(buildScript).toContain("process.env.WINKGO_EDITION || 'free'");
     expect(buildScript).toContain('--allow-pro-dev');
   });
@@ -119,6 +120,89 @@ describe('release packaging configuration', () => {
 
     expect(macBlock).toContain('    - dmg');
     expect(macBlock).toContain('    - zip');
+  });
+
+  it('ships canonical legal documents in every public distribution channel', () => {
+    const desktopConfig = readProjectFile('packages/desktop/electron-builder.yml');
+    const afterPack = readProjectFile('scripts/afterPack.js');
+    const webPack = readProjectFile('scripts/pack-web-cli.js');
+    const webSmoke = readProjectFile('scripts/smoke-test-web-cli.sh');
+    const releaseWorkflow = readProjectFile('.github/workflows/build-and-release.yml');
+    const distributionWorkflow = readProjectFile('.github/workflows/release-distribute.yml');
+
+    for (const fileName of ['LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md']) {
+      expect(desktopConfig).toContain(`from: ${fileName}`);
+      expect(afterPack).toContain(fileName);
+      expect(webPack).toContain(`'${fileName}'`);
+      expect(webSmoke).toContain(`legal/${fileName}`);
+      expect(releaseWorkflow).toContain(`release-assets/${fileName}`);
+      expect(distributionWorkflow).toContain(`--pattern "${fileName}"`);
+    }
+
+    expect(desktopConfig).toContain('to: legal/LICENSE');
+    expect(webPack).toContain("path.join(tarballContentDir, 'legal')");
+    expect(afterPack).toContain('Packaged app has missing or invalid legal document(s)');
+  });
+
+  it('keeps package and Core license metadata aligned with Apache-2.0', () => {
+    const packagePaths = [
+      'package.json',
+      'packages/desktop/package.json',
+      'packages/shared-scripts/package.json',
+      'packages/web-cli/package.json',
+      'packages/web-host/package.json',
+      'mobile/package.json',
+    ];
+
+    for (const packagePath of packagePaths) {
+      const packageJson = JSON.parse(readProjectFile(packagePath)) as {
+        license?: string;
+        repository?: { url?: string };
+      };
+      expect(packageJson.license, packagePath).toBe('Apache-2.0');
+      expect(packageJson.repository?.url, packagePath).toContain('github.com/xuweihafeichangniu-lab/wink-go.git');
+    }
+
+    expect(readProjectFile('backend/Cargo.toml')).toContain('license = "Apache-2.0"');
+    expect(readProjectFile('backend/LICENSE')).toContain('Copyright 2026 WINK GO');
+    const crateManifests = readdirSync(resolve(projectRoot, 'backend/crates'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `backend/crates/${entry.name}/Cargo.toml`)
+      .filter((manifest) => {
+        try {
+          readProjectFile(manifest);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    expect(crateManifests).toHaveLength(24);
+    for (const manifest of crateManifests) {
+      expect(readProjectFile(manifest), manifest).toContain('license.workspace = true');
+    }
+    for (const workflow of ['backend/.github/workflows/release.yml', 'backend/.github/workflows/build-manual.yml']) {
+      expect(readProjectFile(workflow), workflow).toContain('Copy-Item LICENSE');
+      expect(readProjectFile(workflow), workflow).toContain('LICENSE');
+    }
+  });
+
+  it('builds Docker from the supported Web CLI package and exposes its legal bundle', () => {
+    const dockerfile = readProjectFile('Dockerfile');
+
+    expect(dockerfile).toContain('node scripts/pack-web-cli.js');
+    expect(dockerfile).toContain('COPY --from=builder /bundle/winkgo-web/ ./');
+    expect(dockerfile).toContain('ENV WINKGO_PORT=25808');
+    expect(dockerfile).toContain('CMD ["start", "--remote", "--data-dir", "/data", "--no-open"]');
+    expect(dockerfile).not.toContain('build:renderer:web');
+    expect(dockerfile).not.toContain('build-server.mjs');
+  });
+
+  it('cleans stale renderer chunks before every production build', () => {
+    const viteConfig = readProjectFile('packages/desktop/electron.vite.config.ts');
+
+    expect(viteConfig).toContain('emptyOutDir: true');
+    expect(viteConfig).toContain('cleanRendererOutputPlugin()');
+    expect(viteConfig).toContain('removeGeneratedDirectory(rendererOutput)');
   });
 
   it('does not build Windows zip artifacts', () => {

@@ -86,7 +86,14 @@ if (!fs.existsSync(backendSrc)) {
 fs.mkdirSync(path.dirname(backendDest), { recursive: true });
 fs.cpSync(backendSrc, backendDest, { recursive: true });
 
-// 8. Create tarball
+// 8. Copy license and attribution documents into the standalone distribution
+const legalDest = path.join(tarballContentDir, 'legal');
+fs.mkdirSync(legalDest, { recursive: true });
+for (const legalFile of ['LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md']) {
+  fs.copyFileSync(path.join(projectRoot, legalFile), path.join(legalDest, legalFile));
+}
+
+// 9. Create tarball
 fs.mkdirSync(distDir, { recursive: true });
 execSync(`tar -czf ${path.basename(tarballPath)} -C ${stagingDir} winkgo-web`, {
   cwd: path.dirname(tarballPath),
@@ -95,7 +102,7 @@ execSync(`tar -czf ${path.basename(tarballPath)} -C ${stagingDir} winkgo-web`, {
 
 console.log(`✅ Tarball created: ${tarballPath}`);
 
-// 9. Generate SHA256 checksum (cross-platform: use Node's crypto, not `shasum`)
+// 10. Generate SHA256 checksum (cross-platform: use Node's crypto, not `shasum`)
 const checksumPath = `${tarballPath}.sha256`;
 const hash = crypto.createHash('sha256');
 hash.update(fs.readFileSync(tarballPath));

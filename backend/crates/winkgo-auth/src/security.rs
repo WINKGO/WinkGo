@@ -14,7 +14,7 @@ fn allows_embedding(path: &str) -> bool {
 }
 
 /// Office preview proxies serve content loaded in same-origin iframes by
-/// the web UI; `DENY` here blanks the preview (xuweihafeichangniu-lab/WinkGo#3177).
+/// the web UI; `DENY` here blanks the preview (xuweihafeichangniu-lab/wink-go#3177).
 fn allows_same_origin_embedding(path: &str) -> bool {
     path.starts_with("/api/ppt-proxy/") || path.starts_with("/api/office-watch-proxy/")
 }
@@ -107,7 +107,7 @@ mod tests {
 
     #[tokio::test]
     async fn office_proxy_routes_get_sameorigin_frame_headers() {
-        // Regression for xuweihafeichangniu-lab/WinkGo#3177: the office preview proxies
+        // Regression for xuweihafeichangniu-lab/wink-go#3177: the office preview proxies
         // serve iframe content for the same-origin web UI; `DENY` blanks
         // the preview iframe in browsers.
         let app = Router::new()

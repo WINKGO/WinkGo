@@ -63,7 +63,11 @@ const forbiddenPathParts = new Set([
 const contentRules = [
   {
     id: 'personal-github-account',
-    pattern: /\bxuweihafeichangniu-lab\b/i,
+    // The owner account now hosts WINK GO's official public repositories.
+    // Block unapproved/legacy repository URLs without rejecting the canonical
+    // product, core, or agent links that are intentionally shipped.
+    pattern:
+      /\b(?:https?:\/\/)?(?:api\.)?github\.com\/(?:repos\/)?xuweihafeichangniu-lab\/(?!(?:wink-go|winkgocore|winkgo_agent)(?:\.git)?(?:[/?#\s"'`]|$))[a-z0-9_.-]+/i,
   },
   {
     id: 'developer-windows-profile',

@@ -195,4 +195,6 @@ bun run test
 
 ## 许可证
 
-WINK GO 以 [Apache License 2.0](LICENSE) 发布。项目包含或衍生的第三方组件所需归属信息保留在 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+WINK GO 以 [Apache License 2.0](LICENSE) 发布。部分源码派生自 AionUi，并在保留原始版权声明的基础上进行独立修改。完整分发声明见 [NOTICE](NOTICE)，第三方归属与固定上游基线见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+AionUi 仅作为法律归属信息出现；WINK GO 是独立开发、独立命名和独立发布的衍生项目，该归属不代表原项目对 WINK GO 的赞助、认可或关联。

@@ -39,6 +39,28 @@ function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) 
   console.log(`   ✓ Bundled resources verified for ${result.runtimeKey} (${result.checked.length} checks)`);
 }
 
+function verifyLegalDocuments(resourcesDir) {
+  const requiredLegalDocuments = {
+    LICENSE: ['Apache License'],
+    NOTICE: ['AionUi', 'WINK GO'],
+    'THIRD_PARTY_NOTICES.md': ['AionUi', 'Apache License 2.0'],
+  };
+  const invalid = [];
+  for (const [fileName, requiredMarkers] of Object.entries(requiredLegalDocuments)) {
+    const documentPath = path.join(resourcesDir, 'legal', fileName);
+    if (!fs.existsSync(documentPath) || fs.statSync(documentPath).size === 0) {
+      invalid.push(fileName);
+      continue;
+    }
+    const content = fs.readFileSync(documentPath, 'utf8');
+    if (requiredMarkers.some((marker) => !content.includes(marker))) invalid.push(fileName);
+  }
+  if (invalid.length > 0) {
+    throw new Error(`Packaged app has missing or invalid legal document(s): ${invalid.join(', ')}`);
+  }
+  console.log(`   ✓ Legal documents verified (${Object.keys(requiredLegalDocuments).length} checks)`);
+}
+
 function pruneOtherBundledRuntimes(resourcesDir, electronPlatformName, targetArch) {
   const runtimeRoot = path.join(resourcesDir, 'bundled-winkgo-core');
   const currentRuntimeKey = `${electronPlatformName}-${targetArch}`;
@@ -137,6 +159,7 @@ module.exports = async function afterPack(context) {
     }
 
     verifyBundledResources(resourcesDir, electronPlatformName, targetArch);
+    verifyLegalDocuments(resourcesDir);
     // Keep every capability for the target machine, but do not make an x64
     // customer unpack the unused ARM64 runtime (or vice versa).
     pruneOtherBundledRuntimes(resourcesDir, electronPlatformName, targetArch);

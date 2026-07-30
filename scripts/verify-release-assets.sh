@@ -5,6 +5,24 @@ set -euo pipefail
 OUTPUT_DIR="${1:-release-assets}"
 ERRORS=0
 
+for f in LICENSE NOTICE THIRD_PARTY_NOTICES.md; do
+  if [ ! -s "$OUTPUT_DIR/$f" ]; then
+    echo "FAIL: missing or empty legal document: $f"
+    ERRORS=$((ERRORS + 1))
+  else
+    echo "PASS: $f exists"
+  fi
+done
+
+if [ -s "$OUTPUT_DIR/LICENSE" ] && ! grep -q "Apache License" "$OUTPUT_DIR/LICENSE"; then
+  echo "FAIL: LICENSE does not contain the Apache License text"
+  ERRORS=$((ERRORS + 1))
+fi
+if [ -s "$OUTPUT_DIR/NOTICE" ] && ! grep -q "AionUi" "$OUTPUT_DIR/NOTICE"; then
+  echo "FAIL: NOTICE does not contain the upstream attribution"
+  ERRORS=$((ERRORS + 1))
+fi
+
 for f in latest.yml latest-mac.yml latest-linux.yml latest-linux-arm64.yml; do
   if [ ! -f "$OUTPUT_DIR/$f" ]; then
     echo "FAIL: missing canonical metadata: $f"

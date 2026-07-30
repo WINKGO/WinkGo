@@ -1291,5 +1291,13 @@
     "solveWithButler": "Perguntar ao Mordomo"
   },
   "providerIdConflict": "O Provider ID já existe. Tente novamente.",
-  "autoInjectedSkillsHint": "Carregadas automaticamente em cada conversa — não é preciso ativá-las; o agente decide quando usá-las."
+  "autoInjectedSkillsHint": "Carregadas automaticamente em cada conversa — não é preciso ativá-las; o agente decide quando usá-las.",
+  "legal": {
+    "title": "Informações legais",
+    "summary": "Partes do código do WINK GO são derivadas do AionUi e continuam licenciadas sob a Apache License 2.0.",
+    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "apacheLicense": "Licença Apache 2.0",
+    "notice": "Aviso de distribuição",
+    "thirdPartyNotices": "Avisos de terceiros"
+  }
 }

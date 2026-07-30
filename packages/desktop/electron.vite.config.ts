@@ -1,18 +1,34 @@
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import { execSync } from 'child_process';
-import { readFileSync, rmSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, rmdirSync, unlinkSync } from 'fs';
 import { resolve } from 'path';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import UnoCSS from 'unocss/vite';
 import unoConfig from '../../uno.config.ts';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
+const projectRoot = resolve('.');
+
 // Read the real WinkGo version from the repo-root package.json.
 // `packages/desktop/package.json` is a workspace-internal placeholder pinned
 // at "0.0.0" — never use it for user-visible version strings.
-const rootPackageJson = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf-8')) as {
+const rootPackageJson = JSON.parse(readFileSync(resolve(projectRoot, 'package.json'), 'utf-8')) as {
   version: string;
 };
+
+function removeGeneratedDirectory(directory: string): void {
+  if (!existsSync(directory)) return;
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = resolve(directory, entry.name);
+    if (entry.isDirectory() && !entry.isSymbolicLink()) {
+      removeGeneratedDirectory(entryPath);
+    } else {
+      unlinkSync(entryPath);
+    }
+  }
+  rmdirSync(directory);
+}
 
 // Build builtin MCP servers after main process bundle so they survive out/main/ cleanup.
 function buildMcpServersPlugin() {
@@ -20,6 +36,25 @@ function buildMcpServersPlugin() {
     name: 'vite-plugin-build-mcp-servers',
     closeBundle() {
       execSync(`node "${resolve('scripts/build-mcp-servers.js')}"`, { stdio: 'inherit' });
+    },
+  };
+}
+
+function cleanRendererOutputPlugin() {
+  return {
+    name: 'winkgo-clean-renderer-output',
+    apply: 'build' as const,
+    buildStart() {
+      // The renderer root and output directory live in different parts of the
+      // repository, so Vite may retain old hashed chunks. Anything left there
+      // would be copied into the packaged application.
+      const rendererOutput = resolve(projectRoot, 'out/renderer');
+      console.log(`[WINK GO] Cleaning generated renderer output: ${rendererOutput}`);
+      removeGeneratedDirectory(rendererOutput);
+      // A direct electron-vite build cannot vouch for the edition marker that
+      // build-with-builder signs after all outputs pass validation.
+      const editionMarker = resolve(projectRoot, 'out/.winkgo-vite-build.json');
+      if (existsSync(editionMarker)) unlinkSync(editionMarker);
     },
   };
 }
@@ -84,11 +119,6 @@ function resolveWinkGoBuildEdition(): 'free' | 'pro' {
 export default defineConfig(({ mode }) => {
   const isDevelopment = mode === 'development';
   const winkGoEdition = resolveWinkGoBuildEdition();
-  // A direct electron-vite invocation can overwrite out/ without going
-  // through the wrapper that signs its edition marker. Invalidate any older
-  // marker before Vite writes output; build-with-builder reissues it only
-  // after a complete, successful build.
-  rmSync(resolve(__dirname, '../../out/.winkgo-vite-build.json'), { force: true });
   const enableSentrySourceMaps =
     !isDevelopment &&
     !!process.env.SENTRY_AUTH_TOKEN &&
@@ -130,7 +160,7 @@ export default defineConfig(({ mode }) => {
               {
                 name: 'dev-build-mcp-servers',
                 closeBundle() {
-                  execSync(`node "${resolve(__dirname, '../../scripts/build-mcp-servers.js')}"`, {
+                  execSync(`node "${resolve(projectRoot, 'scripts/build-mcp-servers.js')}"`, {
                     stdio: 'inherit',
                   });
                 },
@@ -262,12 +292,18 @@ export default defineConfig(({ mode }) => {
         ],
       },
       plugins: [
+        cleanRendererOutputPlugin(),
         UnoCSS(unoConfig),
         iconParkPlugin(),
         ...(enableSentrySourceMaps ? [sentryVitePlugin(sentryPluginOptions)] : []),
       ],
       build: {
         target: 'es2022',
+        // Renderer root lives below the repository while electron-vite writes
+        // to the top-level out/ directory. Vite will not clean an outDir that
+        // sits outside root unless this is explicit, which can otherwise leave
+        // stale hashed chunks in a release.
+        emptyOutDir: true,
         sourcemap: enableSentrySourceMaps ? 'hidden' : isDevelopment,
         minify: !isDevelopment,
         reportCompressedSize: false,

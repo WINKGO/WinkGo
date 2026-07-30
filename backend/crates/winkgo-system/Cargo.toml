@@ -2,6 +2,7 @@
 name = "winkgo-system"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 winkgo-auth.workspace = true

@@ -2,6 +2,7 @@
 name = "winkgo-team-prompts"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 winkgo-api-types.workspace = true

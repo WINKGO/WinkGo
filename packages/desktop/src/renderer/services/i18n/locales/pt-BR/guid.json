@@ -23,7 +23,5 @@
     "environmentSetup": "Configuração rápida para {{platform}}",
     "downloadFailed": "Não foi possível abrir o link de download",
     "recommended": "Recomendado"
-  },
-  "openSourceLicense": "Este software foi modificado a partir do projeto de código aberto WinkGo e é licenciado sob a Apache License 2.0.",
-  "openSourceCopyright": "Copyright 2025 WinkGo (winkgo.top) · Modificado pela WINK GO, 2026."
+  }
 }

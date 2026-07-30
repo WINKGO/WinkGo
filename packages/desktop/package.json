@@ -2,7 +2,16 @@
   "name": "@winkgo/desktop",
   "version": "0.0.0",
   "private": true,
-  "description": "WinkGo desktop Electron application",
+  "description": "WINK GO desktop Electron application",
+  "homepage": "https://winkgo.top/",
+  "bugs": {
+    "url": "https://github.com/xuweihafeichangniu-lab/wink-go/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xuweihafeichangniu-lab/wink-go.git"
+  },
   "main": "../../out/main/index.js",
   "dependencies": {
     "@winkgo/web-host": "workspace:*"

@@ -49,6 +49,17 @@ if [ ! -f "package.json" ]; then
 fi
 echo "✓ Found package.json"
 
+for file in legal/LICENSE legal/NOTICE legal/THIRD_PARTY_NOTICES.md; do
+  if [ ! -s "$file" ]; then
+    echo "❌ Missing or empty legal document: $file"
+    exit 1
+  fi
+  echo "✓ Found $file"
+done
+grep -q "Apache License" legal/LICENSE || { echo "❌ LICENSE is invalid"; exit 1; }
+grep -q "AionUi" legal/NOTICE || { echo "❌ NOTICE is missing upstream attribution"; exit 1; }
+grep -q "WINK GO" legal/THIRD_PARTY_NOTICES.md || { echo "❌ Third-party notices are invalid"; exit 1; }
+
 # 3. Check executable
 echo ""
 echo "3. Checking executable..."

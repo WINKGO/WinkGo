@@ -23,7 +23,5 @@
     "environmentSetup": "{{platform}} 环境快速部署",
     "downloadFailed": "无法打开下载地址",
     "recommended": "推荐"
-  },
-  "openSourceLicense": "本软件基于 WinkGo 开源项目修改，采用 Apache License 2.0 授权。",
-  "openSourceCopyright": "Copyright 2025 WinkGo (winkgo.top) · WINK GO 修改版本，2026。"
+  }
 }

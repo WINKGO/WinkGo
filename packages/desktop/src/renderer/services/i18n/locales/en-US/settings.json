@@ -1288,5 +1288,13 @@
     "solveWithButler": "Ask the Butler"
   },
   "providerIdConflict": "Provider ID already exists. Please try again.",
-  "autoInjectedSkillsHint": "Loaded automatically into every conversation — no need to enable them; the agent decides when to use them."
+  "autoInjectedSkillsHint": "Loaded automatically into every conversation — no need to enable them; the agent decides when to use them.",
+  "legal": {
+    "title": "Legal information",
+    "summary": "Portions of WINK GO are derived from AionUi and remain licensed under Apache License 2.0.",
+    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "apacheLicense": "Apache 2.0 License",
+    "notice": "Distribution notice",
+    "thirdPartyNotices": "Third-party notices"
+  }
 }

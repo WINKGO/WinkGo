@@ -1290,5 +1290,13 @@
     "solveWithButler": "找管家排查"
   },
   "providerIdConflict": "Provider ID 已存在，請重試。",
-  "autoInjectedSkillsHint": "每次對話都會自動載入，無需手動啟用；由智能體自行決定何時呼叫。"
+  "autoInjectedSkillsHint": "每次對話都會自動載入，無需手動啟用；由智能體自行決定何時呼叫。",
+  "legal": {
+    "title": "法律資訊",
+    "summary": "WINK GO 的部分程式碼基於 AionUi 修改，並繼續依據 Apache License 2.0 授權。",
+    "attribution": "原作 Copyright 2025-2026 AionUi (aionui.com) · WINK GO 修改 Copyright 2026 WINK GO (winkgo.top)。",
+    "apacheLicense": "Apache 2.0 授權條款",
+    "notice": "發行聲明",
+    "thirdPartyNotices": "第三方聲明"
+  }
 }

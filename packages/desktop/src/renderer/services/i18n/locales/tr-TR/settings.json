@@ -1288,5 +1288,13 @@
     "solveWithButler": "Kâhya'ya sor"
   },
   "providerIdConflict": "Provider ID zaten var. Lütfen tekrar deneyin.",
-  "autoInjectedSkillsHint": "Her sohbete otomatik olarak yüklenir — etkinleştirmeye gerek yoktur; aracı bunları ne zaman kullanacağına karar verir."
+  "autoInjectedSkillsHint": "Her sohbete otomatik olarak yüklenir — etkinleştirmeye gerek yoktur; aracı bunları ne zaman kullanacağına karar verir.",
+  "legal": {
+    "title": "Yasal bilgiler",
+    "summary": "WINK GO kodunun bazı bölümleri AionUi temel alınarak değiştirilmiştir ve Apache License 2.0 kapsamında sunulmaya devam eder.",
+    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "apacheLicense": "Apache 2.0 Lisansı",
+    "notice": "Dağıtım bildirimi",
+    "thirdPartyNotices": "Üçüncü taraf bildirimleri"
+  }
 }

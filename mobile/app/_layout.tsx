@@ -37,6 +37,15 @@ export default function RootLayout() {
                     <Stack.Screen name='connect' />
                     <Stack.Screen name='(tabs)' />
                     <Stack.Screen
+                      name='legal'
+                      options={{
+                        headerShown: true,
+                        headerTitle: '',
+                        headerBackTitle: '',
+                        animation: 'slide_from_right',
+                      }}
+                    />
+                    <Stack.Screen
                       name='file-preview'
                       options={{
                         headerShown: true,

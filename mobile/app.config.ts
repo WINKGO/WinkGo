@@ -1,6 +1,15 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import VERSION from './versions/version.json';
+
+const repositoryRoot = resolve(__dirname, '..');
+const legalDocuments = {
+  license: readFileSync(resolve(repositoryRoot, 'LICENSE'), 'utf8'),
+  notice: readFileSync(resolve(repositoryRoot, 'NOTICE'), 'utf8'),
+  thirdPartyNotices: readFileSync(resolve(repositoryRoot, 'THIRD_PARTY_NOTICES.md'), 'utf8'),
+};
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   return {
@@ -38,6 +47,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       typedRoutes: true,
     },
     extra: {
+      legalDocuments,
       eas: {
         projectId: '34b66303-fd5c-4d86-a790-0665d55f2017',
       },

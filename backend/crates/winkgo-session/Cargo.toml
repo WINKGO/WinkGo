@@ -2,6 +2,7 @@
 name = "winkgo-session"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 # Feature 002: server-authoritative SessionState control plane. Domain layer.
 # Self-contained: depends ONLY on winkgo-process (001) + winkgo-common. Spawns

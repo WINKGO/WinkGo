@@ -23,7 +23,5 @@
     "environmentSetup": "{{platform}} için hızlı kurulum",
     "downloadFailed": "İndirme bağlantısı açılamadı",
     "recommended": "Önerilen"
-  },
-  "openSourceLicense": "Bu yazılım WinkGo açık kaynak projesi temel alınarak değiştirilmiştir ve Apache License 2.0 kapsamında lisanslanmıştır.",
-  "openSourceCopyright": "Copyright 2025 WinkGo (winkgo.top) · WINK GO tarafından değiştirildi, 2026."
+  }
 }

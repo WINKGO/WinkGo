@@ -28,6 +28,16 @@ fi
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
+# Keep the canonical license and attribution documents next to every public
+# release, in addition to the copies embedded in each distributable.
+for legal_file in LICENSE NOTICE THIRD_PARTY_NOTICES.md; do
+  if [ ! -s "$legal_file" ]; then
+    echo "::error::Missing or empty legal document: $legal_file"
+    exit 1
+  fi
+  cp -f "$legal_file" "$OUTPUT_DIR/$legal_file"
+done
+
 # ---------------------------------------------------------------------------
 # 1) Copy all distributables (unique file names)
 # ---------------------------------------------------------------------------

@@ -1,13 +1,16 @@
 import React from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '../../../src/components/ui/ThemedText';
 import { useConnection } from '../../../src/context/ConnectionContext';
 import { useThemeColor } from '../../../src/hooks/useThemeColor';
+import VERSION from '../../../versions/version.json';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { config, connectionState, disconnect, tryReconnect } = useConnection();
   const surface = useThemeColor({}, 'surface');
   const border = useThemeColor({}, 'border');
@@ -94,8 +97,17 @@ export default function SettingsScreen() {
         <View style={[styles.card, { backgroundColor: surface }]}>
           <View style={[styles.row, { borderBottomColor: border }]}>
             <ThemedText>{t('settings.version')}</ThemedText>
-            <ThemedText type='caption'>0.1.0</ThemedText>
+            <ThemedText type='caption'>{VERSION.version}</ThemedText>
           </View>
+          <TouchableOpacity
+            accessibilityRole='button'
+            style={[styles.row, { borderBottomColor: border }]}
+            onPress={() => router.push('/legal')}
+            activeOpacity={0.7}
+          >
+            <ThemedText>{t('settings.legal.title')}</ThemedText>
+            <Ionicons name='chevron-forward' size={18} color={tint} />
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>

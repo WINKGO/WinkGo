@@ -1290,5 +1290,13 @@
     "solveWithButler": "집사에게 문의"
   },
   "providerIdConflict": "Provider ID가 이미 있습니다. 다시 시도하세요.",
-  "autoInjectedSkillsHint": "모든 대화에 자동으로 로드됩니다. 활성화할 필요가 없으며, 에이전트가 사용 시점을 결정합니다."
+  "autoInjectedSkillsHint": "모든 대화에 자동으로 로드됩니다. 활성화할 필요가 없으며, 에이전트가 사용 시점을 결정합니다.",
+  "legal": {
+    "title": "법적 정보",
+    "summary": "WINK GO의 일부 코드는 AionUi를 기반으로 수정되었으며 Apache License 2.0에 따라 계속 제공됩니다.",
+    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "apacheLicense": "Apache 2.0 라이선스",
+    "notice": "배포 고지",
+    "thirdPartyNotices": "제3자 고지"
+  }
 }

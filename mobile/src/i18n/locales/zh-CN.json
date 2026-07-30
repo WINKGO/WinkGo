@@ -137,6 +137,13 @@
     "changeServer": "更换服务器",
     "about": "关于",
     "version": "版本",
-    "language": "语言"
+    "language": "语言",
+    "legal": {
+      "title": "法律信息",
+      "apacheLicense": "Apache 2.0 许可证",
+      "notice": "分发声明",
+      "thirdPartyNotices": "第三方声明",
+      "unavailable": "当前构建未包含这份法律文件。"
+    }
   }
 }

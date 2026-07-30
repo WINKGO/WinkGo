@@ -1290,5 +1290,13 @@
     "solveWithButler": "執事に相談"
   },
   "providerIdConflict": "Provider ID は既に存在します。もう一度お試しください。",
-  "autoInjectedSkillsHint": "すべての会話に自動的に読み込まれます。有効化は不要で、エージェントが使用するタイミングを判断します。"
+  "autoInjectedSkillsHint": "すべての会話に自動的に読み込まれます。有効化は不要で、エージェントが使用するタイミングを判断します。",
+  "legal": {
+    "title": "法的情報",
+    "summary": "WINK GO の一部のコードは AionUi を基に変更され、Apache License 2.0 に基づき引き続き提供されます。",
+    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "apacheLicense": "Apache 2.0 ライセンス",
+    "notice": "配布通知",
+    "thirdPartyNotices": "サードパーティー通知"
+  }
 }
