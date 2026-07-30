@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "skill_id": "windows",
+  "actions": [
+    {
+      "id": "application",
+      "phrases": ["打开应用", "启动软件", "关闭软件", "结束进程"],
+      "tool_names": ["windows.open_application", "windows.kill_process", "windows.list_processes"],
+      "default_arguments": {}
+    },
+    {
+      "id": "file",
+      "phrases": ["打开文件", "读取文件", "创建文件", "搜索文件"],
+      "tool_names": ["windows.open_path", "windows.read_file", "windows.create_file", "windows.search_files"],
+      "default_arguments": {}
+    },
+    {
+      "id": "window",
+      "phrases": ["窗口", "当前窗口"],
+      "tool_names": ["windows.get_window_list"],
+      "default_arguments": {}
+    },
+    {
+      "id": "system",
+      "phrases": ["系统信息", "音量"],
+      "tool_names": ["windows.get_system_info", "windows.get_volume", "windows.set_volume"],
+      "default_arguments": {}
+    },
+    {
+      "id": "folder",
+      "phrases": ["创建文件夹", "列出文件夹", "查看目录"],
+      "tool_names": ["windows.create_folder", "windows.list_directory"],
+      "default_arguments": {}
+    },
+    {
+      "id": "cancel",
+      "phrases": ["取消Windows操作", "停止本地任务", "停止搜索文件"],
+      "tool_names": ["windows.cancel_current", "tools.cancel_all"],
+      "default_arguments": {}
+    },
+    {
+      "id": "focus_or_open_application",
+      "phrases": ["切换或打开应用", "聚焦或打开应用", "切到应用窗口"],
+      "tool_names": ["windows.windows_focus_or_open"],
+      "default_arguments": {}
+    },
+    {
+      "id": "open_search_result",
+      "phrases": ["打开搜索结果", "在资源管理器定位文件", "打开文件或文件夹"],
+      "tool_names": ["windows.open_file_or_folder"],
+      "default_arguments": {}
+    },
+    {
+      "id": "focus_window",
+      "phrases": ["聚焦窗口", "切换到窗口", "把窗口切到前台"],
+      "tool_names": ["windows.focus_window"],
+      "default_arguments": {}
+    },
+    {
+      "id": "show_desktop",
+      "phrases": ["显示桌面", "切换到桌面", "最小化窗口看桌面"],
+      "tool_names": ["windows.show_desktop"],
+      "default_arguments": {}
+    },
+    {
+      "id": "online_channel_status",
+      "phrases": ["检查联网渠道", "检查Agent Reach", "联网工具状态"],
+      "tool_names": ["windows.get_online_channel_status"],
+      "default_arguments": {}
+    },
+    {
+      "id": "browser_environment_status",
+      "phrases": ["检查浏览器环境", "浏览器是否可用", "浏览器状态"],
+      "tool_names": ["windows.get_browser_status"],
+      "default_arguments": {}
+    },
+    {
+      "id": "windows_environment_status",
+      "phrases": ["检查Windows环境", "本地化环境状态", "Windows技能自检"],
+      "tool_names": ["windows.get_environment_status"],
+      "default_arguments": {}
+    },
+    {
+      "id": "installed_apps",
+      "phrases": ["查看已安装软件", "列出本地软件", "本地软件清单"],
+      "tool_names": ["windows.list_installed_apps"],
+      "default_arguments": {}
+    },
+    {
+      "id": "command",
+      "phrases": ["执行系统命令", "运行白名单命令", "命令行查询"],
+      "tool_names": ["windows.run_command"],
+      "default_arguments": {}
+    },
+    {
+      "id": "screenshot",
+      "phrases": ["截取当前屏幕", "截一张屏幕", "保存屏幕截图"],
+      "tool_names": ["windows.take_screenshot"],
+      "default_arguments": {}
+    },
+    {
+      "id": "lock_screen",
+      "phrases": ["锁定电脑", "锁定屏幕", "立即锁屏"],
+      "tool_names": ["windows.lock_screen"],
+      "default_arguments": {}
+    },
+    {
+      "id": "mouse_click",
+      "phrases": ["点击指定坐标", "在目标窗口点击", "鼠标点击"],
+      "tool_names": ["windows.mouse_click"],
+      "default_arguments": {}
+    },
+    {
+      "id": "wallpaper",
+      "phrases": ["设置桌面壁纸", "更换电脑壁纸", "把图片设为壁纸"],
+      "tool_names": ["windows.set_wallpaper"],
+      "default_arguments": {}
+    },
+    {
+      "id": "shutdown",
+      "phrases": ["设置延时关机", "取消关机计划", "定时关闭电脑"],
+      "tool_names": ["windows.shutdown_computer"],
+      "default_arguments": {}
+    },
+    {
+      "id": "text_input",
+      "phrases": ["在目标窗口输入文字", "向当前窗口输入文本", "输入指定内容"],
+      "tool_names": ["windows.type_text"],
+      "default_arguments": {}
+    },
+    {
+      "id": "key_input",
+      "phrases": ["在目标窗口按键", "按下组合键", "发送键盘按键"],
+      "tool_names": ["windows.press_key"],
+      "default_arguments": {}
+    }
+  ]
+}

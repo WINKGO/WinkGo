@@ -1,0 +1,74 @@
+[package]
+name = "winkgo-ai-agent"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+winkgo-auth.workspace = true
+winkgo-common.workspace = true
+winkgo-db.workspace = true
+winkgo-mcp.workspace = true
+winkgo-realtime.workspace = true
+winkgo-runtime.workspace = true
+winkgo-extension.workspace = true
+winkgo-api-types.workspace = true
+winkgo-team-prompts.workspace = true
+winkgo-session.workspace = true
+winkgo-process.workspace = true
+winkgo-system.workspace = true
+axum.workspace = true
+http.workspace = true
+base64.workspace = true
+tokio.workspace = true
+tokio-tungstenite.workspace = true
+ed25519-dalek.workspace = true
+sha2.workspace = true
+hex.workspace = true
+dirs.workspace = true
+getrandom.workspace = true
+regex.workspace = true
+dashmap.workspace = true
+futures-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+which.workspace = true
+winkgo-agent.workspace = true
+winkgo-agent-providers.workspace = true
+winkgo-agent-types.workspace = true
+winkgo-agent-protocol.workspace = true
+winkgo-agent-config.workspace = true
+winkgo-agent-mcp.workspace = true
+uuid.workspace = true
+agent-client-protocol = { version = "0.11.1", features = ["unstable_session_model", "unstable_session_close", "unstable_session_usage", "unstable_session_fork", "unstable_session_additional_directories", "unstable_session_resume"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+rusqlite.workspace = true
+libc.workspace = true
+
+[features]
+# Enables the `AgentInstance::Mock` variant used by downstream test harnesses
+# (conversation/cron/team/app) to inject trait-object stubs without having to
+# spawn a real agent process. Production builds must NOT turn this on — it
+# introduces a `dyn IAgentTask` branch that defeats the enum's zero-dispatch
+# guarantee.
+test-support = []
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { workspace = true, features = ["full"] }
+tracing-subscriber.workspace = true
+winkgo-common.workspace = true
+winkgo-extension.workspace = true
+winkgo-db.workspace = true
+winkgo-process.workspace = true
+uuid.workspace = true
+sqlx.workspace = true
+
+# Integration tests under `tests/` need the `AgentInstance::Mock` variant.
+# Unlike unit tests (which see `cfg(test)` on the library), integration
+# tests compile as separate binaries and must opt in via a feature.
+[[test]]
+name = "agent_types_integration"
+required-features = ["test-support"]

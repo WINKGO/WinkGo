@@ -1,0 +1,51 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# Cargo lock (binary project should commit it, but ignore for libraries)
+# Cargo.lock  # keep committed for binary projects
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+.tmp/
+.cargo-ok
+
+# Git worktrees
+.worktree/
+.worktrees/
+worktree/
+worktrees/
+
+# winkgo_agent session data
+.winkgo_agent/
+
+# Debug artifacts
+*.pdb
+*.dSYM/
+
+# Test coverage
+*.profraw
+*.profdata
+tarpaulin-report.html
+lcov.info
+coverage/
+
+# Superpowers brainstorm tool (runtime files, session data)
+.superpowers/
+docs/superpowers/
+
+# Superset
+.superset/

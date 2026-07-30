@@ -1,0 +1,56 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/triage-map.json
+          sparse-checkout-cone-mode: false
+
+      - name: Label and assign by module
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const map = JSON.parse(fs.readFileSync('.github/triage-map.json', 'utf8'));
+            const issue = context.payload.issue;
+            const issue_number = issue.number;
+            const body = issue.body || '';
+
+            const section = body.match(/^###\s*Module\s*\r?\n+([^\r\n#]+)/m);
+            const selected = section ? section[1].trim() : null;
+            const matched = selected
+              ? (map.modules.find((entry) => entry.module === selected) ?? null)
+              : null;
+            const target = matched ?? map.fallback;
+
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number,
+              labels: [target.label],
+            });
+
+            try {
+              await github.rest.issues.addAssignees({
+                ...context.repo,
+                issue_number,
+                assignees: [target.owner],
+              });
+            } catch (error) {
+              core.warning(`Failed to assign ${target.owner}: ${error.message}`);
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number,
+                labels: ['needs-triage'],
+              });
+            }

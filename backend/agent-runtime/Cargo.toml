@@ -1,0 +1,137 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/winkgo-agent-types",
+    "crates/winkgo-agent-protocol",
+    "crates/winkgo-agent-compact",
+    "crates/winkgo-agent-process",
+    "crates/winkgo-agent-config",
+    "crates/winkgo-agent-providers",
+    "crates/winkgo-agent-tools",
+    "crates/winkgo-agent-mcp",
+    "crates/winkgo-agent-skills",
+    "crates/winkgo-agent-memory",
+    "crates/winkgo-agent",
+    "crates/winkgo-agent-cli",
+    "workspace-hack",
+]
+
+[workspace.package]
+version = "0.2.7"
+edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/xuweihafeichangniu-lab/wink"
+
+[workspace.dependencies]
+# Internal crates
+winkgo-agent-types     = { path = "crates/winkgo-agent-types" }
+winkgo-agent-protocol  = { path = "crates/winkgo-agent-protocol" }
+winkgo-agent-compact   = { path = "crates/winkgo-agent-compact" }
+winkgo-agent-process   = { path = "crates/winkgo-agent-process" }
+winkgo-agent-config    = { path = "crates/winkgo-agent-config" }
+winkgo-agent-providers = { path = "crates/winkgo-agent-providers" }
+winkgo-agent-tools     = { path = "crates/winkgo-agent-tools" }
+winkgo-agent-mcp       = { path = "crates/winkgo-agent-mcp" }
+winkgo-agent-skills    = { path = "crates/winkgo-agent-skills" }
+winkgo-agent-memory    = { path = "crates/winkgo-agent-memory" }
+winkgo-agent     = { path = "crates/winkgo-agent" }
+
+# Async runtime
+tokio   = { version = "1", features = ["full"] }
+futures = "0.3"
+
+# HTTP client
+# HTTP client — use rustls to avoid native OpenSSL dep during cross-compilation
+http = "1"
+reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"], default-features = false }
+
+# Serialization
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid       = { version = "1", features = ["v7"] }
+
+# Async trait support
+async-trait = "0.1"
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive", "env"] }
+
+# Error handling
+thiserror = "2"
+anyhow    = "1"
+
+# File globbing
+glob = "0.3"
+
+# Executable lookup for cross-platform shell detection
+which = "8"
+
+# LRU cache (for file state tracking)
+lru = "0.18"
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# TOML config parsing
+toml = "1.0"
+
+# YAML frontmatter parsing (for skill files)
+serde_yaml = "0.9"
+
+# XDG/platform config directory
+dirs = "6"
+
+# Regular expressions (for argument substitution in skills)
+regex = "1"
+
+# File system change notification (for skill hot-reload)
+notify = "8"
+
+# Terminal color support
+crossterm = "0.29"
+
+# TTY detection
+is-terminal = "0.4"
+
+# AWS SigV4 signing (for Bedrock provider)
+aws-sigv4            = "1"
+aws-credential-types = { version = "1", features = ["hardcoded-credentials"] }
+aws-config           = { version = "1", features = ["behavior-version-latest"] }
+aws-sdk-sts          = { version = "1", default-features = false, features = ["rt-tokio", "default-https-client", "sigv4a"] }
+
+# Pin rustls-webpki to fix RUSTSEC-2026-{0098,0099,0104}
+rustls-webpki = "0.103.13"
+
+# JWT creation (for Vertex GCP service account auth)
+jsonwebtoken = "10"
+
+# Base64 encoding
+base64 = "0.22"
+
+# URL parsing
+url = "2"
+
+# Structured logging
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
+
+unicode-width = "0.2.2"
+
+# Unix file flags (O_NOFOLLOW) for secure bundled skill file extraction
+libc = "0.2"
+
+# Windows process containment
+windows-sys = "0.61"
+
+# workspace-hack (managed by cargo-hakari for build speed)
+workspace-hack = { path = "workspace-hack" }
+
+# Test utilities
+wiremock    = "0.6"
+tokio-test  = "0.4"
+tempfile    = "3"
+mockall     = "0.15"
+rstest      = "0.26"
+serial_test = "3"
+insta       = { version = "1", features = ["json"] }

@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "netease_music",
+  "ui_id": "neteaseMusic",
+  "config_id": "music",
+  "diagnostic_id": "netease_music",
+  "release_skill_id": "music",
+  "client_key": "cloud",
+  "order": 10,
+  "display_name": "网易云音乐",
+  "canonical_alias": "网易云音乐",
+  "icon_key": "music",
+  "color": "linear-gradient(135deg, #e74c3c, #c0392b)",
+  "description": "独立控制网易云音乐，支持我喜欢的音乐、歌单、官方榜单、每日推荐、雷达与播放控制。",
+  "strong_aliases": ["网易云音乐", "网易云", "网易音乐", "云村音乐", "云音乐"],
+  "weak_aliases": ["音乐", "播放器", "听歌", "下一首", "上一首", "暂停", "歌单"],
+  "capability_labels": ["我喜欢的音乐", "歌单与历史", "官方榜单与推荐", "播放控制"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "网易云音乐",
+  "tool_selectors": {
+    "prefixes": ["music.cloud_"],
+    "names": ["music.launch_netease_music", "music.get_netease_config", "music.play_roaming"],
+    "shared_names": [
+      "music.cancel_current",
+      "music.control_playback",
+      "music.control_volume",
+      "music.get_controller_info",
+      "music.like_current_song",
+      "music.open_music_app",
+      "music.search_and_play",
+      "music.search_and_play_playlist",
+      "music.station_close",
+      "music.station_lyrics_toggle",
+      "music.station_now_snapshot",
+      "music.station_open",
+      "music.station_play_toggle",
+      "music.station_track_next",
+      "music.station_track_previous",
+      "music.system_volume_lower",
+      "music.system_volume_raise",
+      "music.system_volume_set",
+      "music.toggle_lyrics",
+      "music.toggle_mini_mode",
+      "music.station_compact_toggle",
+      "music.track_heart_toggle",
+      "music.track_resolve_and_start"
+    ]
+  },
+  "compatibility_tool_aliases": {
+    "music.cloud_app_open": {
+      "canonical_tool_name": "music.station_open",
+      "default_arguments": { "player": "cloud", "minimize": false }
+    },
+    "music.cloud_radar_start": {
+      "canonical_tool_name": "music.cloud_radar_mix_start"
+    },
+    "music.cloud_roaming_now": {
+      "canonical_tool_name": "music.play_roaming"
+    },
+    "music.launch_netease_music": {
+      "canonical_tool_name": "music.station_open",
+      "default_arguments": { "player": "cloud", "minimize": false },
+      "argument_renames": { "minimize_window": "minimize" }
+    },
+    "music.like_current_song": {
+      "canonical_tool_name": "music.track_heart_toggle",
+      "default_arguments": { "player": "cloud" }
+    },
+    "music.open_music_app": {
+      "canonical_tool_name": "music.station_open",
+      "default_arguments": { "player": "cloud" },
+      "argument_transforms": {
+        "visible": { "target": "minimize", "operation": "not" }
+      }
+    },
+    "music.search_and_play": {
+      "canonical_tool_name": "music.track_resolve_and_start",
+      "default_arguments": { "player": "cloud" },
+      "drop_arguments": ["minimize_window"]
+    },
+    "music.search_and_play_playlist": {
+      "canonical_tool_name": "music.cloud_playlist_play"
+    },
+    "music.station_play_toggle": {
+      "canonical_tool_name": "music.control_playback",
+      "default_arguments": { "action": "play", "player": "cloud" },
+      "drop_arguments": ["player"]
+    },
+    "music.toggle_lyrics": {
+      "canonical_tool_name": "music.station_lyrics_toggle",
+      "default_arguments": { "player": "cloud" }
+    },
+    "music.toggle_mini_mode": {
+      "canonical_tool_name": "music.station_compact_toggle",
+      "default_arguments": { "player": "cloud" }
+    }
+  },
+  "internal_tool_names": [
+    "music.get_controller_info",
+    "music.get_netease_config",
+    "music.cloud_player_state_snapshot",
+    "music.cloud_collection_state_snapshot",
+    "music.control_volume"
+  ],
+  "config_scope_id": "netease_music"
+}

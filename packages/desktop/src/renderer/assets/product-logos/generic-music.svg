@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="music-bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5b8cff"/>
+      <stop offset="1" stop-color="#7c5cff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="20" fill="url(#music-bg)"/>
+  <path
+    d="M26 17v27.5a8 8 0 1 1-5-7.42V22.2l24-5.2v21.5a8 8 0 1 1-5-7.42V20.86L26 24v-7Z"
+    fill="#fff"
+  />
+</svg>

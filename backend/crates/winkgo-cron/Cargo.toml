@@ -1,0 +1,34 @@
+[package]
+name = "winkgo-cron"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+winkgo-common.workspace = true
+winkgo-db.workspace = true
+winkgo-api-types.workspace = true
+winkgo-realtime.workspace = true
+winkgo-conversation.workspace = true
+winkgo-ai-agent.workspace = true
+winkgo-auth.workspace = true
+winkgo-system.workspace = true
+axum.workspace = true
+cron.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+iana-time-zone.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+dashmap.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+tempfile.workspace = true
+tower = { workspace = true, features = ["util"] }
+# Enable the `AgentInstance::Mock` variant so tests can build fake agents
+# through the trait-object escape hatch without spawning real CLI processes.
+winkgo-ai-agent = { workspace = true, features = ["test-support"] }

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "google_antigravity",
+  "ui_id": "antigravity",
+  "config_id": "antigravity",
+  "diagnostic_id": "antigravity",
+  "release_skill_id": "antigravity",
+  "order": 120,
+  "display_name": "Google Antigravity",
+  "canonical_alias": "Google Antigravity",
+  "icon_key": "rocket",
+  "color": "linear-gradient(135deg, #6c5ce7, #a29bfe)",
+  "description": "独立的 Google Antigravity 桌面代理启动、任务投递与可见结果读取入口。",
+  "strong_aliases": ["GoogleAntigravity", "Google Antigravity", "Antigravity", "谷歌反重力"],
+  "weak_aliases": ["桌面代理", "代码助手", "任务", "新对话"],
+  "capability_labels": ["启动客户端", "视觉定位", "任务投递", "结果读取"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "Google Antigravity",
+  "tool_selectors": {
+    "prefixes": [],
+    "names": [],
+    "shared_names": [
+      "desktop_agents.check_agent",
+      "desktop_agents.close_agent",
+      "desktop_agents.desktop_agent_new_task",
+      "desktop_agents.desktop_agent_read_window",
+      "desktop_agents.desktop_agent_stop_task",
+      "desktop_agents.get_last_reply",
+      "desktop_agents.get_last_status",
+      "desktop_agents.get_task_result",
+      "desktop_agents.open_agent",
+      "desktop_agents.send_task",
+      "desktop_agents.wait_until_ready"
+    ]
+  },
+  "internal_tool_names": ["desktop_agents.wait_until_ready"],
+  "config_scope_id": "google_antigravity"
+}

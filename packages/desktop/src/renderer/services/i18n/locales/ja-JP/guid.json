@@ -1,0 +1,29 @@
+{
+  "promptExamplesHint": "これらの指示を試す",
+  "defaultPrompts": {
+    "understand": "このプロジェクトを調べて、何をするものか、どこから手を付ければいいかを分かりやすく教えて",
+    "cleanup": "このフォルダ内の重複ファイルや不要なファイルを見つけて、確認できるようにリストにして",
+    "create": "おしゃれな個人ホームページを作って、完成したらそのまま開いて見せて"
+  },
+  "selectAssistantHint": "アシスタントを選択してタスクを開始",
+  "workspace": {
+    "workInProject": "プロジェクトで作業",
+    "optional": "任意",
+    "clearWorkspace": "クリア",
+    "specifyWorkspace": "プロジェクトフォルダを選択",
+    "searchPlaceholder": "プロジェクトを検索…",
+    "noProject": "プロジェクトなし"
+  },
+  "installerCenter": {
+    "entry": "ソフトウェアインストールセンター",
+    "title": "WINK GO インストールセンター",
+    "subtitle": "Codex、Claude Code、Antigravity のワンクリック導入パッケージ",
+    "windows": "Windows インストーラー",
+    "macos": "macOS インストーラー",
+    "environmentSetup": "{{platform}} 環境をすばやくセットアップ",
+    "downloadFailed": "ダウンロードリンクを開けませんでした",
+    "recommended": "おすすめ"
+  },
+  "openSourceLicense": "本ソフトウェアは WinkGo オープンソースプロジェクトを基に改変され、Apache License 2.0 の下で提供されます。",
+  "openSourceCopyright": "Copyright 2025 WinkGo (winkgo.top) · WINK GO により改変、2026年。"
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "skill_id": "openclaw",
+  "actions": [
+    {
+      "id": "start",
+      "phrases": ["启动", "打开网关"],
+      "tool_names": ["openclaw.start_gateway"],
+      "default_arguments": {}
+    },
+    {
+      "id": "chat",
+      "phrases": ["执行", "对话", "任务"],
+      "tool_names": ["openclaw.chat"],
+      "default_arguments": {}
+    },
+    {
+      "id": "status",
+      "phrases": ["状态", "检查"],
+      "tool_names": ["openclaw.check_runtime", "openclaw.get_last_status"],
+      "default_arguments": {}
+    },
+    {
+      "id": "result",
+      "phrases": ["回复", "结果"],
+      "tool_names": ["openclaw.get_last_reply", "openclaw.get_task_result"],
+      "default_arguments": {}
+    },
+    {
+      "id": "stop",
+      "phrases": ["停止", "取消"],
+      "tool_names": ["openclaw.cancel_current"],
+      "default_arguments": {}
+    }
+  ]
+}

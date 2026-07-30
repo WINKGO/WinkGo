@@ -1,0 +1,1138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WinkGo Extension Manifest v1",
+  "description": "Schema for winkgo-extension.json as accepted by the WinkGo extension manifest parser. Canonical snake_case fields and supported compatibility aliases are both described.",
+  "type": "object",
+  "required": ["name", "version"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path or URI of this schema."
+    },
+    "name": {
+      "$ref": "#/$defs/extensionName"
+    },
+    "version": {
+      "$ref": "#/$defs/semver"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Compatibility alias for display_name."
+    },
+    "description": {
+      "type": "string"
+    },
+    "author": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "homepage": {
+      "type": "string"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Path relative to the extension root."
+    },
+    "engine": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/engine"
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "api_version": {
+      "type": "string"
+    },
+    "apiVersion": {
+      "type": "string",
+      "description": "Compatibility alias for api_version."
+    },
+    "dependencies": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/stringMap"
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "entry_point": {
+      "type": "string"
+    },
+    "entryPoint": {
+      "type": "string",
+      "description": "Compatibility alias for entry_point."
+    },
+    "permissions": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/permissions"
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "contributes": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/contributes"
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "lifecycle": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/lifecycle"
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "i18n": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/i18n"
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "plainString": {
+      "type": "string"
+    },
+    "fileRef": {
+      "type": "string",
+      "pattern": "^\\$file:\\s*\\S.*$",
+      "description": "A file reference resolved relative to the extension root before deserialization."
+    },
+    "extensionName": {
+      "type": "string",
+      "minLength": 1,
+      "allOf": [
+        {
+          "not": {
+            "pattern": "^[Ww][Ii][Nn][Kk][Gg][Oo]-"
+          }
+        },
+        {
+          "not": {
+            "pattern": "^[Ii][Nn][Tt][Ee][Rr][Nn][Aa][Ll]-"
+          }
+        },
+        {
+          "not": {
+            "pattern": "^[Bb][Uu][Ii][Ll][Tt][Ii][Nn]-"
+          }
+        },
+        {
+          "not": {
+            "pattern": "^[Ss][Yy][Ss][Tt][Ee][Mm]-"
+          }
+        }
+      ]
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stringMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "engine": {
+      "type": "object",
+      "properties": {
+        "winkgo": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "networkPermission": {
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "required": ["allowedDomains", "reasoning"],
+          "properties": {
+            "allowedDomains": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "reasoning": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "permissions": {
+      "type": "object",
+      "properties": {
+        "storage": {
+          "type": "boolean"
+        },
+        "network": {
+          "$ref": "#/$defs/networkPermission"
+        },
+        "shell": {
+          "type": "boolean"
+        },
+        "filesystem": {
+          "enum": ["extension-only", "workspace", "full"]
+        },
+        "clipboard": {
+          "type": "boolean"
+        },
+        "active_user": {
+          "type": "boolean"
+        },
+        "events": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "lifecycle": {
+      "type": "object",
+      "properties": {
+        "on_install": {
+          "type": "string"
+        },
+        "onInstall": {
+          "type": "string",
+          "description": "Compatibility alias for on_install."
+        },
+        "on_uninstall": {
+          "type": "string"
+        },
+        "onUninstall": {
+          "type": "string",
+          "description": "Compatibility alias for on_uninstall."
+        },
+        "on_activate": {
+          "type": "string"
+        },
+        "onActivate": {
+          "type": "string",
+          "description": "Compatibility alias for on_activate."
+        },
+        "on_deactivate": {
+          "type": "string"
+        },
+        "onDeactivate": {
+          "type": "string",
+          "description": "Compatibility alias for on_deactivate."
+        }
+      },
+      "additionalProperties": true
+    },
+    "i18n": {
+      "type": "object",
+      "properties": {
+        "locales": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "directory": {
+          "type": "string"
+        },
+        "localesDir": {
+          "type": "string",
+          "description": "Compatibility alias for directory."
+        },
+        "defaultLocale": {
+          "type": "string",
+          "description": "Compatibility shorthand used as the single locales entry when locales is absent."
+        }
+      },
+      "anyOf": [
+        {
+          "properties": {
+            "locales": {}
+          },
+          "required": ["locales"]
+        },
+        {
+          "properties": {
+            "defaultLocale": {}
+          },
+          "required": ["defaultLocale"]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "fieldDescriptor": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "default": {},
+        "options": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": true
+    },
+    "acpAdapter": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/plainString"
+        },
+        "name": {
+          "$ref": "#/$defs/plainString"
+        },
+        "description": {
+          "type": "string"
+        },
+        "cli_command": {
+          "type": "string"
+        },
+        "cliCommand": {
+          "type": "string",
+          "description": "Compatibility alias for cli_command."
+        },
+        "default_cli_path": {
+          "type": "string"
+        },
+        "defaultCliPath": {
+          "type": "string",
+          "description": "Compatibility alias for default_cli_path."
+        },
+        "acp_args": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "acpArgs": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "env": {
+          "$ref": "#/$defs/stringMap"
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Compatibility alias for avatar."
+        },
+        "auth_required": {
+          "type": "boolean"
+        },
+        "authRequired": {
+          "type": "boolean",
+          "description": "Compatibility alias for auth_required."
+        },
+        "supports_streaming": {
+          "type": "boolean"
+        },
+        "supportsStreaming": {
+          "type": "boolean",
+          "description": "Compatibility alias for supports_streaming."
+        },
+        "connection_type": {
+          "type": "string"
+        },
+        "connectionType": {
+          "type": "string",
+          "description": "Compatibility alias for connection_type."
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "models": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "yolo_mode": {},
+        "yoloMode": {
+          "description": "Compatibility alias for yolo_mode."
+        },
+        "health_check": {},
+        "healthCheck": {
+          "description": "Compatibility alias for health_check."
+        },
+        "api_key_fields": {
+          "type": "array",
+          "items": {}
+        },
+        "apiKeyFields": {
+          "type": "array",
+          "items": {},
+          "description": "Compatibility alias for api_key_fields."
+        }
+      },
+      "additionalProperties": true
+    },
+    "mcpServer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Optional in source manifests; the parser derives it from name when omitted."
+        },
+        "name": {
+          "$ref": "#/$defs/plainString"
+        },
+        "description": {
+          "type": "string"
+        },
+        "command": {
+          "description": "Provider-specific MCP configuration."
+        },
+        "args": {
+          "description": "Provider-specific MCP configuration."
+        },
+        "env": {
+          "description": "Provider-specific MCP configuration."
+        },
+        "enabled": {
+          "description": "Provider-specific MCP configuration."
+        },
+        "transport": {
+          "description": "Provider-specific MCP configuration."
+        }
+      },
+      "additionalProperties": true
+    },
+    "assistant": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/plainString"
+        },
+        "name": {
+          "$ref": "#/$defs/plainString"
+        },
+        "description": {
+          "type": "string"
+        },
+        "system_prompt": {
+          "type": "string"
+        },
+        "systemPrompt": {
+          "type": "string",
+          "description": "Compatibility alias for system_prompt."
+        },
+        "icon": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Compatibility alias for icon."
+        },
+        "context": {
+          "type": "string"
+        },
+        "contextFile": {
+          "type": "string",
+          "description": "Compatibility path converted to an @file: context reference."
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "agentId": {
+          "type": "string",
+          "description": "Compatibility alias for agent_id."
+        },
+        "presetAgentType": {
+          "type": "string",
+          "deprecated": true,
+          "description": "Legacy example metadata retained for source compatibility; the current Rust manifest model ignores this field."
+        },
+        "enabled_skills": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "enabledSkills": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "prompts": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "models": {
+          "$ref": "#/$defs/stringArray"
+        }
+      },
+      "additionalProperties": true
+    },
+    "agent": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/plainString"
+        },
+        "name": {
+          "$ref": "#/$defs/plainString"
+        },
+        "description": {
+          "type": "string"
+        },
+        "agent_type": {
+          "type": "string"
+        },
+        "agentType": {
+          "type": "string",
+          "description": "Compatibility alias for agent_type."
+        },
+        "presetAgentType": {
+          "type": "string",
+          "deprecated": true,
+          "description": "Legacy example metadata retained for source compatibility; the current Rust manifest model ignores this field."
+        },
+        "context": {
+          "type": "string"
+        },
+        "contextFile": {
+          "type": "string",
+          "description": "Compatibility path converted to an @file: context reference."
+        },
+        "icon": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Compatibility alias for icon."
+        },
+        "enabled_skills": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "enabledSkills": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "prompts": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "models": {
+          "$ref": "#/$defs/stringArray"
+        }
+      },
+      "additionalProperties": true
+    },
+    "skill": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/plainString"
+        },
+        "description": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string",
+          "description": "Compatibility alias for path."
+        }
+      },
+      "additionalProperties": true
+    },
+    "theme": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/plainString"
+        },
+        "name": {
+          "$ref": "#/$defs/plainString"
+        },
+        "description": {
+          "type": "string"
+        },
+        "css_file": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string",
+          "description": "Compatibility alias for css_file."
+        },
+        "cover_image": {
+          "type": "string"
+        },
+        "cover": {
+          "type": "string",
+          "description": "Compatibility alias for cover_image."
+        }
+      },
+      "anyOf": [
+        {
+          "properties": {
+            "css_file": {}
+          },
+          "required": ["css_file"]
+        },
+        {
+          "properties": {
+            "file": {}
+          },
+          "required": ["file"]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "channelPlugin": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "description": "Compatibility alias used as id when id is absent."
+        },
+        "name": {
+          "$ref": "#/$defs/plainString"
+        },
+        "description": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "entry_point": {
+          "type": "string"
+        },
+        "entryPoint": {
+          "type": "string",
+          "description": "Compatibility alias for entry_point."
+        },
+        "icon": {
+          "type": "string"
+        },
+        "credential_fields": {
+          "type": "array",
+          "items": {}
+        },
+        "credentialFields": {
+          "type": "array",
+          "items": {}
+        },
+        "config_fields": {
+          "type": "array",
+          "items": {}
+        },
+        "configFields": {
+          "type": "array",
+          "items": {}
+        }
+      },
+      "anyOf": [
+        {
+          "properties": {
+            "id": {}
+          },
+          "required": ["id"]
+        },
+        {
+          "properties": {
+            "type": {}
+          },
+          "required": ["type"]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "webuiRoute": {
+      "type": "object",
+      "required": ["path", "method", "handler"],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "handler": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "webuiEntry": {
+      "type": "object",
+      "required": ["id", "directory"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/plainString"
+        },
+        "directory": {
+          "type": "string"
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/webuiRoute"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "legacyWebuiRoute": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "handler": {
+          "type": "string"
+        },
+        "entryPoint": {
+          "type": "string",
+          "description": "Compatibility alias for handler."
+        },
+        "description": {
+          "type": "string"
+        },
+        "auth": {
+          "type": "boolean"
+        }
+      },
+      "anyOf": [
+        {
+          "properties": {
+            "handler": {}
+          },
+          "required": ["handler"]
+        },
+        {
+          "properties": {
+            "entryPoint": {}
+          },
+          "required": ["entryPoint"]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "legacyStaticAsset": {
+      "type": "object",
+      "properties": {
+        "urlPrefix": {
+          "type": "string"
+        },
+        "url_prefix": {
+          "type": "string"
+        },
+        "directory": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "legacyWebui": {
+      "type": "object",
+      "not": {
+        "properties": {
+          "directory": {},
+          "routes": {}
+        },
+        "required": ["directory", "routes"]
+      },
+      "properties": {
+        "apiRoutes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/legacyWebuiRoute"
+          }
+        },
+        "api_routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/legacyWebuiRoute"
+          }
+        },
+        "staticAssets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/legacyStaticAsset"
+          }
+        },
+        "static_assets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/legacyStaticAsset"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "settingsTabPosition": {
+      "type": "object",
+      "required": ["placement"],
+      "properties": {
+        "relativeTo": {
+          "type": "string"
+        },
+        "relative_to": {
+          "type": "string"
+        },
+        "anchor": {
+          "type": "string",
+          "description": "Compatibility alias for relativeTo."
+        },
+        "placement": {
+          "type": "string"
+        }
+      },
+      "anyOf": [
+        {
+          "properties": {
+            "relativeTo": {}
+          },
+          "required": ["relativeTo"]
+        },
+        {
+          "properties": {
+            "relative_to": {}
+          },
+          "required": ["relative_to"]
+        },
+        {
+          "properties": {
+            "anchor": {}
+          },
+          "required": ["anchor"]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "settingsTab": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/plainString"
+        },
+        "label": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "description": "Compatibility alias for label."
+        },
+        "icon": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "entryPoint": {
+          "type": "string",
+          "description": "Compatibility alias for url."
+        },
+        "position": {
+          "$ref": "#/$defs/settingsTabPosition"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      },
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "label": {}
+              },
+              "required": ["label"]
+            },
+            {
+              "properties": {
+                "name": {}
+              },
+              "required": ["name"]
+            }
+          ]
+        },
+        {
+          "anyOf": [
+            {
+              "properties": {
+                "url": {}
+              },
+              "required": ["url"]
+            },
+            {
+              "properties": {
+                "entryPoint": {}
+              },
+              "required": ["entryPoint"]
+            }
+          ]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "modelProvider": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/plainString"
+        },
+        "name": {
+          "$ref": "#/$defs/plainString"
+        },
+        "description": {
+          "type": "string"
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string",
+          "description": "Compatibility alias for protocol."
+        },
+        "base_url": {
+          "type": "string"
+        },
+        "baseUrl": {
+          "type": "string",
+          "description": "Compatibility alias for base_url."
+        },
+        "models": {
+          "$ref": "#/$defs/stringArray"
+        }
+      },
+      "additionalProperties": true
+    },
+    "acpAdapterList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/acpAdapter"
+          }
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "mcpServerList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/mcpServer"
+          }
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "assistantList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/assistant"
+          }
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "agentList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/agent"
+          }
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "skillList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/skill"
+          }
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "themeList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/theme"
+          }
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "channelPluginList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/channelPlugin"
+          }
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "webuiContribution": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/webuiEntry"
+          }
+        },
+        {
+          "$ref": "#/$defs/legacyWebui"
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "settingsTabList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/settingsTab"
+          }
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "modelProviderList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/modelProvider"
+          }
+        },
+        {
+          "$ref": "#/$defs/fileRef"
+        }
+      ]
+    },
+    "contributes": {
+      "type": "object",
+      "properties": {
+        "acp_adapters": {
+          "$ref": "#/$defs/acpAdapterList"
+        },
+        "acpAdapters": {
+          "$ref": "#/$defs/acpAdapterList"
+        },
+        "mcp_servers": {
+          "$ref": "#/$defs/mcpServerList"
+        },
+        "mcpServers": {
+          "$ref": "#/$defs/mcpServerList"
+        },
+        "assistants": {
+          "$ref": "#/$defs/assistantList"
+        },
+        "agents": {
+          "$ref": "#/$defs/agentList"
+        },
+        "skills": {
+          "$ref": "#/$defs/skillList"
+        },
+        "themes": {
+          "$ref": "#/$defs/themeList"
+        },
+        "channel_plugins": {
+          "$ref": "#/$defs/channelPluginList"
+        },
+        "channelPlugins": {
+          "$ref": "#/$defs/channelPluginList"
+        },
+        "webui": {
+          "$ref": "#/$defs/webuiContribution"
+        },
+        "settings_tabs": {
+          "$ref": "#/$defs/settingsTabList"
+        },
+        "settingsTabs": {
+          "$ref": "#/$defs/settingsTabList"
+        },
+        "model_providers": {
+          "$ref": "#/$defs/modelProviderList"
+        },
+        "modelProviders": {
+          "$ref": "#/$defs/modelProviderList"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

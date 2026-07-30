@@ -1,0 +1,29 @@
+{
+  "promptExamplesHint": "Спробуйте ці інструкції",
+  "defaultPrompts": {
+    "understand": "Ознайомся з цим проєктом і поясни простими словами, що він робить і з чого почати",
+    "cleanup": "Знайди в цій папці дублікати та непотрібні файли й покажи список для мого підтвердження",
+    "create": "Зроби мені гарну персональну домашню сторінку й відкрий її, коли завершиш"
+  },
+  "selectAssistantHint": "Виберіть асистента, щоб розпочати завдання",
+  "workspace": {
+    "workInProject": "Працювати в проєкті",
+    "optional": "Необов'язково",
+    "clearWorkspace": "Очистити",
+    "specifyWorkspace": "Вибрати папку проєкту",
+    "searchPlaceholder": "Пошук проєктів…",
+    "noProject": "Без проєкту"
+  },
+  "installerCenter": {
+    "entry": "Центр встановлення програм",
+    "title": "Центр встановлення WINK GO",
+    "subtitle": "Пакети швидкого встановлення Codex, Claude Code та Antigravity",
+    "windows": "Інсталятори Windows",
+    "macos": "Інсталятори macOS",
+    "environmentSetup": "Швидке налаштування для {{platform}}",
+    "downloadFailed": "Не вдалося відкрити посилання для завантаження",
+    "recommended": "Рекомендовано"
+  },
+  "openSourceLicense": "Це програмне забезпечення створено на основі відкритого проєкту WinkGo та ліцензовано за Apache License 2.0.",
+  "openSourceCopyright": "Copyright 2025 WinkGo (winkgo.top) · Змінено WINK GO, 2026."
+}

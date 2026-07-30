@@ -1,0 +1,29 @@
+# Reference template only. WINK GO does not currently claim an official
+# Homebrew cask. Replace the version and checksums when publishing one.
+
+cask "winkgo" do
+  arch arm: "arm64", intel: "x64"
+
+  version "2.1.45"
+  sha256 arm: :no_check, intel: :no_check
+
+  url "https://github.com/xuweihafeichangniu-lab/wink/releases/download/v#{version}/WINK-GO-Free-#{version}-mac-#{arch}.dmg"
+  name "WINK GO"
+  desc "Desktop workspace for AI agents"
+  homepage "https://winkgo.top"
+
+  livecheck do
+    url "https://github.com/xuweihafeichangniu-lab/wink"
+    strategy :github_latest
+  end
+
+  depends_on macos: ">= :big_sur"
+
+  app "WINK GO.app"
+
+  zap trash: [
+    "~/Library/Application Support/WINK GO",
+    "~/Library/Preferences/com.winkgo.desktop.plist",
+    "~/Library/Saved Application State/com.winkgo.desktop.savedState",
+  ]
+end

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "openclaw",
+  "ui_id": "openclaw",
+  "config_id": "openclaw",
+  "diagnostic_id": "openclaw",
+  "release_skill_id": "openclaw",
+  "order": 190,
+  "display_name": "OpenClaw",
+  "canonical_alias": "OpenClaw",
+  "icon_key": "cpu",
+  "color": "linear-gradient(135deg, #a29bfe, #6c5ce7)",
+  "description": "独立的 OpenClaw 本地网关、任务编排和状态入口。",
+  "strong_aliases": ["OpenClaw", "Open Claw", "开放爪助手"],
+  "weak_aliases": ["本地网关", "任务编排", "代理"],
+  "capability_labels": ["本地网关", "可视化面板", "任务编排", "状态读取"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "OpenClaw",
+  "tool_selectors": {
+    "prefixes": ["openclaw.", "openclaw_web."],
+    "names": [],
+    "shared_names": []
+  },
+  "compatibility_tool_aliases": {
+    "openclaw_web.cancel_current": {
+      "canonical_tool_name": "openclaw.cancel_current"
+    }
+  },
+  "config_scope_id": "openclaw"
+}

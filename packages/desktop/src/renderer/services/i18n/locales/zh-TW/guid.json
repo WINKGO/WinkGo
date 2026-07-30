@@ -1,0 +1,29 @@
+{
+  "promptExamplesHint": "試試這些指令",
+  "defaultPrompts": {
+    "understand": "了解一下這個專案，用白話告訴我它是做什麼的、從哪裡入手",
+    "cleanup": "幫我找出這個資料夾裡重複和沒用的檔案，列出來讓我確認",
+    "create": "幫我做一個精美的個人主頁網頁，做好後直接打開給我看"
+  },
+  "selectAssistantHint": "選擇一位助手開始任務",
+  "workspace": {
+    "workInProject": "在專案中工作",
+    "optional": "可選",
+    "clearWorkspace": "清除",
+    "specifyWorkspace": "選擇專案資料夾",
+    "searchPlaceholder": "搜尋專案…",
+    "noProject": "不使用專案"
+  },
+  "installerCenter": {
+    "entry": "軟體安裝中心",
+    "title": "WINK GO 安裝中心",
+    "subtitle": "一鍵取得 Codex、Claude Code 與 Antigravity 部署套件",
+    "windows": "Windows 安裝套件",
+    "macos": "macOS 安裝套件",
+    "environmentSetup": "{{platform}} 環境快速部署",
+    "downloadFailed": "無法開啟下載連結",
+    "recommended": "推薦"
+  },
+  "openSourceLicense": "本軟體基於 WinkGo 開源專案修改，採用 Apache License 2.0 授權。",
+  "openSourceCopyright": "Copyright 2025 WinkGo (winkgo.top) · WINK GO 修改版本，2026。"
+}

@@ -1,0 +1,57 @@
+/**
+ * @license
+ * Copyright 2026 WINK GO (winkgo.top)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { httpRequest } from '@/common/adapter/httpBridge';
+import { ProcessConfig } from './initStorage';
+
+const CLOSE_TO_TRAY_CONFIG_KEY = 'system.closeToTray';
+const LEGACY_BACKEND_CLOSE_TO_TRAY_KEY = 'closeToTray';
+
+const readBackendBoolean = async (key: string): Promise<boolean | undefined> => {
+  try {
+    const value = await httpRequest<Record<string, unknown>>(
+      'GET',
+      `/api/settings/client?keys=${encodeURIComponent(key)}`,
+      undefined,
+      {
+        silentStatuses: [404],
+      }
+    );
+    const entry = value?.[key];
+    return typeof entry === 'boolean' ? entry : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+export const readCloseToTraySetting = async (): Promise<boolean> => {
+  const localValue = await ProcessConfig.get(CLOSE_TO_TRAY_CONFIG_KEY);
+  if (typeof localValue === 'boolean') {
+    return localValue;
+  }
+
+  const backendValue =
+    (await readBackendBoolean(CLOSE_TO_TRAY_CONFIG_KEY)) ??
+    (await readBackendBoolean(LEGACY_BACKEND_CLOSE_TO_TRAY_KEY));
+
+  if (typeof backendValue === 'boolean') {
+    try {
+      await writeCloseToTraySetting(backendValue);
+    } catch {
+      await ProcessConfig.set(CLOSE_TO_TRAY_CONFIG_KEY, backendValue).catch(() => {});
+    }
+    return backendValue;
+  }
+
+  // WINK GO owns local Agent/MCP channels. Keep them reachable after the
+  // workspace window is closed unless the user explicitly quits from tray.
+  return true;
+};
+
+export const writeCloseToTraySetting = async (enabled: boolean): Promise<void> => {
+  await httpRequest<void>('PUT', '/api/settings/client', { [CLOSE_TO_TRAY_CONFIG_KEY]: enabled });
+  await ProcessConfig.set(CLOSE_TO_TRAY_CONFIG_KEY, enabled);
+};

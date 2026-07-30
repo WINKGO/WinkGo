@@ -1,0 +1,21 @@
+{
+  "$comment": "Issue module → area label → owner mapping. Single source of truth for .github/workflows/issue-triage.yml. The 'module' key must exactly match the dropdown option text in .github/ISSUE_TEMPLATE/bug_report.yml and question.yml. Edit owners here — no workflow change needed.",
+  "modules": [
+    { "module": "Agent Detection & Connection", "label": "area/agent-detection", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Assistants & Presets", "label": "area/assistant", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Models & Authentication", "label": "area/model-auth", "owner": "xuweihafeichangniu-lab" },
+    { "module": "MCP & Tools", "label": "area/mcp", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Skills & Plugins", "label": "area/skills", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Channel Integrations", "label": "area/channel", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Conversation & Sessions", "label": "area/conversation", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Search & History", "label": "area/history", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Project, Files & Preview", "label": "area/workspace", "owner": "xuweihafeichangniu-lab" },
+    { "module": "WebUI & Remote Access", "label": "area/webui", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Scheduled Tasks", "label": "area/cron", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Team Collaboration", "label": "area/team", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Interface, Display & Desktop Pet", "label": "area/display", "owner": "xuweihafeichangniu-lab" },
+    { "module": "System Settings", "label": "area/settings", "owner": "xuweihafeichangniu-lab" },
+    { "module": "Other", "label": "area/other", "owner": "xuweihafeichangniu-lab" }
+  ],
+  "fallback": { "label": "needs-triage", "owner": "xuweihafeichangniu-lab" }
+}

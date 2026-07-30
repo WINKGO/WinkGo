@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "smart_home",
+  "ui_id": "smartHome",
+  "config_id": "smartHome",
+  "diagnostic_id": "smartHome",
+  "release_skill_id": "smartHome",
+  "order": 70,
+  "display_name": "智能家居",
+  "canonical_alias": "智能家居",
+  "icon_key": "home",
+  "color": "linear-gradient(135deg, #fdcb6e, #f39c12)",
+  "description": "通过 Home Assistant 和本地设备注册表统一控制设备、区域与场景。",
+  "strong_aliases": ["智能家居", "HomeAssistant", "Home Assistant", "HA家居"],
+  "weak_aliases": ["灯", "空调", "设备", "场景", "房间"],
+  "capability_labels": ["Home Assistant", "区域与设备", "场景执行", "状态控制"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "智能家居",
+  "tool_selectors": {
+    "prefixes": ["homeassistant.", "appliance."],
+    "names": [],
+    "shared_names": []
+  },
+  "config_scope_id": "smart_home"
+}

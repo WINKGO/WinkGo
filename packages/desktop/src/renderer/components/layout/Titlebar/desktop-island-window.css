@@ -1,0 +1,1331 @@
+.desktop-island-runtime,
+.desktop-island-runtime body,
+.desktop-island-runtime #root {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  background: rgba(0, 0, 0, 0) !important;
+  background-color: rgba(0, 0, 0, 0) !important;
+  box-shadow: none !important;
+}
+
+.desktop-island-runtime body {
+  color: var(--color-text-1);
+  user-select: none;
+}
+
+.desktop-island-runtime::before,
+.desktop-island-runtime::after,
+.desktop-island-runtime body::before,
+.desktop-island-runtime body::after,
+.desktop-island-runtime #root::before,
+.desktop-island-runtime #root::after {
+  display: none !important;
+  content: none !important;
+}
+
+.desktop-island-window {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0;
+  background: rgba(0, 0, 0, 0) !important;
+  box-shadow: none !important;
+}
+
+.titlebar-dynamic-island--floating {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 38px;
+  gap: 6px;
+  filter: none;
+  transform-origin: top center;
+  animation: desktop-island-enter 320ms cubic-bezier(0.18, 0.86, 0.26, 1);
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__summary,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-header > span:nth-child(2),
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__media-track > span:nth-child(2) {
+  -webkit-app-region: drag;
+  cursor: grab;
+  user-select: none;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__summary:active,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-header > span:nth-child(2):active,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__media-track > span:nth-child(2):active {
+  cursor: grabbing;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__capsule-drag-handle {
+  -webkit-app-region: drag;
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 101px;
+  left: 46px;
+  height: 38px;
+  cursor: grab;
+  user-select: none;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__capsule-drag-handle:active {
+  cursor: grabbing;
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='format'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='toast'] .titlebar-dynamic-island__capsule-drag-handle {
+  display: none;
+}
+
+.titlebar-dynamic-island--floating button,
+.titlebar-dynamic-island--floating [role='button'],
+.titlebar-dynamic-island--floating a,
+.titlebar-dynamic-island--floating input,
+.titlebar-dynamic-island--floating select,
+.titlebar-dynamic-island--floating textarea {
+  -webkit-app-region: no-drag;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.titlebar-dynamic-island--floating button:focus,
+.titlebar-dynamic-island--floating button:focus-visible,
+.titlebar-dynamic-island--floating [role='button']:focus,
+.titlebar-dynamic-island--floating [role='button']:focus-visible {
+  outline: none !important;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__capsule.arco-btn {
+  display: grid !important;
+  width: calc(100% - 44px);
+  max-width: none;
+  height: 38px;
+  grid-template-columns: 30px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  padding: 4px 11px 4px 4px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.97);
+  color: #111827;
+  box-shadow: none;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__alarm.arco-btn {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.97);
+  color: #ff455a;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__capsule.arco-btn,
+.titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__alarm.arco-btn {
+  background: #111317;
+  color: #fff;
+  box-shadow: none;
+}
+
+.titlebar-dynamic-island--floating[data-island-theme='black']
+  > .titlebar-dynamic-island__capsule
+  .titlebar-dynamic-island__summary {
+  color: #fff;
+}
+
+.titlebar-dynamic-island--floating[data-island-theme='black']
+  > .titlebar-dynamic-island__capsule
+  .titlebar-dynamic-island__pulse {
+  color: #9dddf2;
+}
+
+.titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__alarm.arco-btn {
+  color: #ff596c;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__capsule.arco-btn:hover {
+  border: 0;
+  background: #fff;
+  box-shadow: none;
+  transform: none;
+}
+
+.titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__capsule.arco-btn:hover,
+.titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__alarm.arco-btn:hover {
+  background: #1a1d22;
+  box-shadow: none;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__alarm.arco-btn:hover {
+  border: 0;
+  background: #fff7f8;
+  box-shadow: none;
+  transform: none;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__brand {
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__brand img {
+  width: 24px;
+  height: 24px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__brand--media-cover .titlebar-dynamic-island__identity,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__brand--media-cover img,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__brand--media-app .titlebar-dynamic-island__identity,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__brand--media-app img {
+  border-radius: 50%;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__brand--media-cover,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__brand--media-app,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__brand--notification-app,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__brand--activity-app {
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(22, 29, 37, 0.2);
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__summary {
+  width: auto;
+  max-width: none;
+  padding: 0;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  color: #151a22;
+  font-family: 'Segoe UI Variable Text', 'Microsoft YaHei UI', 'Segoe UI', sans-serif;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__pulse {
+  width: 34px;
+  height: 20px;
+  justify-content: center;
+  color: #9dddf2;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel {
+  top: 38px;
+  right: 0;
+  left: 0;
+  width: 100%;
+  max-width: none;
+  border-color: rgba(77, 91, 114, 0.2);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(77, 91, 114, 0.04);
+  backdrop-filter: none;
+  transform: none;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-header {
+  grid-template-columns: 38px minmax(0, 1fr) 30px;
+  min-height: 66px;
+  padding: 10px 12px 9px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-icon img {
+  width: 27px;
+  height: 27px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-header strong {
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-header small {
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 10px 10px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-footer .arco-btn {
+  height: 30px;
+  justify-content: center;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-text-1);
+  font-size: 11px;
+  font-weight: 560;
+  box-shadow: none;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-footer .arco-btn:hover {
+  border-color: rgba(var(--primary-6), 0.35);
+  background: rgba(var(--primary-6), 0.08);
+  color: rgb(var(--primary-6));
+  transform: none;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__panel-footer .arco-icon {
+  font-size: 15px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__file-drop {
+  min-height: 66px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__recent-file.arco-btn {
+  height: 46px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__timer-time {
+  font-size: 32px;
+  line-height: 40px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__media-cover {
+  width: 58px;
+  height: 58px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__media-track {
+  grid-template-columns: 60px minmax(0, 1fr) 30px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__media-track strong {
+  font-size: 15px;
+}
+
+/* The original WINK GO island expands in place for media instead of stacking
+   a second card below the compact capsule. Keep that interaction here while
+   the other, information-dense panels retain their larger layouts. */
+.titlebar-dynamic-island--floating[data-panel='media'] {
+  min-height: 115px;
+  gap: 0;
+  overflow: hidden;
+  border-radius: 23px;
+  clip-path: inset(0 round 23px);
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='media'] > .titlebar-dynamic-island__alarm {
+  display: none !important;
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__panel--media {
+  top: 0;
+  width: 100%;
+  height: 115px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 23px;
+  background: #fff;
+  box-shadow: none !important;
+  clip-path: inset(0 round 23px);
+  cursor: pointer;
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__panel-header {
+  display: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__media-panel {
+  min-height: 115px;
+  box-sizing: border-box;
+  padding: 10px 14px 8px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__media-track {
+  grid-template-columns: 42px minmax(0, 1fr) 24px;
+  gap: 10px;
+  min-height: 42px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__media-cover {
+  width: 40px;
+  height: 40px;
+  border-width: 0;
+  border-radius: 50%;
+  box-shadow: 0 3px 10px rgba(22, 29, 37, 0.16);
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__media-cover--artwork {
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 4px 12px rgba(22, 29, 37, 0.18);
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__media-track strong {
+  font-size: 14px;
+  line-height: 19px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__media-track small {
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__media-controls {
+  gap: 16px;
+  padding-top: 6px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__media-control {
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 999px !important;
+  cursor: pointer;
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__media-control--primary {
+  width: 36px;
+  height: 36px;
+  background: #fff;
+  color: #11151a;
+  box-shadow: 0 3px 12px rgba(24, 31, 40, 0.13);
+}
+
+.titlebar-dynamic-island--floating[data-panel='media']
+  .titlebar-dynamic-island__media-cover--app.titlebar-dynamic-island__media-cover--playing
+  img {
+  animation: none;
+}
+
+/* The timer follows the original one-card interaction but keeps every input
+   and action visibly framed, including at Windows display scaling. */
+.titlebar-dynamic-island--floating[data-panel='timer'] {
+  min-height: 128px;
+  gap: 0;
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='timer'] > .titlebar-dynamic-island__alarm {
+  display: none !important;
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__panel--timer {
+  top: 0;
+  width: 100%;
+  height: 128px;
+  overflow: hidden;
+  border-color: rgba(77, 91, 114, 0.22);
+  border-radius: 23px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow:
+    0 18px 42px rgba(24, 32, 45, 0.16),
+    0 5px 14px rgba(24, 32, 45, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__panel-header {
+  box-sizing: border-box;
+  grid-template-columns: 38px minmax(0, 1fr) 30px;
+  height: 64px;
+  min-height: 0;
+  padding: 10px 13px 8px;
+  border-bottom: 1px solid rgba(77, 91, 114, 0.14);
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__panel-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  background: #fff0f2;
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__timer-panel {
+  position: relative;
+  box-sizing: border-box;
+  height: 64px;
+  padding: 12px 13px 12px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__timer-time {
+  position: absolute;
+  top: -54px;
+  right: 49px;
+  color: #ff455a;
+  font-size: 20px;
+  font-weight: 780;
+  line-height: 28px;
+  letter-spacing: 0.4px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__timer-progress {
+  display: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__timer-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 86px 74px;
+  gap: 8px;
+  align-items: center;
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__timer-controls label {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 38px;
+  flex-direction: row;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(77, 91, 114, 0.3);
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__timer-controls label > span {
+  order: 2;
+  padding: 0 11px 0 6px;
+  color: #7f8793;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer']
+  .titlebar-dynamic-island__timer-controls
+  label
+  .arco-input-number {
+  order: 1;
+  width: 100%;
+  height: 36px;
+  border: 0;
+  background: transparent;
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__timer-controls .arco-btn {
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid rgba(77, 91, 114, 0.24);
+  border-radius: 11px;
+  background: #f3f4f6;
+  color: #263140;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__timer-controls .arco-btn-primary {
+  border-color: #ff455a;
+  background: #ff455a;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(255, 69, 90, 0.2);
+}
+
+.titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__timer-controls .arco-btn-secondary {
+  border-color: rgba(77, 91, 114, 0.26);
+  background: #eef0f3;
+}
+
+/* The utility surfaces below are the original compact WINK GO island
+   contracts. They expand the transparent desktop window in-place instead of
+   opening a generic desktop popover. */
+.titlebar-dynamic-island--floating[data-panel='files'],
+.titlebar-dynamic-island--floating[data-panel='category'],
+.titlebar-dynamic-island--floating[data-panel='destination'],
+.titlebar-dynamic-island--floating[data-panel='drop'],
+.titlebar-dynamic-island--floating[data-panel='format'],
+.titlebar-dynamic-island--floating[data-panel='toast'] {
+  height: 100%;
+  min-height: 100%;
+  gap: 0;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='files'] > .titlebar-dynamic-island__alarm,
+.titlebar-dynamic-island--floating[data-panel='category'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='category'] > .titlebar-dynamic-island__alarm,
+.titlebar-dynamic-island--floating[data-panel='destination'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='destination'] > .titlebar-dynamic-island__alarm,
+.titlebar-dynamic-island--floating[data-panel='drop'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='drop'] > .titlebar-dynamic-island__alarm,
+.titlebar-dynamic-island--floating[data-panel='format'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='format'] > .titlebar-dynamic-island__alarm,
+.titlebar-dynamic-island--floating[data-panel='toast'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='toast'] > .titlebar-dynamic-island__alarm {
+  display: none !important;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__panel,
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__panel,
+.titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__panel,
+.titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel,
+.titlebar-dynamic-island--floating[data-panel='format'] .titlebar-dynamic-island__panel {
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(77, 91, 114, 0.16);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: inset 0 0 0 1px rgba(77, 91, 114, 0.035);
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__panel-header,
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__panel-header,
+.titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__panel-header,
+.titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel-header,
+.titlebar-dynamic-island--floating[data-panel='format'] .titlebar-dynamic-island__panel-header {
+  grid-template-columns: 28px minmax(0, 1fr) 26px;
+  min-height: 42px;
+  padding: 6px 10px 4px;
+  border-bottom: 0;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__panel-icon,
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__panel-icon,
+.titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__panel-icon,
+.titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel-icon,
+.titlebar-dynamic-island--floating[data-panel='format'] .titlebar-dynamic-island__panel-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  color: #3478ee;
+  background: #e9f0ff;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__panel-header strong,
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__panel-header strong,
+.titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__panel-header strong,
+.titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel-header strong,
+.titlebar-dynamic-island--floating[data-panel='format'] .titlebar-dynamic-island__panel-header strong {
+  font-size: 12px;
+  line-height: 15px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__panel-header small,
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__panel-header small,
+.titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__panel-header small,
+.titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel-header small,
+.titlebar-dynamic-island--floating[data-panel='format'] .titlebar-dynamic-island__panel-header small {
+  font-size: 8.5px;
+  line-height: 12px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__file-panel {
+  gap: 0;
+  height: 90px;
+  padding: 0 12px 10px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__file-drop,
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__file-settings,
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__recent-heading {
+  display: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__recent-files {
+  height: 66px;
+  max-height: 66px;
+  flex-direction: row;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__recent-files::-webkit-scrollbar {
+  display: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__recent-file.arco-btn {
+  width: 214px;
+  min-width: 214px;
+  height: 61px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid #dfe6ef;
+  border-radius: 14px;
+  background: #f8fafc;
+  box-shadow: 0 3px 10px rgba(71, 93, 119, 0.055);
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__recent-file.arco-btn:only-child {
+  width: 100%;
+  min-width: 100%;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__file-type {
+  width: 40px;
+  height: 44px;
+  border-radius: 12px;
+  background: #eaf1ff;
+  color: #3978e9;
+  font-size: 10px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__recent-file strong {
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__recent-file small {
+  color: #7c8796;
+  font-size: 9.5px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__file-empty {
+  width: 100%;
+  min-height: 56px;
+  flex-direction: row;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__file-status {
+  position: absolute;
+  top: 9px;
+  right: 40px;
+  left: auto;
+  max-width: 210px;
+  overflow: hidden;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__file-status--success {
+  display: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__category-panel {
+  height: 89px;
+  padding: 5px 14px 9px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__category-form {
+  grid-template-columns: minmax(0, 1fr) 90px;
+  gap: 10px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='category']
+  .titlebar-dynamic-island__category-form
+  .arco-input-inner-wrapper,
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__category-form .arco-btn {
+  height: 36px;
+  border: 0;
+  border-radius: 11px;
+  box-shadow: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='category']
+  .titlebar-dynamic-island__category-form
+  .arco-input-inner-wrapper {
+  height: 36px;
+  border: 1px solid #d7e0eb;
+  border-radius: 11px;
+  background: #f9fbfd;
+  box-shadow: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='category']
+  .titlebar-dynamic-island__category-form
+  .arco-input-inner-wrapper:focus-within {
+  border-color: #8cb4f7;
+  box-shadow: 0 0 0 3px rgba(52, 120, 238, 0.09);
+}
+
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__category-form .arco-btn-primary {
+  background: #4e80ec;
+}
+
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__category-feedback {
+  min-height: 22px;
+  padding: 6px 2px 0;
+  color: #7b8796;
+  font-size: 9.5px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__category-list {
+  display: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__destination-panel {
+  height: 163px;
+  max-height: 163px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 3px 12px 38px;
+  scrollbar-width: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='destination']
+  .titlebar-dynamic-island__destination-panel::-webkit-scrollbar {
+  display: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__destination-card.arco-btn {
+  width: 205px;
+  min-width: 205px;
+  height: 105px;
+  grid-template-columns: 45px minmax(0, 1fr);
+  padding: 8px 10px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='destination']
+  .titlebar-dynamic-island__destination-panel[data-has-custom-destinations='false'] {
+  overflow: hidden;
+}
+
+.titlebar-dynamic-island--floating[data-panel='destination']
+  .titlebar-dynamic-island__destination-panel[data-has-custom-destinations='false']
+  .titlebar-dynamic-island__destination-card--smart.arco-btn {
+  width: 100%;
+  min-width: 100%;
+  height: 105px;
+  grid-template-columns: 58px minmax(0, 1fr);
+  padding: 12px 16px;
+  border-color: rgba(25, 164, 105, 0.24);
+  background: linear-gradient(125deg, rgba(77, 211, 144, 0.16), rgba(83, 132, 243, 0.07));
+}
+
+.titlebar-dynamic-island--floating[data-panel='destination']
+  .titlebar-dynamic-island__destination-panel[data-has-custom-destinations='false']
+  .titlebar-dynamic-island__destination-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 17px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='destination']
+  .titlebar-dynamic-island__destination-panel[data-has-custom-destinations='false']
+  .titlebar-dynamic-island__destination-icon
+  img {
+  width: 37px;
+  height: 37px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='destination']
+  .titlebar-dynamic-island__destination-panel[data-has-custom-destinations='false']
+  .titlebar-dynamic-island__destination-card
+  strong {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__destination-footer {
+  position: absolute;
+  right: 12px;
+  bottom: 5px;
+  left: 12px;
+  height: 27px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__destination-actions {
+  gap: 3px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel-header {
+  display: none;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__drop-notice {
+  box-sizing: border-box;
+  display: grid;
+  width: 100%;
+  height: 108px;
+  grid-template-columns: 52px minmax(0, 1fr) 42px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__drop-mark {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 16px;
+  background: #e9f0ff;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__drop-mark img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__drop-notice > span:nth-child(2) {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__drop-notice small {
+  color: #3478ee;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__drop-notice strong {
+  font-size: 16px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__drop-notice em {
+  overflow: hidden;
+  color: #6f7885;
+  font-size: 10px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__drop-notice b {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #3478ee;
+  box-shadow: 0 7px 18px rgba(52, 120, 238, 0.28);
+}
+
+.titlebar-dynamic-island--floating[data-panel='format'] .titlebar-dynamic-island__panel-header {
+  min-height: 39px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-quick {
+  box-sizing: border-box;
+  display: flex;
+  height: 150px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 10px 8px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets-shell {
+  position: relative;
+  height: 57px;
+  flex: 0 0 57px;
+  overflow: hidden;
+  border-radius: 13px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets {
+  display: flex;
+  width: 100%;
+  height: 57px;
+  box-sizing: border-box;
+  gap: 7px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  padding-right: 38px;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets::-webkit-scrollbar {
+  display: none;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets button {
+  box-sizing: border-box;
+  display: flex;
+  width: 124px;
+  min-width: 124px;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  color: #151a22;
+  background: #f8fafc;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(71, 93, 119, 0.045);
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets button.active {
+  border-color: #79a5f4;
+  background: #edf4ff;
+  box-shadow: 0 3px 10px rgba(52, 120, 238, 0.1);
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets button[data-available='false'] {
+  opacity: 0.48;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets em {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border-radius: 10px;
+  color: #3478ee;
+  background: #e9f0ff;
+  font-style: normal;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets button[data-preset='video_to_mp4'] em {
+  color: #7c3aed;
+  background: #f0e9ff;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets button[data-preset='video_compress'] em {
+  color: #3478ee;
+  background: #e9f0ff;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets button[data-preset='gif_compress'] em,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets button[data-preset='image_compress'] em {
+  color: #17a971;
+  background: #e4f8ef;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets button[data-preset='audio_to_mp3'] em {
+  color: #f05b42;
+  background: #fff0ec;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets button[data-preset='document_to_pdf'] em {
+  overflow: hidden;
+  color: #3478ee;
+  background: #edf3ff;
+}
+
+.titlebar-dynamic-island--floating
+  .titlebar-dynamic-island__format-presets
+  button[data-preset='document_to_pdf']
+  em
+  img {
+  display: block;
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets button > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets strong,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets small {
+  overflow: hidden;
+  font-size: 9px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-presets small {
+  color: #7b8491;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-scroll-next {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 2px;
+  display: grid;
+  width: 32px;
+  height: 41px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: #4d78a2;
+  background: rgba(244, 249, 253, 0.97);
+  box-shadow:
+    -8px 0 14px rgba(248, 250, 252, 0.96),
+    0 3px 10px rgba(65, 91, 119, 0.1);
+  cursor: pointer;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-scroll-next span {
+  transform: translateY(-1px);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-scroll-next:hover {
+  color: #3478ee;
+  background: #eaf3ff;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-controls {
+  display: grid;
+  height: 50px;
+  flex: 0 0 50px;
+  grid-template-columns: minmax(0, 1fr) 58px 92px;
+  gap: 7px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-controls button {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 11px;
+  color: #151a22;
+  background: #f1f2f4;
+  cursor: pointer;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-controls button:first-child {
+  justify-content: flex-start;
+  padding: 0 10px;
+  color: #3478ee;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-controls button:first-child span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-controls button:first-child strong,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-controls button:first-child small {
+  overflow: hidden;
+  max-width: 280px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-controls button:first-child strong {
+  color: #151a22;
+  font-size: 10px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-controls button:first-child small {
+  color: #7b8491;
+  font-size: 8px;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-controls button:last-child {
+  color: #fff;
+  background: #3478ee;
+  box-shadow: 0 6px 16px rgba(52, 120, 238, 0.24);
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-progress {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 14px;
+  flex: 0 0 14px;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f1f2f4;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-progress i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(52, 120, 238, 0.24), rgba(79, 143, 255, 0.42));
+  transition: width 220ms ease;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__format-progress span {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast {
+  box-sizing: border-box;
+  display: grid;
+  width: 100%;
+  height: 44px;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  gap: 6px;
+  align-items: center;
+  overflow: hidden;
+  padding: 4px;
+  border: 0;
+  border-radius: 999px;
+  color: #151a22;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #f1f2f4;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-icon img {
+  width: 29px;
+  height: 29px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-viewport {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-viewport > span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-viewport--scrolling {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-viewport--scrolling > span {
+  flex: none;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  animation: winkgo-toast-marquee var(--toast-duration, 7s) ease-in-out 0.8s both;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-bars,
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__media-bars {
+  display: inline-flex;
+  width: 34px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #9dddf2;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-bars i {
+  width: 2px;
+  height: 5px;
+  border-radius: 99px;
+  background: currentColor;
+  animation: titlebar-dynamic-island-pulse 850ms ease-in-out infinite alternate;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-bars i:nth-child(2) {
+  height: 12px;
+  animation-delay: 140ms;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-bars i:nth-child(3) {
+  height: 8px;
+  animation-delay: 260ms;
+}
+
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__toast-bars i:nth-child(4) {
+  height: 15px;
+  animation-delay: 80ms;
+}
+
+@keyframes winkgo-toast-marquee {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+
+  75%,
+  100% {
+    transform: translateX(calc(-1 * var(--toast-travel)));
+  }
+}
+
+@keyframes desktop-island-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.9);
+  }
+
+  65% {
+    opacity: 1;
+    transform: translateY(1px) scale(1.015);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .titlebar-dynamic-island--floating {
+    animation: none;
+  }
+}

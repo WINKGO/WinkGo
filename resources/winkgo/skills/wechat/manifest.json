@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "wechat",
+  "ui_id": "wechat",
+  "config_id": "wechat",
+  "diagnostic_id": "wechat",
+  "release_skill_id": "wechat",
+  "order": 40,
+  "display_name": "微信助手",
+  "canonical_alias": "微信",
+  "icon_key": "message",
+  "color": "linear-gradient(135deg, #2ecc71, #27ae60)",
+  "description": "联系人搜索、会话打开、消息收发、文件发送与桌面微信状态检测。",
+  "strong_aliases": ["微信", "WeChat", "文件传输助手"],
+  "weak_aliases": ["联系人", "发消息", "聊天", "会话"],
+  "capability_labels": ["会话打开", "联系人搜索", "消息收发", "运行状态"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "微信",
+  "tool_selectors": {
+    "prefixes": ["wechat."],
+    "names": [],
+    "shared_names": []
+  },
+  "config_scope_id": "wechat"
+}

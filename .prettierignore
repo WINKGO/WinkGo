@@ -1,0 +1,7 @@
+mobile/
+backend/
+docs/vendor/
+public/knowledge-canvas/
+resources/winkgo/provider-skills/
+.tmp-out-backup-*/
+.tmp-debug-release-assets-*/

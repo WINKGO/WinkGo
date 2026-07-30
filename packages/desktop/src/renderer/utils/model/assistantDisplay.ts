@@ -1,0 +1,23 @@
+/**
+ * @license
+ * Copyright 2026 WINK GO (winkgo.top)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import type { Assistant } from '@/common/types/agent/assistantTypes';
+import { brandLegacyTextForDisplay } from './winkGoBranding';
+
+type AssistantNameSource = Pick<Assistant, 'id' | 'name' | 'name_i18n'>;
+
+export function resolveAssistantName(
+  assistant: AssistantNameSource | null | undefined,
+  localeKey: string,
+  fallback = 'Assistant'
+): string {
+  if (!assistant) {
+    return fallback;
+  }
+
+  const localizedName = assistant.name_i18n?.[localeKey] || assistant.name_i18n?.['en-US'];
+  return brandLegacyTextForDisplay(localizedName?.trim() || assistant.name?.trim() || assistant.id || fallback);
+}

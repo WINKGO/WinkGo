@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "skill_id": "smart_home",
+  "actions": [
+    {
+      "id": "list",
+      "phrases": ["设备列表", "区域", "服务"],
+      "tool_names": ["homeassistant.list_areas", "homeassistant.get_area_entities", "appliance.list_devices"],
+      "default_arguments": {}
+    },
+    {
+      "id": "state",
+      "phrases": ["状态", "是否打开"],
+      "tool_names": ["homeassistant.get_entity_state", "appliance.get_device_state"],
+      "default_arguments": {}
+    },
+    {
+      "id": "power",
+      "phrases": ["打开", "关闭", "开灯", "关灯"],
+      "tool_names": ["homeassistant.turn_on", "homeassistant.turn_off", "homeassistant.toggle", "appliance.set_power"],
+      "default_arguments": {}
+    },
+    {
+      "id": "temperature",
+      "phrases": ["温度", "空调"],
+      "tool_names": ["homeassistant.set_climate_temperature", "appliance.set_temperature"],
+      "default_arguments": {}
+    },
+    {
+      "id": "scene",
+      "phrases": ["执行场景", "回家模式", "离家模式"],
+      "tool_names": ["appliance.run_scene", "homeassistant.call_service"],
+      "default_arguments": {}
+    },
+    {
+      "id": "connection",
+      "phrases": ["检查智能家居连接", "Home Assistant是否在线"],
+      "tool_names": ["homeassistant.check_connection"],
+      "default_arguments": {}
+    },
+    {
+      "id": "catalog",
+      "phrases": ["状态列表", "服务列表", "目标服务", "场景列表"],
+      "tool_names": [
+        "homeassistant.get_states",
+        "homeassistant.list_services",
+        "homeassistant.get_target_services",
+        "appliance.list_scenes"
+      ],
+      "default_arguments": {}
+    },
+    {
+      "id": "brightness",
+      "phrases": ["设置亮度", "灯光亮度"],
+      "tool_names": ["homeassistant.set_light_brightness"],
+      "default_arguments": {}
+    },
+    {
+      "id": "media",
+      "phrases": ["媒体控制", "播放暂停", "音箱说话"],
+      "tool_names": ["appliance.media_command", "appliance.speaker_speak"],
+      "default_arguments": {}
+    },
+    {
+      "id": "vendor_action",
+      "phrases": ["调用设备动作", "执行厂商设备动作"],
+      "tool_names": ["appliance.call_vendor_action"],
+      "default_arguments": {}
+    }
+  ]
+}

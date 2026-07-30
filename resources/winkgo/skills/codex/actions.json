@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "skill_id": "codex",
+  "actions": [
+    {
+      "id": "open",
+      "phrases": ["打开", "启动", "进入"],
+      "tool_names": ["codex.start_app"],
+      "default_arguments": {}
+    },
+    {
+      "id": "chat",
+      "phrases": ["对话", "提问", "执行", "任务", "帮我"],
+      "tool_names": ["codex.desktop_chat"],
+      "default_arguments": {}
+    },
+    {
+      "id": "status",
+      "phrases": ["状态", "检查", "是否在线"],
+      "tool_names": ["codex.check_runtime", "codex.get_last_status"],
+      "default_arguments": {}
+    },
+    {
+      "id": "result",
+      "phrases": ["回复", "结果", "读取"],
+      "tool_names": ["codex.get_last_reply", "codex.get_task_result"],
+      "default_arguments": {}
+    },
+    {
+      "id": "stop",
+      "phrases": ["停止", "取消"],
+      "tool_names": ["codex.cancel_current"],
+      "default_arguments": {}
+    },
+    {
+      "id": "new_chat",
+      "phrases": ["新建对话", "新建任务", "新线程"],
+      "tool_names": ["codex.new_desktop_chat"],
+      "default_arguments": {}
+    },
+    {
+      "id": "list_history",
+      "phrases": ["最近对话", "侧边栏列表", "列出任务"],
+      "tool_names": ["codex.list_recent_chats", "codex.list_sidebar"],
+      "default_arguments": {}
+    },
+    {
+      "id": "open_history",
+      "phrases": ["打开最近对话", "打开线程", "进入任务"],
+      "tool_names": ["codex.open_recent_chat", "codex.open_thread"],
+      "default_arguments": {}
+    },
+    {
+      "id": "open_project",
+      "phrases": ["打开项目", "进入项目"],
+      "tool_names": ["codex.open_project"],
+      "default_arguments": {}
+    },
+    {
+      "id": "open_page",
+      "phrases": ["打开插件", "打开技能", "打开已安排", "切换页面"],
+      "tool_names": ["codex.open_page"],
+      "default_arguments": {}
+    }
+  ]
+}

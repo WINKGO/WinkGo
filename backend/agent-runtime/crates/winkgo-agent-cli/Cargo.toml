@@ -1,0 +1,32 @@
+[package]
+name = "winkgo-agent-cli"
+description = "CLI binary for winkgo_agent — a multi-provider AI agent with tool orchestration"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["ai", "agent", "cli", "llm", "anthropic"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "winkgo_agent"
+path = "src/main.rs"
+
+[dependencies]
+winkgo-agent.workspace    = true
+winkgo-agent-compact.workspace  = true
+winkgo-agent-config.workspace   = true
+winkgo-agent-memory.workspace   = true
+winkgo-agent-providers.workspace = true
+winkgo-agent-tools.workspace    = true
+winkgo-agent-mcp.workspace      = true
+winkgo-agent-protocol.workspace = true
+winkgo-agent-skills.workspace   = true
+winkgo-agent-types.workspace    = true
+
+tokio.workspace              = true
+anyhow.workspace             = true
+clap.workspace               = true
+tracing.workspace            = true
+tracing-subscriber.workspace = true
+workspace-hack.workspace = true

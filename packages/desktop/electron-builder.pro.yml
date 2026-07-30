@@ -1,0 +1,34 @@
+extends: ./packages/desktop/electron-builder.yml
+appId: com.winkgo.desktop.pro
+productName: WINK GO Pro
+# Keep the proven executable basename so the shared NSIS process-control and
+# repair scripts remain compatible. The app id, install folder, shortcuts and
+# artifacts are still completely separate from the Free edition.
+executableName: WINK-GO
+
+protocols:
+  - name: WINK GO Pro Protocol
+    schemes:
+      - winkgopro
+
+win:
+  artifactName: WINK-GO-Pro-Setup-${version}-${arch}.${ext}
+
+nsis:
+  artifactName: WINK-GO-Pro-Setup-${version}-${arch}.${ext}
+  shortcutName: WINK GO Pro
+  uninstallDisplayName: WINK GO Pro
+  menuCategory: WINK GO Pro
+
+mac:
+  artifactName: WINK-GO-Pro-${version}-${os}-${arch}.${ext}
+
+linux:
+  artifactName: WINK-GO-Pro-${version}-${os}-${arch}.${ext}
+
+publish:
+  provider: generic
+  url: https://winkgo.top/releases/pro
+  # Pro artifacts are local development previews only until a separate,
+  # explicitly approved Pro release channel exists.
+  publishAutoUpdate: false

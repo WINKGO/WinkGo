@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "visual_studio_code",
+  "ui_id": "visualstudio",
+  "config_id": "visualstudio",
+  "diagnostic_id": "visualstudio",
+  "release_skill_id": "visualstudio",
+  "order": 130,
+  "display_name": "Visual Studio Code",
+  "canonical_alias": "Visual Studio Code",
+  "icon_key": "code",
+  "color": "linear-gradient(135deg, #5c2d91, #8b5cf6)",
+  "description": "独立的 Visual Studio Code 桌面代理启动、任务投递与可见结果读取入口。",
+  "strong_aliases": ["VisualStudioCode", "Visual Studio Code", "VSCode", "VS Code"],
+  "weak_aliases": ["桌面代理", "代码助手", "任务", "新对话"],
+  "capability_labels": ["启动客户端", "视觉定位", "任务投递", "结果读取"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "Visual Studio Code",
+  "tool_selectors": {
+    "prefixes": [],
+    "names": [],
+    "shared_names": [
+      "desktop_agents.check_agent",
+      "desktop_agents.close_agent",
+      "desktop_agents.desktop_agent_new_task",
+      "desktop_agents.desktop_agent_read_window",
+      "desktop_agents.desktop_agent_stop_task",
+      "desktop_agents.get_last_reply",
+      "desktop_agents.get_last_status",
+      "desktop_agents.get_task_result",
+      "desktop_agents.open_agent",
+      "desktop_agents.send_task",
+      "desktop_agents.wait_until_ready"
+    ]
+  },
+  "internal_tool_names": ["desktop_agents.wait_until_ready"],
+  "config_scope_id": "visual_studio_code"
+}

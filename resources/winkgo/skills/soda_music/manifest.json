@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "soda_music",
+  "ui_id": "sodaMusic",
+  "config_id": "music",
+  "diagnostic_id": "soda_music",
+  "release_skill_id": "music",
+  "client_key": "fizz",
+  "order": 30,
+  "display_name": "汽水音乐",
+  "canonical_alias": "汽水音乐",
+  "icon_key": "music",
+  "color": "linear-gradient(135deg, #22d3ee, #3b82f6)",
+  "description": "独立控制汽水音乐，支持搜索、收藏、历史、听歌模式、推荐与播放控制。",
+  "strong_aliases": ["汽水音乐", "汽水播放器", "抖音音乐客户端"],
+  "weak_aliases": ["音乐", "播放器", "听歌", "下一首", "上一首", "暂停", "歌单"],
+  "capability_labels": ["搜索播放", "收藏与历史", "听歌模式与推荐", "播放控制"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "汽水音乐",
+  "tool_selectors": {
+    "prefixes": ["music.fizz_", "music.station_"],
+    "exclude_names": ["music.station_compact_toggle"],
+    "names": [],
+    "shared_names": [
+      "music.cancel_current",
+      "music.control_playback",
+      "music.control_volume",
+      "music.get_controller_info",
+      "music.like_current_song",
+      "music.open_music_app",
+      "music.search_and_play",
+      "music.search_and_play_playlist",
+      "music.station_close",
+      "music.station_lyrics_toggle",
+      "music.station_now_snapshot",
+      "music.station_open",
+      "music.station_play_toggle",
+      "music.station_track_next",
+      "music.station_track_previous",
+      "music.system_volume_lower",
+      "music.system_volume_raise",
+      "music.system_volume_set",
+      "music.toggle_lyrics",
+      "music.track_heart_toggle",
+      "music.track_resolve_and_start"
+    ]
+  },
+  "compatibility_tool_aliases": {
+    "music.fizz_app_close": {
+      "canonical_tool_name": "music.station_close",
+      "default_arguments": { "player": "fizz" }
+    },
+    "music.fizz_app_open": {
+      "canonical_tool_name": "music.station_open",
+      "default_arguments": { "player": "fizz" }
+    },
+    "music.fizz_lyrics_toggle": {
+      "canonical_tool_name": "music.station_lyrics_toggle",
+      "default_arguments": { "player": "fizz" }
+    },
+    "music.fizz_next_now": {
+      "canonical_tool_name": "music.station_track_next",
+      "default_arguments": { "player": "fizz" }
+    },
+    "music.fizz_play_pause": {
+      "canonical_tool_name": "music.control_playback",
+      "default_arguments": { "action": "play_pause", "player": "fizz" }
+    },
+    "music.fizz_previous_now": {
+      "canonical_tool_name": "music.station_track_previous",
+      "default_arguments": { "player": "fizz" }
+    },
+    "music.fizz_volume_lower": {
+      "canonical_tool_name": "music.system_volume_lower",
+      "default_arguments": { "player": "fizz" }
+    },
+    "music.fizz_volume_raise": {
+      "canonical_tool_name": "music.system_volume_raise",
+      "default_arguments": { "player": "fizz" }
+    },
+    "music.fizz_volume_set": {
+      "canonical_tool_name": "music.system_volume_set",
+      "default_arguments": { "player": "fizz" }
+    },
+    "music.like_current_song": {
+      "canonical_tool_name": "music.fizz_like_current_song"
+    },
+    "music.open_music_app": {
+      "canonical_tool_name": "music.station_open",
+      "default_arguments": { "player": "fizz" },
+      "argument_transforms": {
+        "visible": { "target": "minimize", "operation": "not" }
+      }
+    },
+    "music.search_and_play": {
+      "canonical_tool_name": "music.fizz_search_play",
+      "drop_arguments": ["minimize_window"]
+    },
+    "music.station_play_toggle": {
+      "canonical_tool_name": "music.control_playback",
+      "default_arguments": { "action": "play", "player": "fizz" },
+      "drop_arguments": ["player"]
+    },
+    "music.toggle_lyrics": {
+      "canonical_tool_name": "music.station_lyrics_toggle",
+      "default_arguments": { "player": "fizz" }
+    },
+    "music.track_heart_toggle": {
+      "canonical_tool_name": "music.fizz_like_current_song",
+      "drop_arguments": ["player"]
+    },
+    "music.track_resolve_and_start": {
+      "canonical_tool_name": "music.fizz_search_play",
+      "drop_arguments": ["player"]
+    }
+  },
+  "internal_tool_names": [
+    "music.get_controller_info",
+    "music.station_inventory",
+    "music.control_volume",
+    "music.fizz_control",
+    "music.fizz_page_snapshot",
+    "music.search_and_play_playlist"
+  ],
+  "config_scope_id": "soda_music"
+}

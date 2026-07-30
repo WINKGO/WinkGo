@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "hermes",
+  "ui_id": "hermes",
+  "config_id": "hermes",
+  "diagnostic_id": "hermes",
+  "release_skill_id": "hermes",
+  "order": 200,
+  "display_name": "Hermes",
+  "canonical_alias": "Hermes",
+  "icon_key": "server",
+  "color": "linear-gradient(135deg, #fd79a8, #e84393)",
+  "description": "独立的 Hermes 网关、会话任务和结果读取入口。",
+  "strong_aliases": ["Hermes", "赫尔墨斯助手"],
+  "weak_aliases": ["网关", "任务", "会话"],
+  "capability_labels": ["网关状态", "会话启动", "任务投递", "结果读取"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "Hermes",
+  "tool_selectors": {
+    "prefixes": ["hermes."],
+    "names": [],
+    "shared_names": []
+  },
+  "config_scope_id": "hermes"
+}

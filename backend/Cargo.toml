@@ -1,0 +1,208 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/winkgo-assets",
+    "crates/winkgo-common",
+    "crates/winkgo-db",
+    "crates/winkgo-api-types",
+    "crates/winkgo-realtime",
+    "crates/winkgo-runtime",
+    "crates/winkgo-process",
+    "crates/winkgo-session",
+    "crates/winkgo-auth",
+    "crates/winkgo-system",
+    "crates/winkgo-file",
+    "crates/winkgo-office",
+    "crates/winkgo-shell",
+    "crates/winkgo-ai-agent",
+    "crates/winkgo-mcp",
+    "crates/winkgo-conversation",
+    "crates/winkgo-extension",
+    "crates/winkgo-channel",
+    "crates/winkgo-team-prompts",
+    "crates/winkgo-team",
+    "crates/winkgo-project",
+    "crates/winkgo-cron",
+    "crates/winkgo-assistant",
+    "crates/winkgo-app",
+]
+exclude = ["agent-runtime"]
+
+[workspace.package]
+version = "0.1.52"
+edition = "2024"
+license = "MIT"
+
+[workspace.dependencies]
+# Internal crates
+winkgo-common = { path = "crates/winkgo-common" }
+winkgo-assets = { path = "crates/winkgo-assets" }
+winkgo-db = { path = "crates/winkgo-db" }
+winkgo-api-types = { path = "crates/winkgo-api-types" }
+winkgo-realtime = { path = "crates/winkgo-realtime" }
+winkgo-runtime = { path = "crates/winkgo-runtime" }
+winkgo-process = { path = "crates/winkgo-process" }
+winkgo-session = { path = "crates/winkgo-session" }
+winkgo-auth = { path = "crates/winkgo-auth" }
+winkgo-system = { path = "crates/winkgo-system" }
+winkgo-file = { path = "crates/winkgo-file" }
+winkgo-office = { path = "crates/winkgo-office" }
+winkgo-shell = { path = "crates/winkgo-shell" }
+winkgo-ai-agent = { path = "crates/winkgo-ai-agent" }
+winkgo-mcp = { path = "crates/winkgo-mcp" }
+winkgo-conversation = { path = "crates/winkgo-conversation" }
+winkgo-extension = { path = "crates/winkgo-extension" }
+winkgo-channel = { path = "crates/winkgo-channel" }
+winkgo-team-prompts = { path = "crates/winkgo-team-prompts" }
+winkgo-team = { path = "crates/winkgo-team" }
+winkgo-project = { path = "crates/winkgo-project" }
+winkgo-cron = { path = "crates/winkgo-cron" }
+winkgo-assistant = { path = "crates/winkgo-assistant" }
+winkgo-app = { path = "crates/winkgo-app" }
+
+winkgo-agent = { path = "agent-runtime/crates/winkgo-agent" }
+winkgo-agent-providers = { path = "agent-runtime/crates/winkgo-agent-providers" }
+winkgo-agent-types = { path = "agent-runtime/crates/winkgo-agent-types" }
+winkgo-agent-protocol = { path = "agent-runtime/crates/winkgo-agent-protocol" }
+winkgo-agent-config = { path = "agent-runtime/crates/winkgo-agent-config" }
+winkgo-agent-mcp = { path = "agent-runtime/crates/winkgo-agent-mcp" }
+
+# Core framework
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["multipart", "ws"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["cors", "trace", "limit"] }
+http = "1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+
+# Async utilities
+futures-util = "0.3"
+
+# Async trait (dyn-compatible async traits)
+async-trait = "0.1"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# Auth / Crypto
+jsonwebtoken = "9"
+bcrypt = "0.17"
+aes-gcm = "0.10"
+
+# UUID
+uuid = { version = "1", features = ["v7"] }
+url = "2"
+
+# HTTP client — use rustls with native roots to align backend trust with the host system.
+reqwest = { version = "0.12", features = ["json", "multipart", "rustls-tls-native-roots"], default-features = false }
+
+# Concurrency
+dashmap = "6"
+
+# WebSocket
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-native-roots"] }
+
+# Protobuf
+prost = "0.13"
+
+# Semver
+semver = "1"
+
+# Directories
+dirs = "6"
+
+# Regex
+regex = "1"
+
+# File system
+include_dir = "0.7"
+notify = "8"
+walkdir = "2"
+ignore = "0.4"
+zip = "2"
+git2 = { version = "0.20", default-features = false }
+mime_guess = "2"
+rust-embed = "8"
+
+# Runtime embedding
+fs2 = "0.4"
+zstd = "0.13"
+
+# Cron
+cron = "0.15"
+chrono = "0.4"
+chrono-tz = "0.10"
+iana-time-zone = "0.1"
+
+# Shell
+open = "5"
+which = "7"
+
+# Office
+calamine = "0.36"
+rust_xlsxwriter = "0.82"
+sha1 = "0.10"
+sha2 = "0.10"
+
+# AWS
+aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-sdk-bedrock = { version = "1", default-features = false, features = ["rt-tokio", "default-https-client"] }
+aws-sdk-bedrockruntime = { version = "1", default-features = false, features = ["rt-tokio", "default-https-client"] }
+
+# TLS
+rustls = "0.23"
+rustls-native-certs = "0.8"
+
+# Pin rustls-webpki to fix RUSTSEC-2026-{0098,0099,0104}
+rustls-webpki = "0.103.13"
+
+# OAuth / MCP
+oauth2 = "5.0.0-rc.1"
+toml = "0.8"
+
+# Ed25519
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+
+# Encoding
+base64 = "0.22"
+
+# HTTP body utilities (testing)
+http-body-util = "0.1"
+
+# Testing
+tempfile = "3"
+wiremock = "0.6"
+proptest = "1"
+
+# Random
+getrandom = "0.2"
+hex = "0.4"
+libc = "0.2"
+
+# Shrink target/debug: minimal debuginfo, sidecar files, no incremental cache.
+[profile.dev]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+incremental = false
+
+[profile.test]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+incremental = false

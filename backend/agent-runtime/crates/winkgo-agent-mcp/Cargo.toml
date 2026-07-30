@@ -1,0 +1,27 @@
+[package]
+name = "winkgo-agent-mcp"
+description = "MCP (Model Context Protocol) client implementation for winkgo_agent"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+winkgo-agent-types.workspace    = true
+winkgo-agent-protocol.workspace = true
+winkgo-agent-tools.workspace    = true
+winkgo-agent-config.workspace   = true
+
+tracing.workspace     = true
+tokio.workspace       = true
+serde.workspace       = true
+serde_json.workspace  = true
+async-trait.workspace = true
+thiserror.workspace   = true
+anyhow.workspace      = true
+reqwest.workspace     = true
+futures.workspace     = true
+workspace-hack.workspace = true
+
+[features]
+test-utils = []

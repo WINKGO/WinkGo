@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "runtimeApi": "http://127.0.0.1:8121",
+  "enabledSkillIds": ["wechat"],
+  "allowedToolNames": ["tools.cancel_all"],
+  "allowedToolPrefixes": ["wechat."]
+}

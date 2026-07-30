@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "doubao",
+  "ui_id": "doubao",
+  "config_id": "doubao",
+  "diagnostic_id": "doubao",
+  "release_skill_id": "doubao",
+  "order": 230,
+  "display_name": "豆包",
+  "canonical_alias": "豆包",
+  "icon_key": "cpu",
+  "color": "linear-gradient(135deg, #4facfe, #00f2fe)",
+  "description": "独立的豆包客户端、桌面对话、任务与可见回复入口。",
+  "strong_aliases": ["豆包", "豆包AI", "Doubao"],
+  "weak_aliases": ["AI助手", "桌面端", "任务", "对话"],
+  "capability_labels": ["豆包客户端", "桌面对话", "任务投递", "可见回复"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "豆包",
+  "tool_selectors": {
+    "prefixes": ["doubao."],
+    "names": [],
+    "shared_names": []
+  },
+  "compatibility_tool_aliases": {
+    "doubao.chat": {
+      "canonical_tool_name": "doubao.desktop_chat"
+    }
+  },
+  "config_scope_id": "doubao"
+}

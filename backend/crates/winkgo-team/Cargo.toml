@@ -1,0 +1,35 @@
+[package]
+name = "winkgo-team"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+winkgo-common.workspace = true
+winkgo-db.workspace = true
+winkgo-project.workspace = true
+winkgo-api-types.workspace = true
+winkgo-realtime.workspace = true
+winkgo-ai-agent.workspace = true
+winkgo-team-prompts.workspace = true
+winkgo-auth.workspace = true
+axum.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+dashmap.workspace = true
+regex.workspace = true
+agent-client-protocol = "0.11.1"
+futures-util.workspace = true
+
+[dev-dependencies]
+sqlx.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
+futures-util.workspace = true
+reqwest.workspace = true
+tempfile.workspace = true
+# Enable the `AgentInstance::Mock` variant so tests can build fake agents
+# through the trait-object escape hatch without spawning real CLI processes.
+winkgo-ai-agent = { workspace = true, features = ["test-support"] }

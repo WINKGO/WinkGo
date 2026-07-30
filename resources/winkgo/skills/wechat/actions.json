@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "skill_id": "wechat",
+  "actions": [
+    {
+      "id": "open",
+      "phrases": ["打开", "启动"],
+      "tool_names": ["wechat.open_wechat"],
+      "default_arguments": {}
+    },
+    {
+      "id": "chat",
+      "phrases": ["打开聊天", "进入会话", "搜索联系人"],
+      "tool_names": ["wechat.search_contact", "wechat.open_chat"],
+      "default_arguments": {}
+    },
+    {
+      "id": "send",
+      "phrases": ["发送消息", "发给", "告诉"],
+      "tool_names": ["wechat.send_message", "wechat.run_wechat_task"],
+      "default_arguments": {}
+    },
+    {
+      "id": "file",
+      "phrases": ["发送文件", "文件传输"],
+      "tool_names": ["wechat.send_file", "wechat.check_file_helper_files"],
+      "default_arguments": {}
+    },
+    {
+      "id": "read",
+      "phrases": ["读取消息", "最新回复", "最近会话"],
+      "tool_names": ["wechat.get_messages", "wechat.get_latest_reply", "wechat.get_recent_overview"],
+      "default_arguments": {}
+    },
+    {
+      "id": "contacts",
+      "phrases": ["列出联系人", "最近联系人", "列出最近会话"],
+      "tool_names": ["wechat.get_contacts"],
+      "default_arguments": {}
+    },
+    {
+      "id": "favorites",
+      "phrases": ["常用联系人", "常用群聊", "我的微信常用目标"],
+      "tool_names": ["winkgo.wechat.list_favorites"],
+      "default_arguments": {}
+    },
+    {
+      "id": "status",
+      "phrases": ["微信状态", "登录状态", "自动化状态"],
+      "tool_names": ["wechat.get_client_status"],
+      "default_arguments": {}
+    },
+    {
+      "id": "minimize",
+      "phrases": ["隐藏微信", "最小化微信", "收起微信"],
+      "tool_names": ["wechat.minimize_window"],
+      "default_arguments": {}
+    },
+    {
+      "id": "cancel",
+      "phrases": ["取消微信操作", "停止微信搜索", "别执行了"],
+      "tool_names": ["wechat.cancel_current", "tools.cancel_all"],
+      "default_arguments": {}
+    }
+  ]
+}

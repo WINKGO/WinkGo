@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "windows",
+  "ui_id": "windows",
+  "config_id": "windows",
+  "diagnostic_id": "windows",
+  "release_skill_id": "windows",
+  "order": 50,
+  "display_name": "Windows 本地化",
+  "canonical_alias": "Windows本地",
+  "icon_key": "monitor",
+  "color": "linear-gradient(135deg, #3498db, #2980b9)",
+  "description": "应用、文件、窗口、进程、键鼠、截图与系统控制等可验证本地能力。",
+  "strong_aliases": ["Windows本地", "Windows系统", "本地文件", "系统设置"],
+  "weak_aliases": ["电脑", "应用", "文件", "窗口", "进程"],
+  "capability_labels": ["打开应用", "文件与窗口", "键鼠与截图", "系统控制"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "Windows",
+  "tool_selectors": {
+    "prefixes": ["windows."],
+    "exclude_prefixes": ["windows.browser_"],
+    "exclude_names": ["windows.open_url"],
+    "names": [],
+    "shared_names": []
+  },
+  "internal_tool_names": [],
+  "config_scope_id": "windows"
+}

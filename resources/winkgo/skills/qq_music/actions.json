@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "skill_id": "qq_music",
+  "actions": [
+    {
+      "id": "open",
+      "phrases": ["打开", "启动"],
+      "tool_names": ["music.station_open"],
+      "default_arguments": {
+        "player": "qq"
+      }
+    },
+    {
+      "id": "close",
+      "phrases": ["关闭", "退出"],
+      "tool_names": ["music.station_close"],
+      "default_arguments": {
+        "player": "qq"
+      }
+    },
+    {
+      "id": "favorites",
+      "phrases": ["我喜欢", "喜欢的音乐"],
+      "tool_names": ["music.qq_favorites_start"],
+      "default_arguments": {}
+    },
+    {
+      "id": "history",
+      "phrases": ["最近播放", "历史播放"],
+      "tool_names": ["music.qq_history_start"],
+      "default_arguments": {}
+    },
+    {
+      "id": "search_play",
+      "phrases": ["搜索播放", "播放", "听"],
+      "tool_names": ["music.track_resolve_and_start"],
+      "default_arguments": {
+        "player": "qq"
+      }
+    },
+    {
+      "id": "recommended_playlists",
+      "phrases": ["推荐歌单"],
+      "tool_names": ["music.qq_recommended_playlists_start"],
+      "default_arguments": {}
+    },
+    {
+      "id": "created_playlists",
+      "phrases": ["自建歌单", "创建歌单"],
+      "tool_names": ["music.qq_sidebar_playlist_inventory"],
+      "default_arguments": {
+        "section": "created"
+      }
+    },
+    {
+      "id": "collected_playlists",
+      "phrases": ["收藏歌单", "收藏的歌单"],
+      "tool_names": ["music.qq_sidebar_playlist_inventory"],
+      "default_arguments": {
+        "section": "collected"
+      }
+    },
+    {
+      "id": "music_hall",
+      "phrases": ["打开音乐馆", "音乐馆"],
+      "tool_names": ["music.qq_music_hall_open"],
+      "default_arguments": {}
+    },
+    {
+      "id": "next_track",
+      "phrases": ["下一首"],
+      "tool_names": ["music.station_track_next"],
+      "default_arguments": {
+        "player": "qq"
+      }
+    },
+    {
+      "id": "previous_track",
+      "phrases": ["上一首"],
+      "tool_names": ["music.station_track_previous"],
+      "default_arguments": {
+        "player": "qq"
+      }
+    },
+    {
+      "id": "pause",
+      "phrases": ["暂停"],
+      "tool_names": ["music.control_playback"],
+      "default_arguments": {
+        "action": "pause",
+        "player": "qq"
+      }
+    },
+    {
+      "id": "resume",
+      "phrases": ["继续播放"],
+      "tool_names": ["music.control_playback"],
+      "default_arguments": {
+        "action": "play",
+        "player": "qq"
+      }
+    },
+    {
+      "id": "volume_set",
+      "phrases": ["QQ音乐进程音量调到80", "QQ音乐音量调到80"],
+      "tool_names": ["music.system_volume_set"],
+      "default_arguments": {
+        "player": "qq"
+      },
+      "description": "通过 Windows 音频会话设置 QQ 音乐进程音量；不操作播放器底部的内部音量滑块。"
+    },
+    {
+      "id": "volume_raise",
+      "phrases": ["调大QQ音乐进程音量", "调大QQ音乐音量"],
+      "tool_names": ["music.system_volume_raise"],
+      "default_arguments": {
+        "player": "qq"
+      },
+      "description": "通过 Windows 音频会话调高 QQ 音乐进程音量；不操作播放器底部的内部音量滑块。"
+    },
+    {
+      "id": "volume_lower",
+      "phrases": ["调小QQ音乐进程音量", "调小QQ音乐音量"],
+      "tool_names": ["music.system_volume_lower"],
+      "default_arguments": {
+        "player": "qq"
+      },
+      "description": "通过 Windows 音频会话调低 QQ 音乐进程音量；不操作播放器底部的内部音量滑块。"
+    },
+    {
+      "id": "lyrics",
+      "phrases": ["切换歌词", "歌词"],
+      "tool_names": ["music.qq_lyrics_toggle"],
+      "default_arguments": {}
+    },
+    {
+      "id": "play_mode",
+      "phrases": ["单曲循环", "顺序播放", "列表循环", "随机播放"],
+      "tool_names": ["music.qq_play_mode_set"],
+      "default_arguments": {}
+    },
+    {
+      "id": "now_playing",
+      "phrases": [
+        "当前播放什么歌",
+        "现在播放什么歌",
+        "正在播放什么歌",
+        "现在是什么歌",
+        "当前是什么歌",
+        "放的什么歌",
+        "播的什么歌"
+      ],
+      "tool_names": ["music.station_now_snapshot"],
+      "default_arguments": {
+        "player": "qq",
+        "force_refresh": true
+      }
+    },
+    {
+      "id": "cancel",
+      "phrases": ["停止当前音乐任务", "取消当前操作", "别继续搜索"],
+      "tool_names": ["music.cancel_current", "tools.cancel_all"],
+      "default_arguments": {}
+    },
+    {
+      "id": "favorites_open",
+      "phrases": ["打开我喜欢", "只打开喜欢列表", "查看我喜欢"],
+      "tool_names": ["music.qq_favorites_open"],
+      "default_arguments": {}
+    },
+    {
+      "id": "history_open",
+      "phrases": ["打开最近播放", "只查看历史播放", "查看播放历史"],
+      "tool_names": ["music.qq_history_open"],
+      "default_arguments": {}
+    },
+    {
+      "id": "music_hall_start",
+      "phrases": ["播放音乐馆", "音乐馆开始播放"],
+      "tool_names": ["music.qq_music_hall_start"],
+      "default_arguments": {}
+    },
+    {
+      "id": "music_hall_inventory",
+      "phrases": ["音乐馆有哪些歌单", "列出音乐馆歌单"],
+      "tool_names": ["music.qq_music_hall_inventory"],
+      "default_arguments": {}
+    },
+    {
+      "id": "music_hall_playlist_start",
+      "phrases": ["播放音乐馆里的歌单", "播放音乐馆第一个歌单"],
+      "tool_names": ["music.qq_music_hall_playlist_start"],
+      "default_arguments": {}
+    },
+    {
+      "id": "recommended_open",
+      "phrases": ["打开推荐歌单", "只查看推荐歌单"],
+      "tool_names": ["music.qq_recommended_playlists_open"],
+      "default_arguments": {}
+    },
+    {
+      "id": "recommended_inventory",
+      "phrases": ["推荐歌单有哪些", "列出推荐歌单"],
+      "tool_names": ["music.qq_recommended_playlists_inventory"],
+      "default_arguments": {}
+    },
+    {
+      "id": "recommended_playlist_start",
+      "phrases": ["播放推荐里的歌单", "播放第一个推荐歌单"],
+      "tool_names": ["music.qq_recommended_playlist_start"],
+      "default_arguments": {}
+    },
+    {
+      "id": "sidebar_playlist_start",
+      "phrases": ["播放自建歌单", "播放收藏歌单里的指定歌单"],
+      "tool_names": ["music.qq_sidebar_playlist_start"],
+      "default_arguments": {}
+    },
+    {
+      "id": "toggle_playback",
+      "phrases": ["播放暂停", "切换播放状态"],
+      "tool_names": ["music.control_playback"],
+      "default_arguments": { "action": "play_pause", "player": "qq" }
+    }
+  ]
+}

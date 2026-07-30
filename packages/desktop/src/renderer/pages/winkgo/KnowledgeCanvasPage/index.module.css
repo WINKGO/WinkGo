@@ -1,0 +1,205 @@
+.page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-1, #f7f8fa);
+  overflow: hidden;
+}
+
+.toolbar {
+  min-height: 56px;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--color-border-2);
+  background: color-mix(in srgb, var(--bg-base, #fff) 96%, transparent);
+  flex: 0 0 auto;
+}
+
+.titleGroup,
+.toolbarActions {
+  display: flex;
+  align-items: center;
+}
+
+.titleGroup {
+  min-width: 0;
+  gap: 10px;
+}
+
+.toolbarActions {
+  gap: 9px;
+}
+
+.iconButton {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--color-border-2);
+  border-radius: 10px;
+  background: var(--bg-base, #fff);
+  color: var(--color-text-2);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.iconButton:hover {
+  color: var(--color-text-1);
+  background: var(--color-fill-1);
+  border-color: var(--color-border-3);
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid color-mix(in srgb, #4f7cff 66%, transparent);
+  outline-offset: 2px;
+}
+
+.canvasMark {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  color: #315fce;
+  background: linear-gradient(145deg, #edf4ff, #dfe9ff);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text-1);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 20px;
+}
+
+.subtitle {
+  margin: 1px 0 0;
+  max-width: min(54vw, 520px);
+  overflow: hidden;
+  color: var(--color-text-3);
+  font-size: 11px;
+  line-height: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offlineBadge {
+  min-height: 28px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dce8de;
+  border-radius: 999px;
+  color: #3b7650;
+  background: #f5fbf6;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.offlineDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #39a967;
+  box-shadow: 0 0 0 3px rgba(57, 169, 103, 0.12);
+}
+
+.canvasShell {
+  position: relative;
+  min-height: 0;
+  flex: 1 1 auto;
+  background: #f7f8fa;
+}
+
+.canvasFrame {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+  background: #fff;
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--bg-1, #f7f8fa);
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+
+.loadingMark {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  color: #315fce;
+  background: linear-gradient(145deg, #edf4ff, #dfe9ff);
+  box-shadow: 0 8px 26px rgba(55, 90, 175, 0.12);
+  animation: canvas-breathe 1.25s ease-in-out infinite alternate;
+}
+
+@keyframes canvas-breathe {
+  from {
+    transform: scale(0.96);
+    opacity: 0.78;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+:global([data-theme='dark']) .page,
+:global([data-theme='dark']) .loading {
+  background: #1f1f1f;
+}
+
+:global([data-theme='dark']) .toolbar {
+  background: rgba(31, 31, 31, 0.96);
+}
+
+:global([data-theme='dark']) .canvasMark,
+:global([data-theme='dark']) .loadingMark {
+  color: #a7bdff;
+  background: rgba(91, 125, 213, 0.2);
+}
+
+:global([data-theme='dark']) .offlineBadge {
+  color: #8dd9aa;
+  border-color: rgba(87, 178, 120, 0.24);
+  background: rgba(57, 169, 103, 0.1);
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    padding-inline: 10px;
+  }
+
+  .subtitle,
+  .offlineBadge {
+    display: none;
+  }
+}

@@ -1,0 +1,85 @@
+[package]
+name = "winkgo-app"
+version.workspace = true
+edition.workspace = true
+exclude = ["data/**"]
+
+[[bin]]
+name = "winkgo_core"
+path = "src/main.rs"
+
+[features]
+default = ["telegram", "lark", "dingtalk", "weixin"]
+telegram = ["winkgo-channel/telegram"]
+lark = ["winkgo-channel/lark"]
+dingtalk = ["winkgo-channel/dingtalk"]
+weixin = ["winkgo-channel/weixin"]
+
+[dependencies]
+winkgo-common.workspace = true
+winkgo-assets.workspace = true
+winkgo-db.workspace = true
+winkgo-api-types.workspace = true
+winkgo-realtime.workspace = true
+winkgo-auth.workspace = true
+winkgo-system.workspace = true
+winkgo-file.workspace = true
+winkgo-office.workspace = true
+winkgo-shell.workspace = true
+winkgo-ai-agent.workspace = true
+winkgo-mcp.workspace = true
+winkgo-conversation.workspace = true
+winkgo-extension.workspace = true
+winkgo-channel.workspace = true
+winkgo-team.workspace = true
+winkgo-team-prompts.workspace = true
+winkgo-cron.workspace = true
+winkgo-project.workspace = true
+winkgo-assistant.workspace = true
+winkgo-runtime.workspace = true
+winkgo-process.workspace = true
+winkgo-agent-config.workspace = true
+axum.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-subscriber.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+reqwest.workspace = true
+rmcp = { version = "1.5", features = ["server", "transport-io", "schemars"] }
+anyhow.workspace = true
+async-trait.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+] }
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[dev-dependencies]
+winkgo-api-types.workspace = true
+winkgo-realtime.workspace = true
+# Enable the `AgentInstance::Mock` variant so tests can build fake agents
+# through the trait-object escape hatch without spawning real CLI processes.
+winkgo-ai-agent = { workspace = true, features = ["test-support"] }
+base64.workspace = true
+git2.workspace = true
+http-body-util.workspace = true
+rust_xlsxwriter.workspace = true
+sqlx = { workspace = true, features = ["migrate"] }
+tempfile = "3"
+tower = { workspace = true, features = ["util"] }
+tokio-tungstenite.workspace = true
+futures-util.workspace = true
+wiremock = "0.6"

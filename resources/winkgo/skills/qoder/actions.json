@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "skill_id": "qoder",
+  "actions": [
+    {
+      "id": "open",
+      "phrases": ["打开", "启动", "进入"],
+      "tool_names": ["desktop_agents.open_agent"],
+      "default_arguments": {
+        "agent": "qoder"
+      }
+    },
+    {
+      "id": "send_task",
+      "phrases": ["执行", "处理", "帮我", "任务", "发送"],
+      "tool_names": ["desktop_agents.send_task"],
+      "default_arguments": {
+        "agent": "qoder"
+      }
+    },
+    {
+      "id": "new_task",
+      "phrases": [
+        "新任务",
+        "新建任务",
+        "新对话",
+        "Qoder新建任务",
+        "在Qoder新建任务",
+        "Qoder新建一个任务",
+        "在Qoder新建一个任务",
+        "Qoder新对话"
+      ],
+      "tool_names": ["desktop_agents.desktop_agent_new_task"],
+      "default_arguments": {
+        "agent": "qoder"
+      }
+    },
+    {
+      "id": "read",
+      "phrases": ["读取", "看看回复", "结果", "状态"],
+      "tool_names": [
+        "desktop_agents.desktop_agent_read_window",
+        "desktop_agents.get_last_reply",
+        "desktop_agents.get_last_status",
+        "desktop_agents.get_task_result"
+      ],
+      "default_arguments": {
+        "agent": "qoder"
+      }
+    },
+    {
+      "id": "stop",
+      "phrases": ["停止", "取消", "暂停任务", "Qoder停止任务", "停止Qoder当前任务", "取消Qoder当前任务"],
+      "tool_names": ["desktop_agents.desktop_agent_stop_task"],
+      "default_arguments": {
+        "agent": "qoder"
+      }
+    },
+    {
+      "id": "status_check",
+      "phrases": ["检查Qoder状态", "是否就绪", "是否运行"],
+      "tool_names": ["desktop_agents.check_agent"],
+      "default_arguments": { "agent": "qoder" }
+    },
+    {
+      "id": "close",
+      "phrases": ["关闭Qoder", "退出Qoder"],
+      "tool_names": ["desktop_agents.close_agent"],
+      "default_arguments": { "agent": "qoder" }
+    }
+  ]
+}

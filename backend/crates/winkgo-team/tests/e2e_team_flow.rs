@@ -1,0 +1,1884 @@
+//! End-to-end integration tests for the team communication pipeline.
+//!
+//! These tests verify the full flow:
+//!   MCP tool call → mailbox write → wake → send_message → finish → leader notified
+//!
+
+// Pre-existing: MutexGuard held across await points is intentional in this
+// test to maintain a short critical section for assertion, then explicitly dropped.
+#![allow(clippy::await_holding_lock)]
+//! Infrastructure used:
+//! - Real in-memory mock repo (same pattern as existing tests)
+//! - Real TCP MCP server (TeamMcpServer)
+//! - Real TeamSession with real Mailbox + TaskBoard
+//! - RecordingAgent: captures send_message calls (mock `IAgentTask` / `IMockAgent`)
+//! - StubTaskManager: pre-populated with RecordingAgent instances
+//!
+//! Scenarios that cannot yet be wired without a live TeamSessionService DB path
+//! are marked #[ignore] with a clear explanation.
+
+mod common;
+
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex, Weak};
+use std::time::Duration;
+
+use async_trait::async_trait;
+use common::MockTeamRepo;
+use serde_json::{Value, json};
+use tokio::net::TcpStream;
+use tokio::sync::{broadcast, oneshot};
+use winkgo_ai_agent::AgentError;
+use winkgo_ai_agent::agent_task::{AgentInstance, IAgentTask, IMockAgent};
+use winkgo_ai_agent::protocol::events::{AgentStreamEvent, FinishEventData};
+use winkgo_ai_agent::shared_kernel::approval_key;
+use winkgo_ai_agent::types::{BuildTaskOptions, SendMessageData};
+use winkgo_api_types::AgentModeResponse;
+use winkgo_api_types::WebSocketMessage;
+use winkgo_common::{AgentKillReason, AgentType, Confirmation, ConversationStatus, TimestampMs, now_ms};
+use winkgo_db::ITeamRepository;
+use winkgo_realtime::EventBroadcaster;
+use winkgo_team::event_loop::AgentLoopContext;
+use winkgo_team::mcp::protocol::{read_frame, write_frame};
+use winkgo_team::ports::{
+    AgentTurnCancellationPort, AgentTurnExecutionError, AgentTurnExecutionPort, AgentTurnOutcome, AgentTurnRequest,
+    AgentTurnSource, AgentTurnStarted, AgentTurnStatus,
+};
+use winkgo_team::service::TeamSessionService;
+use winkgo_team::{TeamAgent, TeamProjectionMessageStore, TeamSession, TeammateRole};
+
+// ===========================================================================
+// Shared test infrastructure
+// ===========================================================================
+
+struct NullBroadcaster;
+impl EventBroadcaster for NullBroadcaster {
+    fn broadcast(&self, _msg: WebSocketMessage<Value>) {}
+}
+
+#[derive(Default)]
+struct RecordingTurnPort {
+    requests: Arc<Mutex<Vec<AgentTurnRequest>>>,
+}
+
+impl RecordingTurnPort {
+    fn requests(&self) -> Arc<Mutex<Vec<AgentTurnRequest>>> {
+        self.requests.clone()
+    }
+}
+
+#[async_trait]
+impl AgentTurnExecutionPort for RecordingTurnPort {
+    async fn run_agent_turn(&self, request: AgentTurnRequest) -> Result<AgentTurnOutcome, AgentTurnExecutionError> {
+        let turn_index = {
+            let mut requests = self.requests.lock().unwrap();
+            requests.push(request.clone());
+            requests.len()
+        };
+        let turn_id = format!("turn-test-{turn_index}");
+        if let Some(on_started) = request.on_started.as_ref() {
+            on_started(AgentTurnStarted {
+                team_run_id: request.team_run_id.clone(),
+                slot_id: request.slot_id.clone(),
+                role: request.role.clone(),
+                conversation_id: request.conversation_id.clone(),
+                turn_id: turn_id.clone(),
+            })
+            .await;
+        }
+        Ok(AgentTurnOutcome {
+            conversation_id: request.conversation_id,
+            turn_id,
+            status: AgentTurnStatus::Completed,
+            runtime: None,
+        })
+    }
+}
+
+struct NoopCancellationPort;
+
+#[async_trait]
+impl AgentTurnCancellationPort for NoopCancellationPort {
+    async fn cancel_agent_turn(
+        &self,
+        _user_id: &str,
+        _conversation_id: &str,
+        _turn_id: &str,
+    ) -> Result<(), AgentTurnExecutionError> {
+        Ok(())
+    }
+}
+
+struct ErrorBeforeStartTurnPort;
+
+#[async_trait]
+impl AgentTurnExecutionPort for ErrorBeforeStartTurnPort {
+    async fn run_agent_turn(&self, _request: AgentTurnRequest) -> Result<AgentTurnOutcome, AgentTurnExecutionError> {
+        Err(AgentTurnExecutionError::Failed {
+            reason: "failed before start".into(),
+        })
+    }
+}
+
+#[derive(Default)]
+struct SkippedBusyTurnPort {
+    requests: Arc<Mutex<Vec<AgentTurnRequest>>>,
+}
+
+impl SkippedBusyTurnPort {
+    fn requests(&self) -> Arc<Mutex<Vec<AgentTurnRequest>>> {
+        self.requests.clone()
+    }
+}
+
+#[async_trait]
+impl AgentTurnExecutionPort for SkippedBusyTurnPort {
+    async fn run_agent_turn(&self, request: AgentTurnRequest) -> Result<AgentTurnOutcome, AgentTurnExecutionError> {
+        self.requests.lock().unwrap().push(request.clone());
+        Err(AgentTurnExecutionError::Skipped {
+            reason: format!("conversation {} is already running", request.conversation_id),
+        })
+    }
+}
+
+struct StartedThenFailedTurnPort;
+
+#[async_trait]
+impl AgentTurnExecutionPort for StartedThenFailedTurnPort {
+    async fn run_agent_turn(&self, request: AgentTurnRequest) -> Result<AgentTurnOutcome, AgentTurnExecutionError> {
+        if let Some(on_started) = request.on_started.as_ref() {
+            on_started(AgentTurnStarted {
+                team_run_id: request.team_run_id.clone(),
+                slot_id: request.slot_id.clone(),
+                role: request.role.clone(),
+                conversation_id: request.conversation_id.clone(),
+                turn_id: "turn-failed".into(),
+            })
+            .await;
+        }
+        Ok(AgentTurnOutcome {
+            conversation_id: request.conversation_id,
+            turn_id: "turn-failed".into(),
+            status: AgentTurnStatus::Failed,
+            runtime: None,
+        })
+    }
+}
+
+struct BlockingStartTurnPort {
+    claimed_tx: Mutex<Option<oneshot::Sender<()>>>,
+    release_rx: Mutex<Option<oneshot::Receiver<()>>>,
+}
+
+struct HoldFirstRunningTurnPort {
+    requests: Arc<Mutex<Vec<AgentTurnRequest>>>,
+    first_started_tx: Mutex<Option<oneshot::Sender<()>>>,
+    first_release_rx: Mutex<Option<oneshot::Receiver<()>>>,
+}
+
+impl HoldFirstRunningTurnPort {
+    fn new(first_started_tx: oneshot::Sender<()>, first_release_rx: oneshot::Receiver<()>) -> Self {
+        Self {
+            requests: Arc::new(Mutex::new(Vec::new())),
+            first_started_tx: Mutex::new(Some(first_started_tx)),
+            first_release_rx: Mutex::new(Some(first_release_rx)),
+        }
+    }
+
+    fn requests(&self) -> Arc<Mutex<Vec<AgentTurnRequest>>> {
+        self.requests.clone()
+    }
+}
+
+#[async_trait]
+impl AgentTurnExecutionPort for HoldFirstRunningTurnPort {
+    async fn run_agent_turn(&self, request: AgentTurnRequest) -> Result<AgentTurnOutcome, AgentTurnExecutionError> {
+        let turn_index = {
+            let mut requests = self.requests.lock().unwrap();
+            requests.push(request.clone());
+            requests.len()
+        };
+        let turn_id = format!("turn-coalesced-{turn_index}");
+        if let Some(on_started) = request.on_started.as_ref() {
+            on_started(AgentTurnStarted {
+                team_run_id: request.team_run_id.clone(),
+                slot_id: request.slot_id.clone(),
+                role: request.role.clone(),
+                conversation_id: request.conversation_id.clone(),
+                turn_id: turn_id.clone(),
+            })
+            .await;
+        }
+        if turn_index == 1 {
+            if let Some(tx) = self.first_started_tx.lock().unwrap().take() {
+                let _ = tx.send(());
+            }
+            let release_rx = self.first_release_rx.lock().unwrap().take();
+            if let Some(rx) = release_rx {
+                let _ = rx.await;
+            }
+        }
+        Ok(AgentTurnOutcome {
+            conversation_id: request.conversation_id,
+            turn_id,
+            status: AgentTurnStatus::Completed,
+            runtime: None,
+        })
+    }
+}
+
+impl BlockingStartTurnPort {
+    fn new(claimed_tx: oneshot::Sender<()>, release_rx: oneshot::Receiver<()>) -> Self {
+        Self {
+            claimed_tx: Mutex::new(Some(claimed_tx)),
+            release_rx: Mutex::new(Some(release_rx)),
+        }
+    }
+}
+
+#[async_trait]
+impl AgentTurnExecutionPort for BlockingStartTurnPort {
+    async fn run_agent_turn(&self, request: AgentTurnRequest) -> Result<AgentTurnOutcome, AgentTurnExecutionError> {
+        if let Some(tx) = self.claimed_tx.lock().unwrap().take() {
+            let _ = tx.send(());
+        }
+        let release_rx = self.release_rx.lock().unwrap().take();
+        if let Some(rx) = release_rx {
+            let _ = rx.await;
+        }
+        if let Some(on_started) = request.on_started.as_ref() {
+            on_started(AgentTurnStarted {
+                team_run_id: request.team_run_id.clone(),
+                slot_id: request.slot_id.clone(),
+                role: request.role.clone(),
+                conversation_id: request.conversation_id.clone(),
+                turn_id: "turn-late-start".into(),
+            })
+            .await;
+        }
+        Ok(AgentTurnOutcome {
+            conversation_id: request.conversation_id,
+            turn_id: "turn-late-start".into(),
+            status: AgentTurnStatus::Completed,
+            runtime: None,
+        })
+    }
+}
+
+#[derive(Default)]
+struct RecordingCancellationPort {
+    cancelled: Arc<Mutex<Vec<String>>>,
+}
+
+impl RecordingCancellationPort {
+    fn cancelled(&self) -> Arc<Mutex<Vec<String>>> {
+        self.cancelled.clone()
+    }
+}
+
+#[async_trait]
+impl AgentTurnCancellationPort for RecordingCancellationPort {
+    async fn cancel_agent_turn(
+        &self,
+        _user_id: &str,
+        _conversation_id: &str,
+        turn_id: &str,
+    ) -> Result<(), AgentTurnExecutionError> {
+        self.cancelled.lock().unwrap().push(turn_id.to_owned());
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct NoopProjectionStore;
+
+#[async_trait]
+impl TeamProjectionMessageStore for NoopProjectionStore {
+    fn mint_message_id(&self) -> String {
+        "msg-e2e".into()
+    }
+
+    async fn find_projected_message(
+        &self,
+        _conversation_id: &str,
+        _msg_id: &str,
+        _msg_type: &str,
+    ) -> Result<Option<winkgo_db::models::MessageRow>, winkgo_team::TeamError> {
+        Ok(None)
+    }
+
+    async fn insert_projected_message(
+        &self,
+        _row: &winkgo_db::models::MessageRow,
+    ) -> Result<(), winkgo_team::TeamError> {
+        Ok(())
+    }
+}
+
+/// RecordingBroadcaster captures all WebSocket events for assertion.
+/// Currently unused in e2e_team_flow tests — kept for future scenario expansion.
+#[allow(dead_code)]
+#[derive(Default)]
+struct RecordingBroadcaster {
+    events: Mutex<Vec<WebSocketMessage<Value>>>,
+}
+
+#[allow(dead_code)]
+impl RecordingBroadcaster {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn events_named(&self, name: &str) -> Vec<WebSocketMessage<Value>> {
+        self.events
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|e| e.name == name)
+            .cloned()
+            .collect()
+    }
+}
+
+impl EventBroadcaster for RecordingBroadcaster {
+    fn broadcast(&self, msg: WebSocketMessage<Value>) {
+        self.events.lock().unwrap().push(msg);
+    }
+}
+
+/// RecordingAgent: captures every send_message call. The broadcast channel
+/// lets tests simulate Finish events by sending AgentStreamEvent::Finish.
+struct RecordingAgent {
+    conversation_id: String,
+    sent: Arc<Mutex<Vec<SendMessageData>>>,
+    event_tx: broadcast::Sender<AgentStreamEvent>,
+    fail_with: Option<String>,
+}
+
+impl RecordingAgent {
+    fn new(conversation_id: &str, sent: Arc<Mutex<Vec<SendMessageData>>>) -> Self {
+        let (event_tx, _) = broadcast::channel(16);
+        Self {
+            conversation_id: conversation_id.to_owned(),
+            sent,
+            event_tx,
+            fail_with: None,
+        }
+    }
+
+    /// Create a variant whose send_message always errors.
+    /// Reserved for future error-path scenario tests.
+    #[allow(dead_code)]
+    fn failing(conversation_id: &str, sent: Arc<Mutex<Vec<SendMessageData>>>, error: &str) -> Self {
+        let (event_tx, _) = broadcast::channel(16);
+        Self {
+            conversation_id: conversation_id.to_owned(),
+            sent,
+            event_tx,
+            fail_with: Some(error.to_owned()),
+        }
+    }
+
+    /// Subscribe to the agent's event stream so the test can fire Finish/Error.
+    #[allow(dead_code)]
+    fn subscribe(&self) -> broadcast::Receiver<AgentStreamEvent> {
+        self.event_tx.subscribe()
+    }
+
+    /// Fire a Finish event on the agent's stream (simulates agent completing a turn).
+    #[allow(dead_code)]
+    fn fire_finish(&self) {
+        let _ = self
+            .event_tx
+            .send(AgentStreamEvent::Finish(FinishEventData { session_id: None }));
+    }
+}
+
+#[async_trait::async_trait]
+impl IAgentTask for RecordingAgent {
+    fn agent_type(&self) -> AgentType {
+        AgentType::Acp
+    }
+    fn conversation_id(&self) -> &str {
+        &self.conversation_id
+    }
+    fn workspace(&self) -> &str {
+        "/tmp/ws"
+    }
+    fn status(&self) -> Option<ConversationStatus> {
+        None
+    }
+    fn last_activity_at(&self) -> TimestampMs {
+        now_ms()
+    }
+    fn subscribe(&self) -> broadcast::Receiver<AgentStreamEvent> {
+        self.event_tx.subscribe()
+    }
+    async fn send_message(&self, data: SendMessageData) -> Result<(), winkgo_ai_agent::AgentSendError> {
+        self.sent.lock().unwrap().push(data);
+        match &self.fail_with {
+            Some(msg) => Err(winkgo_ai_agent::AgentSendError::from_agent_error(AgentError::internal(
+                msg.clone(),
+            ))),
+            None => Ok(()),
+        }
+    }
+    async fn cancel(&self) -> Result<(), AgentError> {
+        Ok(())
+    }
+    fn kill(&self, _reason: Option<AgentKillReason>) -> Result<(), AgentError> {
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl IMockAgent for RecordingAgent {
+    fn get_confirmations(&self) -> Vec<Confirmation> {
+        Vec::new()
+    }
+    fn check_approval(&self, action: &str, command_type: Option<&str>) -> bool {
+        let _ = approval_key(Some(action), command_type);
+        false
+    }
+    fn confirm(&self, _: &str, _: &str, _: Value, _: bool) -> Result<(), AgentError> {
+        Ok(())
+    }
+    async fn mode(&self) -> Result<AgentModeResponse, AgentError> {
+        Ok(AgentModeResponse {
+            mode: "default".to_owned(),
+            initialized: false,
+        })
+    }
+}
+
+/// StubTaskManager: allows pre-inserting RecordingAgent handles by conv_id.
+/// Also records kill calls.
+struct StubTaskManager {
+    tasks: Mutex<HashMap<String, AgentInstance>>,
+    kill_calls: Mutex<Vec<(String, Option<AgentKillReason>)>>,
+}
+
+impl StubTaskManager {
+    fn new() -> Self {
+        Self {
+            tasks: Mutex::new(HashMap::new()),
+            kill_calls: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn insert(&self, conv_id: &str, handle: AgentInstance) {
+        self.tasks.lock().unwrap().insert(conv_id.to_owned(), handle);
+    }
+
+    #[allow(dead_code)]
+    fn kill_calls(&self) -> Vec<(String, Option<AgentKillReason>)> {
+        self.kill_calls.lock().unwrap().clone()
+    }
+}
+
+#[async_trait]
+impl winkgo_ai_agent::IWorkerTaskManager for StubTaskManager {
+    fn get_task(&self, conversation_id: &str) -> Option<AgentInstance> {
+        self.tasks.lock().unwrap().get(conversation_id).cloned()
+    }
+
+    async fn get_or_build_task(&self, _: &str, _: BuildTaskOptions) -> Result<AgentInstance, AgentError> {
+        Err(AgentError::internal(
+            "StubTaskManager does not support get_or_build_task",
+        ))
+    }
+    fn kill(&self, conversation_id: &str, reason: Option<AgentKillReason>) -> Result<(), AgentError> {
+        self.kill_calls
+            .lock()
+            .unwrap()
+            .push((conversation_id.to_owned(), reason));
+        Ok(())
+    }
+    fn kill_and_wait(
+        &self,
+        conversation_id: &str,
+        reason: Option<AgentKillReason>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        let _ = self.kill(conversation_id, reason);
+        Box::pin(std::future::ready(()))
+    }
+    async fn clear(&self) {}
+    fn active_count(&self) -> usize {
+        self.tasks.lock().unwrap().len()
+    }
+    fn collect_idle(&self, _: TimestampMs) -> Vec<String> {
+        Vec::new()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers: extract MCP server info from TeamSession via public API
+// ---------------------------------------------------------------------------
+
+/// Get the MCP server port from a TeamSession using the public mcp_stdio_config API.
+fn session_port(session: &TeamSession) -> u16 {
+    session.mcp_stdio_config("lead-1").port
+}
+
+/// Get the MCP server auth token from a TeamSession using the public mcp_stdio_config API.
+fn session_token(session: &TeamSession) -> String {
+    session.mcp_stdio_config("lead-1").token
+}
+
+// ---------------------------------------------------------------------------
+// MCP protocol helpers (same pattern as e2e_smoke.rs and mcp_server_integration.rs)
+// ---------------------------------------------------------------------------
+
+async fn tcp_send(stream: &mut TcpStream, req: &Value) {
+    let bytes = serde_json::to_vec(req).unwrap();
+    write_frame(stream, &bytes).await.unwrap();
+}
+
+async fn tcp_recv(stream: &mut TcpStream) -> Value {
+    let frame = read_frame(stream).await.unwrap();
+    serde_json::from_slice(&frame).unwrap()
+}
+
+/// Connect and complete the MCP initialize handshake. Returns an
+/// authenticated, ready-to-use TcpStream.
+async fn mcp_connect(port: u16, auth_token: &str, slot_id: &str) -> TcpStream {
+    let mut stream = TcpStream::connect(format!("127.0.0.1:{port}"))
+        .await
+        .expect("tcp connect to TeamMcpServer");
+    let init_req = json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "auth_token": auth_token,
+            "slot_id": slot_id,
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": { "name": "e2e-test", "version": "0.1" }
+        }
+    });
+    tcp_send(&mut stream, &init_req).await;
+    let resp = tcp_recv(&mut stream).await;
+    assert!(
+        resp["result"]["serverInfo"]["name"].is_string(),
+        "initialize failed: {resp}"
+    );
+    stream
+}
+
+/// Send a tools/call and return the full response envelope.
+async fn mcp_call_tool(stream: &mut TcpStream, id: u64, tool: &str, args: Value) -> Value {
+    let req = json!({
+        "jsonrpc": "2.0",
+        "id": id,
+        "method": "tools/call",
+        "params": { "name": tool, "arguments": args }
+    });
+    tcp_send(stream, &req).await;
+    tcp_recv(stream).await
+}
+
+fn is_mcp_error(resp: &Value) -> bool {
+    resp["result"]["isError"].as_bool().unwrap_or(false)
+}
+
+fn mcp_text(resp: &Value) -> &str {
+    resp["result"]["content"][0]["text"].as_str().unwrap_or("")
+}
+
+// ---------------------------------------------------------------------------
+// Environment builders
+// ---------------------------------------------------------------------------
+
+fn backend_path() -> Arc<PathBuf> {
+    Arc::new(PathBuf::from("/tmp/winkgo_core-e2e-test"))
+}
+
+/// Two-agent team definition: one Lead + one Worker.
+fn two_agents() -> Vec<TeamAgent> {
+    vec![
+        TeamAgent {
+            slot_id: "lead-1".into(),
+            name: "Leader".into(),
+            role: TeammateRole::Lead,
+            conversation_id: "conv-lead".into(),
+            backend: "acp".into(),
+            model: "claude".into(),
+            assistant_id: None,
+            status: None,
+            conversation_type: None,
+            cli_path: None,
+        },
+        TeamAgent {
+            slot_id: "worker-1".into(),
+            name: "Worker".into(),
+            role: TeammateRole::Teammate,
+            conversation_id: "conv-worker".into(),
+            backend: "acp".into(),
+            model: "claude".into(),
+            assistant_id: None,
+            status: None,
+            conversation_type: None,
+            cli_path: None,
+        },
+    ]
+}
+
+/// Build a TeamSession + shared task manager pre-populated with RecordingAgents.
+///
+/// Returns:
+/// - Arc<TeamSession>
+/// - Arc<StubTaskManager>
+/// - Arc<MockTeamRepo>  (for low-level mailbox inspection)
+/// - Arc<Mutex<Vec<SendMessageData>>>  (shared sent-messages log)
+async fn setup_session_with_turn_recorder() -> (
+    Arc<TeamSession>,
+    Arc<StubTaskManager>,
+    Arc<MockTeamRepo>,
+    Arc<Mutex<Vec<SendMessageData>>>,
+    Arc<Mutex<Vec<AgentTurnRequest>>>,
+) {
+    setup_session_with_turn_recorder_inner(true).await
+}
+
+async fn setup_session_with_turn_recorder_without_loops() -> (
+    Arc<TeamSession>,
+    Arc<StubTaskManager>,
+    Arc<MockTeamRepo>,
+    Arc<Mutex<Vec<SendMessageData>>>,
+    Arc<Mutex<Vec<AgentTurnRequest>>>,
+) {
+    setup_session_with_turn_recorder_inner(false).await
+}
+
+async fn setup_session_with_turn_recorder_inner(
+    register_loops: bool,
+) -> (
+    Arc<TeamSession>,
+    Arc<StubTaskManager>,
+    Arc<MockTeamRepo>,
+    Arc<Mutex<Vec<SendMessageData>>>,
+    Arc<Mutex<Vec<AgentTurnRequest>>>,
+) {
+    let repo = Arc::new(MockTeamRepo::new());
+    let repo_dyn: Arc<dyn ITeamRepository> = repo.clone();
+    let broadcaster: Arc<dyn EventBroadcaster> = Arc::new(NullBroadcaster);
+
+    let sent: Arc<Mutex<Vec<SendMessageData>>> = Arc::new(Mutex::new(Vec::new()));
+    let task_manager = Arc::new(StubTaskManager::new());
+
+    for agent in two_agents() {
+        let handle = AgentInstance::Mock(Arc::new(RecordingAgent::new(&agent.conversation_id, sent.clone())));
+        task_manager.insert(&agent.conversation_id, handle);
+    }
+
+    let task_manager_dyn: Arc<dyn winkgo_ai_agent::IWorkerTaskManager> = task_manager.clone();
+    let turn_port_impl = Arc::new(RecordingTurnPort::default());
+    let turn_requests = turn_port_impl.requests();
+    let turn_port: Arc<dyn AgentTurnExecutionPort> = turn_port_impl;
+    let cancellation_port: Arc<dyn AgentTurnCancellationPort> = Arc::new(NoopCancellationPort);
+
+    let team = winkgo_team::types::Team {
+        id: "e2e-team".into(),
+        name: "E2E Team".into(),
+        workspace: "/tmp/e2e-team".into(),
+        agents: two_agents(),
+        lead_agent_id: Some("lead-1".into()),
+        created_at: 1000,
+        updated_at: 1000,
+    };
+
+    let session = TeamSession::start(
+        team,
+        repo_dyn,
+        broadcaster,
+        backend_path(),
+        task_manager_dyn,
+        turn_port,
+        cancellation_port,
+        Arc::new(NoopProjectionStore),
+        "user-e2e".into(),
+        Weak::<TeamSessionService>::new(),
+    )
+    .await
+    .expect("TeamSession::start failed");
+
+    let session = Arc::new(session);
+    if register_loops {
+        register_test_event_loops(&session);
+    }
+
+    (session, task_manager, repo, sent, turn_requests)
+}
+
+async fn setup_session() -> (
+    Arc<TeamSession>,
+    Arc<StubTaskManager>,
+    Arc<MockTeamRepo>,
+    Arc<Mutex<Vec<SendMessageData>>>,
+) {
+    let (session, task_manager, repo, sent, _turn_requests) = setup_session_with_turn_recorder().await;
+    (session, task_manager, repo, sent)
+}
+
+async fn setup_session_with_runtime_ports(
+    turn_port: Arc<dyn AgentTurnExecutionPort>,
+    cancellation_port: Arc<dyn AgentTurnCancellationPort>,
+    broadcaster: Arc<RecordingBroadcaster>,
+) -> Arc<TeamSession> {
+    let repo = Arc::new(MockTeamRepo::new());
+    let repo_dyn: Arc<dyn ITeamRepository> = repo;
+    let broadcaster_dyn: Arc<dyn EventBroadcaster> = broadcaster;
+    let task_manager = Arc::new(StubTaskManager::new());
+    for agent in two_agents() {
+        let sent: Arc<Mutex<Vec<SendMessageData>>> = Arc::new(Mutex::new(Vec::new()));
+        let handle = AgentInstance::Mock(Arc::new(RecordingAgent::new(&agent.conversation_id, sent)));
+        task_manager.insert(&agent.conversation_id, handle);
+    }
+    let task_manager_dyn: Arc<dyn winkgo_ai_agent::IWorkerTaskManager> = task_manager;
+    let team = winkgo_team::types::Team {
+        id: "e2e-team".into(),
+        name: "E2E Team".into(),
+        workspace: "/tmp/e2e-team".into(),
+        agents: two_agents(),
+        lead_agent_id: Some("lead-1".into()),
+        created_at: 1000,
+        updated_at: 1000,
+    };
+
+    let session = TeamSession::start(
+        team,
+        repo_dyn,
+        broadcaster_dyn,
+        backend_path(),
+        task_manager_dyn,
+        turn_port,
+        cancellation_port,
+        Arc::new(NoopProjectionStore),
+        "user-e2e".into(),
+        Weak::<TeamSessionService>::new(),
+    )
+    .await
+    .expect("TeamSession::start failed");
+    let session = Arc::new(session);
+    register_test_event_loops(&session);
+    session
+}
+
+async fn wait_for_event(broadcaster: &RecordingBroadcaster, name: &str) {
+    for _ in 0..100 {
+        if !broadcaster.events_named(name).is_empty() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("timed out waiting for event {name}");
+}
+
+async fn wait_for_turn_request_count(requests: &Arc<Mutex<Vec<AgentTurnRequest>>>, count: usize) {
+    for _ in 0..100 {
+        if requests.lock().unwrap().len() >= count {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("timed out waiting for {count} turn requests");
+}
+
+async fn wait_for_cancelled_turn_count(cancelled: &Arc<Mutex<Vec<String>>>, count: usize) {
+    for _ in 0..100 {
+        if cancelled.lock().unwrap().len() >= count {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("timed out waiting for {count} cancelled turns");
+}
+
+fn register_test_event_loops(session: &Arc<TeamSession>) {
+    let registry = session.event_loops().clone();
+    for agent in two_agents() {
+        let ctx = AgentLoopContext {
+            team_id: session.team_id().to_owned(),
+            slot_id: agent.slot_id.clone(),
+            user_id: session.user_id().to_owned(),
+            session: session.clone(),
+            scheduler: session.scheduler().clone(),
+            mailbox: session.mailbox().clone(),
+            turn_port: session.turn_port().clone(),
+            registry: registry.clone(),
+        };
+        registry.spawn(&agent.slot_id, ctx).expect("register test event loop");
+    }
+}
+
+async fn wait_until_turn_count(turn_requests: &Arc<Mutex<Vec<AgentTurnRequest>>>, expected: usize) {
+    for _ in 0..100 {
+        if turn_requests.lock().unwrap().len() >= expected {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("timed out waiting for {expected} turn requests");
+}
+
+// ===========================================================================
+// Scenario 1: MCP server starts and tools/list surface is correct
+// ===========================================================================
+
+/// Scenario 1a: TeamSession starts, MCP server binds a port, tools are available.
+///
+/// Verifies:
+/// - TeamSession::start succeeds
+/// - MCP TCP server is reachable
+/// - tools/list returns all expected tools
+#[tokio::test]
+async fn s1a_mcp_server_starts_and_tools_available() {
+    let (session, _tm, _repo, _sent) = setup_session().await;
+
+    let port = session_port(&session);
+    assert!(port > 0, "MCP server must bind a non-zero port");
+
+    let token = session_token(&session);
+    let mut stream = mcp_connect(port, &token, "lead-1").await;
+
+    let req = json!({ "jsonrpc": "2.0", "id": 2, "method": "tools/list" });
+    tcp_send(&mut stream, &req).await;
+    let resp = tcp_recv(&mut stream).await;
+
+    let tools = resp["result"]["tools"].as_array().expect("tools array");
+    assert_eq!(tools.len(), 10, "expected exactly 10 MCP tools, got {}", tools.len());
+
+    let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
+    assert!(names.contains(&"team_send_message"), "missing team_send_message");
+    assert!(names.contains(&"team_members"), "missing team_members");
+    assert!(names.contains(&"team_task_create"), "missing team_task_create");
+    assert!(names.contains(&"team_list_assistants"), "missing team_list_assistants");
+    assert!(
+        !names.contains(&"team_list_models"),
+        "team_list_models should not be exposed"
+    );
+
+    session.stop();
+}
+
+/// Scenario 1b: mcp_stdio_config is generated correctly for each agent slot.
+///
+/// Verifies that the stdio config written to conversation.extra contains
+/// the correct port, token, and slot_id values.
+#[tokio::test]
+async fn s1b_mcp_stdio_config_per_agent() {
+    let (session, _tm, _repo, _sent) = setup_session().await;
+
+    let cfg_lead = session.mcp_stdio_config("lead-1");
+    assert_eq!(cfg_lead.team_id, "e2e-team");
+    assert_eq!(cfg_lead.slot_id, "lead-1");
+    assert_eq!(cfg_lead.port, session_port(&session));
+    assert!(!cfg_lead.token.is_empty());
+
+    let cfg_worker = session.mcp_stdio_config("worker-1");
+    assert_eq!(cfg_worker.team_id, "e2e-team");
+    assert_eq!(cfg_worker.slot_id, "worker-1");
+    assert_eq!(cfg_worker.port, cfg_lead.port, "same server port");
+    assert_eq!(cfg_worker.token, cfg_lead.token, "same auth token for same session");
+    assert_ne!(cfg_worker.slot_id, cfg_lead.slot_id);
+
+    session.stop();
+}
+
+// ===========================================================================
+// Scenario 2: MCP team_send_message end-to-end
+// ===========================================================================
+
+/// Scenario 2a: Standalone MCP send requires a live Team Run service.
+#[tokio::test]
+async fn s2a_mcp_team_send_message_rejects_without_live_service() {
+    let (session, _tm, repo, _sent) = setup_session().await;
+    let port = session_port(&session);
+    let token = session_token(&session);
+
+    let mut stream = mcp_connect(port, &token, "lead-1").await;
+    let resp = mcp_call_tool(
+        &mut stream,
+        10,
+        "team_send_message",
+        json!({ "to": "worker-1", "message": "e2e test payload" }),
+    )
+    .await;
+
+    assert!(
+        is_mcp_error(&resp),
+        "team_send_message must reject without service: {resp}"
+    );
+    assert!(mcp_text(&resp).contains("Team service not available"));
+
+    let state = repo.state.lock().unwrap();
+    assert!(
+        state.messages.is_empty(),
+        "rejected MCP send must not write mailbox rows"
+    );
+
+    session.stop();
+}
+
+/// Scenario 2b: Broadcast send is also guarded by the Team Run service.
+#[tokio::test]
+async fn s2b_mcp_broadcast_rejects_without_live_service() {
+    let (session, _tm, repo, _sent) = setup_session().await;
+    let port = session_port(&session);
+    let token = session_token(&session);
+
+    let mut stream = mcp_connect(port, &token, "lead-1").await;
+    let resp = mcp_call_tool(
+        &mut stream,
+        11,
+        "team_send_message",
+        json!({ "to": "*", "message": "broadcast msg" }),
+    )
+    .await;
+
+    assert!(is_mcp_error(&resp), "broadcast must reject without service: {resp}");
+    assert!(mcp_text(&resp).contains("Team service not available"));
+
+    let state = repo.state.lock().unwrap();
+    assert!(
+        state.messages.is_empty(),
+        "rejected broadcast must not write mailbox rows"
+    );
+
+    session.stop();
+}
+
+/// Scenario 2c: rejected team_send_message has no mailbox side effect.
+#[tokio::test]
+async fn s2c_rejected_send_message_does_not_reach_repo() {
+    let (session, _tm, repo, _sent) = setup_session().await;
+    let port = session_port(&session);
+    let token = session_token(&session);
+
+    // Verify repo is initially empty
+    {
+        let state = repo.state.lock().unwrap();
+        assert!(state.messages.is_empty(), "repo must start empty");
+    }
+
+    let mut stream = mcp_connect(port, &token, "lead-1").await;
+    let resp = mcp_call_tool(
+        &mut stream,
+        12,
+        "team_send_message",
+        json!({ "to": "worker-1", "message": "side-effect check" }),
+    )
+    .await;
+    assert!(
+        is_mcp_error(&resp),
+        "team_send_message must reject without service: {resp}"
+    );
+
+    let state = repo.state.lock().unwrap();
+    assert!(
+        state.messages.is_empty(),
+        "rejected team_send_message must not persist mailbox rows"
+    );
+
+    session.stop();
+}
+
+// ===========================================================================
+// Scenario 3: on_agent_finish → mark_idle → IdleNotification → leader re-wake
+// ===========================================================================
+
+/// Scenario 3a: Worker finishes → on_agent_finish marks worker idle →
+/// IdleNotification written to lead mailbox → lead is returned as wake target.
+#[tokio::test]
+async fn s3a_on_agent_finish_writes_idle_notification_to_lead() {
+    let (session, _tm, repo, _sent) = setup_session().await;
+
+    // Set worker to Working (simulates in-flight turn)
+    session
+        .scheduler()
+        .set_status("worker-1", winkgo_team::TeammateStatus::Working)
+        .await
+        .unwrap();
+
+    // Simulate worker finishing its turn
+    let wake_target = session.on_agent_finish("conv-worker", false).await.unwrap();
+
+    // Worker should now be idle and lead should be returned as wake target
+    assert_eq!(
+        wake_target.as_deref(),
+        Some("lead-1"),
+        "on_agent_finish must return lead-1 as wake target; got {wake_target:?}"
+    );
+
+    let worker_status = session.scheduler().get_status("worker-1").await.unwrap();
+    assert_eq!(
+        worker_status,
+        winkgo_team::TeammateStatus::Idle,
+        "worker must be Idle after finish"
+    );
+
+    // IdleNotification must be in lead's mailbox
+    let state = repo.state.lock().unwrap();
+    let lead_idle: Vec<_> = state
+        .messages
+        .iter()
+        .filter(|m| m.to_agent_id == "lead-1" && m.msg_type == "idle_notification")
+        .collect();
+    assert!(
+        !lead_idle.is_empty(),
+        "IdleNotification must be written to lead mailbox after worker finish; got {:?}",
+        state.messages
+    );
+
+    session.stop();
+}
+
+/// Scenario 3b: Lead finish does not write IdleNotification to anyone.
+#[tokio::test]
+async fn s3b_lead_finish_does_not_write_idle_notification() {
+    let (session, _tm, repo, _sent) = setup_session().await;
+
+    session
+        .scheduler()
+        .set_status("lead-1", winkgo_team::TeammateStatus::Working)
+        .await
+        .unwrap();
+
+    let wake_target = session.on_agent_finish("conv-lead", false).await.unwrap();
+
+    // Lead finish should not produce a wake target
+    assert!(wake_target.is_none(), "lead finish must not return a wake target");
+
+    // No idle_notification should be written
+    let state = repo.state.lock().unwrap();
+    let idle_notifs: Vec<_> = state
+        .messages
+        .iter()
+        .filter(|m| m.msg_type == "idle_notification")
+        .collect();
+    assert!(
+        idle_notifs.is_empty(),
+        "lead finish must not write idle_notification; got {idle_notifs:?}"
+    );
+
+    session.stop();
+}
+
+/// Scenario 3c: Full round-trip — worker sends message via MCP → finishes →
+/// lead mailbox has IdleNotification → lead's send_message is called.
+#[tokio::test]
+async fn s3c_finish_triggers_lead_wake_with_idle_notification() {
+    let (session, _tm, repo, _sent, turn_requests) = setup_session_with_turn_recorder().await;
+
+    // Write a message to worker's mailbox (so the wake has content to send)
+    session
+        .mailbox()
+        .write(
+            "e2e-team",
+            "worker-1",
+            "lead-1",
+            winkgo_team::MailboxMessageType::Message,
+            "do the work",
+            None,
+        )
+        .await
+        .unwrap();
+
+    // Set worker Working and drain its mailbox (simulates the wake consuming
+    // messages via compute_wake_input before on_agent_finish fires).
+    session
+        .scheduler()
+        .set_status("worker-1", winkgo_team::TeammateStatus::Working)
+        .await
+        .unwrap();
+    let _ = session.mailbox().read_unread("e2e-team", "worker-1").await;
+
+    // Worker finishes → IdleNotification → lead returned
+    let wake_target = session.on_agent_finish("conv-worker", false).await.unwrap();
+    assert_eq!(wake_target.as_deref(), Some("lead-1"));
+
+    // Verify that the IdleNotification is in lead's mailbox (it will be consumed
+    // when the lead is re-woken by spawn_finish_subscribers in the real service).
+    {
+        let state = repo.state.lock().unwrap();
+        let lead_msgs: Vec<_> = state.messages.iter().filter(|m| m.to_agent_id == "lead-1").collect();
+        assert!(
+            !lead_msgs.is_empty(),
+            "lead mailbox must have content (idle_notification) after worker finish"
+        );
+    }
+
+    // Trigger lead wake via the public send_message_to_agent API:
+    // this writes to mailbox + wakes the agent, which causes send_message to fire.
+    session
+        .send_message_to_agent("lead-1", "wake", None)
+        .await
+        .expect("send_message_to_agent must succeed");
+
+    // Allow async propagation
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+    // Lead's turn must go through the Team-defined port, not direct agent send.
+    let log = turn_requests.lock().unwrap();
+    assert!(
+        log.iter().any(|request| request.slot_id == "lead-1"
+            && request.conversation_id == "conv-lead"
+            && request.team_id == "e2e-team"),
+        "lead turn port must be called after wake; requests: {log:?}"
+    );
+
+    session.stop();
+}
+
+// ===========================================================================
+// Scenario 4: add_agent (runtime) + finish propagation
+// ===========================================================================
+
+/// Scenario 4: Adding a new agent at runtime (simulating spawn_agent outcome)
+/// then verifying the new agent receives messages and can finish.
+#[tokio::test]
+async fn s4_dynamic_agent_added_then_finish_propagates() {
+    let (session, task_manager, repo, sent, turn_requests) = setup_session_with_turn_recorder().await;
+
+    // Add a new agent at runtime
+    let new_agent = TeamAgent {
+        slot_id: "helper-1".into(),
+        name: "Helper".into(),
+        role: TeammateRole::Teammate,
+        conversation_id: "conv-helper".into(),
+        backend: "acp".into(),
+        model: "claude".into(),
+        assistant_id: None,
+        status: None,
+        conversation_type: None,
+        cli_path: None,
+    };
+
+    // Insert a recording agent for the new conversation
+    let handle = AgentInstance::Mock(Arc::new(RecordingAgent::new("conv-helper", sent.clone())));
+    task_manager.insert("conv-helper", handle);
+
+    // Add the agent to the session's scheduler
+    session.add_agent(&new_agent).await;
+    let registry = session.event_loops().clone();
+    registry
+        .spawn(
+            &new_agent.slot_id,
+            AgentLoopContext {
+                team_id: session.team_id().to_owned(),
+                slot_id: new_agent.slot_id.clone(),
+                user_id: session.user_id().to_owned(),
+                session: session.clone(),
+                scheduler: session.scheduler().clone(),
+                mailbox: session.mailbox().clone(),
+                turn_port: session.turn_port().clone(),
+                registry: registry.clone(),
+            },
+        )
+        .expect("register test event loop");
+
+    // Verify the agent is in the roster
+    let agents = session.scheduler().list_agents().await;
+    assert_eq!(agents.len(), 3, "expected 3 agents after add_agent");
+    assert!(agents.iter().any(|a| a.slot_id == "helper-1"));
+
+    // Send a welcome message to the new agent
+    session
+        .mailbox()
+        .write(
+            "e2e-team",
+            "helper-1",
+            "lead-1",
+            winkgo_team::MailboxMessageType::Message,
+            "welcome, helper",
+            None,
+        )
+        .await
+        .unwrap();
+
+    // Wake the helper via public send_message_to_agent API
+    // (this writes to mailbox AND wakes the agent, consuming the prior mailbox messages)
+    session
+        .send_message_to_agent("helper-1", "start your task", None)
+        .await
+        .expect("send_message_to_agent to helper must succeed");
+
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+    // Helper's turn must go through the Team-defined port.
+    let log = turn_requests.lock().unwrap();
+    assert!(
+        log.iter().any(|request| request.slot_id == "helper-1"
+            && request.conversation_id == "conv-helper"
+            && request.team_id == "e2e-team"),
+        "helper turn port must be called after send_message_to_agent; requests: {log:?}"
+    );
+    drop(log);
+
+    // EventLoop finalization owns the finish transition and writes the leader
+    // notification; calling on_agent_finish here would duplicate that terminal.
+    let state = repo.state.lock().unwrap();
+    let lead_notifs: Vec<_> = state
+        .messages
+        .iter()
+        .filter(|m| m.to_agent_id == "lead-1" && m.msg_type == "idle_notification" && m.from_agent_id == "helper-1")
+        .collect();
+    assert!(
+        !lead_notifs.is_empty(),
+        "lead must receive idle_notification from helper; msgs={:?}",
+        state.messages
+    );
+
+    session.stop();
+}
+
+// ===========================================================================
+// Scenario 5: Rapid consecutive messages – dedup window after clear
+// ===========================================================================
+
+/// Scenario 5: After a first finish + clear_finalized_turn, a second finish
+/// for the same conversation must also succeed (not be dropped by dedup).
+///
+/// This is the regression test for the "dedup window drops legitimate second
+/// Finish" bug (fix/team-communication-bugs task #5).
+#[tokio::test]
+async fn s5_consecutive_finish_events_after_dedup_clear() {
+    let (session, _tm, repo, _sent) = setup_session().await;
+
+    // First finish
+    session
+        .scheduler()
+        .set_status("worker-1", winkgo_team::TeammateStatus::Working)
+        .await
+        .unwrap();
+    let first_result = session.on_agent_finish("conv-worker", false).await.unwrap();
+    assert_eq!(
+        first_result.as_deref(),
+        Some("lead-1"),
+        "first finish must return wake target"
+    );
+
+    // Simulate what the service's finish_subscribers do: clear the dedup window
+    // after a successful wake so the next legitimate finish can proceed.
+    session.scheduler().clear_finalized_turn("conv-worker");
+
+    // Set worker Working again (second turn)
+    session
+        .scheduler()
+        .set_status("worker-1", winkgo_team::TeammateStatus::Working)
+        .await
+        .unwrap();
+
+    let second_result = session.on_agent_finish("conv-worker", false).await.unwrap();
+    assert_eq!(
+        second_result.as_deref(),
+        Some("lead-1"),
+        "second finish (after dedup clear) must also return wake target; got {second_result:?}"
+    );
+
+    // Lead mailbox should have two IdleNotification entries (one per finish)
+    let state = repo.state.lock().unwrap();
+    let idle_count = state
+        .messages
+        .iter()
+        .filter(|m| m.to_agent_id == "lead-1" && m.msg_type == "idle_notification")
+        .count();
+    assert_eq!(
+        idle_count, 2,
+        "both finish events must produce IdleNotification; got {idle_count}"
+    );
+
+    session.stop();
+}
+
+/// Scenario 5b: Within the dedup window, a duplicate finish SHOULD be dropped.
+///
+/// Bug (task #5): `on_agent_finish` calls `clear_finalized_turn` immediately
+/// after `finalize_turn` returns `wake_target.is_some()`. This means the dedup
+/// window is cleared on the first success, allowing the second rapid Finish to
+/// also be processed. The intent was to only clear after the re-woken agent
+/// completes its *next* turn — not immediately.
+///
+/// This test is #[ignore] until the fix is merged: the dedup window must NOT
+/// be cleared immediately after the first success if the second finish arrives
+/// within the 5-second window.
+#[tokio::test]
+#[ignore = "Bug: on_agent_finish clears dedup window immediately, allowing double-processing within window (task #5 fix pending)"]
+async fn s5b_dedup_window_blocks_rapid_duplicate_finish() {
+    let (session, _tm, repo, _sent) = setup_session().await;
+
+    session
+        .scheduler()
+        .set_status("worker-1", winkgo_team::TeammateStatus::Working)
+        .await
+        .unwrap();
+
+    // First finish — should proceed
+    let first = session.on_agent_finish("conv-worker", false).await.unwrap();
+    assert!(first.is_some(), "first finish must succeed");
+
+    // Immediately repeat without clearing — should be dedup'd (returns Ok(None)).
+    // NOTE: on_agent_finish checks dedup before any state changes, so the second
+    // call should return None even after re-setting status to Working.
+    session
+        .scheduler()
+        .set_status("worker-1", winkgo_team::TeammateStatus::Working)
+        .await
+        .unwrap();
+
+    let second = session.on_agent_finish("conv-worker", false).await.unwrap();
+    assert!(
+        second.is_none(),
+        "second finish within dedup window must be dropped (returns None); got {second:?}"
+    );
+
+    // Only one IdleNotification should exist
+    let state = repo.state.lock().unwrap();
+    let idle_count = state
+        .messages
+        .iter()
+        .filter(|m| m.msg_type == "idle_notification")
+        .count();
+    assert_eq!(
+        idle_count, 1,
+        "dedup must prevent double idle_notification; got {idle_count}"
+    );
+
+    session.stop();
+}
+
+// ===========================================================================
+// Scenario 6: task board operations via MCP
+// ===========================================================================
+
+/// Scenario 6: team_task_create via MCP → task board persisted → task visible
+/// in team_task_list.
+#[tokio::test]
+async fn s6_mcp_task_create_and_list() {
+    let (session, _tm, repo, _sent) = setup_session().await;
+    let port = session_port(&session);
+    let token = session_token(&session);
+
+    let mut stream = mcp_connect(port, &token, "lead-1").await;
+
+    // Create a task
+    let create_resp = mcp_call_tool(
+        &mut stream,
+        20,
+        "team_task_create",
+        json!({ "subject": "E2E Task Alpha" }),
+    )
+    .await;
+    assert!(!is_mcp_error(&create_resp), "team_task_create failed: {create_resp}");
+
+    // List tasks — must contain the created task
+    let list_resp = mcp_call_tool(&mut stream, 21, "team_task_list", json!({})).await;
+    assert!(!is_mcp_error(&list_resp), "team_task_list failed: {list_resp}");
+    let text = mcp_text(&list_resp);
+    let tasks: Vec<Value> = serde_json::from_str(text).expect("task list must be JSON");
+    assert!(
+        tasks.iter().any(|t| t["subject"] == "E2E Task Alpha"),
+        "created task must appear in task list; got {tasks:?}"
+    );
+
+    // Repo-level cross-check: task row reached storage
+    let state = repo.state.lock().unwrap();
+    assert!(
+        state.tasks.iter().any(|t| t.subject == "E2E Task Alpha"),
+        "task must be persisted in repo; got {:?}",
+        state.tasks
+    );
+
+    session.stop();
+}
+
+// ===========================================================================
+// Scenario 7: team_members reflects dynamic roster
+// ===========================================================================
+
+/// Scenario 7: After adding an agent at runtime, team_members via MCP
+/// returns the updated roster.
+#[tokio::test]
+async fn s7_team_members_reflects_dynamic_roster() {
+    let (session, _tm, _repo, _sent) = setup_session().await;
+    let port = session_port(&session);
+    let token = session_token(&session);
+
+    let mut stream = mcp_connect(port, &token, "lead-1").await;
+
+    // Initially 2 members
+    let resp = mcp_call_tool(&mut stream, 30, "team_members", json!({})).await;
+    assert!(!is_mcp_error(&resp), "team_members failed");
+    let members: Vec<Value> = serde_json::from_str(mcp_text(&resp)).expect("team_members must return JSON array");
+    assert_eq!(members.len(), 2, "should start with 2 members");
+
+    // Add a third agent
+    let new_agent = TeamAgent {
+        slot_id: "extra-1".into(),
+        name: "ExtraAgent".into(),
+        role: TeammateRole::Teammate,
+        conversation_id: "conv-extra".into(),
+        backend: "acp".into(),
+        model: "claude".into(),
+        assistant_id: None,
+        status: None,
+        conversation_type: None,
+        cli_path: None,
+    };
+    session.add_agent(&new_agent).await;
+
+    // Now team_members should return 3
+    let resp2 = mcp_call_tool(&mut stream, 31, "team_members", json!({})).await;
+    assert!(!is_mcp_error(&resp2), "team_members (after add) failed");
+    let members2: Vec<Value> = serde_json::from_str(mcp_text(&resp2)).expect("team_members must return JSON array");
+    assert_eq!(members2.len(), 3, "roster must include dynamically added agent");
+    assert!(
+        members2.iter().any(|m| m["name"] == "ExtraAgent"),
+        "ExtraAgent must appear in team_members"
+    );
+
+    session.stop();
+}
+
+// ===========================================================================
+// Scenario 8: Authentication on MCP connection
+// ===========================================================================
+
+/// Scenario 8a: Wrong auth token must be rejected.
+#[tokio::test]
+async fn s8a_wrong_auth_token_rejected() {
+    let (session, _tm, _repo, _sent) = setup_session().await;
+    let port = session_port(&session);
+
+    let mut stream = TcpStream::connect(format!("127.0.0.1:{port}"))
+        .await
+        .expect("tcp connect");
+    let bad_init = json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "auth_token": "wrong-token",
+            "slot_id": "lead-1",
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": { "name": "attacker", "version": "1" }
+        }
+    });
+    tcp_send(&mut stream, &bad_init).await;
+    let resp = tcp_recv(&mut stream).await;
+    assert!(
+        resp["error"]["message"]
+            .as_str()
+            .unwrap_or("")
+            .contains("Authentication failed"),
+        "wrong token must be rejected with Authentication failed; got {resp}"
+    );
+
+    session.stop();
+}
+
+/// Scenario 8b: Non-lead slot cannot call team_spawn_agent (role guard).
+#[tokio::test]
+async fn s8b_worker_cannot_call_spawn_agent() {
+    let (session, _tm, _repo, _sent) = setup_session().await;
+    let port = session_port(&session);
+    let token = session_token(&session);
+
+    let mut stream = mcp_connect(port, &token, "worker-1").await;
+    let resp = mcp_call_tool(
+        &mut stream,
+        40,
+        "team_spawn_agent",
+        json!({ "name": "Hacker", "backend": "claude" }),
+    )
+    .await;
+    assert!(is_mcp_error(&resp), "worker must not be allowed to call spawn_agent");
+    let text = mcp_text(&resp);
+    assert!(text.contains("Only Lead"), "error must mention 'Only Lead'; got {text}");
+
+    session.stop();
+}
+
+// ===========================================================================
+// Scenario 9: send_message via TeamSession (not MCP) — direct API path
+// ===========================================================================
+
+#[tokio::test]
+async fn turn_completion_reconciles_without_another_notify() {
+    let (session, _task_manager, _repo, _sent, turn_requests) = setup_session_with_turn_recorder_without_loops().await;
+
+    let ack = session.send_message("start team", None).await.unwrap();
+    session
+        .pause_slot_work(&ack.run.team_run_id, "lead-1", Some("user stopped".into()))
+        .await
+        .unwrap();
+    session
+        .mailbox()
+        .write(
+            "e2e-team",
+            "lead-1",
+            "worker-1",
+            winkgo_team::MailboxMessageType::Message,
+            "background backlog",
+            None,
+        )
+        .await
+        .unwrap();
+    let user_ack = session
+        .send_message_to_agent("lead-1", "user priority", None)
+        .await
+        .unwrap();
+
+    register_test_event_loops(&session);
+    session.event_loops().notify("lead-1");
+
+    wait_until_turn_count(&turn_requests, 1).await;
+    let first = turn_requests.lock().unwrap()[0].clone();
+    assert!(first.content.contains("start team"));
+    assert!(first.content.contains("user priority"));
+    assert!(!first.content.contains("background backlog"));
+    match first.source {
+        AgentTurnSource::Mailbox {
+            unread_message_ids,
+            unread_count,
+        } => {
+            assert_eq!(unread_count, 2);
+            assert_eq!(unread_message_ids, vec![ack.message_id, user_ack.message_id]);
+        }
+    }
+
+    wait_until_turn_count(&turn_requests, 2).await;
+    let second = turn_requests.lock().unwrap()[1].clone();
+    assert!(second.content.contains("background backlog"));
+
+    session.stop();
+}
+
+/// Scenario 9: TeamSession::send_message writes to lead mailbox and
+/// triggers lead's RecordingAgent.send_message.
+#[tokio::test]
+async fn s9_session_send_message_wakes_lead() {
+    let (session, _tm, repo, _sent, turn_requests) = setup_session_with_turn_recorder().await;
+
+    session
+        .send_message("user input to team", None)
+        .await
+        .expect("send_message must succeed");
+
+    // Lead mailbox must have the message
+    {
+        let state = repo.state.lock().unwrap();
+        let lead_msgs: Vec<_> = state
+            .messages
+            .iter()
+            .filter(|m| m.to_agent_id == "lead-1" && m.content == "user input to team")
+            .collect();
+        assert!(!lead_msgs.is_empty(), "message must be in lead mailbox");
+    }
+
+    // Lead's turn must go through the Team-defined port with Team metadata.
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    let log = turn_requests.lock().unwrap();
+    let request = log
+        .iter()
+        .find(|request| request.slot_id == "lead-1")
+        .expect("lead turn port request must be recorded");
+    assert_eq!(request.team_id, "e2e-team");
+    assert_eq!(request.conversation_id, "conv-lead");
+    assert_eq!(request.user_id, "user-e2e");
+    assert!(request.content.contains("user input to team"));
+
+    session.stop();
+}
+
+#[tokio::test]
+async fn one_notify_drains_five_intents_after_busy_turn() {
+    let (first_started_tx, first_started_rx) = oneshot::channel();
+    let (first_release_tx, first_release_rx) = oneshot::channel();
+    let broadcaster = Arc::new(RecordingBroadcaster::new());
+    let turn_port = Arc::new(HoldFirstRunningTurnPort::new(first_started_tx, first_release_rx));
+    let requests = turn_port.requests();
+    let session =
+        setup_session_with_runtime_ports(turn_port, Arc::new(NoopCancellationPort), broadcaster.clone()).await;
+
+    let first = session.send_message("first", None).await.unwrap();
+    tokio::time::timeout(Duration::from_secs(2), first_started_rx)
+        .await
+        .expect("first turn should start")
+        .expect("first start signal should be sent");
+
+    let mut queued_message_ids = Vec::new();
+    for index in 1..=5 {
+        let ack = session.send_message(&format!("queued-{index}"), None).await.unwrap();
+        assert_eq!(ack.enqueue_status, winkgo_api_types::TeamMessageEnqueueStatus::Queued);
+        assert_eq!(ack.run.team_run_id, first.run.team_run_id);
+        queued_message_ids.push(ack.message_id);
+    }
+
+    first_release_tx.send(()).unwrap();
+    wait_for_event(&broadcaster, "team.runCompleted").await;
+    wait_for_turn_request_count(&requests, 2).await;
+
+    let requests = requests.lock().unwrap();
+    assert_eq!(requests.len(), 2);
+    match &requests[1].source {
+        AgentTurnSource::Mailbox {
+            unread_message_ids,
+            unread_count,
+        } => {
+            assert_eq!(*unread_count, 5);
+            assert_eq!(unread_message_ids, &queued_message_ids);
+        }
+    }
+    drop(requests);
+    assert!(
+        session
+            .mailbox()
+            .peek_unread("e2e-team", "lead-1")
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert!(session.team_run_manager().current_active_run_id().is_none());
+    session.stop();
+}
+
+#[tokio::test]
+async fn one_turn_claims_every_message_it_reads() {
+    let (session, _task_manager, _repo, _sent, requests) = setup_session_with_turn_recorder_without_loops().await;
+    let first = session.send_message("batch-1", None).await.unwrap();
+    let second = session.send_message("batch-2", None).await.unwrap();
+    let third = session.send_message("batch-3", None).await.unwrap();
+    register_test_event_loops(&session);
+
+    session.event_loops().notify("lead-1");
+    wait_for_turn_request_count(&requests, 1).await;
+
+    let requests = requests.lock().unwrap();
+    assert_eq!(requests.len(), 1);
+    match &requests[0].source {
+        AgentTurnSource::Mailbox {
+            unread_message_ids,
+            unread_count,
+        } => {
+            assert_eq!(*unread_count, 3);
+            assert_eq!(
+                unread_message_ids,
+                &vec![first.message_id, second.message_id, third.message_id]
+            );
+        }
+    }
+    drop(requests);
+    session.stop();
+}
+
+#[tokio::test]
+async fn nonretryable_start_failure_is_terminal_and_not_recovered() {
+    let broadcaster = Arc::new(RecordingBroadcaster::new());
+    let session = setup_session_with_runtime_ports(
+        Arc::new(ErrorBeforeStartTurnPort),
+        Arc::new(NoopCancellationPort),
+        broadcaster.clone(),
+    )
+    .await;
+
+    session
+        .send_message("user input to team", None)
+        .await
+        .expect("send_message must succeed");
+
+    wait_for_event(&broadcaster, "team.runFailed").await;
+    assert_eq!(session.team_run_manager().current_active_run_id(), None);
+    assert!(
+        session
+            .mailbox()
+            .peek_unread("e2e-team", "lead-1")
+            .await
+            .unwrap()
+            .is_empty()
+    );
+
+    session.stop();
+}
+
+#[tokio::test]
+async fn retryable_start_requeues_without_marking_mailbox_read() {
+    let broadcaster = Arc::new(RecordingBroadcaster::new());
+    let turn_port = Arc::new(SkippedBusyTurnPort::default());
+    let requests = turn_port.requests();
+    let session =
+        setup_session_with_runtime_ports(turn_port, Arc::new(NoopCancellationPort), broadcaster.clone()).await;
+
+    session
+        .send_message("user input to team", None)
+        .await
+        .expect("send_message must succeed");
+
+    wait_for_turn_request_count(&requests, 1).await;
+    tokio::time::sleep(std::time::Duration::from_millis(350)).await;
+    let request_log = requests.lock().unwrap();
+    let first_team_run_id = request_log[0]
+        .team_run_id
+        .as_deref()
+        .expect("first attempt should belong to TeamRun")
+        .to_owned();
+    assert_eq!(
+        request_log.len(),
+        1,
+        "Team event loop should not use a timer to retry retryable busy skips"
+    );
+    drop(request_log);
+
+    assert_eq!(
+        session.team_run_manager().current_active_run_id(),
+        Some(first_team_run_id.clone()),
+        "run should remain active for a state-driven retry"
+    );
+    assert_eq!(
+        session.mailbox().peek_unread("e2e-team", "lead-1").await.unwrap().len(),
+        1
+    );
+
+    session.stop();
+}
+
+#[tokio::test]
+async fn s9c_event_loop_fails_run_when_started_turn_returns_failed() {
+    let broadcaster = Arc::new(RecordingBroadcaster::new());
+    let session = setup_session_with_runtime_ports(
+        Arc::new(StartedThenFailedTurnPort),
+        Arc::new(NoopCancellationPort),
+        broadcaster.clone(),
+    )
+    .await;
+
+    session
+        .send_message("user input to team", None)
+        .await
+        .expect("send_message must succeed");
+
+    wait_for_event(&broadcaster, "team.runFailed").await;
+    assert_eq!(session.team_run_manager().current_active_run_id(), None);
+
+    session.stop();
+}
+
+#[tokio::test]
+async fn s9d_late_child_start_after_team_cancel_is_cancelled_without_reviving_run() {
+    let (claimed_tx, claimed_rx) = oneshot::channel();
+    let (release_tx, release_rx) = oneshot::channel();
+    let broadcaster = Arc::new(RecordingBroadcaster::new());
+    let cancellation_port = Arc::new(RecordingCancellationPort::default());
+    let cancelled = cancellation_port.cancelled();
+    let session = setup_session_with_runtime_ports(
+        Arc::new(BlockingStartTurnPort::new(claimed_tx, release_rx)),
+        cancellation_port,
+        broadcaster.clone(),
+    )
+    .await;
+
+    let ack = session
+        .send_message("user input to team", None)
+        .await
+        .expect("send_message must succeed");
+    tokio::time::timeout(Duration::from_secs(2), claimed_rx)
+        .await
+        .expect("turn port should be called")
+        .expect("claim signal should be sent");
+
+    session
+        .cancel_run(&ack.run.team_run_id, None, Some("stop".into()))
+        .await
+        .expect("team run cancel must succeed");
+    release_tx.send(()).expect("release signal should be sent");
+
+    wait_for_event(&broadcaster, "team.runCancelled").await;
+    wait_for_cancelled_turn_count(&cancelled, 1).await;
+    let cancelled_turns = cancelled.lock().unwrap().clone();
+    assert_eq!(cancelled_turns, vec!["turn-late-start".to_owned()]);
+    assert_eq!(session.team_run_manager().current_active_run_id(), None);
+
+    session.stop();
+}
+
+// ===========================================================================
+// Scenario 10: Error finish marks agent as Error status
+// ===========================================================================
+
+/// Scenario 10: on_agent_finish with is_error=true must preserve Error status.
+///
+/// Bug (task #5 related): Currently `on_agent_finish` sets status to Error,
+/// then calls `finalize_turn` → `mark_idle`, which overwrites Error with Idle.
+/// The correct behavior: Error status should be preserved (not overwritten by
+/// mark_idle). This test is #[ignore] until the Error-status-preservation fix
+/// is merged into fix/team-communication-bugs.
+#[tokio::test]
+#[ignore = "Bug: mark_idle overwrites Error status with Idle (fix pending in fix/team-communication-bugs)"]
+async fn s10_error_finish_sets_agent_status_to_error() {
+    let (session, _tm, _repo, _sent) = setup_session().await;
+
+    session
+        .scheduler()
+        .set_status("worker-1", winkgo_team::TeammateStatus::Working)
+        .await
+        .unwrap();
+
+    let wake_target = session.on_agent_finish("conv-worker", true).await.unwrap();
+    assert_eq!(wake_target.as_deref(), Some("lead-1"));
+
+    let status = session.scheduler().get_status("worker-1").await.unwrap();
+    assert_eq!(
+        status,
+        winkgo_team::TeammateStatus::Error,
+        "error finish must preserve Error status (not be overwritten by mark_idle)"
+    );
+
+    session.stop();
+}
+
+// ===========================================================================
+// Scenario 11: shutdown_approved sentinel interception
+// ===========================================================================
+
+/// Scenario 11: Worker sending "shutdown_approved" to lead is intercepted
+/// by the MCP bridge and does not land as a raw string in lead's mailbox.
+#[tokio::test]
+async fn s11_shutdown_approved_interception() {
+    let (session, _tm, repo, _sent) = setup_session().await;
+    let port = session_port(&session);
+    let token = session_token(&session);
+
+    let mut stream = mcp_connect(port, &token, "worker-1").await;
+    let resp = mcp_call_tool(
+        &mut stream,
+        50,
+        "team_send_message",
+        json!({ "to": "lead-1", "message": "shutdown_approved" }),
+    )
+    .await;
+
+    assert!(!is_mcp_error(&resp), "shutdown_approved must not be a protocol error");
+    let text = mcp_text(&resp);
+    let payload: Value = serde_json::from_str(text).expect("shutdown_approved response must be JSON");
+    assert_eq!(
+        payload["status"], "shutdown_approved_received",
+        "must return shutdown_approved_received status; got {text}"
+    );
+
+    // The raw sentinel must NOT be in lead's mailbox
+    let state = repo.state.lock().unwrap();
+    let raw_sentinel: Vec<_> = state
+        .messages
+        .iter()
+        .filter(|m| m.to_agent_id == "lead-1" && m.content == "shutdown_approved")
+        .collect();
+    assert!(
+        raw_sentinel.is_empty(),
+        "raw shutdown_approved sentinel must not land in lead mailbox; got {raw_sentinel:?}"
+    );
+
+    session.stop();
+}

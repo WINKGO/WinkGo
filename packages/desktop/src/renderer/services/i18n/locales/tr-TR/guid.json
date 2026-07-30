@@ -1,0 +1,29 @@
+{
+  "promptExamplesHint": "Bu talimatları deneyin",
+  "defaultPrompts": {
+    "understand": "Bu projeyi incele ve ne yaptığını, nereden başlamam gerektiğini basit bir dille anlat",
+    "cleanup": "Bu klasördeki yinelenen ve gereksiz dosyaları bul, onaylamam için listele",
+    "create": "Bana şık bir kişisel ana sayfa yap ve bitince doğrudan açıp göster"
+  },
+  "selectAssistantHint": "Göreve başlamak için bir asistan seçin",
+  "workspace": {
+    "workInProject": "Projede çalış",
+    "optional": "İsteğe bağlı",
+    "clearWorkspace": "Temizle",
+    "specifyWorkspace": "Proje klasörü seç",
+    "searchPlaceholder": "Proje ara…",
+    "noProject": "Proje Yok"
+  },
+  "installerCenter": {
+    "entry": "Yazılım Kurulum Merkezi",
+    "title": "WINK GO Kurulum Merkezi",
+    "subtitle": "Codex, Claude Code ve Antigravity için tek tıkla kurulum paketleri",
+    "windows": "Windows yükleyicileri",
+    "macos": "macOS yükleyicileri",
+    "environmentSetup": "{{platform}} için hızlı kurulum",
+    "downloadFailed": "İndirme bağlantısı açılamadı",
+    "recommended": "Önerilen"
+  },
+  "openSourceLicense": "Bu yazılım WinkGo açık kaynak projesi temel alınarak değiştirilmiştir ve Apache License 2.0 kapsamında lisanslanmıştır.",
+  "openSourceCopyright": "Copyright 2025 WinkGo (winkgo.top) · WINK GO tarafından değiştirildi, 2026."
+}

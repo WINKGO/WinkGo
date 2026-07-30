@@ -1,0 +1,35 @@
+[package]
+name = "winkgo-agent-config"
+description = "Configuration layer for winkgo_agent: Config struct, ProviderCompat, auth, hooks, session config"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+winkgo-agent-types.workspace   = true
+winkgo-agent-compact.workspace = true
+winkgo-agent-process.workspace = true
+
+serde.workspace      = true
+serde_json.workspace = true
+toml.workspace       = true
+anyhow.workspace     = true
+thiserror.workspace  = true
+dirs.workspace       = true
+chrono.workspace     = true
+reqwest.workspace    = true
+glob.workspace       = true
+tokio.workspace      = true
+which.workspace      = true
+
+tracing.workspace            = true
+tracing-appender.workspace   = true
+tracing-subscriber.workspace = true
+workspace-hack.workspace = true
+
+[dev-dependencies]
+wiremock.workspace            = true
+tokio-test.workspace          = true
+tempfile.workspace            = true
+tracing-subscriber.workspace  = true

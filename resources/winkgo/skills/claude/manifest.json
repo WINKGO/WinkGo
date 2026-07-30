@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "claude",
+  "ui_id": "claude",
+  "config_id": "claude",
+  "diagnostic_id": "claude",
+  "release_skill_id": "claude",
+  "order": 210,
+  "display_name": "Claude",
+  "canonical_alias": "Claude",
+  "icon_key": "cpu",
+  "color": "linear-gradient(135deg, #ffb36b, #ff7a45)",
+  "description": "独立的 Claude 桌面端、CLI、任务投递和结果读取入口。",
+  "strong_aliases": ["Claude", "ClaudeAI", "克劳德助手"],
+  "weak_aliases": ["AI助手", "桌面端", "CLI", "任务"],
+  "capability_labels": ["Claude CLI", "可见会话", "任务投递", "结果读取"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "Claude",
+  "tool_selectors": {
+    "prefixes": ["claude."],
+    "names": [],
+    "shared_names": []
+  },
+  "compatibility_tool_aliases": {
+    "claude.send_to_cli": {
+      "canonical_tool_name": "claude.cli_chat",
+      "drop_arguments": ["wait_seconds"]
+    }
+  },
+  "config_scope_id": "claude"
+}

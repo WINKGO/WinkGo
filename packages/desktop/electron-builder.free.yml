@@ -1,0 +1,29 @@
+extends: ./packages/desktop/electron-builder.yml
+appId: com.winkgo.desktop
+productName: WINK GO
+executableName: WINK-GO
+
+protocols:
+  - name: WINK GO Protocol
+    schemes:
+      - winkgo
+
+win:
+  artifactName: WINK-GO-Free-Setup-${version}-${arch}.${ext}
+
+nsis:
+  artifactName: WINK-GO-Free-Setup-${version}-${arch}.${ext}
+  shortcutName: WINK GO
+  uninstallDisplayName: WINK GO
+  menuCategory: WINK GO
+
+mac:
+  artifactName: WINK-GO-Free-${version}-${os}-${arch}.${ext}
+
+linux:
+  artifactName: WINK-GO-Free-${version}-${os}-${arch}.${ext}
+
+publish:
+  provider: generic
+  url: https://winkgo.top/releases/free
+  publishAutoUpdate: true

@@ -1,0 +1,19 @@
+{
+  "name": "@winkgo/shared-scripts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared build scripts for WinkGo packages",
+  "type": "commonjs",
+  "exports": {
+    "./prepare-winkgo-core": "./src/prepare-winkgo-core.js"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "vitest": "^4.1.0"
+  }
+}

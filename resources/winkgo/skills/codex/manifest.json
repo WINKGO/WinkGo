@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "visibility": "skill_center",
+  "id": "codex",
+  "ui_id": "codex",
+  "config_id": "codex",
+  "diagnostic_id": "codex",
+  "release_skill_id": "codex",
+  "order": 220,
+  "display_name": "Codex",
+  "canonical_alias": "Codex",
+  "icon_key": "cpu",
+  "color": "linear-gradient(135deg, #00bcd4, #0288d1)",
+  "description": "独立的 Codex 客户端、任务、项目、页面与结果读取入口。",
+  "strong_aliases": ["Codex", "OpenAICodex", "OpenAI Codex", "扣袋", "扣袋助手"],
+  "weak_aliases": ["代码助手", "任务", "项目", "线程", "回复"],
+  "capability_labels": ["Codex 客户端", "任务与项目", "页面导航", "结果读取"],
+  "related_skill_ids": [],
+  "legacy_route_prefix": "Codex",
+  "tool_selectors": {
+    "prefixes": ["codex."],
+    "names": [],
+    "shared_names": []
+  },
+  "config_scope_id": "codex"
+}
