@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # SkillsHubSettings 需求分析讨论记录
 
 ## 起草过程

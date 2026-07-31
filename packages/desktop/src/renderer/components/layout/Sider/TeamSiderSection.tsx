@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -10,7 +11,7 @@ import { Input, Message, Modal, Spin, Tooltip } from '@arco-design/web-react';
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useSWRConfig } from 'swr';
 import { iconColors } from '@renderer/styles/colors';
 import { cleanupSiderTooltips } from '@renderer/utils/ui/siderTooltip';

@@ -37,6 +37,8 @@ const LOCAL_TIMEOUT_MS = 1_800;
 const REMOTE_TIMEOUT_MS = 10_000;
 const FIREWALL_RUNTIME_RULE = 'WINK GO Runtime';
 const FIREWALL_BRIDGE_RULE = 'WINK GO Voice Bridge';
+const CURRENT_CONFIG_SCHEMA_VERSION = 5;
+const CURRENT_RELAY_CONSENT_VERSION = 1;
 const remoteGateway = new WinkGoRemoteGatewayService({
   enabled: false,
   authorized: false,
@@ -58,14 +60,15 @@ const bounded = (value: unknown, max: number): string =>
     .slice(0, max);
 
 const defaultConfig = (): WinkGoXiaozhiConfig => ({
-  schemaVersion: 4,
+  schemaVersion: CURRENT_CONFIG_SCHEMA_VERSION,
+  relayConsentVersion: 0,
   runtimeApi: DEFAULT_RUNTIME_API,
   lanIp: detectWinkGoLanIp() || '127.0.0.1',
   bridgePort: DEFAULT_BRIDGE_PORT,
   relayUrl: DEFAULT_RELAY_URL,
   desktopId: '',
   bindingCode: '',
-  relayEnabled: true,
+  relayEnabled: false,
   hardwareEnabled: true,
   mobileEnabled: false,
   hardwareEndpoint: XIAOZHI_MCP_BASE,
@@ -93,8 +96,12 @@ const mergeConfig = (value: unknown): WinkGoXiaozhiConfig => {
   const defaults = defaultConfig();
   if (!value || typeof value !== 'object') return defaults;
   const raw = value as Partial<WinkGoXiaozhiConfig>;
+  const hasCurrentRelayConsent =
+    Number(raw.schemaVersion) >= CURRENT_CONFIG_SCHEMA_VERSION &&
+    raw.relayConsentVersion === CURRENT_RELAY_CONSENT_VERSION;
   return {
-    schemaVersion: 4,
+    schemaVersion: CURRENT_CONFIG_SCHEMA_VERSION,
+    relayConsentVersion: hasCurrentRelayConsent ? CURRENT_RELAY_CONSENT_VERSION : 0,
     runtimeApi: bounded(raw.runtimeApi, 300) || defaults.runtimeApi,
     lanIp: bounded(raw.lanIp, 64) || defaults.lanIp,
     bridgePort:
@@ -104,7 +111,7 @@ const mergeConfig = (value: unknown): WinkGoXiaozhiConfig => {
     relayUrl: bounded(raw.relayUrl, 500) || defaults.relayUrl,
     desktopId: bounded(raw.desktopId, 120),
     bindingCode: bounded(raw.bindingCode, 120),
-    relayEnabled: typeof raw.relayEnabled === 'boolean' ? raw.relayEnabled : defaults.relayEnabled,
+    relayEnabled: hasCurrentRelayConsent && raw.relayEnabled === true,
     hardwareEnabled: typeof raw.hardwareEnabled === 'boolean' ? raw.hardwareEnabled : defaults.hardwareEnabled,
     mobileEnabled: typeof raw.mobileEnabled === 'boolean' ? raw.mobileEnabled : defaults.mobileEnabled,
     hardwareEndpoint: bounded(raw.hardwareEndpoint, 500) || defaults.hardwareEndpoint,
@@ -130,7 +137,16 @@ const loadConfigFile = async (): Promise<WinkGoXiaozhiConfig> => {
   try {
     const data = await readFile(configPath());
     if (data.byteLength > MAX_CONFIG_BYTES) throw new Error('小智 MCP 配置文件过大。');
-    return mergeConfig(JSON.parse(data.toString('utf8')));
+    const raw = JSON.parse(data.toString('utf8')) as Partial<WinkGoXiaozhiConfig>;
+    const config = mergeConfig(raw);
+    if (
+      raw.schemaVersion !== CURRENT_CONFIG_SCHEMA_VERSION ||
+      raw.relayConsentVersion !== config.relayConsentVersion ||
+      raw.relayEnabled !== config.relayEnabled
+    ) {
+      await saveConfigFile(config);
+    }
+    return config;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       throw new Error(`无法读取小智 MCP 配置：${error instanceof Error ? error.message : String(error)}`, {
@@ -596,6 +612,8 @@ export const subscribeWinkGoXiaozhiStatus = (listener: (snapshot: WinkGoXiaozhiS
 export const saveWinkGoXiaozhiConfig = async (request: WinkGoXiaozhiSaveRequest): Promise<WinkGoXiaozhiSnapshot> => {
   validateSaveRequest(request);
   const config = await loadConfigFile();
+  config.schemaVersion = CURRENT_CONFIG_SCHEMA_VERSION;
+  config.relayConsentVersion = request.relayEnabled ? CURRENT_RELAY_CONSENT_VERSION : 0;
   config.runtimeApi = request.runtimeApi.trim().replace(/\/+$/, '');
   config.lanIp = request.lanIp.trim();
   config.bridgePort = request.bridgePort;

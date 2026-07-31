@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -20,7 +21,7 @@ import classNames from 'classnames';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import './ConversationSearchPopover.css';
 
 const PAGE_SIZE = 20;

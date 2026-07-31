@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Abstraction over "what are the auto-inject skill names right now?" so
 //! `ConversationService` can compute the initial snapshot without forcing
 //! every test setup to stand up a real `SkillPaths` and skill repository.

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for manifest validation (test-plan MV-1 through MV-4).
 //!
 //! These test the public API surface of `winkgo_extension::manifest`.

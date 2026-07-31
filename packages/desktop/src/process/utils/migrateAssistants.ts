@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -77,7 +78,6 @@ const PRESET_ID_WHITELIST = new Set<string>([
   'planning-with-files',
   'human-3-coach',
   'social-job-publisher',
-  'moltbook',
   'beautiful-mermaid',
   'story-roleplay',
 ]);

@@ -1,4 +1,5 @@
 #!/bin/bash
+# Modified from AionUI by WINK GO contributors in 2026.
 # ============================================================================
 # Smoke test for install-web.sh
 # Tests the full installation flow in a container environment

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for directory browsing and file metadata (task 7.3).
 //!
 //! These tests exercise the full `FileService` through the `IFileService` trait,

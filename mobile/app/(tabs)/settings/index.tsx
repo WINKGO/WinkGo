@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';

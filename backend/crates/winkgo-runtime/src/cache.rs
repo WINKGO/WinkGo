@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Cross-platform cache directory resolution for managed runtimes.
 
 use std::path::{Path, PathBuf};

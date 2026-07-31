@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! ACP protocol layer: SDK integration for JSON-RPC communication.
 //!
 //! This module owns the `agent-client-protocol` SDK connection. It provides

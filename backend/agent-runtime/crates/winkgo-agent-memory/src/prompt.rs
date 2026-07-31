@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Memory system prompt construction.
 //
 // Builds the behavioral instructions and MEMORY.md content that get

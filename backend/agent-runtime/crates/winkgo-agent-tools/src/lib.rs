@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 pub mod edit;
 pub mod exec_command;
 pub mod file_cache;

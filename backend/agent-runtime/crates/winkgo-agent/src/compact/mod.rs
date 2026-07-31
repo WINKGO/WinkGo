@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Multi-level context compaction for long conversations.
 //!
 //! Three levels, from lightest to heaviest:

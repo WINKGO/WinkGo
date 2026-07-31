@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // TC-AX-01: Multi-feature collaboration test (LOCAL, no LLM).
 //
 // Exercises memory + compression + file cache + tool description all at once.

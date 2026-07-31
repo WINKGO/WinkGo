@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 /// MCP crate-level errors.
 #[derive(Debug, thiserror::Error)]
 pub enum McpError {

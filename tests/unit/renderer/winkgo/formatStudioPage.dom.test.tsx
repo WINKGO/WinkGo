@@ -39,7 +39,7 @@ vi.mock('@/common', () => ({
   },
 }));
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
 }));
 

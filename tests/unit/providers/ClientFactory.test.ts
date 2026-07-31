@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -164,7 +165,7 @@ describe('ClientFactory', () => {
       const config = calls[0][1];
       expect(config.defaultHeaders).toEqual({
         'HTTP-Referer': 'https://winkgo.top',
-        'X-Title': 'WinkGo',
+        'X-Title': 'WINK GO',
       });
     });
 

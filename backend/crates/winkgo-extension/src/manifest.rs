@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use crate::constants::RESERVED_NAME_PREFIXES;
 use crate::error::ExtensionError;
 use crate::types::ExtensionManifest;

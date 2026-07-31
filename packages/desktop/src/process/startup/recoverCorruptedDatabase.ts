@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { BackendStartupFailureInfo } from '@/common/types/platform/electron';
 
 export type RecoverCorruptedDatabaseDeps = {

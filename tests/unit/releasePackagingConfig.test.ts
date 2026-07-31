@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { describe, expect, it } from 'vitest';
 import { mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
@@ -96,6 +97,50 @@ describe('release packaging configuration', () => {
     );
   });
 
+  it('runs main push quality checks and restricts releases to stable v tags', () => {
+    const workflow = readProjectFile('.github/workflows/build-and-release.yml');
+    const releaseStart = workflow.indexOf('\n  release:');
+    const releaseJob = workflow.slice(releaseStart);
+
+    expect(workflow).toContain('branches: [main, dev]');
+    expect(workflow).toContain("- 'v*'");
+    expect(workflow).not.toContain("- '*'");
+    expect(workflow).toContain("github.ref == 'refs/heads/main'");
+    expect(releaseStart).toBeGreaterThan(-1);
+    expect(releaseJob).toContain("startsWith(github.ref, 'refs/tags/v')");
+    expect(releaseJob).toContain("!contains(github.ref, '-dev-')");
+    expect(releaseJob).not.toContain("needs.create-tag.result == 'success'");
+  });
+
+  it('audits tracked source and verifies tag, version, and source commit provenance', () => {
+    const workflow = readProjectFile('.github/workflows/build-and-release.yml');
+
+    expect(workflow).toContain('node scripts/audit-release-privacy.cjs --source');
+    expect(workflow).toContain('fetch-depth: 0');
+    expect(workflow).toContain('EXPECTED_TAG="v${VERSION}"');
+    expect(workflow).toContain('TAG_COMMIT="$(git rev-parse "${GITHUB_REF_NAME}^{commit}")"');
+    expect(workflow).toContain('if [ "$SOURCE_COMMIT" != "$TAG_COMMIT" ]');
+  });
+
+  it('uses the supported Intel macOS runner for x64 builds', () => {
+    for (const workflowPath of ['.github/workflows/build-and-release.yml', '.github/workflows/build-manual.yml']) {
+      const workflow = readProjectFile(workflowPath);
+      expect(workflow, workflowPath).toMatch(/"platform":"macos-x64","os":"macos-15-intel"/);
+      expect(workflow, workflowPath).not.toMatch(/"platform":"macos-x64","os":"macos-14"/);
+    }
+  });
+
+  it('passes the retired-runtime audit for tracked production source', () => {
+    const result = spawnSync(process.execPath, ['scripts/audit-release-privacy.cjs', '--source'], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+    });
+    const output = `${result.stdout}\n${result.stderr}`;
+
+    expect(result.status, output).toBe(0);
+    expect(output).toContain('privacy audit (source) passed');
+  }, 30_000);
+
   it('does not expose a publishable Pro update feed', () => {
     const proConfig = readProjectFile('packages/desktop/electron-builder.pro.yml');
 
@@ -122,6 +167,23 @@ describe('release packaging configuration', () => {
     expect(macBlock).toContain('    - zip');
   });
 
+  it('excludes and rejects the unreviewed Knowledge Canvas runtime', () => {
+    const builderConfig = readProjectFile('packages/desktop/electron-builder.yml');
+    const viteConfig = readProjectFile('packages/desktop/electron.vite.config.ts');
+
+    expect(builderConfig).toContain("'!public/knowledge-canvas/**'");
+    expect(builderConfig).toContain("'!knowledge-canvas/**'");
+    expect(builderConfig).toContain("'!provider-skills/**'");
+    expect(builderConfig).toContain("'!skills/**'");
+    expect(viteConfig).toContain('winkgo-reject-unreviewed-knowledge-canvas');
+    expect(viteConfig).toContain('public/knowledge-canvas/index.html');
+    expect(viteConfig).toContain('resources/winkgo/provider-skills');
+    expect(viteConfig).toContain('out/main/static/winkgo/skills');
+    expect(viteConfig).toContain('out/renderer/winkgo/skills');
+    expect(viteConfig).toContain('Refusing to build');
+    expect(readProjectFile('scripts/audit-release-privacy.cjs')).toContain('restricted-bundled-skills-path');
+  });
+
   it('ships canonical legal documents in every public distribution channel', () => {
     const desktopConfig = readProjectFile('packages/desktop/electron-builder.yml');
     const afterPack = readProjectFile('scripts/afterPack.js');
@@ -130,7 +192,7 @@ describe('release packaging configuration', () => {
     const releaseWorkflow = readProjectFile('.github/workflows/build-and-release.yml');
     const distributionWorkflow = readProjectFile('.github/workflows/release-distribute.yml');
 
-    for (const fileName of ['LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md']) {
+    for (const fileName of ['LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md', 'TERMS.md']) {
       expect(desktopConfig).toContain(`from: ${fileName}`);
       expect(afterPack).toContain(fileName);
       expect(webPack).toContain(`'${fileName}'`);
@@ -140,8 +202,30 @@ describe('release packaging configuration', () => {
     }
 
     expect(desktopConfig).toContain('to: legal/LICENSE');
+    expect(desktopConfig).toContain('to: legal/PRIVACY.md');
+    expect(desktopConfig).toContain('to: legal/TERMS.md');
     expect(webPack).toContain("path.join(tarballContentDir, 'legal')");
     expect(afterPack).toContain('Packaged app has missing or invalid legal document(s)');
+    expect(webSmoke).toContain('grep -q "OfficeCLI" legal/THIRD_PARTY_NOTICES.md');
+    expect(webSmoke).toContain('grep -q "Apache License 2.0" legal/THIRD_PARTY_NOTICES.md');
+    expect(webSmoke).not.toContain('grep -q "WINK GO" legal/THIRD_PARTY_NOTICES.md');
+  });
+
+  it('ships bilingual account-service policy baselines with a review warning and contact channel', () => {
+    const privacy = readProjectFile('PRIVACY.md');
+    const terms = readProjectFile('TERMS.md');
+
+    for (const policy of [privacy, terms]) {
+      expect(policy).toContain('2026-07-30');
+      expect(policy).toContain('1394748660@qq.com');
+      expect(policy).toContain('not legal advice');
+      expect(policy).toContain('执业律师');
+    }
+    expect(privacy).toContain('hashed fingerprint');
+    expect(privacy).toContain('international transfer');
+    expect(privacy).toContain('does not sell or rent personal data');
+    expect(terms).toContain('Account services and the open-source license are separate');
+    expect(terms).toContain('open, free, public-interest');
   });
 
   it('keeps package and Core license metadata aligned with Apache-2.0', () => {
@@ -164,7 +248,7 @@ describe('release packaging configuration', () => {
     }
 
     expect(readProjectFile('backend/Cargo.toml')).toContain('license = "Apache-2.0"');
-    expect(readProjectFile('backend/LICENSE')).toContain('Copyright 2026 WINK GO');
+    expect(readProjectFile('backend/LICENSE')).toContain('Modifications Copyright 2026 WINK GO contributors.');
     const crateManifests = readdirSync(resolve(projectRoot, 'backend/crates'), { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => `backend/crates/${entry.name}/Cargo.toml`)
@@ -235,6 +319,15 @@ describe('release packaging configuration', () => {
     const script = readProjectFile('scripts/build-with-builder.js');
 
     expect(script).toMatch(/--mac\s+dmg\s+zip\s+--\$\{targetArch\}\s+--prepackaged/);
+  });
+
+  it('does not let a generic notarization log line bypass the packed release audit', () => {
+    const workflow = readProjectFile('.github/workflows/_build-reusable.yml');
+
+    expect(workflow).not.toContain('grep -qiE "notariz|staple"');
+    expect(workflow).toContain('failed to notarize|notarization (failed|error)');
+    expect(workflow).toContain('node scripts/audit-release-privacy.cjs --packed');
+    expect(workflow).toContain('rm -f out/*.dmg');
   });
 
   itWithBash('fails release asset preparation when a mac zip is missing', { timeout: 30000 }, () => {

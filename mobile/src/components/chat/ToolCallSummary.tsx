@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React, { useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

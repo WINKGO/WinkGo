@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use super::types::{
     BoolOrString, EffortLevel, ExecutionContext, FrontmatterData, LoadedFrom, ParsedMarkdown, SkillMetadata,
     SkillSource, StringOrNumber, StringOrVec,

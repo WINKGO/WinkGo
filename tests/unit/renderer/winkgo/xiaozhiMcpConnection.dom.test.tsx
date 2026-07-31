@@ -17,6 +17,11 @@ const mocks = vi.hoisted(() => ({
   authorizeFirewall: vi.fn(),
   detectLanIp: vi.fn(),
   statusHandler: undefined as ((snapshot: typeof snapshot) => void) | undefined,
+  navigate: vi.fn(),
+}));
+
+vi.mock('react-router', () => ({
+  useNavigate: () => mocks.navigate,
 }));
 
 vi.mock('@/common', () => ({
@@ -43,6 +48,23 @@ vi.mock('@/common', () => ({
 
 vi.mock('@/renderer/utils/platform', () => ({
   openExternalUrl: vi.fn(),
+}));
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { domain?: string }) => {
+      const translations: Record<string, string> = {
+        'settings.mcpWorkspace.relayToggleLabel': '启用云端设备中转',
+        'settings.mcpWorkspace.relayDisclosureTitle': '启用云端设备中转前请确认',
+        'settings.mcpWorkspace.relayDisclosureBody':
+          '通过 {{domain}} 传输必要数据；第三方服务可能收费；你可以随时关闭本开关。',
+        'settings.mcpWorkspace.bindingHelp': '如果设备码显示失效，请重新获取设备码，同时确认电脑防火墙和WebUI已开启。',
+        'settings.mcpWorkspace.bindingHelpLabel': '查看设备绑定帮助',
+        'settings.mcpWorkspace.webuiConfiguration': 'WebUI 配置',
+      };
+      return (translations[key] ?? key).replace('{{domain}}', options?.domain ?? '');
+    },
+  }),
 }));
 
 vi.mock('@arco-design/web-react', async (importOriginal) => {
@@ -161,6 +183,28 @@ describe('XiaozhiMcpConnection', () => {
     expect(mocks.startRuntime).not.toHaveBeenCalled();
   });
 
+  it('shows the cloud-relay disclosure before the user can opt in', async () => {
+    const disabledSnapshot = {
+      ...snapshot,
+      config: { ...snapshot.config, relayEnabled: false },
+      remoteGateway: {
+        ...snapshot.remoteGateway,
+        state: 'stopped',
+        enabled: false,
+        connected: false,
+      },
+    };
+    mocks.getSnapshot.mockResolvedValue({ success: true, data: disabledSnapshot });
+
+    render(<XiaozhiMcpConnection />);
+
+    const disclosure = await screen.findByTestId('xiaozhi-relay-disclosure');
+    expect(disclosure).toHaveTextContent('启用云端设备中转前请确认');
+    expect(disclosure).toHaveTextContent('wss://winkgo.top/desktop');
+    expect(disclosure).toHaveTextContent('你可以随时关闭');
+    expect(screen.getByRole('switch', { name: '启用云端设备中转' })).not.toBeChecked();
+  });
+
   it('shows cloud mode as healthy when the optional LAN bridge is closed', async () => {
     render(<XiaozhiMcpConnection />);
 
@@ -225,5 +269,14 @@ describe('XiaozhiMcpConnection', () => {
     fireEvent.click(screen.getByRole('button', { name: '重新获取设备码' }));
 
     await waitFor(() => expect(mocks.refreshBindingCode).toHaveBeenCalledTimes(1));
+  });
+
+  it('links device binding help to the WebUI settings page', async () => {
+    render(<XiaozhiMcpConnection />);
+
+    expect(await screen.findByRole('button', { name: '查看设备绑定帮助' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'WebUI 配置' }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith('/settings/webui');
   });
 });

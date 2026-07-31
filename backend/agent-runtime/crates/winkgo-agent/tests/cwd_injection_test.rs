@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Integration tests verifying that tools use the injected workspace cwd
 //! rather than the process working directory.
 

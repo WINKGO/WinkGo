@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 const { createCanvas, loadImage, registerFont } = require('canvas');
 const fs = require('fs');
 const path = require('path');

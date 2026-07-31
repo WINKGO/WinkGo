@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -14,7 +15,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
 }));
 
-// react-router-dom: control location, capture navigate.
+// react-router: control location, capture navigate.
 const navigate = vi.fn();
 let currentPathname = '/guid';
 const platformMocks = vi.hoisted(() => ({
@@ -26,7 +27,7 @@ const shortcutMocks = vi.hoisted(() => ({
 const featureMocks = vi.hoisted(() => ({
   teamModeEnabled: false,
 }));
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => navigate,
   useLocation: () => ({ pathname: currentPathname, search: '', hash: '' }),
   useNavigationType: () => 'POP',

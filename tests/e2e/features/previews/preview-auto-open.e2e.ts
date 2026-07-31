@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * E2E: auto-open Office preview tabs when new files appear in the workspace.
  *

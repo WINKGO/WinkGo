@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `Spawner` — the assembly entry that wires spawn → containment → registry.
 //!
 //! Record-once (design Decision 2): we spawn FIRST, get the real pid + identity,

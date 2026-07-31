@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Row models and parameter structs for the `agent_metadata` table.
 //!
 //! JSON-encoded columns (`agent_source_info`, `args`, `env`,

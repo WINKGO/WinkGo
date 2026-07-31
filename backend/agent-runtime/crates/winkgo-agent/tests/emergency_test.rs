@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Black-box integration tests for emergency truncation (TC-2.5-01 .. TC-2.5-04).
 //!
 //! These tests treat `is_at_emergency_limit` as a public API and verify

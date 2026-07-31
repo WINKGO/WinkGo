@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React from 'react';
 import { Button, Typography, Tooltip, Link } from '@arco-design/web-react';
 import { IconDownload, IconRefresh } from '@arco-design/web-react/icon';
@@ -102,7 +103,7 @@ export const AgentHubModal: React.FC<AgentHubModalProps> = ({ visible, onCancel 
           </Typography.Text>
           <Link className='text-12px leading-18px' onClick={openWinkGoHubRepo}>
             {t('settings.agentManagement.marketContributionAction', {
-              defaultValue: 'Open a PR on WinkGoHub',
+              defaultValue: 'Open a PR on WINK GO Hub',
             })}
           </Link>
         </div>

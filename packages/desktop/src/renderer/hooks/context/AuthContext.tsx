@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { ipcBridge } from '@/common';
 import {
   hasWinkGoCapability,
@@ -29,6 +30,9 @@ interface LoginParams {
   password: string;
   phone?: string;
   remember?: boolean;
+  privacyVersion?: string;
+  termsVersion?: string;
+  source?: 'desktop_login' | 'desktop_registration';
 }
 
 type LoginErrorCode =
@@ -37,6 +41,7 @@ type LoginErrorCode =
   | 'licenseDenied'
   | 'validationError'
   | 'tooManyAttempts'
+  | 'localError'
   | 'serverError'
   | 'networkError'
   | 'csrfError'
@@ -181,146 +186,197 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
   }, [refresh]);
 
-  const login = useCallback(async ({ username, password, remember }: LoginParams): Promise<LoginResult> => {
-    try {
-      if (isDesktopRuntime) {
-        const result = await ipcBridge.winkGoAuth.login.invoke({ username, password });
+  const login = useCallback(
+    async ({
+      username,
+      password,
+      remember,
+      privacyVersion,
+      termsVersion,
+      source,
+    }: LoginParams): Promise<LoginResult> => {
+      try {
+        if (isDesktopRuntime) {
+          const result = await ipcBridge.winkGoAuth.login.invoke({
+            username,
+            password,
+            privacyVersion,
+            termsVersion,
+            source,
+          });
+          if (result.success && result.user) {
+            let session: Awaited<ReturnType<typeof ipcBridge.winkGoAuth.getSession.invoke>> | undefined;
+            try {
+              session = await ipcBridge.winkGoAuth.getSession.invoke();
+            } catch (error) {
+              // The login response is authoritative for this operation. A
+              // follow-up status refresh is useful metadata, but must not undo a
+              // successful sign-in when the local profile is momentarily busy.
+              console.warn('Desktop account session refresh failed after login:', error);
+            }
+            setUser(session?.user || result.user);
+            setEdition(
+              session?.edition ||
+                resolveWinkGoEditionSnapshot({
+                  buildEdition: 'free',
+                  authenticated: true,
+                })
+            );
+            // The login response is authoritative for this operation. A
+            // separately refreshed session can momentarily lag behind remote
+            // persistence and must not revert a successful login in the UI.
+            setStatus('authenticated');
+            setReady(true);
+          }
+          return result;
+        }
+
+        // Check CSRF token availability before login
+        // If token is missing, clear cache and inform user
+        const csrfTokenValid = hasValidCsrfToken();
+        if (!csrfTokenValid) {
+          console.warn('CSRF token missing or invalid, clearing cache');
+          clearAuthCache();
+          // Allow login to proceed anyway - server will set new token
+        }
+
+        // P1 安全修复：登录请求需要 CSRF Token / P1 Security fix: Login needs CSRF token
+        // Backend route is /login; web-host's static-server explicitly proxies it.
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(withCsrfToken({ username, password, remember, privacyVersion, termsVersion, source })),
+        });
+
+        const data = (await response.json()) as {
+          success: boolean;
+          message?: string;
+          user?: AuthUser;
+        };
+
+        if (!response.ok || !data.success || !data.user) {
+          let code: LoginErrorCode = 'unknown';
+          let message = data?.message ?? 'Login failed';
+          let shouldClearCache = false;
+
+          if (response.status === 401) {
+            code = 'invalidCredentials';
+          } else if (response.status === 403) {
+            // CSRF validation failed - clear cache
+            code = 'csrfError';
+            message = 'Security token expired. Please try again.';
+            shouldClearCache = true;
+          } else if (response.status === 429) {
+            code = 'tooManyAttempts';
+          } else if (response.status >= 500) {
+            code = 'serverError';
+          } else if (!csrfTokenValid) {
+            // If we knew CSRF was invalid and login failed, suggest cache clear
+            code = 'csrfError';
+            message = 'Login failed due to cached data. Please clear your browser cache and try again.';
+            shouldClearCache = true;
+          }
+
+          // Clear cache on CSRF-related errors
+          if (shouldClearCache) {
+            clearAuthCache();
+          }
+
+          return {
+            success: false,
+            message,
+            code,
+            shouldClearCache,
+          };
+        }
+
+        setUser(data.user);
+        setEdition(
+          resolveWinkGoEditionSnapshot({
+            buildEdition: 'free',
+            authenticated: true,
+          })
+        );
+        setStatus('authenticated');
+        setReady(true);
+
+        // Re-enable WebSocket reconnection after successful login (WebUI mode only)
+        const reconnectWindow = window as Window & { __websocketReconnect?: () => void };
+        if (reconnectWindow.__websocketReconnect) {
+          reconnectWindow.__websocketReconnect();
+        }
+
+        return { success: true };
+      } catch (error) {
+        console.error('Login request failed:', error);
+
+        // Check if error is related to CSRF token parsing
+        const errorMessage = (error as Error).message;
+        if (errorMessage?.includes('parse') || errorMessage?.includes('csrf') || errorMessage?.includes('cookie')) {
+          // CSRF or cookie parsing error - clear cache
+          clearAuthCache();
+          return {
+            success: false,
+            message: 'Login failed due to cached data. Please clear your browser cache and try again.',
+            code: 'csrfError',
+            shouldClearCache: true,
+          };
+        }
+
+        return {
+          success: false,
+          message: 'Desktop account service failed. Please try again.',
+          code: 'serverError',
+        };
+      }
+    },
+    []
+  );
+
+  const register = useCallback(
+    async ({ username, password, phone, privacyVersion, termsVersion, source }: LoginParams): Promise<LoginResult> => {
+      if (!isDesktopRuntime) {
+        return { success: false, code: 'unknown' };
+      }
+
+      try {
+        const result = await ipcBridge.winkGoAuth.register.invoke({
+          username,
+          password,
+          phone,
+          privacyVersion,
+          termsVersion,
+          source,
+        });
         if (result.success && result.user) {
-          const session = await ipcBridge.winkGoAuth.getSession.invoke();
-          setUser(session.user || result.user);
-          setEdition(session.edition || DEFAULT_WEB_EDITION);
-          // The login response is authoritative for this operation. A
-          // separately refreshed session can momentarily lag behind remote
-          // persistence and must not revert a successful login in the UI.
+          let session: Awaited<ReturnType<typeof ipcBridge.winkGoAuth.getSession.invoke>> | undefined;
+          try {
+            session = await ipcBridge.winkGoAuth.getSession.invoke();
+          } catch (error) {
+            console.warn('Desktop account session refresh failed after registration:', error);
+          }
+          setUser(session?.user || result.user);
+          setEdition(
+            session?.edition ||
+              resolveWinkGoEditionSnapshot({
+                buildEdition: 'free',
+                authenticated: true,
+              })
+          );
           setStatus('authenticated');
           setReady(true);
         }
         return result;
+      } catch (error) {
+        console.error('Desktop account registration failed:', error);
+        return { success: false, code: 'serverError' };
       }
-
-      // Check CSRF token availability before login
-      // If token is missing, clear cache and inform user
-      const csrfTokenValid = hasValidCsrfToken();
-      if (!csrfTokenValid) {
-        console.warn('CSRF token missing or invalid, clearing cache');
-        clearAuthCache();
-        // Allow login to proceed anyway - server will set new token
-      }
-
-      // P1 安全修复：登录请求需要 CSRF Token / P1 Security fix: Login needs CSRF token
-      // Backend route is /login; web-host's static-server explicitly proxies it.
-      const response = await fetch('/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(withCsrfToken({ username, password, remember })),
-      });
-
-      const data = (await response.json()) as {
-        success: boolean;
-        message?: string;
-        user?: AuthUser;
-      };
-
-      if (!response.ok || !data.success || !data.user) {
-        let code: LoginErrorCode = 'unknown';
-        let message = data?.message ?? 'Login failed';
-        let shouldClearCache = false;
-
-        if (response.status === 401) {
-          code = 'invalidCredentials';
-        } else if (response.status === 403) {
-          // CSRF validation failed - clear cache
-          code = 'csrfError';
-          message = 'Security token expired. Please try again.';
-          shouldClearCache = true;
-        } else if (response.status === 429) {
-          code = 'tooManyAttempts';
-        } else if (response.status >= 500) {
-          code = 'serverError';
-        } else if (!csrfTokenValid) {
-          // If we knew CSRF was invalid and login failed, suggest cache clear
-          code = 'csrfError';
-          message = 'Login failed due to cached data. Please clear your browser cache and try again.';
-          shouldClearCache = true;
-        }
-
-        // Clear cache on CSRF-related errors
-        if (shouldClearCache) {
-          clearAuthCache();
-        }
-
-        return {
-          success: false,
-          message,
-          code,
-          shouldClearCache,
-        };
-      }
-
-      setUser(data.user);
-      setEdition(
-        resolveWinkGoEditionSnapshot({
-          buildEdition: 'free',
-          authenticated: true,
-        })
-      );
-      setStatus('authenticated');
-      setReady(true);
-
-      // Re-enable WebSocket reconnection after successful login (WebUI mode only)
-      const reconnectWindow = window as Window & { __websocketReconnect?: () => void };
-      if (reconnectWindow.__websocketReconnect) {
-        reconnectWindow.__websocketReconnect();
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Login request failed:', error);
-
-      // Check if error is related to CSRF token parsing
-      const errorMessage = (error as Error).message;
-      if (errorMessage?.includes('parse') || errorMessage?.includes('csrf') || errorMessage?.includes('cookie')) {
-        // CSRF or cookie parsing error - clear cache
-        clearAuthCache();
-        return {
-          success: false,
-          message: 'Login failed due to cached data. Please clear your browser cache and try again.',
-          code: 'csrfError',
-          shouldClearCache: true,
-        };
-      }
-
-      return {
-        success: false,
-        message: 'Network error. Please try again.',
-        code: 'networkError',
-      };
-    }
-  }, []);
-
-  const register = useCallback(async ({ username, password, phone }: LoginParams): Promise<LoginResult> => {
-    if (!isDesktopRuntime) {
-      return { success: false, code: 'unknown' };
-    }
-
-    try {
-      const result = await ipcBridge.winkGoAuth.register.invoke({ username, password, phone });
-      if (result.success && result.user) {
-        const session = await ipcBridge.winkGoAuth.getSession.invoke();
-        setUser(session.user || result.user);
-        setEdition(session.edition || DEFAULT_WEB_EDITION);
-        setStatus('authenticated');
-        setReady(true);
-      }
-      return result;
-    } catch (error) {
-      console.error('Desktop account registration failed:', error);
-      return { success: false, code: 'serverError' };
-    }
-  }, []);
+    },
+    []
+  );
 
   const logout = useCallback(async () => {
     if (isDesktopRuntime) {

@@ -1,4 +1,5 @@
 #![allow(clippy::disallowed_types)]
+// Modified from AionCore by WINK GO contributors in 2026.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -680,7 +681,7 @@ const QR_LOGIN_HTML: &str = r#"<!DOCTYPE html>
   fetch('/api/auth/qr-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ qrToken: token })
+    body: JSON.stringify({ qr_token: token })
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {

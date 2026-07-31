@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use serde::{Deserialize, Serialize};
 use winkgo_common::PreviewContentType;
 

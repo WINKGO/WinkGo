@@ -87,6 +87,9 @@ done
 mkdir -p "$out"
 cat > "$out/winkgo_core" <<'SH'
 #!/usr/bin/env bash
+# pdf-toolkit/SKILL.md
+# name: pdf-toolkit
+# This original skill is distributed under the Apache License 2.0.
 exit 0
 SH
 chmod +x "$out/winkgo_core"
@@ -183,7 +186,17 @@ describe('prepare-winkgo-core GitHub Actions artifact resolver', () => {
   posixFakeToolchainIt('hard fails local binary fallback when prepared managed resources lack contract', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'winkgo-local-binary-gate-'));
     const localBinary = join(tmp, 'winkgo_core');
-    writeExecutable(localBinary, '#!/usr/bin/env bash\nexit 0\n');
+    writeExecutable(
+      localBinary,
+      [
+        '#!/usr/bin/env bash',
+        '# pdf-toolkit/SKILL.md',
+        '# name: pdf-toolkit',
+        '# This original skill is distributed under the Apache License 2.0.',
+        'exit 0',
+        '',
+      ].join('\n')
+    );
     const fakeBin = createFakeToolchain(tmp, { curlFails: true });
     const previousPath = process.env.PATH;
     process.env.PATH = `${fakeBin}${delimiter}${previousPath || ''}`;

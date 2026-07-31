@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for the WeChat (iLink Bot) plugin.
 //!
 //! Tests the WeixinPlugin through the public ChannelPlugin trait interface

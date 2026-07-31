@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # 前端接入指南
 
 ## TL;DR

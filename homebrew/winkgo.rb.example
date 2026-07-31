@@ -4,13 +4,13 @@
 cask "winkgo" do
   arch arm: "arm64", intel: "x64"
 
-  version "2.1.45"
+  version "2.2.0"
   sha256 arm: :no_check, intel: :no_check
 
   url "https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/v#{version}/WINK-GO-Free-#{version}-mac-#{arch}.dmg"
   name "WINK GO"
   desc "Desktop workspace for AI agents"
-  homepage "https://winkgo.top"
+  homepage "https://github.com/xuweihafeichangniu-lab/wink-go"
 
   livecheck do
     url "https://github.com/xuweihafeichangniu-lab/wink-go"
@@ -21,6 +21,7 @@ cask "winkgo" do
 
   app "WINK GO.app"
 
+  # Preserve cleanup for data created by pre-WINK GO installations.
   zap trash: [
     "~/Library/Application Support/WINK GO",
     "~/Library/Preferences/com.winkgo.desktop.plist",

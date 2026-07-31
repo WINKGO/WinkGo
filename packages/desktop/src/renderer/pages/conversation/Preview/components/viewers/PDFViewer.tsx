@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -6,6 +7,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { PDF_PREVIEW_WEBVIEW_PARTITION } from '@/common/platform/electronSecurity';
 import { buildPdfSrc } from '../../previewUrls';
 import { usePreviewToolbarExtras } from '../../context/PreviewToolbarExtrasContext';
 import { Button, Message } from '@arco-design/web-react';
@@ -163,6 +165,7 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({ file_path, content, hideToolbar
           ref={webviewRef}
           src={pdfSrc}
           className='w-full h-full'
+          partition={PDF_PREVIEW_WEBVIEW_PARTITION}
           style={{ display: 'inline-flex' }}
         />
       </div>

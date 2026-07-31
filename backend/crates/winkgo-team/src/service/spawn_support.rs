@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use super::*;
 use std::sync::Arc;
 use winkgo_common::AgentType;

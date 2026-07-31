@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! End-to-end integration tests for the complete authentication flow.
 //!
 //! These tests exercise the full application stack (security headers, CSRF,

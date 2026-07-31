@@ -1,3 +1,4 @@
+<!-- Modified from aionrs by WINK GO contributors in 2026. -->
 # winkgo_agent JSON Stream Protocol Spec
 
 > This protocol defines the communication between winkgo_agent (Rust CLI) and a host client (e.g., WINK GO Electron app) via stdin/stdout JSON Lines.

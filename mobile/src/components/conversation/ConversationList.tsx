@@ -1,5 +1,6 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React, { useCallback } from 'react';
-import { View, StyleSheet, RefreshControl, Alert } from 'react-native';
+import { View, StyleSheet, RefreshControl } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';

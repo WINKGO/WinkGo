@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import classNames from 'classnames';
 import React from 'react';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
@@ -23,7 +24,7 @@ import {
   Toolkit,
 } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { useExtI18n } from '@/renderer/hooks/system/useExtI18n';
 import { BUILTIN_TAB_IDS, LEGACY_ANCHOR_REMAP } from '../settingsNavigation';
 import './settings.css';

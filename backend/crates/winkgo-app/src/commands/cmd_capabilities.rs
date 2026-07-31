@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Top-level agent-readable capability index for the `winkgo_core` binary.
 
 use std::io::{self, Write};

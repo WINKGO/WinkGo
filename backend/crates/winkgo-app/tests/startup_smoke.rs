@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Smoke test: starting the app twice with the same binary version
 //! should be a no-op on the second run (version gate skips rewrite).
 

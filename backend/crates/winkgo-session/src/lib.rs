@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `winkgo-session` — server-authoritative SessionState control plane (feature
 //! 002). Domain layer.
 //!

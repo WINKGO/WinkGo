@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use winkgo_api_types::SystemInfoResponse;
 
 /// Map Rust `std::env::consts::OS` to the Node.js-compatible platform name

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Shared first-message prefix injection for ACP agents.
 //!
 //! Takes the conversation's first-message content and produces a new content

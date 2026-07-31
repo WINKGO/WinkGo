@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Assistant } from '@/common/types/agent/assistantTypes';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
@@ -11,6 +13,7 @@ import {
   brandAssistantForDisplay,
   brandLegacyTextForDisplay,
   brandManagedAgentForDisplay,
+  WINK_GO_BRAND_ICON,
   resolveIslandDynamicIdentity,
   resolveMediaIdentity,
   resolveNotificationIdentity,
@@ -18,6 +21,43 @@ import {
 } from '@/renderer/utils/model/winkGoBranding';
 
 describe('WINK GO visible branding', () => {
+  it('keeps the currently open desktop surfaces free of edition sales gates', () => {
+    const publicUiFiles = [
+      'packages/desktop/src/renderer/pages/settings/ToolsSettings/index.tsx',
+      'packages/desktop/src/renderer/pages/settings/SkillsSettings/SkillsHubSettings.tsx',
+      'packages/desktop/src/renderer/pages/winkgo/InspirationCenterPage/index.tsx',
+      'packages/desktop/src/renderer/components/layout/Router.tsx',
+      'packages/desktop/src/renderer/pages/winkgo/KnowledgeCanvasPage/knowledgeCanvasAiBridge.ts',
+      'packages/desktop/src/renderer/components/settings/SettingsModal/contents/WebuiModalContent.tsx',
+      'packages/desktop/src/renderer/components/layout/Sider/index.tsx',
+      'packages/desktop/src/process/services/winkGoEditionGuard.ts',
+    ];
+    const salesGate = /WinkGoProFeatureCard|WINK GO Pro|WINK GO 免费版|解锁 Pro|属于 Pro|需安装 Pro 客户端|· PRO/;
+    const rendererCapabilityGate =
+      /can\(['"](?:mcp\.miniapp|skills\.premium|inspiration\.full|canvas\.ai|remote\.desktop)['"]\)|winkGoAuth\.getSession/;
+
+    for (const file of publicUiFiles) {
+      const source = readFileSync(resolve(process.cwd(), file), 'utf8');
+      expect(source, `${file} contains an edition sales prompt`).not.toMatch(salesGate);
+      expect(source, `${file} blocks an open feature in the renderer`).not.toMatch(rendererCapabilityGate);
+    }
+  });
+
+  it('shows the WINK GO mini-program code whenever WebUI is running', () => {
+    const source = readFileSync(
+      resolve(
+        process.cwd(),
+        'packages/desktop/src/renderer/components/settings/SettingsModal/contents/WebuiModalContent.tsx'
+      ),
+      'utf8'
+    );
+
+    expect(source).toContain('{status?.running && (');
+    expect(source).not.toContain('{status?.running && status.allowRemote && (');
+    expect(source).toContain('src={winkGoMiniAppCode}');
+    expect(source).toContain("data-testid='webui-generated-login-qr-hidden'");
+  });
+
   it('replaces legacy product names in provider and runtime messages', () => {
     expect(
       brandLegacyTextForDisplay('WinkGoAgent agent error. Send message to WinkGo CLI from WinkGo or WinkGo UI.')
@@ -48,7 +88,7 @@ describe('WINK GO visible branding', () => {
     expect(branded.name_i18n['zh-CN']).toBe('WINK GO');
     expect(branded.description).toBe('Your WINK GO assistant');
     expect(branded.description_i18n['zh-CN']).toBe('你的 WINK GO 助手');
-    expect(branded.avatar).toMatch(/^data:image\/png;base64,/);
+    expect(branded.avatar).toBe(WINK_GO_BRAND_ICON);
   });
 
   it('presents the generated WinkGo CLI assistant as WINK GO CLI with the WINK GO mark', () => {
@@ -68,7 +108,7 @@ describe('WINK GO visible branding', () => {
 
     expect(branded.name).toBe(WINK_GO_CLI_DISPLAY_NAME);
     expect(branded.name_i18n['zh-CN']).toBe(WINK_GO_CLI_DISPLAY_NAME);
-    expect(branded.avatar).toMatch(/^data:image\/png;base64,/);
+    expect(branded.avatar).toBe(WINK_GO_BRAND_ICON);
   });
 
   it('brands the WINK GO CLI management row and its visible diagnostics without adding absent fields', () => {
@@ -89,8 +129,8 @@ describe('WINK GO visible branding', () => {
     const branded = brandManagedAgentForDisplay(agent);
 
     expect(branded.name).toBe('WINK GO CLI');
-    expect(branded.icon).toMatch(/^data:image\/png;base64,/);
-    expect(branded.avatar).toMatch(/^data:image\/png;base64,/);
+    expect(branded.icon).toBe(WINK_GO_BRAND_ICON);
+    expect(branded.avatar).toBe(WINK_GO_BRAND_ICON);
     expect(branded.last_check_error_message).toBe('WINK GO could not start WINK GO CLI');
     expect(branded.last_check_error_details?.agent_name).toBe('WINK GO CLI');
     expect(branded).not.toHaveProperty('description');

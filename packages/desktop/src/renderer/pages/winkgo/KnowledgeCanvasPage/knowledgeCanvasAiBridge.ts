@@ -418,14 +418,6 @@ export async function runKnowledgeCanvasAnalysis(
 ): Promise<KnowledgeCanvasAnalysis> {
   if (options.signal?.aborted) throw new DOMException('知识画布分析已取消', 'AbortError');
 
-  // Re-read the main-process session immediately before starting a paid
-  // analysis. The UI gate improves UX, while this signed-session check keeps a
-  // stale or manually navigated renderer from starting a Pro Agent task.
-  const authSession = await ipcBridge.winkGoAuth.getSession.invoke();
-  if (!authSession.edition.capabilities.includes('canvas.ai')) {
-    throw new Error('AI 知识画布属于 WINK GO Pro。请升级账号并使用 Pro 客户端后重试。');
-  }
-
   options.onProgress?.({ stage: 'resolving', progress: 8, detail: '正在选择 WINK GO AI 分析引擎' });
 
   const assistants = await ipcBridge.assistants.list.invoke();

@@ -18,7 +18,8 @@ import {
   TagOne,
   Undo,
 } from '@icon-park/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { ipcBridge } from '@/common';
 import type {
   IStartOnBootStatus,
@@ -119,6 +120,7 @@ const ShortcutBadge: React.FC<{ value: string }> = ({ value }) => (
 );
 
 const IslandFilesSettings: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const preferences = useWinkGoIslandFilePreferences();
   const [startOnBoot, setStartOnBoot] = useState<IStartOnBootStatus>({
@@ -294,11 +296,7 @@ const IslandFilesSettings: React.FC = () => {
       />
 
       <div className='mt-18px space-y-16px pb-24px' data-testid='island-files-settings'>
-        <SettingsCard
-          icon={<SettingTwo />}
-          title='灵动岛与交互'
-          description='沿用原版 WINK GO 的桌面悬浮、通知和轻量反馈能力'
-        >
+        <SettingsCard icon={<SettingTwo />} title='灵动岛与交互' description={t('settings.islandFilesExperienceDesc')}>
           <PreferenceRow label='轻量交互音效' description='只在点击和任务完成时播放，不常驻音频服务'>
             <Switch
               checked={preferences.interactionSoundEnabled}
@@ -357,7 +355,7 @@ const IslandFilesSettings: React.FC = () => {
           </PreferenceRow>
           <PreferenceRow
             label='开机自启动'
-            description={startOnBoot.supported ? '随 Windows 启动 WINK GO' : '开发运行不支持，安装正式版后可用'}
+            description={startOnBoot.supported ? t('settings.startOnBootDesc') : t('settings.startOnBootUnsupported')}
           >
             <Switch checked={startOnBoot.enabled} disabled={!startOnBoot.supported} onChange={updateStartOnBoot} />
           </PreferenceRow>

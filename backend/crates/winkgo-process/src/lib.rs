@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `winkgo-process` — self-contained subprocess mechanism (feature 001).
 //!
 //! A Foundation-layer crate that spawns, supervises, and reaps the agent

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Black-box integration tests for PlanModeTransition and ContextModifier
 //! extensions (TC-3.2-04, TC-3.2-05).
 

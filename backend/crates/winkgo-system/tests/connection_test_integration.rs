@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for ConnectionTestService.
 //!
 //! Tests validate input checking, service construction, and error paths.

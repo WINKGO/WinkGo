@@ -1,3 +1,4 @@
+; Modified from AionUI by WINK GO contributors in 2026.
 !ifndef WINKGO_INSTALLER_REPAIR_HEAL_NSH
 !define WINKGO_INSTALLER_REPAIR_HEAL_NSH
 

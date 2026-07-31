@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # Contributing Guide
 
 > **Chinese version**: [CONTRIBUTING.zh.md](CONTRIBUTING.zh.md)
@@ -10,6 +12,26 @@ See [docs/contributing/development.md](docs/contributing/development.md) for env
 - [bun](https://bun.sh)
 - [Rust stable + Cargo](https://rustup.rs) for the local WINK GO Core backend
 - [prek](https://github.com/j178/prek) (`npm install -g @j178/prek`)
+
+## Contribution rights and DCO
+
+Every contribution is submitted under the repository's Apache License 2.0.
+By adding a `Signed-off-by` line, the contributor certifies the
+[Developer Certificate of Origin 1.1](https://developercertificate.org/):
+they created the contribution or have the right to submit it under the stated
+license, and understand that the public contribution record is retained.
+
+Sign each commit with:
+
+```bash
+git commit -s
+```
+
+Do not submit employer-confidential material, copied code, generated assets, or
+AI-assisted output unless you have verified the right to distribute it.
+Third-party material must include its exact source, version or commit, license,
+copyright/NOTICE text, and a clear modification record. Contributors are
+responsible for obtaining any employer or client authorization they need.
 
 ## Rule 1: Atomic PRs
 

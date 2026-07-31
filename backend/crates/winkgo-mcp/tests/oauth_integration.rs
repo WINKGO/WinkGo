@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for McpOAuthService with real SQLite.
 //!
 //! Tests from test-plan §4 (OAuth) at the service layer.

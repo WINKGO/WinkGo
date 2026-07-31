@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { ipcBridge } from '@/common';
 import type { IMcpServer } from '@/common/config/storage';
 import type { Assistant, CreateAssistantRequest, UpdateAssistantRequest } from '@/common/types/agent/assistantTypes';
@@ -15,9 +16,9 @@ import { assistantOrderAfterToggle, selectableAssistants } from '@/renderer/util
 import {
   brandLegacyTextForDisplay,
   isWinkGoCliAssistant,
+  WINK_GO_BRAND_ICON as winkGoLogo,
   WINK_GO_CLI_DISPLAY_NAME,
 } from '@/renderer/utils/model/winkGoBranding';
-import winkGoLogo from '@/renderer/assets/logos/brand/app.png?inline';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mutate as swrMutate } from 'swr';

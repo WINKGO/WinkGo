@@ -13,7 +13,7 @@ import {
 import classNames from 'classnames';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { isMacOS } from '@/renderer/utils/platform';
 import {
   dismissTitlebarQuickActionTargets,

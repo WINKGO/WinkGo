@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Acceptance tests for file cache dedup and cross-tool integration.
 //
 // These are LOCAL tests — no LLM call required.

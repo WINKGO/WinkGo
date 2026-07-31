@@ -14,14 +14,32 @@
     "searchPlaceholder": "搜尋專案…",
     "noProject": "不使用專案"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "WINK GO AI 分析失敗，請稍後再試。",
+    "backToChat": "返回聊天",
+    "frameTitle": "WINK GO 知識畫布",
+    "loading": "正在開啟知識畫布…",
+    "open": "開啟知識畫布",
+    "pageLabel": "WINK GO 知識畫布",
+    "reload": "重新載入知識畫布",
+    "statusAnalyzing": "WINK GO AI 分析中",
+    "statusReady": "本機畫布 · AI 可用",
+    "statusUnavailable": "實驗功能 · 尚未提供",
+    "subtitle": "將網頁、文件與想法整理成可編輯的知識結構",
+    "title": "知識畫布",
+    "unavailableDescription": "公開版本暫不包含完整畫布執行元件；待來源、授權與發布資料完成審核後再開放。",
+    "unavailableTitle": "知識畫布仍在實驗階段"
+  },
   "installerCenter": {
     "entry": "軟體安裝中心",
     "title": "WINK GO 安裝中心",
-    "subtitle": "一鍵取得 Codex、Claude Code 與 Antigravity 部署套件",
-    "windows": "Windows 安裝套件",
-    "macos": "macOS 安裝套件",
-    "environmentSetup": "{{platform}} 環境快速部署",
-    "downloadFailed": "無法開啟下載連結",
+    "subtitle": "前往 Codex、Claude Code 與 Antigravity 官方安裝頁面",
+    "windows": "Windows 安裝指引",
+    "macos": "macOS 安裝指引",
+    "environmentSetup": "查看 {{platform}} 官方安裝說明",
+    "openOfficialPage": "開啟官方安裝頁面",
+    "thirdPartyDisclaimer": "Codex、Claude Code 與 Antigravity 均為第三方產品。WINK GO 不代管、不背書，也不保證其可用性或相容性；使用時請遵守各廠商條款。",
+    "downloadFailed": "無法開啟官方安裝頁面",
     "recommended": "推薦"
   }
 }

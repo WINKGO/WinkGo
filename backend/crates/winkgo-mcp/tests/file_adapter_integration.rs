@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for file-based MCP Agent adapters (Opencode, WinkGoAgent, WinkGoui).
 //!
 //! These tests exercise the real filesystem read/write logic using temp

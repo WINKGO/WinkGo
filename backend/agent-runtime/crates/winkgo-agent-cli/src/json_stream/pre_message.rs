@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Pre-message phase of the JSON stream protocol.
 //!
 //! Before the first `Message` command arrives, the host is allowed to send

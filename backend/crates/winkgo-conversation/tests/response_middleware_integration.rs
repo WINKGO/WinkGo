@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use winkgo_conversation::response_middleware::strip_think_tags;
 
 #[test]

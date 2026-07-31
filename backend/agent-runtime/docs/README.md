@@ -1,3 +1,4 @@
+<!-- Modified from aionrs by WINK GO contributors in 2026. -->
 # Documentation
 
 ## Table of Contents
@@ -6,7 +7,7 @@
 - **[Core Concepts](core-concepts.md)** — Runtime terminology: runs, turns, tool rounds, and tool calls
 - **[Built-in Tools](tools.md)** — Read, Write, Edit, ExecCommand, Grep, Glob, Spawn — detailed reference and concurrency notes
 - **[MCP Integration](mcp.md)** — Model Context Protocol client: stdio, SSE, and streamable-http transports
-- **[Providers & Auth](providers.md)** — Multi-provider configuration, profile inheritance, AWS Bedrock, Google Vertex AI, OAuth login
+- **[Providers & Auth](providers.md)** — Multi-provider configuration, profile inheritance, AWS Bedrock, Google Vertex AI, and provider credentials
 - **[Advanced Features](advanced.md)** — Sub-agent spawning, hook system, prompt caching, VCR recording/replay, AGENTS.md hierarchical loading, memory system, plan mode, context compression, file state cache, output compaction
 - **[JSON Stream Protocol](json-stream-protocol.md)** — Host integration protocol specification (`--json-stream` mode)
 - **[Troubleshooting](troubleshooting.md)** — Common errors, diagnostics, and solutions

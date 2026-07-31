@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 // --- File processing ---
 
 pub const WINKGO_TIMESTAMP_SEPARATOR: &str = "_winkgo_";

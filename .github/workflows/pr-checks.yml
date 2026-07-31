@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 name: 'PR Checks'
 
 on:
@@ -43,6 +44,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo "PR closed, cancelling in-progress runs via concurrency."
+
+  dependency-security:
+    name: Dependency Security
+    if: github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve PR context
+        uses: ./.github/actions/checkout-pr
+        with:
+          pr_number: ${{ inputs.pr_number }}
+          github_token: ${{ github.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.22'
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+          cache: true
+
+      - name: Install dependencies without lifecycle scripts
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Audit production dependencies
+        run: bun run security:audit
 
   # Job 1: Code quality checks (TypeScript, Oxlint, Oxfmt)
   code-quality:
@@ -532,4 +567,4 @@ jobs:
 
       - name: Validate script output
         shell: bash
-        run: bash scripts/verify-release-assets.sh release-assets
+        run: bash scripts/verify-release-assets.sh release-assets 1.0.0

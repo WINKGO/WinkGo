@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+# Modified by WINK GO contributors in 2026. See ../SOURCE.md and ../MODIFICATIONS.md.
 """
 Quick validation script for skills - minimal version
 """
 
+# Modified from AionCore by WINK GO contributors in 2026.
 import sys
 import os
 import re

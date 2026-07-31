@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use super::{OutputFormatter, OutputSink};
 
 /// Terminal output sink - wraps the existing OutputFormatter for human-readable output

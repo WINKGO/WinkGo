@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Core agent infrastructure: engine, session, orchestration, output sinks.
 
 pub mod agents_md;

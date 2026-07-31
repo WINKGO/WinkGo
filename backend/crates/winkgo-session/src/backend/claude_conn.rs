@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! 007 §C5 (claude variant): `ClaudeConnection` / `ClaudeSessionBackend` — the
 //! NEW symmetric-seam impl that WRAPS the existing `ClaudeAdapter` spawn+parse
 //! logic so its behavior is verbatim-unchanged (claude is already in production;
@@ -480,7 +481,7 @@ struct ClaudeWakeRecipe {
     /// a resume-respawn re-applies the SAME env (R16 continuity — a woken process
     /// must reach the same provider as the original).
     env: Vec<winkgo_common::EnvVar>,
-    /// The bundled-CLI path captured at open time so a resume-respawn uses the
+    /// The user-installed CLI path captured at open time so a resume-respawn uses the
     /// SAME binary (R16 continuity). `None` ⇒ bare "claude" via PATH.
     cli_program: Option<std::path::PathBuf>,
 }

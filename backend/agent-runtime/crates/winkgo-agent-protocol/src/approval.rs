@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Mutex;

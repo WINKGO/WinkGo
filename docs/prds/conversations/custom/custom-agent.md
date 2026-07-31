@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # 设置页 → Agent 管理 → Custom Agent (F-CAGENT)
 
 > 本文档覆盖「设置 → Agents → 本地 Agents」页面中 **Custom Agent** 相关的全部功能，包括列表展示、创建/编辑/删除/启用禁用、连接测试、Agent 自动检测机制。

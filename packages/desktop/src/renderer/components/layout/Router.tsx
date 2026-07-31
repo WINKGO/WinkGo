@@ -1,10 +1,9 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React, { Suspense, useEffect } from 'react';
-import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import AppLoader from '@renderer/components/layout/AppLoader';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
 import { TEAM_MODE_ENABLED } from '@/common/config/constants';
-import type { WinkGoCapability } from '@/common/types/platform/winkGoEdition';
-import WinkGoProFeatureCard from '@renderer/components/winkgo/WinkGoProFeatureCard';
 const Conversation = React.lazy(() => import('@renderer/pages/conversation'));
 const Guid = React.lazy(() => import('@renderer/pages/guid'));
 const AgentSettings = React.lazy(() => import('@renderer/pages/settings/AgentSettings'));
@@ -37,8 +36,6 @@ const InspirationCenterPage = React.lazy(loadInspirationCenterPage);
 const KnowledgeCanvasPage = React.lazy(() => import('@renderer/pages/winkgo/KnowledgeCanvasPage'));
 
 const WarmWorkspaceRoutes: React.FC = () => {
-  const { can } = useAuth();
-
   useEffect(() => {
     // Warm high-frequency routes without asking low-end machines to parse six
     // large chunks at once. One chunk is loaded per idle period, leaving input,
@@ -46,13 +43,11 @@ const WarmWorkspaceRoutes: React.FC = () => {
     const loaders = [
       loadFormatStudioPage,
       loadToolsSettings,
+      loadInspirationCenterPage,
       loadSkillsSettings,
       loadScheduledTasksPage,
       loadAssistantSettings,
     ];
-    if (can('inspiration.basic')) {
-      loaders.splice(2, 0, loadInspirationCenterPage);
-    }
     let nextLoaderIndex = 0;
     let cancelled = false;
     let timeoutId: number | undefined;
@@ -89,7 +84,7 @@ const WarmWorkspaceRoutes: React.FC = () => {
         window.cancelIdleCallback(idleId);
       }
     };
-  }, [can]);
+  }, []);
 
   return null;
 };
@@ -98,17 +93,6 @@ const withRouteFallback = (Component: React.LazyExoticComponent<React.ComponentT
   <Suspense fallback={<AppLoader />}>
     <Component />
   </Suspense>
-);
-
-const CapabilityRoute: React.FC<{
-  capability: WinkGoCapability;
-  title: string;
-  description: string;
-  component: React.LazyExoticComponent<React.ComponentType>;
-}> = ({ capability, title, description, component }) => (
-  <WinkGoProFeatureCard capability={capability} title={title} description={description}>
-    {withRouteFallback(component)}
-  </WinkGoProFeatureCard>
 );
 
 /**
@@ -182,17 +166,7 @@ const PanelRoute: React.FC<{ layout: React.ReactElement }> = ({ layout }) => {
           <Route path='/format-studio' element={withRouteFallback(FormatStudioPage)} />
           <Route path='/mcp' element={withRouteFallback(ToolsSettings)} />
           <Route path='/inspiration' element={withRouteFallback(InspirationCenterPage)} />
-          <Route
-            path='/knowledge-canvas'
-            element={
-              <CapabilityRoute
-                capability='canvas.ai'
-                component={KnowledgeCanvasPage}
-                title='AI 知识画布属于 WINK GO Pro'
-                description='升级后可调用本机 Agent 深度分析网页、视频和文档，并保存可继续编辑的知识画布。'
-              />
-            }
-          />
+          <Route path='/knowledge-canvas' element={withRouteFallback(KnowledgeCanvasPage)} />
           <Route path='/skills' element={withRouteFallback(SkillsSettings)} />
           <Route path='/settings/appearance' element={withRouteFallback(AppearanceSettings)} />
           <Route path='/settings/display' element={<Navigate to='/settings/appearance' replace />} />

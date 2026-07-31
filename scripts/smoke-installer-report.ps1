@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')

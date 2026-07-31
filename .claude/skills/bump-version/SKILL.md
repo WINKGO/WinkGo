@@ -3,6 +3,8 @@ name: bump-version
 description: Use when bumping the WinkGo version: query WINK GO Core release, verify artifacts, update package.json, generate CHANGELOG, branch, commit, push, create PR, auto-merge, tag release.
 ---
 
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # Bump Version
 
 Automate the WinkGo release preparation: query WINK GO Core release → verify artifacts → update versions → generate CHANGELOG → branch → PR → tag.

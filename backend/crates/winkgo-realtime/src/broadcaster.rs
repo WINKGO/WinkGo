@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use tokio::sync::broadcast;
 use tracing::warn;
 use winkgo_api_types::WebSocketMessage;

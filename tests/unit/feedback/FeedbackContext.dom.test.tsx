@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -29,13 +30,6 @@ vi.mock('@/renderer/components/settings/SettingsModal/contents/FeedbackReportMod
     onCancel: () => void;
     defaultModule?: string;
     prefilledScreenshots?: Array<{ filename: string; data: Uint8Array; type: string }>;
-    feedbackTags?: Record<string, string>;
-    feedbackExtra?: Record<string, unknown>;
-    feedbackDiagnosticsContext?: {
-      explicitContext?: Record<string, string>;
-      explicitProfiles?: string[];
-      routeAtOpen?: string;
-    };
   }) => {
     modalSpy(props);
     if (!props.visible) return null;
@@ -114,7 +108,7 @@ describe('FeedbackProvider / useFeedback', () => {
     expect(lastCall.prefilledScreenshots).toBeUndefined();
   });
 
-  it('forwards feedback tags and extra context to the modal', async () => {
+  it('does not forward hidden feedback tags or extra context to the modal', async () => {
     const user = userEvent.setup();
     renderWithProvider(
       <Trigger
@@ -137,19 +131,11 @@ describe('FeedbackProvider / useFeedback', () => {
 
     const lastCall = modalSpy.mock.calls.at(-1)?.[0];
     expect(lastCall.visible).toBe(true);
-    expect(lastCall.feedbackTags).toEqual({
-      agent_error_code: 'USER_AGENT_ACP_INIT_FAILED',
-      agent_error_ownership: 'user_agent',
-    });
-    expect(lastCall.feedbackExtra).toEqual({
-      agent_error: {
-        code: 'USER_AGENT_ACP_INIT_FAILED',
-        ownership: 'user_agent',
-      },
-    });
+    expect(lastCall).not.toHaveProperty('feedbackTags');
+    expect(lastCall).not.toHaveProperty('feedbackExtra');
   });
 
-  it('captures route and explicit diagnostics context when opening feedback', async () => {
+  it('does not forward route or explicit diagnostics context to the modal', async () => {
     window.location.hash = '#/conversation/conv-1';
     const user = userEvent.setup();
     renderWithProvider(
@@ -165,56 +151,7 @@ describe('FeedbackProvider / useFeedback', () => {
 
     const lastCall = modalSpy.mock.calls.at(-1)?.[0];
     expect(lastCall.visible).toBe(true);
-    expect(lastCall.feedbackDiagnosticsContext).toEqual({
-      explicitContext: { conversationId: 'conv-1' },
-      explicitProfiles: ['conversation-session'],
-      routeAtOpen: '#/conversation/conv-1',
-    });
-  });
-
-  it('derives team diagnostics context from the route', async () => {
-    window.location.hash = '#/team/team-1';
-    const user = userEvent.setup();
-    renderWithProvider(<Trigger module='agent-team' autoScreenshot={false} />);
-
-    await user.click(document.querySelector('button')!);
-
-    const lastCall = modalSpy.mock.calls.at(-1)?.[0];
-    expect(lastCall.feedbackDiagnosticsContext).toEqual({
-      explicitContext: { teamId: 'team-1' },
-      explicitProfiles: undefined,
-      routeAtOpen: '#/team/team-1',
-    });
-  });
-
-  it('does not derive diagnostics context from malformed team routes', async () => {
-    window.location.hash = '#/team/%E0%A4%A';
-    const user = userEvent.setup();
-    renderWithProvider(<Trigger module='agent-team' autoScreenshot={false} />);
-
-    await user.click(document.querySelector('button')!);
-
-    const lastCall = modalSpy.mock.calls.at(-1)?.[0];
-    expect(lastCall.feedbackDiagnosticsContext).toEqual({
-      explicitContext: undefined,
-      explicitProfiles: undefined,
-      routeAtOpen: '#/team/%E0%A4%A',
-    });
-  });
-
-  it('does not derive diagnostics context from encoded blank route ids', async () => {
-    window.location.hash = '#/team/%20';
-    const user = userEvent.setup();
-    renderWithProvider(<Trigger module='agent-team' autoScreenshot={false} />);
-
-    await user.click(document.querySelector('button')!);
-
-    const lastCall = modalSpy.mock.calls.at(-1)?.[0];
-    expect(lastCall.feedbackDiagnosticsContext).toEqual({
-      explicitContext: undefined,
-      explicitProfiles: undefined,
-      routeAtOpen: '#/team/%20',
-    });
+    expect(lastCall).not.toHaveProperty('feedbackDiagnosticsContext');
   });
 
   it('captures a screenshot via electronAPI when autoScreenshot=true', async () => {
@@ -301,8 +238,6 @@ describe('FeedbackProvider / useFeedback', () => {
     const lastCall = modalSpy.mock.calls.at(-1)?.[0];
     expect(lastCall.visible).toBe(false);
     expect(lastCall.prefilledScreenshots).toBeUndefined();
-    expect(lastCall.feedbackTags).toBeUndefined();
-    expect(lastCall.feedbackExtra).toBeUndefined();
   });
 
   it('returns a no-op openFeedback when used outside a provider', async () => {

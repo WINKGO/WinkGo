@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Isolated PATH-resolution coverage for stdio MCP connection tests.
 //!
 //! This file intentionally contains one test because it mutates process PATH

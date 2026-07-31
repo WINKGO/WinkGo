@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 /// End-to-end tests that hit real LLM provider APIs.
 ///
 /// These tests are skipped when the required environment variable is absent,

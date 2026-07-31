@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Integration tests for the MEMORY.md index management.
 //
 // These tests target functional requirements from test-plan.md TC-5,

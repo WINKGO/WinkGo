@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Modified from AionUI by WINK GO contributors in 2026.
 import { execSync, spawn } from 'node:child_process';
 import path from 'node:path';
 import process from 'node:process';

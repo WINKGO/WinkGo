@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Assistant source classification + rule/skill dispatch traits used by
 //! `skill_routes` to route rule-md / skill-md reads/writes to the correct
 //! source (built-in file, extension resolution, or user-writable directory).

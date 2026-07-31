@@ -1,13 +1,17 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { ExpoConfig, ConfigContext } from 'expo/config';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { LOCAL_NETWORK_USAGE_DESCRIPTION } from './plugins/withLocalNetworkAccess';
 import VERSION from './versions/version.json';
 
 const repositoryRoot = resolve(__dirname, '..');
 const legalDocuments = {
   license: readFileSync(resolve(repositoryRoot, 'LICENSE'), 'utf8'),
   notice: readFileSync(resolve(repositoryRoot, 'NOTICE'), 'utf8'),
+  privacy: readFileSync(resolve(repositoryRoot, 'PRIVACY.md'), 'utf8'),
+  terms: readFileSync(resolve(repositoryRoot, 'TERMS.md'), 'utf8'),
   thirdPartyNotices: readFileSync(resolve(repositoryRoot, 'THIRD_PARTY_NOTICES.md'), 'utf8'),
 };
 
@@ -19,6 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     version: VERSION.version,
     orientation: 'portrait',
     icon: './assets/images/icon.png',
+    assetBundlePatterns: ['assets/**/*'],
     scheme: 'winkgo-mobile',
     userInterfaceStyle: 'automatic',
     ios: {
@@ -28,6 +33,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription: 'WINK GO needs camera access to scan QR codes for server login.',
+        NSLocalNetworkUsageDescription: LOCAL_NETWORK_USAGE_DESCRIPTION,
+        NSAppTransportSecurity: {
+          NSAllowsLocalNetworking: true,
+        },
       },
     },
     android: {
@@ -42,7 +51,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       output: 'static',
       favicon: './assets/images/icon.png',
     },
-    plugins: ['expo-router', 'expo-secure-store', 'expo-dev-client', 'expo-camera'],
+    plugins: [
+      'expo-router',
+      'expo-secure-store',
+      'expo-dev-client',
+      'expo-camera',
+      './plugins/withLocalNetworkAccess.ts',
+    ],
     experiments: {
       typedRoutes: true,
     },

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Module-level router states + their builders.
 //!
 //! `ModuleStates` is the bundle returned by `build_module_states`; each

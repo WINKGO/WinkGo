@@ -4,6 +4,10 @@ description: Guide for creating effective skills. This skill should be used when
 license: Complete terms in LICENSE.txt
 ---
 
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
+
+> **Modification notice:** This Anthropic skill-creator file was modified by WINK GO contributors in 2026 for local integration and Windows/PowerShell compatibility. See `SOURCE.md` and `MODIFICATIONS.md`.
+
 > **⚠️ Platform note — read before running any command.** The command examples here are written for **macOS / Linux**. On **Windows**: run `python` (or `py`) instead of `python3`, use `$env:USERPROFILE\…` and backslashes instead of `~/…`, and translate any shell pipes/redirects (`|`, `>`, `&&`) to their PowerShell equivalents before running. The scripts themselves are cross-platform; only the way you invoke them differs.
 
 # Skill Creator

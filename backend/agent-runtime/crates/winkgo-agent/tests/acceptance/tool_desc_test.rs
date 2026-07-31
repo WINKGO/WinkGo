@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Acceptance test for tool usage guidance in the system prompt (TC-A4-01).
 //
 // This is a LOCAL test — no LLM call required.

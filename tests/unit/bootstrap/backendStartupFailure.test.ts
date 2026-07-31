@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { describe, expect, it, vi } from 'vitest';
 import { classifyBackendStartupFailure } from '@/process/startup/backendStartupFailure';
 import { detectStartupArchitectureMismatch } from '@/process/startup/architectureCompatibility';
@@ -293,7 +294,7 @@ describe('classifyBackendStartupFailure', () => {
   });
 
   it('classifies packaged macOS architecture mismatches separately from generic startup failures', () => {
-    const error = new Error('WinkGo package architecture does not match this Mac') as Error & {
+    const error = new Error('WINK GO package architecture does not match this Mac') as Error & {
       details?: Record<string, unknown>;
     };
     error.details = {

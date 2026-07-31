@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -15,7 +16,6 @@ import type {
   FeedbackDiagnosticsExplicitContext,
   FeedbackDiagnosticsProfile,
 } from '@/common/types/feedbackDiagnostics';
-import { captureFeedbackRoute, feedbackDiagnosticsContextFromRoute } from '@/renderer/services/feedback/routeContext';
 
 type OpenFeedbackOptions = {
   module?: string;
@@ -52,35 +52,9 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [visible, setVisible] = useState(false);
   const [defaultModule, setDefaultModule] = useState<string | undefined>(undefined);
   const [prefilledScreenshots, setPrefilledScreenshots] = useState<PrefilledScreenshot[] | undefined>(undefined);
-  const [feedbackTags, setFeedbackTags] = useState<FeedbackEventTags | undefined>(undefined);
-  const [feedbackExtra, setFeedbackExtra] = useState<FeedbackEventExtra | undefined>(undefined);
-  const [feedbackDiagnosticsContext, setFeedbackDiagnosticsContext] = useState<
-    | {
-        explicitContext?: FeedbackDiagnosticsExplicitContext;
-        explicitProfiles?: FeedbackDiagnosticsProfile[];
-        routeAtOpen?: string;
-      }
-    | undefined
-  >(undefined);
 
   const openFeedback = useCallback(async (options?: OpenFeedbackOptions) => {
-    const routeAtOpen = captureFeedbackRoute();
-    const routeContext = feedbackDiagnosticsContextFromRoute(routeAtOpen);
-    const explicitContext =
-      routeContext || options?.diagnosticsContext
-        ? {
-            ...routeContext,
-            ...options?.diagnosticsContext,
-          }
-        : undefined;
     setDefaultModule(options?.module);
-    setFeedbackTags(options?.tags);
-    setFeedbackExtra(options?.extra);
-    setFeedbackDiagnosticsContext({
-      explicitContext,
-      explicitProfiles: options?.diagnosticsProfiles,
-      routeAtOpen,
-    });
     if (options?.autoScreenshot) {
       const shot = await captureScreenshot();
       setPrefilledScreenshots(shot ? [shot] : undefined);
@@ -93,9 +67,6 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const handleCancel = useCallback(() => {
     setVisible(false);
     setPrefilledScreenshots(undefined);
-    setFeedbackTags(undefined);
-    setFeedbackExtra(undefined);
-    setFeedbackDiagnosticsContext(undefined);
   }, []);
 
   const value = useMemo(() => ({ openFeedback }), [openFeedback]);
@@ -108,9 +79,6 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         onCancel={handleCancel}
         defaultModule={defaultModule}
         prefilledScreenshots={prefilledScreenshots}
-        feedbackTags={feedbackTags}
-        feedbackExtra={feedbackExtra}
-        feedbackDiagnosticsContext={feedbackDiagnosticsContext}
       />
     </FeedbackContext.Provider>
   );

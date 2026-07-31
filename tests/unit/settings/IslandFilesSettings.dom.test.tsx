@@ -26,7 +26,7 @@ const mocks = vi.hoisted(() => ({
   undo: vi.fn(),
 }));
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
 }));
 

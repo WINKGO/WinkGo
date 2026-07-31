@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Integration tests for the memory path system.
 //
 // These tests target the functional requirements from test-plan.md TC-2,

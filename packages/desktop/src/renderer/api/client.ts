@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * HTTP client factory for communicating with the winkgo_core server.
  *

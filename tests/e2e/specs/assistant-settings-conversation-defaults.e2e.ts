@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Assistant Settings Conversation Defaults — E2E tests.
  *

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Lifecycle manager for the winkgo_core subprocess (web-host version).
  *

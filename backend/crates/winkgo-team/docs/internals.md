@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Team 内部调度
 
 ## Agent 状态机

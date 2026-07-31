@@ -14,14 +14,32 @@
     "searchPlaceholder": "جستجوی پروژه‌ها…",
     "noProject": "بدون پروژه"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "تحلیل WINK GO AI ناموفق بود. بعداً دوباره تلاش کنید.",
+    "backToChat": "بازگشت به گفت‌وگو",
+    "frameTitle": "بوم دانش WINK GO",
+    "loading": "در حال باز کردن بوم دانش…",
+    "open": "باز کردن بوم دانش",
+    "pageLabel": "بوم دانش WINK GO",
+    "reload": "بارگذاری دوباره بوم دانش",
+    "statusAnalyzing": "WINK GO AI در حال تحلیل است",
+    "statusReady": "بوم محلی · هوش مصنوعی در دسترس",
+    "statusUnavailable": "آزمایشی · در بسته موجود نیست",
+    "subtitle": "صفحه‌های وب، اسناد و ایده‌ها را به ساختارهای دانشی قابل ویرایش تبدیل کنید",
+    "title": "بوم دانش",
+    "unavailableDescription": "نسخه عمومی شامل محیط کامل بوم نیست. این قابلیت تا پایان بررسی منبع، مجوزها و مدارک انتشار غیرفعال می‌ماند.",
+    "unavailableTitle": "بوم دانش همچنان آزمایشی است"
+  },
   "installerCenter": {
     "entry": "مرکز نصب نرم‌افزار",
     "title": "مرکز نصب WINK GO",
-    "subtitle": "بسته‌های نصب یک‌کلیکی Codex، Claude Code و Antigravity",
-    "windows": "نصب‌کننده‌های Windows",
-    "macos": "نصب‌کننده‌های macOS",
-    "environmentSetup": "راه‌اندازی سریع محیط {{platform}}",
-    "downloadFailed": "باز کردن پیوند دانلود ناموفق بود",
+    "subtitle": "صفحه‌های رسمی نصب Codex، Claude Code و Antigravity را باز کنید",
+    "windows": "راهنمای نصب Windows",
+    "macos": "راهنمای نصب macOS",
+    "environmentSetup": "مشاهده راهنمای رسمی نصب {{platform}}",
+    "openOfficialPage": "باز کردن صفحه رسمی نصب",
+    "thirdPartyDisclaimer": "Codex، Claude Code و Antigravity محصولات شخص ثالث هستند. WINK GO آن‌ها را میزبانی یا تأیید نمی‌کند و دسترس‌پذیری یا سازگاری آن‌ها را تضمین نمی‌کند؛ شرایط فروشنده اعمال می‌شود.",
+    "downloadFailed": "باز کردن صفحه رسمی نصب ناموفق بود",
     "recommended": "پیشنهادشده"
   }
 }

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for Hub extension marketplace (test-plan HM scenarios).
 
 use std::sync::Arc;

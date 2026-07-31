@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use std::path::Path;
 
 use crate::context_modifier::effort_to_string;

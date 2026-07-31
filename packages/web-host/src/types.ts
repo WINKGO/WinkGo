@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 // Core types for @winkgo/web-host (M3 interface contract, locked for M4-M8)
 
 /**

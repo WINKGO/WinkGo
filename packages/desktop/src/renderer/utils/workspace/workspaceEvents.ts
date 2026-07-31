@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 export const WORKSPACE_TOGGLE_EVENT = 'winkgo-workspace-toggle';
 export const WORKSPACE_STATE_EVENT = 'winkgo-workspace-state';
 export const WORKSPACE_HAS_FILES_EVENT = 'winkgo-workspace-has-files';

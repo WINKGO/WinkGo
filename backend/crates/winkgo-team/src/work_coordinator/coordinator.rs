@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
 

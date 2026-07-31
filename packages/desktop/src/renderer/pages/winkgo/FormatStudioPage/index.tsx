@@ -33,7 +33,7 @@ import {
   Video,
 } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import './workbench.css';
 
 type EngineKind = 'builtin' | 'ffmpeg' | 'office';

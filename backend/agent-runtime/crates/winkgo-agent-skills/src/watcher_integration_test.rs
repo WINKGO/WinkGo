@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 /// Black-box tests for `SkillWatcher` based on the Phase 13 test plan.
 ///
 /// All tests are async (`#[tokio::test]`) because the watcher relies on

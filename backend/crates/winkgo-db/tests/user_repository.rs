@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for IUserRepository (test-plan T2.1 – T2.13).
 //!
 //! Tests exercise the public trait interface against an in-memory SQLite database.

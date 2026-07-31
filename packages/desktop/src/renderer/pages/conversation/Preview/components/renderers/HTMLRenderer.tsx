@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -6,6 +7,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { HTML_PREVIEW_WEBVIEW_PARTITION } from '@/common/platform/electronSecurity';
 import { useTypingAnimation } from '@/renderer/hooks/chat/useTypingAnimation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useScrollSyncTarget } from '../../hooks/useScrollSyncHelpers';
@@ -696,7 +698,7 @@ const HTMLRenderer: React.FC<HTMLRendererProps> = ({
               bottom: 0,
               height: '100%',
             }}
-            webpreferences='allowRunningInsecureContent, javascript=yes'
+            partition={HTML_PREVIEW_WEBVIEW_PARTITION}
           />
         </>
       ) : (

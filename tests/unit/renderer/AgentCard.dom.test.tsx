@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -87,7 +88,7 @@ describe('AgentCard (custom variant)', () => {
 
 const renderOfficial = (
   agent: Record<string, unknown>,
-  handlers: Partial<{ onTestConnection: () => void; onConfigure: () => void }> = {}
+  handlers: Partial<{ onTestConnection: () => void; onConfigure: () => void; onOpenSetup: () => void }> = {}
 ) =>
   render(
     <AgentCard
@@ -97,6 +98,7 @@ const renderOfficial = (
       boundAssistants={[]}
       onTestConnection={handlers.onTestConnection ?? vi.fn()}
       onConfigure={handlers.onConfigure ?? vi.fn()}
+      onOpenSetup={handlers.onOpenSetup ?? vi.fn()}
     />
   );
 
@@ -211,5 +213,26 @@ describe('AgentCard (official variant)', () => {
 
     fireEvent.click(screen.getByText('common.edit'));
     expect(onConfigure).toHaveBeenCalled();
+  });
+
+  it('opens the individual setup guide without opening the configuration page', () => {
+    const onOpenSetup = vi.fn();
+    const onConfigure = vi.fn();
+    renderOfficial(
+      {
+        id: 'claude',
+        name: 'Claude Code',
+        agent_type: 'acp',
+        agent_source: 'builtin',
+        backend: 'claude',
+        status: 'missing',
+      },
+      { onOpenSetup, onConfigure }
+    );
+
+    fireEvent.click(screen.getByTestId('agent-row-setup-claude'));
+
+    expect(onOpenSetup).toHaveBeenCalledTimes(1);
+    expect(onConfigure).not.toHaveBeenCalled();
   });
 });

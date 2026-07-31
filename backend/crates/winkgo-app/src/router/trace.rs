@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! HTTP request access-log layer.
 
 use std::time::Instant;

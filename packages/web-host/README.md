@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # @winkgo/web-host
 
 WebUI host package for WinkGo - zero Electron dependency.

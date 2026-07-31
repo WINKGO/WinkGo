@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -19,14 +20,13 @@ import ChannelSlackLogo from '@/renderer/assets/channel-logos/slack.svg';
 import ChannelTelegramLogo from '@/renderer/assets/channel-logos/telegram.svg';
 import ChannelWecomLogo from '@/renderer/assets/channel-logos/wecom.svg';
 import ChannelWeixinLogo from '@/renderer/assets/channel-logos/weixin.svg';
+import winkGoMiniAppCode from '@/renderer/assets/brand/winkgo-miniapp-code.png';
 import { isElectronDesktop } from '@/renderer/utils/platform';
 import { Button, Form, Input, Message, Switch, Tabs, Tooltip } from '@arco-design/web-react';
 import { CheckOne, Communication, Copy, Earth, EditTwo, Refresh } from '@icon-park/react';
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettingsViewMode } from '../settingsViewContext';
-import { useAuth } from '@/renderer/hooks/context/AuthContext';
-import { openExternalUrl } from '@/renderer/utils/platform';
 
 /**
  * 偏好设置行组件
@@ -75,8 +75,6 @@ const DESKTOP_WEBUI_ALLOW_REMOTE_KEY = 'webui.desktop.allowRemote';
  */
 const WebuiModalContent: React.FC = () => {
   const { t } = useTranslation();
-  const { can } = useAuth();
-  const canUseRemoteDesktop = can('remote.desktop');
   const talkToButler = useTalkToButler();
   const viewMode = useSettingsViewMode();
   const isPageMode = viewMode === 'page';
@@ -115,7 +113,7 @@ const WebuiModalContent: React.FC = () => {
     setLoading(true);
     try {
       const savedAllowRemote = configService.get(DESKTOP_WEBUI_ALLOW_REMOTE_KEY) ?? false;
-      setAllowRemotePreference(canUseRemoteDesktop && savedAllowRemote === true);
+      setAllowRemotePreference(savedAllowRemote === true);
 
       // getStatus goes via IPC to the Electron main process which tracks the
       // WebUI lifecycle; backend does not know it's being wrapped.
@@ -170,7 +168,7 @@ const WebuiModalContent: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [canUseRemoteDesktop]);
+  }, []);
 
   useEffect(() => {
     void loadStatus();
@@ -261,7 +259,7 @@ const WebuiModalContent: React.FC = () => {
         // Await the real result — Promise.race with a 3s fallback used to hide
         // backend failures behind a fake "started" toast while the server was
         // still RESOLVING or had crashed, leaving webui.desktop.enabled unset.
-        const remoteEnabled = canUseRemoteDesktop && allowRemotePreference;
+        const remoteEnabled = allowRemotePreference;
         const startResult = await webui.start.invoke({ port, allowRemote: remoteEnabled });
 
         const responseIP = startResult.lanIP || currentIP;
@@ -307,11 +305,6 @@ const WebuiModalContent: React.FC = () => {
   // 处理允许远程访问切换 / Handle allow remote toggle
   // 需要重启服务器才能更改绑定地址 / Need to restart server to change binding address
   const handleAllowRemoteChange = async (checked: boolean) => {
-    if (checked && !canUseRemoteDesktop) {
-      Message.info('手机与外网远程访问属于 WINK GO Pro');
-      void openExternalUrl('https://winkgo.top/');
-      return;
-    }
     // 保存原始值用于回滚 / Save original value for rollback
     const previousAllowRemote = allowRemotePreference;
     setAllowRemotePreference(checked);
@@ -621,8 +614,8 @@ const WebuiModalContent: React.FC = () => {
           <div className='flex flex-wrap gap-x-12px gap-y-6px'>
             {[
               t('settings.webui.enable', { defaultValue: 'Enable WebUI' }),
-              t('settings.webui.accessUrl', { defaultValue: 'Access URL' }),
               t('settings.webui.allowRemote', { defaultValue: 'Allow Remote Access' }),
+              t('settings.webui.miniProgram', { defaultValue: 'WINK GO mini program' }),
             ].map((stepLabel, idx) => (
               <div key={stepLabel} className='inline-flex items-center gap-6px'>
                 <span className='inline-flex items-center justify-center w-16px h-16px rd-50% text-10px font-600 bg-[rgba(var(--primary-6),0.12)] text-[rgb(var(--primary-6))]'>
@@ -673,26 +666,28 @@ const WebuiModalContent: React.FC = () => {
           </PreferenceRow>
 
           {/* 访问地址（启用 WebUI 后即显示，不依赖后端 running 状态）/ Access URL (shown whenever WebUI is enabled, not tied to backend running state) */}
-          {webuiEnabled && (
-            <PreferenceRow label={t('settings.webui.accessUrl')}>
-              <div className='flex items-center gap-8px min-w-0'>
-                <button
-                  className='text-14px text-primary font-mono hover:underline cursor-pointer bg-transparent border-none p-0 truncate'
-                  onClick={() => shell.openExternal.invoke(getDisplayUrl()).catch(console.error)}
-                >
-                  {getDisplayUrl()}
-                </button>
-                <Tooltip content={t('common.copy')}>
+          <div aria-hidden='true' className='hidden' data-testid='webui-access-url-hidden'>
+            {webuiEnabled && (
+              <PreferenceRow label={t('settings.webui.accessUrl')}>
+                <div className='flex items-center gap-8px min-w-0'>
                   <button
-                    className='p-4px text-t-tertiary hover:text-t-primary cursor-pointer bg-transparent border-none'
-                    onClick={() => handleCopy(getDisplayUrl())}
+                    className='text-14px text-primary font-mono hover:underline cursor-pointer bg-transparent border-none p-0 truncate'
+                    onClick={() => shell.openExternal.invoke(getDisplayUrl()).catch(console.error)}
                   >
-                    <Copy size={16} />
+                    {getDisplayUrl()}
                   </button>
-                </Tooltip>
-              </div>
-            </PreferenceRow>
-          )}
+                  <Tooltip content={t('common.copy')}>
+                    <button
+                      className='p-4px text-t-tertiary hover:text-t-primary cursor-pointer bg-transparent border-none'
+                      onClick={() => handleCopy(getDisplayUrl())}
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </Tooltip>
+                </div>
+              </PreferenceRow>
+            )}
+          </div>
 
           {/* 允许局域网访问 / Allow LAN Access */}
           <PreferenceRow
@@ -700,7 +695,6 @@ const WebuiModalContent: React.FC = () => {
             description={
               <span className='text-t-secondary'>
                 {t('settings.webui.allowRemoteDesc')}
-                {!canUseRemoteDesktop && ' · WINK GO Pro'}
                 {'  '}
                 <button
                   className='text-primary hover:underline cursor-pointer bg-transparent border-none p-0 text-12px'
@@ -718,11 +712,7 @@ const WebuiModalContent: React.FC = () => {
               </span>
             }
           >
-            <Switch
-              checked={canUseRemoteDesktop && allowRemotePreference}
-              disabled={!canUseRemoteDesktop}
-              onChange={handleAllowRemoteChange}
-            />
+            <Switch checked={allowRemotePreference} onChange={handleAllowRemoteChange} />
           </PreferenceRow>
 
           {webuiEnabled && allowRemotePreference && (
@@ -817,15 +807,26 @@ const WebuiModalContent: React.FC = () => {
             </div>
           </div>
 
-          {/* 二维码登录（仅服务器运行且允许远程访问时显示）/ QR Code Login (only when server running and remote access allowed) */}
-          {status?.running && status.allowRemote && (
+          {/* WINK GO 小程序码只依赖 WebUI 运行，不要求开放局域网访问。 */}
+          {status?.running && (
             <>
               <div className='border-t border-line my-12px' />
               <div className='text-14px font-500 mb-4px text-t-primary'>{t('settings.webui.qrLogin')}</div>
-              <div className='text-12px text-t-tertiary mb-12px'>{t('settings.webui.qrLoginHint')}</div>
+              <div className='text-12px text-t-tertiary mb-12px'>{t('settings.webui.miniappSearchHint')}</div>
 
               <div className='flex flex-col items-center gap-12px'>
-                {/* 二维码显示区域 / QR Code display area */}
+                <div className='p-8px bg-white border border-line rd-8px'>
+                  <img
+                    alt={t('settings.webui.miniProgramCodeAlt')}
+                    className='block size-180px object-contain'
+                    src={winkGoMiniAppCode}
+                  />
+                </div>
+                <strong className='text-13px font-500 text-t-primary'>{t('settings.webui.miniappSearchHint')}</strong>
+              </div>
+
+              {/* Keep the generated WebUI login payload alive for compatibility, but do not expose it in this UI. */}
+              <div aria-hidden='true' className='hidden' data-testid='webui-generated-login-qr-hidden'>
                 <div className='p-12px bg-fill-1 border border-line rd-10px'>
                   {qrLoading ? (
                     <div className='w-140px h-140px flex items-center justify-center'>
@@ -850,7 +851,6 @@ const WebuiModalContent: React.FC = () => {
                   )}
                 </div>
 
-                {/* 过期时间、复制链接和刷新按钮 / Expiration time, copy link and refresh button */}
                 <div className='flex items-center gap-8px'>
                   {qrExpiresAt && (
                     <span className='text-12px text-t-tertiary'>

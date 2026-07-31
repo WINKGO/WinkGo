@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -72,7 +73,7 @@ const makeWinkGoManifest = (version = '1.9.22') => ({
   productName: 'WINK GO',
   notes: 'release notes',
   generatedAt: '2026-04-29T00:00:00Z',
-  officialSite: 'https://winkgo.top/',
+  officialSite: 'https://github.com/xuweihafeichangniu-lab/wink-go/releases',
 });
 
 const getCheckHandler = async () => {
@@ -124,7 +125,7 @@ describe('updateBridge official WINK GO manifest', () => {
 
     try {
       const handler = await getCheckHandler();
-      const result = await handler({ repo: 'xuweihafeichangniu-lab/wink-go' });
+      const result = await handler({ repo: 'xuweihafeichangniu-lab/winkgo' });
 
       expect(result.success).toBe(true);
       expect(result.data?.currentVersion).toBe('1.0.0');
@@ -134,13 +135,13 @@ describe('updateBridge official WINK GO manifest', () => {
         version: '1.9.22',
         name: 'WINK GO',
         body: 'release notes',
-        htmlUrl: 'https://winkgo.top/',
+        htmlUrl: 'https://github.com/xuweihafeichangniu-lab/wink-go/releases',
         assets: [],
       });
       expect(fetchMock).toHaveBeenCalledWith(
         'https://winkgo.top/winkgo-free-update.json',
         expect.objectContaining({
-          headers: expect.objectContaining({ 'User-Agent': 'WINK-GO' }),
+          headers: expect.objectContaining({ 'User-Agent': 'WINK GO' }),
         })
       );
     } finally {
@@ -157,7 +158,7 @@ describe('updateBridge official WINK GO manifest', () => {
 
     try {
       const handler = await getCheckHandler();
-      const result = await handler({ repo: 'xuweihafeichangniu-lab/wink-go' });
+      const result = await handler({ repo: 'xuweihafeichangniu-lab/winkgo' });
       expect(result.success).toBe(true);
       expect(result.data?.latest?.version).toBe('1.9.22');
       expect(result.data?.latest?.tagName).toBe('v1.9.22');

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Integration tests for FileStateCache (TC-5.2 series from test-plan.md).
 //!
 //! Black-box tests targeting the public API of FileStateCache without

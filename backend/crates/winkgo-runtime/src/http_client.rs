@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::time::Duration;
 
 const DEFAULT_RUNTIME_USER_AGENT: &str = concat!("winkgo_core/", env!("CARGO_PKG_VERSION"));

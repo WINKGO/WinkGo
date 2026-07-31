@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -24,7 +25,7 @@ vi.mock('@/common', () => ({
 vi.mock('@/renderer/utils/platform', () => ({ isElectronDesktop: () => false }));
 vi.mock('@/common/config/configService', () => ({ configService: { get: () => true } }));
 const navigate = vi.fn();
-vi.mock('react-router-dom', () => ({ useNavigate: () => navigate }));
+vi.mock('react-router', () => ({ useNavigate: () => navigate }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
 
 import { useBrowserNotification } from '@/renderer/hooks/system/notification/useBrowserNotification';

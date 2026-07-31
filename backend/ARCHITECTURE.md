@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Architecture
 
 WinkGoCore is the backend server for WinkGo, built with Rust (Axum + Tokio + SQLite).

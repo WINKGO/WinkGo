@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use crate::shared_kernel::PersistedSessionState;
 use agent_client_protocol::schema::{EnvVariable, McpServer, McpServerStdio, NewSessionRequest};
 use std::path::PathBuf;

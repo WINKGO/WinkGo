@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Black-box integration tests for the autocompact subsystem.
 //!
 //! These tests correspond to TC-2.4-* in the test plan.

@@ -1,6 +1,8 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 mod common;
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -40,6 +42,25 @@ use winkgo_team::{
     TeamProjectionMessageStore,
 };
 use winkgo_team::{TeamError, TeamSessionService};
+
+fn generated_conversation_workspace_name(workspace: &str) -> &str {
+    let workspace_path = Path::new(workspace);
+    let workspace_name = workspace_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .expect("generated workspace must have a UTF-8 directory name");
+    let parent_name = workspace_path
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str());
+
+    assert_eq!(
+        parent_name,
+        Some("conversations"),
+        "generated workspace must be under conversations: {workspace}"
+    );
+    workspace_name
+}
 
 // ---------------------------------------------------------------------------
 // Mock ConversationRepository — minimal impl for TeamSessionService tests
@@ -2365,7 +2386,7 @@ async fn create_team_without_workspace_uses_leader_auto_workspace_for_all_initia
     let got = svc.get_team("user1", &created.id).await.unwrap();
     assert!(!got.workspace.trim().is_empty(), "teams.workspace must be set");
     assert!(
-        got.workspace.contains("/conversations/acp-temp-"),
+        generated_conversation_workspace_name(&got.workspace).starts_with("acp-temp-"),
         "unexpected auto workspace: {}",
         got.workspace
     );
@@ -4374,11 +4395,9 @@ async fn add_agent_uses_team_temp_workspace_when_team_and_leader_workspaces_are_
         .unwrap();
 
     let got = svc.get_team("user1", &created.id).await.unwrap();
-    assert!(
-        got.workspace
-            .contains(&format!("/conversations/team-temp-{}", created.id)),
-        "unexpected team temp workspace: {}",
-        got.workspace
+    assert_eq!(
+        generated_conversation_workspace_name(&got.workspace),
+        format!("team-temp-{}", created.id)
     );
     let added_extra = conv_repo.get_extra(&added.conversation_id).unwrap();
     assert_eq!(
@@ -4488,9 +4507,9 @@ async fn add_agent_continues_when_team_temp_leader_patch_fails() {
         .unwrap();
 
     let got = svc.get_team("user1", &created.id).await.unwrap();
-    assert!(
-        got.workspace
-            .contains(&format!("/conversations/team-temp-{}", created.id))
+    assert_eq!(
+        generated_conversation_workspace_name(&got.workspace),
+        format!("team-temp-{}", created.id)
     );
     let added_extra = conv_repo.get_extra(&added.conversation_id).unwrap();
     assert_eq!(

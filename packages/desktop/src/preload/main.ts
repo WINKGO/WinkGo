@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -31,9 +32,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         throw error;
       });
   },
-  on: (callback: (payload: { event: unknown; value: unknown }) => void) => {
-    const handler = (event: unknown, value: unknown) => {
-      callback({ event, value });
+  on: (callback: (payload: { value: unknown }) => void) => {
+    const handler = (_event: unknown, value: unknown) => {
+      callback({ value });
     };
     ipcRenderer.on(ADAPTER_BRIDGE_EVENT_KEY, handler);
     return () => {

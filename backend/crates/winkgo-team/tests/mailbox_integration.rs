@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for `Mailbox` service.
 //!
 //! Exercises the service layer against a real SQLite database.

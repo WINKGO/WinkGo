@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for ACP session MCP injection.
 //!
 //! Covers test-plan items SI-1 through SI-7: capability parsing,

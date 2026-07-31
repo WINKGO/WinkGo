@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // vi.mock factories are hoisted above const declarations — use vi.hoisted to avoid TDZ errors
@@ -39,7 +40,7 @@ describe('startSystemThemeWatcher', () => {
 
   it('does nothing when a non-system theme is active', () => {
     const media = installMatchMedia();
-    configGet.mockReturnValue('misaka-mikoto-theme');
+    configGet.mockReturnValue('retro-windows');
     startSystemThemeWatcher();
     media.fire(true);
     expect(setActiveTheme).not.toHaveBeenCalled();

@@ -11,12 +11,14 @@ const DEFAULT_OFFLINE_GRACE_HOURS = 48;
 const DEFAULT_HEARTBEAT_INTERVAL_HOURS = 12;
 const LICENSE_CONFIG_LOCK_MESSAGE = '设备码服务为托管配置，不能手动关闭。';
 const LICENSE_SERVICE_UNREACHABLE = 'license_service_unreachable';
+const LICENSE_LOCAL_STATE_UNAVAILABLE = 'local_auth_state_unavailable';
 const LICENSE_REQUEST_TIMEOUT_MS = 8000;
 const LICENSE_MAX_REDIRECTS = 3;
 const LICENSE_SESSION_SEAL_VERSION = 2;
 const LICENSE_SESSION_SEAL_ALGORITHM = 'hmac-sha256-installation';
 const OFFLINE_ASSERTION_VERSION = 1;
 const OFFLINE_ASSERTION_CLOCK_SKEW_SECONDS = 300;
+const POLICY_VERSION_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const EMBEDDED_OFFLINE_ASSERTION_PUBLIC_KEYS = Object.freeze({
   e337a51e1702e14c:
     '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAGtj/dJO6bCcv6rGPwlg+0cRv6B9cuNUVomT78cOLqB0=\n-----END PUBLIC KEY-----\n',
@@ -44,6 +46,28 @@ function getManagedLicenseEndpoint() {
 
 function getManagedProjectId() {
   return decodeManagedLicenseText(MANAGED_LICENSE_PROJECT_CIPHER);
+}
+
+function buildPolicyConsentPayload(input, expectedSource) {
+  const privacyVersion = String(input?.privacyVersion || '')
+    .trim()
+    .slice(0, 40);
+  const termsVersion = String(input?.termsVersion || '')
+    .trim()
+    .slice(0, 40);
+  const source = String(input?.source || '')
+    .trim()
+    .slice(0, 48);
+  if (
+    !POLICY_VERSION_PATTERN.test(privacyVersion) ||
+    !POLICY_VERSION_PATTERN.test(termsVersion) ||
+    source !== expectedSource
+  ) {
+    return {};
+  }
+  // The server must assign acceptedAt from its own clock. The desktop only
+  // supplies the exact policy versions and the fixed flow identifier.
+  return { privacyVersion, termsVersion, source };
 }
 
 function redactLicenseText(value) {
@@ -1370,6 +1394,18 @@ function createLicenseService({
     };
   }
 
+  function buildLocalStateError(error) {
+    const detail = redactLicenseText(error instanceof Error ? error.message : String(error || ''));
+    appendLicenseLog('Local account state is unavailable', {
+      error: detail,
+    });
+    return {
+      ok: false,
+      error: LICENSE_LOCAL_STATE_UNAVAILABLE,
+      detail,
+    };
+  }
+
   function buildCloudAuthResult(session, mode) {
     writeSession(session);
     return {
@@ -1434,18 +1470,25 @@ function createLicenseService({
   }
 
   async function remoteLogin(input = {}) {
-    const config = readConfig();
+    let config;
+    let device;
+    try {
+      config = readConfig();
+      device = getDeviceSnapshot();
+    } catch (error) {
+      return buildLocalStateError(error);
+    }
     if (!hasRemoteLicenseConfig(config)) {
       return { ok: false, error: '设备码服务尚未配置，当前仍使用本地模式。' };
     }
 
-    const device = getDeviceSnapshot();
     let response;
 
     try {
       response = await postJsonWithFallback(config, '/auth/login', {
         username: String(input.username || '').trim(),
         password: String(input.password || ''),
+        ...buildPolicyConsentPayload(input, 'desktop_login'),
         ...device,
       });
     } catch (error) {
@@ -1453,6 +1496,11 @@ function createLicenseService({
     }
 
     if (!response.ok || !response.payload?.ok) {
+      appendLicenseLog('Cloud account login was rejected', {
+        status: response.status,
+        error: response.payload?.error || '',
+        requestId: response.payload?.requestId || '',
+      });
       return {
         ok: false,
         error: redactLicenseText(response.payload?.error || `Remote login failed (${response.status})`),
@@ -1460,16 +1508,25 @@ function createLicenseService({
       };
     }
 
-    const session = mapAuthResponseToSession(response.payload);
-    appendLicenseLog('Cloud license login succeeded', {
-      username: String(input.username || '').trim(),
-      provider: config.provider,
-    });
-    return buildCloudAuthResult(session, 'cloud');
+    try {
+      const session = mapAuthResponseToSession(response.payload);
+      appendLicenseLog('Cloud license login succeeded', {
+        username: String(input.username || '').trim(),
+        provider: config.provider,
+      });
+      return buildCloudAuthResult(session, 'cloud');
+    } catch (error) {
+      return buildLocalStateError(error);
+    }
   }
 
   async function remoteRegister(input = {}) {
-    const config = readConfig();
+    let config;
+    try {
+      config = readConfig();
+    } catch (error) {
+      return buildLocalStateError(error);
+    }
     if (!hasRemoteLicenseConfig(config)) {
       return { ok: false, error: '设备码服务尚未配置，当前仍使用本地模式。' };
     }
@@ -1487,7 +1544,12 @@ function createLicenseService({
       return { ok: false, error: 'password_too_short' };
     }
 
-    const device = getDeviceSnapshot();
+    let device;
+    try {
+      device = getDeviceSnapshot();
+    } catch (error) {
+      return buildLocalStateError(error);
+    }
     let response;
 
     try {
@@ -1495,6 +1557,7 @@ function createLicenseService({
         username,
         password,
         phone,
+        ...buildPolicyConsentPayload(input, 'desktop_registration'),
         ...device,
       });
     } catch (error) {
@@ -1502,6 +1565,11 @@ function createLicenseService({
     }
 
     if (!response.ok || !response.payload?.ok) {
+      appendLicenseLog('Cloud account registration was rejected', {
+        status: response.status,
+        error: response.payload?.error || '',
+        requestId: response.payload?.requestId || '',
+      });
       return {
         ok: false,
         error: redactLicenseText(response.payload?.error || `Remote register failed (${response.status})`),
@@ -1509,12 +1577,16 @@ function createLicenseService({
       };
     }
 
-    const session = mapAuthResponseToSession(response.payload);
-    appendLicenseLog('Cloud license register succeeded', {
-      username,
-      provider: config.provider,
-    });
-    return buildCloudAuthResult(session, 'cloud-register');
+    try {
+      const session = mapAuthResponseToSession(response.payload);
+      appendLicenseLog('Cloud license register succeeded', {
+        username,
+        provider: config.provider,
+      });
+      return buildCloudAuthResult(session, 'cloud-register');
+    } catch (error) {
+      return buildLocalStateError(error);
+    }
   }
 
   async function remoteHeartbeat() {

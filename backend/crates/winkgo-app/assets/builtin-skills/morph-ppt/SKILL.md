@@ -3,6 +3,10 @@ name: morph-ppt
 description: "Use this skill when the user wants a .pptx with smooth cross-slide animation — PowerPoint Morph transitions, Keynote-style continuous motion, shapes that grow / move / rotate as the slide advances. Trigger on: 'morph', 'morph transition', 'smooth transition', 'continuous animation across slides', 'Keynote-style transition', 'animated slide sequence', 'shape continuity across slides'. Output is a single .pptx. This skill is a scene layer on top of officecli-pptx — inherits every pptx v2 rule (visual floor, grid, palettes, connector canon, Delivery Gate 1–5a). DO NOT invoke for a generic deck, pitch deck, or board review without cross-slide motion — route those to officecli-pptx base or officecli-pitch-deck."
 ---
 
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
+
+> **Modification notice:** This OfficeCLI-derived file was modified by WINK GO contributors in 2026 for local skill routing and Windows/PowerShell compatibility. See `SOURCE.md`.
+
 > **⚠️ Platform note — read before running any command.** The shell snippets in this skill are written for **macOS / Linux** (bash/zsh). Always check which OS you are on first. On **Windows** do **not** run them verbatim — the underlying tool/CLI commands are usually cross-platform, but the surrounding shell syntax is not. Translate it to PowerShell before running:
 >
 > | bash (macOS / Linux) | PowerShell (Windows) |
@@ -32,7 +36,7 @@ If `officecli` is missing:
 - **macOS / Linux**: `curl -fsSL https://d.officecli.ai/install.sh | bash`
 - **Windows (PowerShell)**: `irm https://d.officecli.ai/install.ps1 | iex`
 
-Verify with `officecli --version` (open a new terminal if PATH hasn't picked up). If install fails, download a binary from https://github.com/xuweihafeichangniu-lab/OfficeCLI/releases.
+Verify with `officecli --version` (open a new terminal if PATH hasn't picked up). If install fails, download a binary from https://github.com/iOfficeAI/OfficeCLI/releases.
 
 ## ⚠️ Help-First Rule
 
@@ -538,7 +542,7 @@ Every morph deck ships with three artifacts, each as a standalone file:
 **Pre-deliver reminder to the user (verbatim-safe wording):**
 
 - "The deck is ready with morph transitions. Open it in PowerPoint 365 / Keynote / WPS to see the motion — LibreOffice and web viewers render static."
-- "While the build script is running, the `.pptx` may be rewritten several times. If you want to preview progress, use `officecli watch "$FILE"` and open the live preview in WinkGo — do NOT click 'Open with system app' during the build, or you'll hit a file lock."
+- "While the build script is running, the `.pptx` may be rewritten several times. If you want to preview progress, use `officecli watch "$FILE"` and open the live preview in WINK GO — do NOT click 'Open with system app' during the build, or you'll hit a file lock."
 
 ## Adjustments after creation
 

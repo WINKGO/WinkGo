@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync, readdirSync, rmdirSync, unlinkSync } from 'fs';
@@ -55,6 +56,49 @@ function cleanRendererOutputPlugin() {
       // build-with-builder signs after all outputs pass validation.
       const editionMarker = resolve(projectRoot, 'out/.winkgo-vite-build.json');
       if (existsSync(editionMarker)) unlinkSync(editionMarker);
+    },
+  };
+}
+
+function rejectUnreviewedKnowledgeCanvasPlugin() {
+  const assertNoGeneratedSkillInventory = () => {
+    const forbiddenGeneratedSkillRoots = [
+      resolve(projectRoot, 'public/winkgo/skills'),
+      resolve(projectRoot, 'out/main/static/winkgo/skills'),
+      resolve(projectRoot, 'out/renderer/winkgo/skills'),
+    ];
+    const bundledSkillRoot = forbiddenGeneratedSkillRoots.find((candidate) => existsSync(candidate));
+    if (bundledSkillRoot) {
+      throw new Error(
+        `Refusing to build with generated winkgo/skills assets (${bundledSkillRoot}): bundled Skills require item-by-item rights and safety approval.`
+      );
+    }
+  };
+
+  return {
+    name: 'winkgo-reject-unreviewed-knowledge-canvas',
+    apply: 'build' as const,
+    buildStart() {
+      assertNoGeneratedSkillInventory();
+      const isolatedCanvasBundle = resolve(projectRoot, 'public/knowledge-canvas/index.html');
+      if (existsSync(isolatedCanvasBundle)) {
+        throw new Error(
+          'Refusing to build with public/knowledge-canvas/index.html: the experimental runtime is isolated until its source and redistribution rights are verified.'
+        );
+      }
+
+      const unlicensedProviderSkill = resolve(
+        projectRoot,
+        'resources/winkgo/provider-skills/meituan-life-assistant/mtunion-product-ai-all-guide'
+      );
+      if (existsSync(unlicensedProviderSkill)) {
+        throw new Error(
+          'Refusing to build with resources/winkgo/provider-skills: provider Skills must be installed by the user from an authorized source and may not be bundled without redistribution rights.'
+        );
+      }
+    },
+    closeBundle() {
+      assertNoGeneratedSkillInventory();
     },
   };
 }
@@ -284,7 +328,7 @@ export default defineConfig(({ mode }) => {
         dedupe: [
           'react',
           'react-dom',
-          'react-router-dom',
+          'react-router',
           '@codemirror/state',
           '@codemirror/view',
           '@codemirror/language',
@@ -292,6 +336,7 @@ export default defineConfig(({ mode }) => {
         ],
       },
       plugins: [
+        rejectUnreviewedKnowledgeCanvasPlugin(),
         cleanRendererOutputPlugin(),
         UnoCSS(unoConfig),
         iconParkPlugin(),
@@ -374,7 +419,7 @@ export default defineConfig(({ mode }) => {
         include: [
           'react',
           'react-dom',
-          'react-router-dom',
+          'react-router',
           'react-i18next',
           'i18next',
           '@arco-design/web-react',

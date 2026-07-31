@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Black-box integration tests for the microcompact subsystem.
 //!
 //! These tests correspond to TC-2.3-01 through TC-2.3-11 in the test plan.

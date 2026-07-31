@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # E2E Testing Guide
 
 ## Quick Start

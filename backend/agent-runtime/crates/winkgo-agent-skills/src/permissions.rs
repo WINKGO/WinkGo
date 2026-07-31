@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use crate::types::SkillMetadata;
 
 /// A parsed permission rule for skill name matching.

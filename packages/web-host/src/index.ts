@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { WebHostOptions, WebHostHandle } from './types.js';
 
 export type { AppMetadata, BackendBinaryResolver, WebHostOptions, WebHostHandle } from './types.js';

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for agent type implementations and auxiliary features.
 //!
 //! These tests validate:

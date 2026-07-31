@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Acceptance tests for the memory system end-to-end.
 //
 // These tests verify that the memory system's file I/O, index management,

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use crate::types::SkillMetadata;
 
 // Re-export from winkgo-agent-types so callers can use a single import path

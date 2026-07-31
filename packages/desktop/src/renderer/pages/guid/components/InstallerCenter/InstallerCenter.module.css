@@ -319,6 +319,13 @@
   display: inline-flex;
 }
 
+.thirdPartyDisclaimer {
+  margin: -6px 2px 0;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 @media (max-width: 760px) {
   .modal {
     width: calc(100vw - 28px);

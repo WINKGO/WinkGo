@@ -33,20 +33,31 @@ const authenticatedUser = {
 
 const AuthProbe: React.FC = () => {
   const auth = useAuth();
+  const [lastResult, setLastResult] = React.useState('none');
   return (
     <div>
       <span>{auth.status}</span>
       <span>{auth.user?.username ?? 'no-user'}</span>
-      <button type='button' onClick={() => void auth.login({ username: 'Alice', password: 'secret-123' })}>
+      <span data-testid='last-result'>{lastResult}</span>
+      <button
+        type='button'
+        onClick={() =>
+          void auth
+            .login({ username: 'Alice', password: 'secret-123' })
+            .then((result) => setLastResult(result.success ? 'success' : result.code || 'unknown'))
+        }
+      >
         login
       </button>
       <button
         type='button'
         onClick={() =>
-          void auth.register({
-            username: 'Alice',
-            password: 'secret-123',
-          })
+          void auth
+            .register({
+              username: 'Alice',
+              password: 'secret-123',
+            })
+            .then((result) => setLastResult(result.success ? 'success' : result.code || 'unknown'))
         }
       >
         register
@@ -117,6 +128,48 @@ describe('desktop authentication context', () => {
       password: 'secret-123',
     });
     expect(screen.getByText('authenticated')).toBeInTheDocument();
+  });
+
+  it('does not label an unexpected desktop provider failure as a network outage', async () => {
+    bridgeMocks.login.mockRejectedValue(new Error('provider failed'));
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>
+    );
+    await screen.findByText('unauthenticated');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'login' }));
+    });
+
+    expect(screen.getByTestId('last-result')).toHaveTextContent('serverError');
+  });
+
+  it('keeps a successful login when the follow-up session refresh fails', async () => {
+    bridgeMocks.getSession.mockReset();
+    bridgeMocks.getSession
+      .mockResolvedValueOnce({
+        authenticated: false,
+        user: null,
+        oauth: { google: false, wechat: false },
+      })
+      .mockRejectedValueOnce(new Error('session refresh failed'));
+    bridgeMocks.login.mockResolvedValue({ success: true, user: authenticatedUser });
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>
+    );
+    await screen.findByText('unauthenticated');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'login' }));
+    });
+
+    expect(screen.getByText('authenticated')).toBeInTheDocument();
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByTestId('last-result')).toHaveTextContent('success');
   });
 
   it('returns to the login gate after desktop logout', async () => {

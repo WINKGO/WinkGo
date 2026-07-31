@@ -433,6 +433,15 @@
   "skills": "Beceriler",
   "tools": "Araçlar",
   "toolsDescription": "MCP sunucularını ve görüntü oluşturma gibi yerleşik araçları yapılandırın. Görüntü oluşturma yalnızca Model sayfasında görüntü destekli bir model yapılandırıldıktan sonra etkinleştirilebilir.",
+  "mcpWorkspace": {
+    "title": "MCP yapılandırması",
+    "description": "Genel MCP hizmetlerini ve ESP32 XiaoZhi ile eşlik eden mini programın ayrı cihaz kanalını yönetin.",
+    "general": "Genel MCP",
+    "xiaozhi": "XiaoZhi MCP bağlantısı",
+    "relayToggleLabel": "Bulut cihaz aktarımını etkinleştir",
+    "relayDisclosureTitle": "Bulut cihaz aktarımını etkinleştirmeden önce inceleyin",
+    "relayDisclosureBody": "Etkinleştirildiğinde bu bilgisayar {{domain}} ile bağlantıyı sürdürür ve hesap, kurulum ve masaüstü tanımlayıcılarını, cihaz adını, bağlantı ve eşleştirme kodu durumunu ve mini programdan bilerek aktardığınız metin, konuşma dökümleri, görev sonuçları ile uzak WebUI istek ve yanıtlarını (dosya içeriği veya kimlik doğrulama verileri içerebilir) gönderir. Yasal işletmeci ve sunucu konumu genel kullanıma sunulmadan önce tamamlanmalıdır; üçüncü taraf alımı veya sınır ötesi aktarım için ayrıca bildirim ve gerekli izin sağlanacaktır. Üçüncü taraf ağ, model veya konuşma hizmetleri ücretli olabilir. Bunu istediğiniz zaman kapatabilirsiniz."
+  },
   "modelDescription": "Tüm asistanlarda kullanmak için LLM sağlayıcılarını ve API anahtarlarını yapılandırın. Özel modelleri yalnızca WINK GO destekler; diğer aracılar kendi yerleşik modellerini kullanır.",
   "capabilities": "Yetenekler",
   "capabilitiesTab": {
@@ -672,7 +681,7 @@
   "mcpAuthenticated": "Kimlik doğrulandı",
   "mcpDisconnected": "Test edilmedi",
   "mcpError": "Son test başarısız",
-  "mcpErrorNodeCommandNotFound": "{{command}} komutu hazırlanamadı. WinkGoCore genellikle yönetilen Node çalışma zamanını otomatik olarak hazırlar. Bağlantı testini yeniden deneyin; sorun sürerse arka uç günlüklerini kontrol edin veya bu MCP sunucusu için mutlak komut yolu yapılandırın.",
+  "mcpErrorNodeCommandNotFound": "{{command}} komutu hazırlanamadı. WINK GO Core genellikle yönetilen Node çalışma zamanını otomatik olarak hazırlar. Bağlantı testini yeniden deneyin; sorun sürerse arka uç günlüklerini kontrol edin veya bu MCP sunucusu için mutlak komut yolu yapılandırın.",
   "mcpErrorBunCommandNotFound": "Command {{command}} was not found. Install Bun (which includes bun/bunx), restart WINK GO, or configure this MCP server to use an absolute command path.",
   "mcpErrorUvCommandNotFound": "Command {{command}} was not found. Install uv, restart WINK GO, or configure this MCP server to use an absolute command path.",
   "mcpErrorPythonCommandNotFound": "Command {{command}} was not found. Install Python, restart WINK GO, or configure this MCP server to use an absolute command path.",
@@ -786,7 +795,7 @@
   "bugReportScreenshotUploaded": "({{count}} yüklendi)",
   "bugReportScreenshotDropzoneText": "Ekran görüntülerini buraya tıklayarak, sürükleyerek veya yapıştırarak ekleyin",
   "bugReportScreenshotFormats": "PNG, JPG, GIF desteklenir",
-  "bugReportAutoInfo": "Gönderim sırasında sistem bilgileri ve son 3 günün günlükleri sorunu daha hızlı tespit etmemize yardımcı olmak için otomatik olarak eklenecektir",
+  "bugReportAutoInfo": "Yalnızca açıklamanız ve seçtiğiniz ekran görüntüleri gönderilir. Günlükler ve veritabanı tanılama verileri hiçbir zaman otomatik yüklenmez.",
   "bugReportSubmit": "Gönder",
   "bugReportCancel": "İptal",
   "bugReportSuccess": "Rapor gönderildi, geri bildiriminiz için teşekkürler",
@@ -1106,8 +1115,8 @@
     "marketUpdate": "Güncelle",
     "marketEmpty": "Yüklenebilir Agent bulunamadı. Ağ bağlantınızı kontrol edin ve GitHub'a erişilebildiğinden emin olun.",
     "marketContributionHint": "Burada yeni bir Agent görmek mi istiyorsunuz?",
-    "marketContributionAction": "WinkGoHub'a PR gönderin",
-    "marketComingSoon": "WinkGoHub market is coming soon.",
+    "marketContributionAction": "WINK GO Hub'a PR gönderin",
+    "marketComingSoon": "WINK GO Hub market is coming soon.",
     "detectCustomAgent": "Özel Ajan Tanı",
     "editCustomAgent": "Özel Ajanı Düzenle",
     "officialAgents": "Resmi Ajanlar",
@@ -1138,6 +1147,7 @@
     "errorCodes": {
       "command_not_found": "Install {{command}} and retry the connection test.",
       "qoderCliRequired": "Qoder IDE ile Qoder Agent CLI ayrı bileşenlerdir. {{command}} bileşenini ayrıca yükleyin; IDE ile gelen qoder komutu ACP desteklemez ve onun yerine kullanılamaz.",
+      "claudeCliRequired": "Install the official Claude Code CLI separately and make sure {{command}} is on PATH. WINK GO does not bundle Claude Code or reuse Claude.ai Free/Pro/Max subscription OAuth; configure ANTHROPIC_API_KEY or a compatible API gateway.",
       "acp_init_failed": "The CLI started but failed during initialization. Complete sign-in or first-run setup, then retry the connection test.",
       "health_check_failed": "Open {{name}} once to finish setup or sign-in, then retry the connection test.",
       "session_send_failed": "Fix the credentials or network issue affecting {{name}}, then start a new conversation or retry the connection test.",
@@ -1178,7 +1188,7 @@
     "envScenarioApiKey": "Eksik API anahtarı veya erişim belirteci (ör. ANTHROPIC_API_KEY, OPENAI_API_KEY) — \"giriş gerekli\" / bağlantı hatalarının en yaygın nedeni",
     "envScenarioBaseUrl": "Özel API uç noktası veya ağ geçidi (ör. ANTHROPIC_BASE_URL, OPENAI_BASE_URL); kendi barındırılan veya proxy hizmetler için",
     "envScenarioProxy": "Ağ proxy ayarları (ör. HTTPS_PROXY, HTTP_PROXY); aracı internete doğrudan erişemediğinde",
-    "envOauthNote": "Not: Bu, CLI içindeki hesap girişinin yerini tutmaz (ör. Gemini'ye Google hesabıyla giriş). OAuth girişi için bir terminalde CLI üzerinden giriş yapın.",
+    "envOauthNote": "WINK GO does not reuse third-party GUI subscription credentials. Configure the API keys or gateway tokens required by each tool here. Use vendor OAuth only where that vendor explicitly permits third-party client use.",
     "emptyOverridesError": "Kaydetmeden önce bir başlatma yolu veya en az bir ortam değişkeni girin."
   },
   "remoteAgent": {
@@ -1291,8 +1301,7 @@
   "autoInjectedSkillsHint": "Her sohbete otomatik olarak yüklenir — etkinleştirmeye gerek yoktur; aracı bunları ne zaman kullanacağına karar verir.",
   "legal": {
     "title": "Yasal bilgiler",
-    "summary": "WINK GO kodunun bazı bölümleri AionUi temel alınarak değiştirilmiştir ve Apache License 2.0 kapsamında sunulmaya devam eder.",
-    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "summary": "WINK GO, Apache License 2.0 kapsamında yayımlanır.",
     "apacheLicense": "Apache 2.0 Lisansı",
     "notice": "Dağıtım bildirimi",
     "thirdPartyNotices": "Üçüncü taraf bildirimleri"

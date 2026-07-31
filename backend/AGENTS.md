@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # AGENTS.md
 
 <!-- Maintenance rule: Only add content that tells AI assistants WHAT TO DO or WHAT NOT TO DO.

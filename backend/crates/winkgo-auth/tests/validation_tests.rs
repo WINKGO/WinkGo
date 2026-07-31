@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box validation tests (test-plan T15).
 //!
 //! Tests password and username validation rules as specified in API Spec 03-auth.md.

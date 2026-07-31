@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -10,7 +11,7 @@ import { Button } from '@arco-design/web-react';
 import { DownloadComputer, Earth } from '@icon-park/react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import styles from '../index.module.css';
 import InstallerCenter from './InstallerCenter';
 
@@ -138,7 +139,7 @@ const QuickActionButtons: React.FC<QuickActionButtonsProps> = ({ onOpenLink, ina
             style={quickActionStyle(hoveredQuickAction === 'website')}
             onMouseEnter={() => setHoveredQuickAction('website')}
             onMouseLeave={() => setHoveredQuickAction(null)}
-            onClick={() => onOpenLink('https://winkgo.top/')}
+            onClick={() => onOpenLink('https://github.com/xuweihafeichangniu-lab/wink-go')}
             aria-label={`WINK GO ${t('common.website')}`}
             title={`WINK GO ${t('common.website')}`}
           >

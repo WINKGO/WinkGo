@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * M4 unit tests for backend-launcher.
  * All external I/O mocked: node:child_process.spawn, node:net.createServer, fetch.

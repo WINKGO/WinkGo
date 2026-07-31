@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Top-level router assembly: middleware stack + module route merges.
 
 use std::sync::Arc;

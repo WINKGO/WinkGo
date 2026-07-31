@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';

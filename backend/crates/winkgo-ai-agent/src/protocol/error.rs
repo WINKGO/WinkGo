@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use agent_client_protocol::{Error as SdkError, ErrorCode};
 use winkgo_common::AgentKillReason;
 

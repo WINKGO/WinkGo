@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use winkgo_channel::formatter::format_text_for_platform;
 use winkgo_channel::types::PluginType;
 

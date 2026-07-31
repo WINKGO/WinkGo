@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Unit tests for partial real ACP config option snapshots and set-path routing.
 
 use agent_client_protocol::schema::{

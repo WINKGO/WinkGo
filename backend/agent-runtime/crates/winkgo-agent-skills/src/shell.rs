@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use futures::future::join_all;
 use regex::Regex;
 use std::path::Path;

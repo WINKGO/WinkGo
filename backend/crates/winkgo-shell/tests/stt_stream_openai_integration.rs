@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for the OpenAI realtime transcription upstream.
 //!
 //! wiremock does not support WebSocket, so these tests run a small local

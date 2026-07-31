@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Long-term memory system for winkgo_agent.
 //
 // Provides cross-session storage of user preferences, feedback,

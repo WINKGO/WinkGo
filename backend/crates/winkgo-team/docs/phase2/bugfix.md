@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Phase 2 Bugfix Status — 2026-05-02
 
 ## Branch: `fix/team-communication-bugs`
@@ -37,7 +38,7 @@ Leader prompt (`lead.txt`) 规则 9/10 和 87-88 行要求先提方案等确认�
 
 ### 前端待做
 
-前端需监听 `team.created` + `conversation.listChanged` 实现自动跳转。已提 issue: https://github.com/xuweihafeichangniu-lab/wink-go/issues/2734
+前端需监听 `team.created` + `conversation.listChanged` 实现自动跳转。历史实现记录为旧仓库 issue #2734；该 issue 未迁移到当前干净仓库。
 
 ---
 
@@ -218,4 +219,4 @@ crates/winkgo-app/src/guide_stdio.rs       — forward_tool 重试逻辑
 - Frontend: `/Users/testuser/project/WinkGo` branch `feat/backend-migration`
 - Backend fix branch: `fix/team-communication-bugs`
 - Log file: `/Users/testuser/Library/Logs/WinkGo-Dev/2026-05-02.backend.log`
-- Frontend issue: https://github.com/xuweihafeichangniu-lab/wink-go/issues/2734
+- Frontend issue: legacy repository issue #2734 (not migrated into this clean repository)

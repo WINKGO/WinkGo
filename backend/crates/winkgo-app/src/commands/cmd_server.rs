@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `winkgo_core` (no subcommand): the main HTTP server.
 
 use std::io::{self, Write};

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for SessionManager and ActionExecutor.
 //!
 //! Uses real SQLite (in-memory) and mock EventBroadcaster.

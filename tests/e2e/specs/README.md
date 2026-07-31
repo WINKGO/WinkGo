@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # Team E2E Specs
 
 > 本文件是 ciwei（测试）和 laochui（开发）的共同规范。动手前必读。

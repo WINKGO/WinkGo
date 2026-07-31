@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Git-based workspace snapshot service.
 //!
 //! Supports two modes:

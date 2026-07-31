@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 /// Manifest filename that identifies an extension directory.
 pub const EXTENSION_MANIFEST_FILE: &str = "winkgo-extension.json";
 

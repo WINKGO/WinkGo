@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 name: '🤖 GPT Review'
 
 on:
@@ -93,7 +94,7 @@ jobs:
             }
 
             const systemPrompt = [
-              'You are a world-class code review expert for the WinkGo project — a cross-platform Electron desktop application that provides a unified AI agent graphical interface.',
+              'You are a world-class code review expert for the WINK GO project — a cross-platform Electron desktop application that provides a unified AI agent graphical interface.',
               '',
               '## Tech Stack',
               '- Electron 37.x + React 19.x + TypeScript 5.8.x (strict mode)',

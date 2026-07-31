@@ -1,10 +1,11 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # WINK GO
 
 WINK GO es un espacio de trabajo de escritorio multiplataforma para agentes de IA que reúne agentes, archivos, herramientas, habilidades, tareas programadas, WebUI y colaboración multiagente.
 
-## Ediciones
+## Proyecto abierto y gratuito
 
-- **Free 2.1.45: acceso completo.** Incluye actualmente todas las funciones disponibles en la compilación Pro.
-- **Pro: reservado para el futuro.** Por ahora no desbloquea funciones adicionales.
+Todas las funciones actuales del cliente de escritorio están disponibles para todos. Los modelos, las API, el relé en la nube, la voz y otros servicios externos pueden tener costes propios.
 
-[Sitio web](https://winkgo.top) · [Repositorio](https://github.com/xuweihafeichangniu-lab/wink-go) · [Descargas](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)
+[Repositorio](https://github.com/xuweihafeichangniu-lab/wink-go) · [Descargas](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)

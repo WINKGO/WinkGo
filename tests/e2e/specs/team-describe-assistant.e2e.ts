@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * E2E: team_describe_assistant (and follow-up team_spawn_agent) via the real
  * TeamMcpServer TCP bridge.

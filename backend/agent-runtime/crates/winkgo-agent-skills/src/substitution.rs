@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use regex::Regex;
 
 /// Substitute all argument and environment variables in skill content.

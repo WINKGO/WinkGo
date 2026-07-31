@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 name: Distribute Release Assets
 
 # Triggered after a GitHub Release is officially published.
@@ -105,7 +106,11 @@ jobs:
             --pattern "latest*.yml" \
             --pattern "LICENSE" \
             --pattern "NOTICE" \
-            --pattern "THIRD_PARTY_NOTICES.md"
+            --pattern "THIRD_PARTY_NOTICES.md" \
+            --pattern "THIRD_PARTY_DEPENDENCIES.json" \
+            --pattern "THIRD_PARTY_LICENSES.txt" \
+            --pattern "PRIVACY.md" \
+            --pattern "TERMS.md"
           echo "Downloaded files:"
           ls -la dist
 
@@ -135,6 +140,10 @@ jobs:
           for asset in "${desktop_assets[@]}"; do
             asset_name=$(basename "$asset")
             case "$asset_name" in
+              WINK-GO-Pro-*)
+                echo "::error::Refusing to publish a Pro desktop asset to ${S3_RELEASE_PREFIX}: $asset_name"
+                exit 1
+                ;;
               WINK-GO-Free-*) ;;
               *)
                 echo "::error::Refusing to publish non-Free desktop asset to ${S3_RELEASE_PREFIX}: $asset_name"
@@ -169,7 +178,7 @@ jobs:
               echo "::error::$file does not reference a desktop asset."
               exit 1
             fi
-            if printf '%s\n' "$metadata_refs" | grep -Ev 'WINK-GO-Free-' >/dev/null; then
+            if printf '%s\n' "$metadata_refs" | grep -Ev 'WINK-GO-Free-[0-9]' >/dev/null; then
               echo "::error::Refusing metadata with a non-Free asset reference: $file"
               printf '%s\n' "$metadata_refs"
               exit 1

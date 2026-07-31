@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # Pull Request
 
 > Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting. PRs that ignore the rules below may be closed and asked to resubmit.
@@ -36,6 +38,8 @@
 - [ ] `bunx vitest run` — tests pass
 - [ ] i18n validated (`bun run i18n:types` + `node scripts/check-i18n.js`) — only if `src/renderer/`, `locales/`, or `src/common/config/i18n/` changed; N/A otherwise
 - [ ] New/changed user-facing text uses i18n keys (no hardcoded strings)
+- [ ] Every commit is signed off (`git commit -s`) under DCO 1.1
+- [ ] Third-party or AI-assisted material has a verified source, license, and modification record
 
 ## Runtime Verification
 
@@ -58,4 +62,4 @@
 
 <!-- Commits and PR titles must NOT contain AI signatures (Co-Authored-By, "Generated with", etc.). -->
 
-**Thank you for contributing to WinkGo! 🎉**
+**Thank you for contributing to WINK GO! 🎉**

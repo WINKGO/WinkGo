@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use crate::error::AgentError;
 use crate::stream::StreamOutcome;
 use crate::tool_call::{

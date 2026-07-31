@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -10,15 +11,11 @@ import { LIGHT_THEME_ID, DARK_THEME_ID } from '@/common/theme/constants';
 
 import {
   defaultThemeCover,
-  misakaMikotoCover,
-  helloKittyCover,
   retroWindowsCover,
   y2kJpCover,
   retromaObsidianBookCover,
 } from '@renderer/pages/settings/AppearanceSettings/themeCovers';
 
-import misakaMikotoCss from '@renderer/pages/settings/AppearanceSettings/presets/misaka-mikoto.css?raw';
-import helloKittyCss from '@renderer/pages/settings/AppearanceSettings/presets/hello-kitty.css?raw';
 import retroWindowsCss from '@renderer/pages/settings/AppearanceSettings/presets/retro-windows.css?raw';
 import retromaY2kCss from '@renderer/pages/settings/AppearanceSettings/presets/retroma-y2k.css?raw';
 import retromaObsidianBookCss from '@renderer/pages/settings/AppearanceSettings/presets/retroma-obsidian-book.css?raw';
@@ -49,9 +46,7 @@ export const BUILTIN_THEMES: Theme[] = [
     updated_at: T0,
   },
   { id: DARK_THEME_ID, name: 'Dark', appearance: 'dark', builtin: true, created_at: T0, updated_at: T0 },
-  decorative('misaka-mikoto-theme', 'Misaka Mikoto Theme', 'light', misakaMikotoCss, misakaMikotoCover),
-  decorative('hello-kitty', 'Hello Kitty', 'light', helloKittyCss, helloKittyCover),
-  decorative('retro-windows', 'Retro Windows', 'light', retroWindowsCss, retroWindowsCover),
+  decorative('retro-windows', 'Retro Desktop', 'light', retroWindowsCss, retroWindowsCover),
   decorative('retroma-y2k-jp-v42-pure', 'Y2K电子账本 by 椰树女王', 'light', retromaY2kCss, y2kJpCover),
   decorative(
     'retroma-obsidian-book',

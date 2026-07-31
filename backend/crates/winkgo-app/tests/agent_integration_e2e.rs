@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! E2E integration tests with mock agent tasks.
 //!
 //! Tests the message flow, confirmation system, and auxiliary routes

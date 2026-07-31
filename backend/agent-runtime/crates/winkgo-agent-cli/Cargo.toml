@@ -1,3 +1,4 @@
+# Modified from aionrs by WINK GO contributors in 2026.
 [package]
 name = "winkgo-agent-cli"
 description = "CLI binary for winkgo_agent — a multi-provider AI agent with tool orchestration"

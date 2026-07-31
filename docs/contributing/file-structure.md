@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # File & Directory Structure
 
 Rules for organizing files and directories across the entire Electron project.
@@ -22,7 +24,7 @@ Rules for organizing files and directories across the entire Electron project.
 
 ## Project Layout (`src/`)
 
-WinkGo is a multi-process Electron app with three core layers: **renderer**, **main process**, and **preload/shared**.
+WINK GO is a multi-process Electron app with three core layers: **renderer**, **main process**, and **preload/shared**.
 
 ### Target Structure
 

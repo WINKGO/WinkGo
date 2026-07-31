@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # ext-wecom-bot
 
 Enterprise WeCom AI Bot channel extension example for WinkGo.

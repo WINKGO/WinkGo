@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use async_trait::async_trait;
 use serde_json::Value;
 

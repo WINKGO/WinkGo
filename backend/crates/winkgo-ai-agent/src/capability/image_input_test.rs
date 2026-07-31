@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use serde_json::json;
 use winkgo_agent_types::message::ImageInputCapability;
 

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Resolve the conversation workspace directory.
 
 use std::path::{Path, PathBuf};

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! System info, version check, and full system flow E2E tests.
 
 mod common;
@@ -65,7 +66,7 @@ fn make_github_asset(name: &str, size: u64) -> serde_json::Value {
 async fn version_check_has_update_with_auth() {
     let mock_server = MockServer::start().await;
     Mock::given(method("GET"))
-        .and(path("/repos/xuweihafeichangniu-lab/wink-go/releases"))
+        .and(path("/repos/xuweihafeichangniu-lab/winkgo/releases"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!([make_github_release(
             "v2.0.0",
             false,
@@ -90,7 +91,7 @@ async fn version_check_has_update_with_auth() {
 async fn version_check_no_update_with_auth() {
     let mock_server = MockServer::start().await;
     Mock::given(method("GET"))
-        .and(path("/repos/xuweihafeichangniu-lab/wink-go/releases"))
+        .and(path("/repos/xuweihafeichangniu-lab/winkgo/releases"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!([make_github_release(
             "v1.0.0",
             false,
@@ -114,7 +115,7 @@ async fn version_check_no_update_with_auth() {
 async fn version_check_github_error_with_auth() {
     let mock_server = MockServer::start().await;
     Mock::given(method("GET"))
-        .and(path("/repos/xuweihafeichangniu-lab/wink-go/releases"))
+        .and(path("/repos/xuweihafeichangniu-lab/winkgo/releases"))
         .respond_with(ResponseTemplate::new(500).set_body_string("Internal Error"))
         .mount(&mock_server)
         .await;

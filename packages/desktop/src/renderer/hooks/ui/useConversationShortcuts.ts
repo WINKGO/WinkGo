@@ -1,6 +1,7 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { useEffect } from 'react';
-import type { NavigateFunction } from 'react-router-dom';
-import { useLocation } from 'react-router-dom';
+import type { NavigateFunction } from 'react-router';
+import { useLocation } from 'react-router';
 import { useVisibleConversationIds } from '@/renderer/pages/conversation/GroupedHistory/hooks/useVisibleConversationIds';
 import { isElectronDesktop } from '@/renderer/utils/platform';
 import { isPrimaryApplicationShortcut } from '@/renderer/utils/ui/keyboardShortcuts';

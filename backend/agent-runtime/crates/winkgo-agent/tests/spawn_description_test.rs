@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Integration tests for Spawn tool description (TC-4.2-07).
 //!
 //! Verifies the enhanced Spawn tool description contains capacity limits

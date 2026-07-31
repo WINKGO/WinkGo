@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! End-to-end test: a stateful Streamable-HTTP MCP server that emits SSE with
 //! CRLF (`\r\n`) line endings, exactly like Python `fastmcp` / the MCP Python
 //! SDK do via `sse-starlette` (whose default separator is `\r\n`).

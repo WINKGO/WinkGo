@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -13,9 +14,12 @@ import winkGoLogo from '@/renderer/assets/logos/brand/app.png';
 import { openExternalUrl } from '@/renderer/utils/platform';
 import apacheLicenseText from '../../../../../../../../LICENSE?raw';
 import noticeText from '../../../../../../../../NOTICE?raw';
+import privacyPolicyText from '../../../../../../../../PRIVACY.md?raw';
+import termsOfServiceText from '../../../../../../../../TERMS.md?raw';
 import thirdPartyNoticesText from '../../../../../../../../THIRD_PARTY_NOTICES.md?raw';
 
-const WINK_GO_WEBSITE = 'https://winkgo.top/';
+const WINK_GO_PROJECT_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go';
+const WINK_GO_PROJECT_LABEL = 'github.com/xuweihafeichangniu-lab/wink-go';
 const APACHE_LICENSE_URL = 'https://www.apache.org/licenses/LICENSE-2.0';
 
 declare const __APP_VERSION__: string;
@@ -52,9 +56,9 @@ const AboutModalContent: React.FC = () => {
 
       <div className='relative flex w-full max-w-760px flex-col items-center'>
         <a
-          href={WINK_GO_WEBSITE}
-          aria-label={WINK_GO_WEBSITE}
-          onClick={(event) => openExternalLink(event, WINK_GO_WEBSITE)}
+          href={WINK_GO_PROJECT_URL}
+          aria-label={WINK_GO_PROJECT_URL}
+          onClick={(event) => openExternalLink(event, WINK_GO_PROJECT_URL)}
           className='group relative flex h-300px w-full max-w-420px flex-col items-center justify-center no-underline outline-none focus-visible:ring-2 focus-visible:ring-[rgba(17,17,17,0.32)]'
         >
           <span
@@ -68,7 +72,7 @@ const AboutModalContent: React.FC = () => {
             style={{ filter: 'drop-shadow(0 18px 38px rgba(17, 17, 17, 0.16))' }}
           />
           <span className='relative -mt-4px flex items-center rounded-full border border-border-2 bg-[rgba(255,255,255,0.92)] px-20px py-9px text-13px font-600 text-t-primary shadow-[0_10px_24px_rgba(17,17,17,0.1)] transition-transform duration-300 group-hover:-translate-y-2px md:text-15px'>
-            {WINK_GO_WEBSITE}
+            {WINK_GO_PROJECT_LABEL}
           </span>
         </a>
 
@@ -81,7 +85,6 @@ const AboutModalContent: React.FC = () => {
             {t('common.version')} {__APP_VERSION__}
           </div>
           <p className='m-0'>{t('settings.legal.summary')}</p>
-          <p className='m-0'>{t('settings.legal.attribution')}</p>
           <div className='flex flex-wrap items-center justify-center gap-8px'>
             <Button size='mini' type='outline' onClick={() => setLegalVisible(true)}>
               {t('settings.legal.title')}
@@ -130,6 +133,22 @@ const AboutModalContent: React.FC = () => {
               className='m-0 max-h-60vh overflow-auto whitespace-pre-wrap break-words rounded-8px bg-fill-1 p-16px text-12px leading-20px text-t-secondary'
             >
               {thirdPartyNoticesText}
+            </pre>
+          </Tabs.TabPane>
+          <Tabs.TabPane key='privacy' title={t('login.privacyPolicy')}>
+            <pre
+              data-testid='legal-document-privacy'
+              className='m-0 max-h-60vh overflow-auto whitespace-pre-wrap break-words rounded-8px bg-fill-1 p-16px text-12px leading-20px text-t-secondary'
+            >
+              {privacyPolicyText}
+            </pre>
+          </Tabs.TabPane>
+          <Tabs.TabPane key='terms' title={t('login.termsOfService')}>
+            <pre
+              data-testid='legal-document-terms'
+              className='m-0 max-h-60vh overflow-auto whitespace-pre-wrap break-words rounded-8px bg-fill-1 p-16px text-12px leading-20px text-t-secondary'
+            >
+              {termsOfServiceText}
             </pre>
           </Tabs.TabPane>
         </Tabs>

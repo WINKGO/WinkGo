@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Row models and repository parameter structs for the assistants domain.
 
 use serde::{Deserialize, Serialize};

@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 param(
   [string[]]$Versions = @(),
   [string]$SentryDsnFile = '',
@@ -166,7 +167,7 @@ function Wait-BuildProcess($Build, [int]$TimeoutSeconds) {
   $Build.process.WaitForExit()
   $Build.process.Refresh()
   $exitCode = $Build.process.ExitCode
-  $source = Join-Path $Build.worktreePath "out\WinkGo-$($Build.version)-win-x64.exe"
+  $source = Join-Path $Build.worktreePath "out\WINK-GO-Free-Setup-$($Build.version)-x64.exe"
   if (-not (Test-Path -LiteralPath $source)) {
     $tailParts = @()
     if (Test-Path -LiteralPath $Build.stderrPath) {
@@ -198,7 +199,7 @@ function Wait-BuildProcess($Build, [int]$TimeoutSeconds) {
     throw "build $($Build.version) produced an unexpectedly small installer ($($sourceItem.Length) bytes): $source. Logs: $($Build.stdoutPath), $($Build.stderrPath)"
   }
 
-  $target = Join-Path $script:OutputDirResolved "WinkGo-$($Build.version)-win-x64.exe"
+  $target = Join-Path $script:OutputDirResolved "WINK-GO-Free-Setup-$($Build.version)-x64.exe"
   Copy-Item -LiteralPath $source -Destination $target -Force
   $item = Get-Item -LiteralPath $target
   $hash = (Get-FileHash -LiteralPath $target -Algorithm SHA512).Hash
@@ -266,7 +267,7 @@ $completed = $false
 
 try {
   foreach ($version in $buildVersions) {
-    $worktreePath = Join-Path $runRoot "WinkGo-$version"
+    $worktreePath = Join-Path $runRoot "WINK GO-$version"
     $worktrees += $worktreePath
     Write-Host "=== prepare worktree ${version}: $worktreePath ==="
     Invoke-Git $repoRoot @('worktree', 'add', '--detach', $worktreePath, $baseRef) | Out-Null
@@ -282,7 +283,7 @@ try {
   }
 
   foreach ($version in $buildVersions) {
-    $worktreePath = Join-Path $runRoot "WinkGo-$version"
+    $worktreePath = Join-Path $runRoot "WINK GO-$version"
     Write-Host "=== build $version start: $(Get-Date -Format o) ==="
     $build = Start-BuildProcess $worktreePath $version $dsn $runRoot $localWinkGoCoreBinary $localWinkGoCoreBundleDir
     if ($Sequential) {

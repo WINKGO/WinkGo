@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -12,20 +13,23 @@ import { applyTheme, setActiveTheme } from '@/renderer/utils/theme/applyTheme';
 import { getSystemPrefersDark } from '@/renderer/utils/theme/systemAppearance';
 import { startSystemThemeWatcher } from '@/renderer/utils/theme/systemThemeWatcher';
 import { BUILTIN_THEMES } from '@renderer/theme/builtinThemes';
-import { LIGHT_THEME_ID } from '@/common/theme/constants';
+import { SYSTEM_THEME_ID } from '@/common/theme/constants';
 import type { Theme } from '@/common/theme/types';
 import { useCallback, useEffect, useState } from 'react';
 
 const APPEARANCE_CACHE_KEY = '__winkgo_theme';
 
 function getPersistedActiveId(): string {
-  return (configService.get('theme.activeId') as string) || LIGHT_THEME_ID;
+  return SYSTEM_THEME_ID;
 }
 
 async function initActiveTheme(): Promise<Theme> {
   try {
     await configService.whenReady();
     const activeId = getPersistedActiveId();
+    if (configService.get('theme.activeId') !== SYSTEM_THEME_ID) {
+      await configService.set('theme.activeId', SYSTEM_THEME_ID);
+    }
     const userThemes = (configService.get('theme.userThemes') as Theme[]) ?? [];
     const resolved = resolveActiveTheme(activeId, [...BUILTIN_THEMES, ...userThemes], getSystemPrefersDark());
     applyTheme(resolved);
@@ -39,7 +43,7 @@ async function initActiveTheme(): Promise<Theme> {
     return resolved;
   } catch (e) {
     console.error('init theme failed', e);
-    const fallback = resolveActiveTheme(LIGHT_THEME_ID, BUILTIN_THEMES);
+    const fallback = resolveActiveTheme(SYSTEM_THEME_ID, BUILTIN_THEMES, getSystemPrefersDark());
     applyTheme(fallback);
     return fallback;
   }
@@ -71,8 +75,7 @@ const useTheme = (): [Theme | null, (activeId: string) => Promise<void>, string 
       applyTheme(t);
       if (mounted) {
         setActive((prev) => (prev?.id === t.id ? prev : t));
-        // Best-effort: config was persisted before the broadcast, fall back to the resolved id.
-        setActiveId((configService.get('theme.activeId') as string) || t.id);
+        setActiveId(SYSTEM_THEME_ID);
       }
       try {
         localStorage.setItem(APPEARANCE_CACHE_KEY, t.appearance);
@@ -88,9 +91,9 @@ const useTheme = (): [Theme | null, (activeId: string) => Promise<void>, string 
     };
   }, []);
 
-  const select = useCallback(async (activeId: string) => {
-    await setActiveTheme(activeId);
-    setActiveId(activeId);
+  const select = useCallback(async (_activeId: string) => {
+    await setActiveTheme(SYSTEM_THEME_ID);
+    setActiveId(SYSTEM_THEME_ID);
   }, []);
 
   return [active, select, activeId];

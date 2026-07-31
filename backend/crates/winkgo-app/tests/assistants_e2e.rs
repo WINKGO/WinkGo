@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! HTTP integration tests for `/api/assistants/*` plus the source-dispatched
 //! `/api/skills/assistant-rule/*` and user assistant-skill helpers.
 //!

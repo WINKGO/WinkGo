@@ -13,6 +13,7 @@
   "settings": "Paramètres",
   "system": "Système",
   "about": "À propos",
+  "localAccount": "Compte local",
   "back": "Retour au chat",
   "goBack": "Dos",
   "add": "Ajouter",
@@ -301,12 +302,12 @@
   "backendStartup": {
     "incompatibleRuntime": {
       "title": "Ce système n'est pas pris en charge par le backend fourni",
-      "description": "WINK GO s'est ouvert, mais le backend local WinkGoCore ne peut pas fonctionner sur cette version de Linux. Veuillez effectuer une mise à niveau vers une distribution Linux prise en charge et redémarrer WINK GO.",
+      "description": "WINK GO s'est ouvert, mais le backend local WINK GO Core ne peut pas fonctionner sur cette version de Linux. Veuillez effectuer une mise à niveau vers une distribution Linux prise en charge et redémarrer WINK GO.",
       "requiredVersions": "Symboles d'exécution requis : {{versions}}"
     },
     "incompleteInstallation": {
       "title": "L'installation d'WINK GO est incomplète",
-      "description": "Cette installation ne dispose pas des ressources locales requises, WinkGoCore ne peut donc pas démarrer. Veuillez télécharger et réinstaller la dernière version d'WINK GO. Si le problème réapparaît après la réinstallation, vérifiez si un logiciel de sécurité ou antivirus a mis WinkGoCore en quarantaine.",
+      "description": "Cette installation ne dispose pas des ressources locales requises, WINK GO Core ne peut donc pas démarrer. Veuillez télécharger et réinstaller la dernière version d'WINK GO. Si le problème réapparaît après la réinstallation, vérifiez si un logiciel de sécurité ou antivirus a mis WINK GO Core en quarantaine.",
       "downloadLatest": "Télécharger le dernier",
       "sendDiagnostics": "Envoyer des diagnostics",
       "diagnosticsSent": "Diagnostics envoyés",
@@ -320,7 +321,7 @@
     },
     "dataMigration": {
       "title": "Échec de la migration des données locales",
-      "description": "WINK GO s'est ouvert, mais WinkGoCore s'est arrêté lors de l'initialisation des données locales. La réinstallation d'WINK GO ne résoudra peut-être pas ce problème. Envoyez un rapport de diagnostic ou contactez le support afin que la migration de la base de données locale puisse être inspectée.",
+      "description": "WINK GO s'est ouvert, mais WINK GO Core s'est arrêté lors de l'initialisation des données locales. La réinstallation d'WINK GO ne résoudra peut-être pas ce problème. Envoyez un rapport de diagnostic ou contactez le support afin que la migration de la base de données locale puisse être inspectée.",
       "sendDiagnostics": "Envoyer des diagnostics",
       "diagnosticsSent": "Diagnostics envoyés",
       "diagnosticsReportSuccess": "Rapport de diagnostic envoyé",
@@ -328,7 +329,7 @@
     },
     "localDataRepair": {
       "title": "La réparation des données locales a échoué",
-      "description": "WINK GO s'est ouvert, mais WinkGoCore s'est arrêté lors de la préparation des données locales de démarrage, comme les enregistrements d'assistants ou d'agents. La réinstallation d'WINK GO ne résoudra peut-être pas ce problème. Envoyez un rapport de diagnostic ou contactez l'assistance afin que la base de données locale puisse être inspectée.",
+      "description": "WINK GO s'est ouvert, mais WINK GO Core s'est arrêté lors de la préparation des données locales de démarrage, comme les enregistrements d'assistants ou d'agents. La réinstallation d'WINK GO ne résoudra peut-être pas ce problème. Envoyez un rapport de diagnostic ou contactez l'assistance afin que la base de données locale puisse être inspectée.",
       "sendDiagnostics": "Envoyer des diagnostics",
       "diagnosticsSent": "Diagnostics envoyés",
       "diagnosticsReportSuccess": "Rapport de diagnostic envoyé",
@@ -336,7 +337,7 @@
     },
     "startupDirectory": {
       "title": "Le répertoire de démarrage n'est pas disponible",
-      "description": "WINK GO s'est ouvert, mais WinkGoCore n'a pas pu démarrer car le répertoire de travail ou de journal configuré est manquant, indisponible ou bloqué par les autorisations. Vérifiez que les répertoires configurés existent et sont accessibles en écriture, puis redémarrez WINK GO.",
+      "description": "WINK GO s'est ouvert, mais WINK GO Core n'a pas pu démarrer car le répertoire de travail ou de journal configuré est manquant, indisponible ou bloqué par les autorisations. Vérifiez que les répertoires configurés existent et sont accessibles en écriture, puis redémarrez WINK GO.",
       "sendDiagnostics": "Envoyer des diagnostics",
       "diagnosticsSent": "Diagnostics envoyés",
       "diagnosticsReportSuccess": "Rapport de diagnostic envoyé",

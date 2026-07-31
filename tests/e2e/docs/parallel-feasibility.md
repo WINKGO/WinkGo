@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # E2E Test Parallel Execution Feasibility
 
 **Author**: assistant-engineer-2

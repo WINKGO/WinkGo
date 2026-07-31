@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! End-to-end WebSocket integration tests through the full app stack.
 //!
 //! Tests exercise real JWT auth, token extraction from HTTP headers,

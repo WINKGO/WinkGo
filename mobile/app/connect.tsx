@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React, { useState, useRef } from 'react';
 import { View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,10 +11,36 @@ import { useConnection } from '../src/context/ConnectionContext';
 import { useThemeColor } from '../src/hooks/useThemeColor';
 import { wsService } from '../src/services/websocket';
 
+function isLocalNetworkHost(value: string): boolean {
+  const host = value.replace(/^\[|\]$/g, '').toLowerCase();
+  if (host === 'localhost' || host.endsWith('.local')) return true;
+
+  const octets = host.split('.').map(Number);
+  if (octets.length === 4 && octets.every((octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255)) {
+    return (
+      octets[0] === 10 ||
+      octets[0] === 127 ||
+      (octets[0] === 169 && octets[1] === 254) ||
+      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+      (octets[0] === 192 && octets[1] === 168)
+    );
+  }
+
+  return host === '::1' || /^f[cd][0-9a-f:]+$/.test(host) || /^fe[89ab][0-9a-f:]+$/.test(host);
+}
+
 function parseQrLoginUrl(data: string): { host: string; port: string; qrToken: string } | null {
   try {
     const url = new URL(data);
-    if (url.pathname !== '/qr-login') return null;
+    if (
+      url.protocol !== 'http:' ||
+      url.username ||
+      url.password ||
+      url.pathname !== '/qr-login' ||
+      !isLocalNetworkHost(url.hostname)
+    ) {
+      return null;
+    }
     const qrToken = url.searchParams.get('token');
     if (!qrToken) return null;
     return {
@@ -52,7 +79,7 @@ export default function ConnectScreen() {
     try {
       const { host, port, qrToken } = parsed;
       const response = await axios.post(`http://${host}:${port}/api/auth/qr-login`, {
-        qrToken,
+        qr_token: qrToken,
       });
       const jwt: string = response.data.token;
 

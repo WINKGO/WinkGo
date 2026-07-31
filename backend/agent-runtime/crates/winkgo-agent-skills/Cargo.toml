@@ -1,3 +1,4 @@
+# Modified from aionrs by WINK GO contributors in 2026.
 [package]
 name = "winkgo-agent-skills"
 description = "Skills system for winkgo_agent: named prompt snippets with tool orchestration, permissions, hooks, and MCP integration"

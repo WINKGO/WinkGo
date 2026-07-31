@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # Assistant 设置页需求文档（反推自源码）
 
 - 模块路径：`src/renderer/pages/settings/AssistantSettings/`

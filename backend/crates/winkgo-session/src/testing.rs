@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! In-crate test doubles (D2/D8), gated behind `test-support` / `cfg(test)`.
 //! NEVER fabricates a `ManagedProcess` (its fields are private, only ctor is the
 //! real `spawn`). Instead:

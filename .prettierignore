@@ -1,7 +1,9 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 mobile/
 backend/
 docs/vendor/
 public/knowledge-canvas/
 resources/winkgo/provider-skills/
+legal/THIRD_PARTY_DEPENDENCIES.json
 .tmp-out-backup-*/
 .tmp-debug-release-assets-*/

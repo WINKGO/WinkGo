@@ -107,7 +107,7 @@
       "selectFolder": "Selecionar Pasta",
       "clearFolder": "Limpar",
       "model": "Modelo",
-      "winkgo_agentModelRequired": "Por favor, selecione um modelo para a CLI do WinkGo",
+      "winkgo_agentModelRequired": "Por favor, selecione um modelo para a CLI do WINK GO",
       "winkgo_agentNoProvider": "Nenhum modelo disponível",
       "assistantLockedExistingConversation": "Tarefas de conversa em andamento devem manter o assistente original. Crie uma nova tarefa para usar outro assistente.",
       "teamTaskExecutionModeLockedReason": "Tarefas agendadas de Team devem continuar executando na conversa de Team proprietária, por isso o modo de execução não pode ser alterado."

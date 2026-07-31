@@ -34,11 +34,11 @@ vi.mock('@/renderer/utils/platform', () => ({
 
 vi.mock('@/renderer/hooks/context/AuthContext', () => ({
   useAuth: () => ({
-    can: () => true,
+    can: () => false,
   }),
 }));
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
 }));
 
@@ -77,9 +77,11 @@ describe('InspirationCenterPage', () => {
     mocks.navigate.mockClear();
   });
 
-  it('opens a life-service example as a focused chat draft', () => {
+  it('opens the full life-service experience even when a legacy capability snapshot is empty', () => {
     render(<InspirationCenterPage />);
 
+    expect(screen.getByTestId('inspiration-provider-didi-ride')).toBeInTheDocument();
+    expect(screen.queryByText(/解锁 Pro|免费版|WINK GO Pro/)).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByTestId('inspiration-example-didi-ride')[0]);
 
     expect(mocks.navigate).toHaveBeenCalledWith('/guid', {

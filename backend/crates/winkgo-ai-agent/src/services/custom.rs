@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Custom Agent business logic.
 //!
 //! Extends `AgentService` with CRUD for `agent_source = 'custom'` rows

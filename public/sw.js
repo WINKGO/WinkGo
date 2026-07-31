@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 // Bumped from v1: the v1 networkFirst fallback returned OFFLINE_PAGE_URL
 // (index.html) for failed script requests, causing "module script MIME text/html"
 // errors when the server was down or served a different asset hash. The v2

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 // WebUI 状态接口 / WebUI status interface
 export interface WebUIStatus {
   running: boolean;

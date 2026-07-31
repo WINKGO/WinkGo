@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! HTTP integration tests for the built-in skills migration surface:
 //! `/api/skills/builtin-skill`, `/api/skills`, and the symlink-contract
 //! `/api/skills/materialize-for-agent` (POST).

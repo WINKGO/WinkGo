@@ -74,7 +74,7 @@ const PROVIDER_SPECS: ProviderSpec[] = [
     name: '美团',
     subtitle: '本地生活搜索、优惠与待支付订单预览',
     phase: 'available',
-    runtime: '官方 Skill · 按需启动',
+    runtime: '官方 Skill · 用户自行安装',
     risk: '交易确认',
     capabilities: ['本地生活', '优惠搜索', '订单预览', '官方支付交接'],
     voiceExamples: ['找附近评分高的餐厅', '看看今天有什么团购优惠'],

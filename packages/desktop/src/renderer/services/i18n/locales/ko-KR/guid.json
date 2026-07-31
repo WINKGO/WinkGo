@@ -14,14 +14,32 @@
     "searchPlaceholder": "프로젝트 검색…",
     "noProject": "프로젝트 없음"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "WINK GO AI 분석에 실패했습니다. 잠시 후 다시 시도하세요.",
+    "backToChat": "채팅으로 돌아가기",
+    "frameTitle": "WINK GO 지식 캔버스",
+    "loading": "지식 캔버스를 여는 중…",
+    "open": "지식 캔버스 열기",
+    "pageLabel": "WINK GO 지식 캔버스",
+    "reload": "지식 캔버스 다시 불러오기",
+    "statusAnalyzing": "WINK GO AI 분석 중",
+    "statusReady": "로컬 캔버스 · AI 사용 가능",
+    "statusUnavailable": "실험 기능 · 미제공",
+    "subtitle": "웹 페이지, 문서, 아이디어를 편집 가능한 지식 구조로 정리합니다",
+    "title": "지식 캔버스",
+    "unavailableDescription": "공개 빌드에는 전체 캔버스 런타임이 포함되지 않습니다. 소스, 라이선스 및 배포 자료 검토가 끝난 뒤 제공됩니다.",
+    "unavailableTitle": "지식 캔버스는 아직 실험 단계입니다"
+  },
   "installerCenter": {
     "entry": "소프트웨어 설치 센터",
     "title": "WINK GO 설치 센터",
-    "subtitle": "Codex, Claude Code 및 Antigravity 원클릭 설치 패키지",
-    "windows": "Windows 설치 패키지",
-    "macos": "macOS 설치 패키지",
-    "environmentSetup": "{{platform}} 환경 빠른 설정",
-    "downloadFailed": "다운로드 링크를 열 수 없습니다",
+    "subtitle": "Codex, Claude Code 및 Antigravity 공식 설치 페이지를 엽니다",
+    "windows": "Windows 설치 안내",
+    "macos": "macOS 설치 안내",
+    "environmentSetup": "{{platform}} 공식 설치 안내 보기",
+    "openOfficialPage": "공식 설치 페이지 열기",
+    "thirdPartyDisclaimer": "Codex, Claude Code 및 Antigravity는 타사 제품입니다. WINK GO은 이를 호스팅하거나 보증하지 않으며 가용성 또는 호환성을 보장하지 않습니다. 각 공급업체의 약관이 적용됩니다.",
+    "downloadFailed": "공식 설치 페이지를 열 수 없습니다",
     "recommended": "추천"
   }
 }

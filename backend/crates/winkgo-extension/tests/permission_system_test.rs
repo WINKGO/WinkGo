@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for permission system (test-plan PS-1 through PS-7).
 //!
 //! These test the public API surface of risk level calculation and permission summary.

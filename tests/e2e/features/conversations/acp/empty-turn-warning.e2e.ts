@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import os from 'os';
 import type { Page } from '@playwright/test';
 import { test, expect } from '../../../fixtures';

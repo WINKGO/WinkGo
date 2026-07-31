@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -37,7 +38,7 @@ import { ArrowRightUp, MindMapping } from '@icon-park/react';
 import { Button, ConfigProvider } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import useSWR from 'swr';
 import styles from './index.module.css';
 
@@ -665,18 +666,18 @@ const GuidPage: React.FC = () => {
   return (
     <ConfigProvider getPopupContainer={() => guidContainerRef.current || document.body}>
       <div ref={guidContainerRef} className={styles.guidContainer}>
-        <button
-          type='button'
+        <Button
+          type='text'
           className={styles.knowledgeCanvasEntry}
           onClick={() => navigate('/knowledge-canvas')}
-          aria-label='打开知识画布'
-          title='打开知识画布'
+          aria-label={t('guid.knowledgeCanvas.open')}
+          title={t('guid.knowledgeCanvas.open')}
         >
           <span className={styles.knowledgeCanvasEntryIcon} aria-hidden='true'>
             <MindMapping theme='outline' size='17' fill='currentColor' strokeWidth={3} />
           </span>
-          <span>知识画布</span>
-        </button>
+          <span>{t('guid.knowledgeCanvas.title')}</span>
+        </Button>
 
         <div className={styles.guidLayout}>
           <div className={styles.heroHeader}>

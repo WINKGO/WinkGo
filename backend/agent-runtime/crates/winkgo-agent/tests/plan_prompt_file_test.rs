@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Integration tests for Plan Mode prompts and file management (task 3.4).
 //!
 //! Tests are numbered to match the test-plan.md identifiers (TC-3.4-*).

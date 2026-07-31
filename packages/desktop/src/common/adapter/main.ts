@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -9,6 +10,7 @@ import type { BrowserWindow } from 'electron';
 import { ipcMain } from 'electron';
 
 import { bridge } from '@/common/platform/bridge';
+import { hasControlCharacters, isTrustedIpcSender } from '@/common/platform/electronSecurity';
 import { ADAPTER_BRIDGE_EVENT_KEY } from './constant';
 import { registerWebSocketBroadcaster, getBridgeEmitter, setBridgeEmitter, broadcastToAll } from './registry';
 
@@ -36,6 +38,30 @@ export const setPetNotifyHook = (hook: ((name: string, data: unknown) => void) |
  * */
 /** Maximum IPC payload size (50 MB). Messages exceeding this are dropped with an error notification. */
 const MAX_IPC_PAYLOAD_SIZE = 50 * 1024 * 1024;
+/** Renderer-to-main bridge messages should only contain small command payloads. */
+const MAX_INBOUND_IPC_PAYLOAD_SIZE = 10 * 1024 * 1024;
+
+function parseInboundBridgeEvent(info: unknown): BridgeEventData | null {
+  if (typeof info !== 'string' || Buffer.byteLength(info, 'utf8') > MAX_INBOUND_IPC_PAYLOAD_SIZE) return null;
+
+  try {
+    const parsed = JSON.parse(info) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    const { name, data } = parsed as Partial<BridgeEventData>;
+    if (
+      typeof name !== 'string' ||
+      name.length === 0 ||
+      name.length > 256 ||
+      name.trim() !== name ||
+      hasControlCharacters(name)
+    ) {
+      return null;
+    }
+    return { name, data };
+  } catch {
+    return null;
+  }
+}
 
 bridge.adapter({
   emit(name, data) {
@@ -91,8 +117,15 @@ bridge.adapter({
     // 保存 emitter 引用供 WebSocket 处理使用 / Save emitter reference for WebSocket handling
     setBridgeEmitter(emitter);
 
-    ipcMain.handle(ADAPTER_BRIDGE_EVENT_KEY, (_event, info) => {
-      const { name, data } = JSON.parse(info) as BridgeEventData;
+    ipcMain.handle(ADAPTER_BRIDGE_EVENT_KEY, (event, info) => {
+      if (!isTrustedIpcSender(event, ['main', 'island'])) {
+        throw new Error('IPC_FORBIDDEN');
+      }
+      const parsed = parseInboundBridgeEvent(info);
+      if (!parsed) {
+        throw new Error('IPC_INVALID_PAYLOAD');
+      }
+      const { name, data } = parsed;
       return Promise.resolve(emitter.emit(name, data));
     });
   },

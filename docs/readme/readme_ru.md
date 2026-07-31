@@ -1,10 +1,11 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # WINK GO
 
 WINK GO — кроссплатформенная настольная рабочая среда для ИИ-агентов, объединяющая агентов, файлы, инструменты, навыки, расписания, WebUI и совместную работу нескольких агентов.
 
-## Редакции
+## Открытый и бесплатный проект
 
-- **Free 2.1.45: полный доступ.** Сейчас включает все функции, доступные в сборке Pro.
-- **Pro: зарезервирована на будущее.** В настоящее время не открывает дополнительных функций.
+Все текущие функции настольного клиента доступны каждому пользователю. Внешние модели, API, облачная ретрансляция, голосовые и другие сервисы могут оплачиваться отдельно.
 
-[Сайт](https://winkgo.top) · [Репозиторий](https://github.com/xuweihafeichangniu-lab/wink-go) · [Загрузки](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)
+[Репозиторий](https://github.com/xuweihafeichangniu-lab/wink-go) · [Загрузки](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)

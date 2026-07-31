@@ -1,6 +1,8 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # ACP 图片输出展示
 
-WinkGo 对 ACP 工具调用中的图片结果使用文件路径展示，不依赖 inline base64。
+WINK GO 对 ACP 工具调用中的图片结果使用文件路径展示，不依赖 inline base64。
 
 ## 数据约定
 

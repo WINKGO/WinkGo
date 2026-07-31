@@ -34,8 +34,7 @@ export const INSTALLER_CATALOG: readonly InstallerItem[] = [
     productName: 'Antigravity',
     platform: 'windows',
     tone: 'pink',
-    downloadUrl:
-      'https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.1.1-6123990880747520/windows-x64/Antigravity%20IDE.exe',
+    downloadUrl: 'https://antigravity.google/download',
   },
   {
     id: 'codex-macos',
@@ -59,8 +58,7 @@ export const INSTALLER_CATALOG: readonly InstallerItem[] = [
     productName: 'Antigravity',
     platform: 'macos',
     tone: 'pink',
-    downloadUrl:
-      'https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.1.1-6123990880747520/darwin-arm/Antigravity%20IDE.dmg',
+    downloadUrl: 'https://antigravity.google/download',
   },
 ] as const;
 

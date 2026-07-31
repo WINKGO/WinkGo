@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * E2E Scenario 6: Team assistant-only leader options.
  *

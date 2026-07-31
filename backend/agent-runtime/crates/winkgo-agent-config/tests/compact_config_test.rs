@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Black-box integration tests for CompactConfig (TC-2.2-01 through TC-2.2-03, TC-2.2-07).
 //!
 //! These test the public API of CompactConfig from a config-file consumer's

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -6,7 +7,7 @@
  */
 
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import SettingsPageWrapper from './components/SettingsPageWrapper';
 
 const SystemModalContent = React.lazy(

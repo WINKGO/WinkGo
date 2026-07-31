@@ -1,3 +1,4 @@
+# Modified from aionrs by WINK GO contributors in 2026.
 [package]
 name = "winkgo-agent-providers"
 description = "LLM provider implementations for winkgo_agent (Anthropic, OpenAI, Bedrock, Vertex)"

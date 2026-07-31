@@ -1,12 +1,18 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import loginLogo from '@renderer/assets/brand/wink-go-wordmark.png';
-import { Button, Checkbox, Input, Radio, Select } from '@arco-design/web-react';
+import { Button, Checkbox, Input, Modal, Radio, Select, Tabs } from '@arco-design/web-react';
 import { Lock, Phone, User } from '@icon-park/react';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LANGUAGE_OPTIONS } from '@/common/config/i18n';
 import { changeLanguage } from '@/renderer/services/i18n';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import AppLoader from '@renderer/components/layout/AppLoader';
 import { useAuth } from '../../hooks/context/AuthContext';
+import privacyPolicyText from '../../../../../../PRIVACY.md?raw';
+import termsOfServiceText from '../../../../../../TERMS.md?raw';
+import { recordPolicyConsent, WINK_GO_POLICY_VERSION } from './policyConsent';
+import policyStyles from './LoginPolicy.module.css';
 import './LoginPage.css';
 
 type MessageState = {
@@ -15,6 +21,7 @@ type MessageState = {
 };
 
 type LoginMode = 'login' | 'register';
+type PolicyDocumentTab = 'privacy' | 'terms';
 
 const REMEMBER_ME_KEY = 'rememberMe';
 const REMEMBERED_USERNAME_KEY = 'rememberedUsername';
@@ -49,6 +56,12 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [policyAgreement, setPolicyAgreement] = useState<Record<LoginMode, boolean>>({
+    login: false,
+    register: false,
+  });
+  const [policyVisible, setPolicyVisible] = useState(false);
+  const [policyTab, setPolicyTab] = useState<PolicyDocumentTab>('terms');
   const [message, setMessage] = useState<MessageState | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -113,23 +126,6 @@ const LoginPage: React.FC = () => {
     [clearMessageLater]
   );
 
-  const supportedLanguages = useMemo<{ code: string; label: string }[]>(
-    () => [
-      { code: 'zh-CN', label: '简体中文' },
-      { code: 'zh-TW', label: '繁體中文' },
-      { code: 'ja-JP', label: '日本語' },
-      { code: 'ko-KR', label: '한국어' },
-      { code: 'tr-TR', label: 'Türkçe' },
-      { code: 'uk-UA', label: 'Українська' },
-      { code: 'pt-BR', label: 'Português (BR)' },
-      { code: 'de-DE', label: 'Deutsch' },
-      { code: 'es-ES', label: 'Español' },
-      { code: 'fa-IR', label: 'فارسی' },
-      { code: 'en-US', label: 'English' },
-    ],
-    []
-  );
-
   const handleLanguageChange = useCallback((nextLanguage: string) => {
     changeLanguage(nextLanguage).catch((error: Error) => {
       console.error('Failed to change language:', error);
@@ -144,11 +140,25 @@ const LoginPage: React.FC = () => {
     setMessage(null);
   }, []);
 
+  const openPolicyDocument = useCallback(
+    (event: { preventDefault: () => void; stopPropagation: () => void }, tab: PolicyDocumentTab) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setPolicyTab(tab);
+      setPolicyVisible(true);
+    },
+    []
+  );
+
   const handleSubmit = useCallback(
     async (event: React.FormEvent) => {
       event.preventDefault();
       const trimmedUsername = username.trim();
 
+      if (!policyAgreement[mode]) {
+        showMessage({ type: 'error', text: t('login.errors.agreementRequired') });
+        return;
+      }
       if (!trimmedUsername || !password) {
         showMessage({ type: 'error', text: t('login.errors.empty') });
         return;
@@ -173,6 +183,7 @@ const LoginPage: React.FC = () => {
 
       setLoading(true);
       setMessage(null);
+      const policyAcceptedAt = new Date();
 
       const result =
         mode === 'register'
@@ -181,8 +192,18 @@ const LoginPage: React.FC = () => {
               password,
               phone: normalizedPhone,
               remember: rememberMe,
+              privacyVersion: WINK_GO_POLICY_VERSION,
+              termsVersion: WINK_GO_POLICY_VERSION,
+              source: 'desktop_registration',
             })
-          : await login({ username: trimmedUsername, password, remember: rememberMe });
+          : await login({
+              username: trimmedUsername,
+              password,
+              remember: rememberMe,
+              privacyVersion: WINK_GO_POLICY_VERSION,
+              termsVersion: WINK_GO_POLICY_VERSION,
+              source: 'desktop_login',
+            });
 
       if (result.success) {
         if (rememberMe) {
@@ -193,6 +214,7 @@ const LoginPage: React.FC = () => {
           localStorage.removeItem(REMEMBERED_USERNAME_KEY);
         }
         localStorage.removeItem(REMEMBERED_PASSWORD_KEY);
+        recordPolicyConsent(localStorage, mode, policyAcceptedAt);
 
         const successText = mode === 'register' ? t('login.registerSuccess') : t('login.success');
         showMessage({ type: 'success', text: successText });
@@ -211,6 +233,8 @@ const LoginPage: React.FC = () => {
               return t('login.errors.validationError');
             case 'tooManyAttempts':
               return t('login.errors.tooManyAttempts');
+            case 'localError':
+              return t('login.errors.localError');
             case 'networkError':
               return t('login.errors.networkError');
             case 'serverError':
@@ -226,7 +250,20 @@ const LoginPage: React.FC = () => {
 
       setLoading(false);
     },
-    [confirmPassword, login, mode, navigate, password, phone, register, rememberMe, showMessage, t, username]
+    [
+      confirmPassword,
+      login,
+      mode,
+      navigate,
+      password,
+      phone,
+      policyAgreement,
+      register,
+      rememberMe,
+      showMessage,
+      t,
+      username,
+    ]
   );
 
   if (status === 'checking') {
@@ -242,7 +279,7 @@ const LoginPage: React.FC = () => {
           onChange={handleLanguageChange}
           aria-label={t('login.languageToggle')}
         >
-          {supportedLanguages.map((lang) => (
+          {LANGUAGE_OPTIONS.map((lang) => (
             <Select.Option key={lang.code} value={lang.code}>
               {lang.label}
             </Select.Option>
@@ -362,6 +399,36 @@ const LoginPage: React.FC = () => {
             {t('login.rememberMe')}
           </Checkbox>
 
+          <Checkbox
+            className={`login-page__checkbox ${policyStyles.policyCheckbox}`}
+            checked={policyAgreement[mode]}
+            onChange={(checked) => setPolicyAgreement((current) => ({ ...current, [mode]: checked }))}
+            aria-label={t('login.agreementCheckbox')}
+          >
+            <span className={policyStyles.policyLabel}>
+              {t('login.agreementPrefix')}
+              <Button
+                htmlType='button'
+                type='text'
+                size='mini'
+                className={policyStyles.policyLink}
+                onClick={(event) => openPolicyDocument(event, 'terms')}
+              >
+                {t('login.termsOfService')}
+              </Button>
+              {t('login.agreementAnd')}
+              <Button
+                htmlType='button'
+                type='text'
+                size='mini'
+                className={policyStyles.policyLink}
+                onClick={(event) => openPolicyDocument(event, 'privacy')}
+              >
+                {t('login.privacyPolicy')}
+              </Button>
+            </span>
+          </Checkbox>
+
           <Button htmlType='submit' type='primary' className='login-page__submit' loading={loading} disabled={loading}>
             {loading
               ? mode === 'register'
@@ -383,12 +450,37 @@ const LoginPage: React.FC = () => {
 
           {isDesktopRuntime && (
             <div className='login-page__privacy'>
-              <p>{t('login.localPrivacy')}</p>
+              <p>{t('login.dataDisclosure')}</p>
               <p>{t('login.oauthUnavailable')}</p>
             </div>
           )}
         </form>
       </div>
+
+      <Modal
+        title={t('login.policyModalTitle')}
+        visible={policyVisible}
+        onCancel={() => setPolicyVisible(false)}
+        footer={null}
+        autoFocus={false}
+        focusLock
+        unmountOnExit
+        className={policyStyles.policyModal}
+      >
+        <p className={policyStyles.policyBaseline}>{t('login.policyBaselineNotice')}</p>
+        <Tabs activeTab={policyTab} onChange={(tab) => setPolicyTab(tab as PolicyDocumentTab)} destroyOnHide={false}>
+          <Tabs.TabPane key='terms' title={t('login.termsOfService')}>
+            <pre data-testid='login-policy-terms' className={policyStyles.policyDocument}>
+              {termsOfServiceText}
+            </pre>
+          </Tabs.TabPane>
+          <Tabs.TabPane key='privacy' title={t('login.privacyPolicy')}>
+            <pre data-testid='login-policy-privacy' className={policyStyles.policyDocument}>
+              {privacyPolicyText}
+            </pre>
+          </Tabs.TabPane>
+        </Tabs>
+      </Modal>
     </div>
   );
 };

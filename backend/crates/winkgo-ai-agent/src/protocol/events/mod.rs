@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 pub mod permission;
 pub mod session_updates;
 pub mod tool_call;

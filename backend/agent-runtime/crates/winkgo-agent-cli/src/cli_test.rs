@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use clap::{CommandFactory, Parser};
 
 use super::{Cli, Commands, ConfigAction};
@@ -50,4 +51,7 @@ fn deleted_flags_are_rejected() {
     assert!(Cli::try_parse_from(["winkgo_agent", "--skills-path"]).is_err());
     assert!(Cli::try_parse_from(["winkgo_agent", "--init-config"]).is_err());
     assert!(Cli::try_parse_from(["winkgo_agent", "--logout"]).is_err());
+    assert!(Cli::try_parse_from(["winkgo_agent", "auth", "login"]).is_err());
+    assert!(Cli::try_parse_from(["winkgo_agent", "auth", "logout"]).is_err());
+    assert!(Cli::try_parse_from(["winkgo_agent", "auth", "anything"]).is_err());
 }

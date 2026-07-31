@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -6,7 +7,8 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Radio, Switch } from '@arco-design/web-react';
+import { Button, Radio, Switch } from '@arco-design/web-react';
+import { Robot } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { systemSettings } from '@/common/adapter/ipcBridge';
 import { configService } from '@/common/config/configService';
@@ -15,6 +17,7 @@ import SettingsPageWrapper from './components/SettingsPageWrapper';
 import PreferenceRow from '@/renderer/components/settings/SettingsModal/contents/SystemModalContent/PreferenceRow';
 import WinkGoScrollArea from '@/renderer/components/base/WinkGoScrollArea';
 import { useSettingsViewMode } from '@/renderer/components/settings/SettingsModal/settingsViewContext';
+import { useTalkToButler } from '@/renderer/hooks/assistant/useTalkToButler';
 
 const PetSettings: React.FC = () => {
   const [enabled, setEnabled] = useState(true);
@@ -22,6 +25,7 @@ const PetSettings: React.FC = () => {
   const [dnd, setDnd] = useState(false);
   const [confirmEnabled, setConfirmEnabled] = useState(true);
   const { t } = useTranslation();
+  const talkToButler = useTalkToButler();
   const viewMode = useSettingsViewMode();
   const isPageMode = viewMode === 'page';
   const isDesktop = isElectronDesktop();
@@ -91,6 +95,20 @@ const PetSettings: React.FC = () => {
     {
       key: 'enabled',
       label: t('pet.enable'),
+      extra: (
+        <Button
+          icon={<Robot theme='outline' size='14' />}
+          size='mini'
+          type='text'
+          onClick={() =>
+            void talkToButler({
+              prompt: t('pet.butlerSetupPrompt'),
+            })
+          }
+        >
+          {t('pet.butlerSetup')}
+        </Button>
+      ),
       component: <Switch checked={enabled} onChange={handleEnabledChange} />,
     },
     {
@@ -125,7 +143,7 @@ const PetSettings: React.FC = () => {
           <div className='px-[12px] md:px-[32px] py-16px bg-2 rd-16px space-y-12px'>
             <div className='w-full flex flex-col divide-y divide-border-2'>
               {preferenceItems.map((item) => (
-                <PreferenceRow key={item.key} label={item.label} description={item.description}>
+                <PreferenceRow key={item.key} label={item.label} description={item.description} extra={item.extra}>
                   {item.component}
                 </PreferenceRow>
               ))}

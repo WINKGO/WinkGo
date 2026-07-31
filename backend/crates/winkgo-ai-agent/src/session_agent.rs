@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `SessionAgentTask` — adapts the clean-slate `winkgo_session::SessionBackend`
 //! (direct-CLI actor model for claude/codex) to origin's `IAgentTask` contract.
 //!
@@ -1203,19 +1204,22 @@ pub async fn build_session_instance(
         model,
         mode,
         init,
-        // Packaged app: resolve the bundled claude/codex binary and forward its
-        // absolute path so the backend spawns OUR CLI, not the user's PATH one.
-        // Bundled-missing / dev falls back to a PATH lookup via
-        // `resolve_command_path` (NOT the bare name): on Windows, npm installs
-        // ship `claude.cmd`/`codex.cmd` shims which `CreateProcess` does not
-        // find from a bare name (#299 parity; Rust std runs `.cmd` via
-        // `cmd.exe` since the BatBadBut fix). `None` (nothing on PATH either)
-        // keeps the bare name so the spawn error stays diagnosable. Detection
-        // (cli_probe) stays PATH-only and is unaffected.
-        cli_program: winkgo_runtime::resolve_bundled_cli(backend_label)
-            .or_else(|| winkgo_runtime::resolve_command_path(backend_label)),
+        // Claude Code and Codex are never packaged or downloaded by WINK GO.
+        // Resolve only the user's separately installed official command.
+        cli_program: resolve_external_cli_program(backend_label, metadata),
         ..Default::default()
     };
+    if matches!(backend_label, "claude" | "codex") && session_config.cli_program.is_none() {
+        let vendor = if backend_label == "claude" {
+            "Anthropic"
+        } else {
+            "OpenAI"
+        };
+        return Err(AgentError::bad_request(format!(
+            "Official {backend_label} CLI is required but `{backend_label}` was not found on PATH. \
+Install it separately from {vendor}; WINK GO does not bundle or download external agent CLIs."
+        )));
+    }
 
     // Spawn env (legacy spawn-surface parity, claude AND codex).
     session_config.spawn_env = assemble_spawn_env(&metadata.env, runtime_env);
@@ -1238,6 +1242,8 @@ pub async fn build_session_instance(
             );
             tracing::info!(conv_id = %conversation_id, ?keys, "cc-switch: provider env injected into claude spawn");
         }
+        let inherited_env = std::env::vars().collect::<Vec<_>>();
+        validate_claude_api_auth(&session_config.spawn_env, &inherited_env)?;
     }
 
     // GAP #6 — codex sandbox + approval policy resolved from the requested mode
@@ -1371,6 +1377,28 @@ pub async fn build_session_instance(
     Ok(Some(crate::agent_task::AgentInstance::Session(task)))
 }
 
+fn resolve_external_cli_program(
+    backend_label: &str,
+    metadata: &winkgo_api_types::AgentMetadata,
+) -> Option<std::path::PathBuf> {
+    resolve_external_cli_program_candidates(
+        backend_label,
+        metadata.resolved_command.as_deref(),
+        metadata.command.as_deref(),
+    )
+}
+
+fn resolve_external_cli_program_candidates(
+    backend_label: &str,
+    probed_command: Option<&std::path::Path>,
+    explicit_command: Option<&str>,
+) -> Option<std::path::PathBuf> {
+    probed_command
+        .map(std::path::Path::to_path_buf)
+        .or_else(|| explicit_command.and_then(winkgo_runtime::resolve_command_path))
+        .or_else(|| winkgo_runtime::resolve_command_path(backend_label))
+}
+
 /// Assemble the direct-CLI spawn env (legacy spawn-surface parity; order
 /// matters — later entries win in `ManagedProcess::spawn`):
 ///  1. per-agent env overrides (`AgentMetadata.env`, repair panel) — the legacy
@@ -1397,6 +1425,63 @@ fn assemble_spawn_env(
         value: value.clone(),
     }));
     env
+}
+
+/// Require explicit API/gateway credentials for Claude Code before spawning it.
+///
+/// Claude.ai Free/Pro/Max subscription OAuth is not reused by WINK GO. The
+/// check is intentionally pure over supplied values so tests never mutate the
+/// process environment. Later spawn entries win, matching `ManagedProcess`.
+fn validate_claude_api_auth(
+    spawn_env: &[winkgo_common::EnvVar],
+    inherited_env: &[(String, String)],
+) -> Result<(), AgentError> {
+    let effective = |name: &str| {
+        spawn_env
+            .iter()
+            .rev()
+            .find(|entry| entry.name.eq_ignore_ascii_case(name))
+            .map(|entry| entry.value.as_str())
+            .or_else(|| {
+                inherited_env
+                    .iter()
+                    .rev()
+                    .find(|(key, _)| key.eq_ignore_ascii_case(name))
+                    .map(|(_, value)| value.as_str())
+            })
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+    };
+
+    if effective("CLAUDE_CODE_OAUTH_TOKEN").is_some() {
+        return Err(AgentError::bad_request(
+            "CLAUDE_CODE_OAUTH_TOKEN is not accepted by WINK GO. Claude.ai Free/Pro/Max \
+subscription OAuth must not be reused in this third-party desktop client. Configure \
+ANTHROPIC_API_KEY, or ANTHROPIC_AUTH_TOKEN together with ANTHROPIC_BASE_URL."
+                .to_owned(),
+        ));
+    }
+    if effective("ANTHROPIC_API_KEY").is_some() {
+        return Ok(());
+    }
+
+    let gateway_token = effective("ANTHROPIC_AUTH_TOKEN").is_some();
+    let gateway_url = effective("ANTHROPIC_BASE_URL").is_some();
+    if gateway_token && gateway_url {
+        return Ok(());
+    }
+    if gateway_token {
+        return Err(AgentError::bad_request(
+            "ANTHROPIC_AUTH_TOKEN requires ANTHROPIC_BASE_URL for a compatible Claude API gateway.".to_owned(),
+        ));
+    }
+
+    Err(AgentError::bad_request(
+        "Claude Code in WINK GO requires explicit API credentials. Configure \
+ANTHROPIC_API_KEY, or ANTHROPIC_AUTH_TOKEN together with ANTHROPIC_BASE_URL. \
+Claude.ai Free/Pro/Max subscription OAuth is not used."
+            .to_owned(),
+    ))
 }
 
 /// Build the `session-cli-config` dump payload from the resolved `SessionConfig`
@@ -2728,6 +2813,77 @@ mod build_mapping_tests {
             assemble_spawn_env(&[], &[]).is_empty(),
             "empty in = empty out (inherit-only spawn)"
         );
+    }
+
+    fn auth_env(entries: &[(&str, &str)]) -> Vec<winkgo_common::EnvVar> {
+        entries
+            .iter()
+            .map(|(name, value)| winkgo_common::EnvVar {
+                name: (*name).to_owned(),
+                value: (*value).to_owned(),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn claude_auth_accepts_explicit_api_key() {
+        let spawn = auth_env(&[("anthropic_api_key", "sk-ant-test")]);
+        assert!(validate_claude_api_auth(&spawn, &[]).is_ok());
+    }
+
+    #[test]
+    fn claude_auth_accepts_compatible_gateway_token_and_url() {
+        let inherited = vec![
+            ("ANTHROPIC_AUTH_TOKEN".to_owned(), "gateway-token".to_owned()),
+            ("ANTHROPIC_BASE_URL".to_owned(), "https://gateway.example".to_owned()),
+        ];
+        assert!(validate_claude_api_auth(&[], &inherited).is_ok());
+    }
+
+    #[test]
+    fn claude_auth_rejects_missing_explicit_credentials() {
+        let error = validate_claude_api_auth(&[], &[]).expect_err("missing credentials must fail");
+        assert!(error.to_string().contains("ANTHROPIC_API_KEY"));
+        assert!(error.to_string().contains("Free/Pro/Max"));
+    }
+
+    #[test]
+    fn claude_auth_rejects_gateway_token_without_base_url() {
+        let spawn = auth_env(&[("ANTHROPIC_AUTH_TOKEN", "gateway-token")]);
+        let error = validate_claude_api_auth(&spawn, &[]).expect_err("gateway URL must be explicit");
+        assert!(error.to_string().contains("ANTHROPIC_BASE_URL"));
+    }
+
+    #[test]
+    fn claude_auth_rejects_subscription_oauth_token_even_with_api_key() {
+        let spawn = auth_env(&[
+            ("ANTHROPIC_API_KEY", "sk-ant-test"),
+            ("CLAUDE_CODE_OAUTH_TOKEN", "subscription-token"),
+        ]);
+        let error = validate_claude_api_auth(&spawn, &[]).expect_err("subscription OAuth must fail");
+        assert!(error.to_string().contains("CLAUDE_CODE_OAUTH_TOKEN"));
+        assert!(error.to_string().contains("must not be reused"));
+    }
+
+    #[test]
+    fn external_cli_program_prefers_existing_probe_result() {
+        let probed = std::path::PathBuf::from("/opt/vendor/bin/claude");
+        let resolved = resolve_external_cli_program_candidates(
+            "definitely-missing-vendor-command",
+            Some(&probed),
+            Some("also-definitely-missing"),
+        );
+        assert_eq!(resolved, Some(probed));
+    }
+
+    #[test]
+    fn external_cli_program_accepts_an_explicit_user_command_path() {
+        let executable = std::env::current_exe().expect("current test executable");
+        let resolved =
+            resolve_external_cli_program_candidates("definitely-missing-vendor-command", None, executable.to_str())
+                .expect("explicit executable path must resolve");
+        assert!(resolved.is_file());
+        assert_eq!(resolved, executable);
     }
 
     #[test]

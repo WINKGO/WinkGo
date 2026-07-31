@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Business-logic layer for the ai-agent crate.
 //!
 //! Per `AGENTS.md` "Domain Crate Structure", this is the sole location

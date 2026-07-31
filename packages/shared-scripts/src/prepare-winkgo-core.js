@@ -16,14 +16,17 @@
  * @module prepare-winkgo-core
  */
 
-const { execSync, execFileSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { verifyBundledWinkGoCoreResources } = require('./verify-bundled-winkgo-core-resources');
+const {
+  assertCorePdfSkillCompliance,
+  verifyBundledWinkGoCoreResources,
+} = require('./verify-bundled-winkgo-core-resources');
 
-const GITHUB_OWNER = 'xuweihafeichangniu-lab';
-const GITHUB_REPO = 'wink-go';
+const DEFAULT_GITHUB_REPOSITORY = 'xuweihafeichangniu-lab/wink-go';
+const RETIRED_GITHUB_REPOSITORY = 'xuweihafeichangniu-lab/wink';
 
 const ACTIONS_ARTIFACT_TARGETS = {
   'darwin-arm64': {
@@ -87,8 +90,45 @@ function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, JSON.stringify(payload, null, 2) + '\n', 'utf-8');
 }
 
+function pruneBundledNodeDocumentation(bundleOut) {
+  const pending = [bundleOut];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (!current || !fs.existsSync(current)) continue;
+
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const target = path.join(current, entry.name);
+      if (entry.name === 'npm' && path.basename(current) === 'node_modules') {
+        // npm's documentation and man pages are not used by the embedded
+        // runtime. Excluding them avoids shipping examples with developer
+        // paths and sample credentials while retaining npm itself and LICENSE.
+        removeDirectorySafe(path.join(target, 'docs'));
+        removeDirectorySafe(path.join(target, 'man'));
+        const npmrcPath = path.join(target, '.npmrc');
+        if (fs.existsSync(npmrcPath) && fs.statSync(npmrcPath).size === 0) {
+          fs.rmSync(npmrcPath, { force: true });
+        }
+      }
+      pending.push(target);
+    }
+  }
+}
+
 function getBinaryName(platform) {
   return platform === 'win32' ? 'winkgo_core.exe' : 'winkgo_core';
+}
+
+function resolveGitHubRepository(env = process.env) {
+  const repository = (env.WINKGO_CORE_GITHUB_REPOSITORY || env.GITHUB_REPOSITORY || DEFAULT_GITHUB_REPOSITORY).trim();
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+    throw new Error(`Invalid WINK GO GitHub repository: ${repository || '(empty)'}`);
+  }
+  if (repository.toLowerCase() === RETIRED_GITHUB_REPOSITORY) {
+    throw new Error(`Refusing to prepare release resources from retired repository ${RETIRED_GITHUB_REPOSITORY}`);
+  }
+  const [owner, repo] = repository.split('/');
+  return { owner, repo, repository };
 }
 
 function buildLocalWinkGoCore(projectRoot, platform, arch) {
@@ -163,6 +203,10 @@ function getActionsArtifactMissingMessage({ runId, platform, arch, expectedArtif
 }
 
 function prepareManagedResources(binaryPath, targetDir) {
+  // Fail before executing any prebuilt Core. Historical release binaries
+  // embedded a proprietary PDF Skill that must never re-enter a new bundle.
+  assertCorePdfSkillCompliance(binaryPath);
+
   const bundleOut = path.join(targetDir, 'managed-resources');
   const dataDir = path.join(targetDir, '.prepare-data');
 
@@ -180,6 +224,7 @@ function prepareManagedResources(binaryPath, targetDir) {
     },
   });
 
+  pruneBundledNodeDocumentation(bundleOut);
   removeDirectorySafe(dataDir);
   return bundleOut;
 }
@@ -208,10 +253,11 @@ function verifyPreparedWinkGoCoreBundle(projectRoot, platform, arch) {
  */
 function resolveLatestTag() {
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || '';
+  const { repository } = resolveGitHubRepository();
 
   // 1. Try gh CLI (honours GH_TOKEN automatically)
   try {
-    const out = execSync(`gh api repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest --jq .tag_name`, {
+    const out = execFileSync('gh', ['api', `repos/${repository}/releases/latest`, '--jq', '.tag_name'], {
       encoding: 'utf-8',
       timeout: 15000,
     }).trim();
@@ -223,7 +269,7 @@ function resolveLatestTag() {
   // 2. Curl with optional token to avoid rate-limit 403
   try {
     const authArgs = token ? ['-H', `Authorization: token ${token}`] : [];
-    const args = ['-fsSL', ...authArgs, `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`];
+    const args = ['-fsSL', ...authArgs, `https://api.github.com/repos/${repository}/releases/latest`];
     const out = execFileSync('curl', args, { encoding: 'utf-8', timeout: 15000 });
     const tag = JSON.parse(out).tag_name;
     if (tag) return tag;
@@ -254,8 +300,9 @@ function getAssetName(platform, arch, tag) {
   return `winkgo_core-${tag}-${normalizedArch}-${normalizedPlatform}${ext}`;
 }
 
-function getDownloadUrl(assetName, tag) {
-  return `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}/${assetName}`;
+function getDownloadUrl(assetName, tag, env = process.env) {
+  const { repository } = resolveGitHubRepository(env);
+  return `https://github.com/${repository}/releases/download/${tag}/${assetName}`;
 }
 
 function downloadFile(url, outputPath) {
@@ -381,13 +428,13 @@ function downloadFileWithAuth(url, outputPath) {
 }
 
 function listActionsArtifacts(runId) {
-  const response = githubApiGetJson(
-    `repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/runs/${runId}/artifacts?per_page=100`
-  );
+  const { repository } = resolveGitHubRepository();
+  const response = githubApiGetJson(`repos/${repository}/actions/runs/${runId}/artifacts?per_page=100`);
   return Array.isArray(response?.artifacts) ? response.artifacts : [];
 }
 
 function downloadAndExtractActionsArtifact(platform, arch, runId) {
+  const { repository } = resolveGitHubRepository();
   const expectedArtifactName = getActionsArtifactName(platform, arch);
   if (!expectedArtifactName) {
     throw new Error(`Unsupported WinkGoCore Actions artifact target: ${platform}-${arch}`);
@@ -420,8 +467,7 @@ function downloadAndExtractActionsArtifact(platform, arch, runId) {
   ensureDirectory(tempDir);
 
   const downloadUrl =
-    artifact.archive_download_url ||
-    `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/artifacts/${artifact.id}/zip`;
+    artifact.archive_download_url || `https://api.github.com/repos/${repository}/actions/artifacts/${artifact.id}/zip`;
   console.log(`  Downloading winkgo_core from WinkGoCore run ${runId} artifact ${expectedArtifactName}`);
   downloadFileWithAuth(downloadUrl, artifactZipPath);
   extractArchive(artifactZipPath, artifactExtractDir, platform);
@@ -586,7 +632,7 @@ function prepareWinkGoCore(options) {
     }
   }
 
-  // 4. Fall back to a release from the user's WINK GO repository.
+  // 4. Fall back to a release from the WINK GO repository.
   if (!sourcePath) {
     if (!tag) {
       tag = resolveLatestTag();
@@ -644,6 +690,8 @@ function prepareWinkGoCore(options) {
 module.exports = {
   getActionsArtifactMissingMessage,
   getActionsArtifactName,
+  getDownloadUrl,
   prepareWinkGoCore,
+  resolveGitHubRepository,
   verifyPreparedWinkGoCoreBundle,
 };

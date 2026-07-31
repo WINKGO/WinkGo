@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `ClaudeAdapter` — the ONLY claude-aware code (seam a-side). Spawns the
 //! claude CLI headless, frames + parses its stream-json (NDJSON) into the
 //! canonical `SessionEvent` vocabulary, and declares its capabilities.
@@ -837,8 +838,8 @@ impl BackendAdapter for ClaudeAdapter {
         args.extend(extra_args.iter().cloned());
 
         let spec = CommandSpec {
-            // Orchestration-resolved bundled CLI (packaged app) or bare "claude"
-            // (dev → PATH). See SessionConfig.cli_program.
+            // Orchestration-resolved path to the user's separately installed
+            // official Claude Code CLI. WINK GO never bundles Claude Code.
             command: cli_program.map(|p| p.to_path_buf()).unwrap_or_else(|| "claude".into()),
             args,
             // #103: provider env injected by the orchestration layer (e.g. cc-switch

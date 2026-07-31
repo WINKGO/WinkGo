@@ -23,10 +23,8 @@ const baseProps = {
   isMobile: false,
   isSettings: false,
   collapsed: false,
-  theme: 'light',
   siderTooltipProps: { disabled: true },
   onSettingsClick: vi.fn(),
-  onThemeToggle: vi.fn(),
 };
 
 describe('SiderFooter user menu', () => {
@@ -47,7 +45,8 @@ describe('SiderFooter user menu', () => {
 
     const menu = screen.getByTestId('sider-user-menu');
     expect(screen.getByText('wink-user')).toBeInTheDocument();
-    expect(screen.getByText('WINK GO · winkgo')).toBeInTheDocument();
+    expect(screen.getByText('WINK GO · common.localAccount')).toBeInTheDocument();
+    expect(screen.queryByText('WINK GO · winkgo')).not.toBeInTheDocument();
     expect(screen.getAllByText('common.settings')).toHaveLength(2);
     expect(screen.getByText('settings.googleLogout')).toBeInTheDocument();
 

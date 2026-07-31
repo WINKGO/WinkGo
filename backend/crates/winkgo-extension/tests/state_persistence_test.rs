@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for state persistence (test-plan SP-1..SP-3).
 //!
 //! These tests exercise `ExtensionStateStore` and the underlying file I/O

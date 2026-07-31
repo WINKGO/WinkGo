@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `winkgo_core mcp-bridge` subcommand: stdio ↔ TCP bridge for the team MCP server.
 //!
 //! Spawned by the ACP agent CLI as an MCP server with command `winkgo_core mcp-bridge`.

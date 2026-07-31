@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for the DingTalk plugin.
 //!
 //! Tests the DingtalkPlugin through the public ChannelPlugin trait interface

@@ -1,5 +1,6 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 name: ✨ Feature Request
-description: Suggest an idea for WinkGo
+description: Suggest an idea for WINK GO
 title: '[Feature]: '
 labels: ['enhancement']
 body:

@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # ACP Agent Skill 发现机制调研
 
 调研日期：2026-06-29
@@ -103,13 +105,13 @@ ACP 支持通过 `_meta` 字段和自定义扩展方法做 vendor 扩展，也�
 | `opencode`  | OpenCode    | `.opencode/skills`   | OpenCode 文档确认 `.opencode/skills`、`.claude/skills`、`.agents/skills` | 未确认热加载；文档只说明发现和按需加载                    |
 | `vibe`      | Vibe        | `.vibe/skills`       | Mistral 文档确认 `.vibe/skills` 和 `.agents/skills`                      | 未确认热加载；文档只说明发现路径                          |
 | `cursor`    | Cursor      | `.cursor/skills`     | 本轮未确认                                                               | 未知                                                      |
-| `auggie`    | Auggie      | `NULL`               | WINK GO Core 行没有 native dir                                           | 只能走 prompt injection                                   |
-| `copilot`   | Copilot     | `NULL`               | WINK GO Core 行没有 native dir                                           | 只能走 prompt injection                                   |
-| `qoder`     | Qoder       | `NULL`               | WINK GO Core 行没有 native dir                                           | 只能走 prompt injection                                   |
-| `kiro`      | Kiro        | `NULL`               | WINK GO Core 行没有 native dir                                           | 只能走 prompt injection                                   |
-| `hermes`    | Hermes      | `NULL`               | WINK GO Core 行没有 native dir                                           | 只能走 prompt injection                                   |
-| `snow`      | Snow        | `NULL`               | WINK GO Core 行没有 native dir                                           | 只能走 prompt injection                                   |
-| `openclaw`  | OpenClaw    | `NULL`               | WINK GO Core 行没有 native dir                                           | 只能走 prompt injection                                   |
+| `auggie`    | Auggie      | `NULL`               | WINK GO Core 行没有 native dir                                         | 只能走 prompt injection                                   |
+| `copilot`   | Copilot     | `NULL`               | WINK GO Core 行没有 native dir                                         | 只能走 prompt injection                                   |
+| `qoder`     | Qoder       | `NULL`               | WINK GO Core 行没有 native dir                                         | 只能走 prompt injection                                   |
+| `kiro`      | Kiro        | `NULL`               | WINK GO Core 行没有 native dir                                         | 只能走 prompt injection                                   |
+| `hermes`    | Hermes      | `NULL`               | WINK GO Core 行没有 native dir                                         | 只能走 prompt injection                                   |
+| `snow`      | Snow        | `NULL`               | WINK GO Core 行没有 native dir                                         | 只能走 prompt injection                                   |
+| `openclaw`  | OpenClaw    | `NULL`               | WINK GO Core 行没有 native dir                                         | 只能走 prompt injection                                   |
 
 ## Agent 扫描 skill 目录的时机
 
@@ -231,7 +233,7 @@ Mistral Vibe 文档说明：CLI 会从 `skill_paths`、受信任目录中的项�
 
 - WINK GO Core 可以通过 `link_workspace_skills` 在 workspace 中创建 skill 软链。
 - WINK GO Core 会在发送消息和 warmup 前重新确保创建时快照里的 skill links。
-- WinkGo 的 send message 参数里已经有 `inject_skills` 字段。
+- WINK GO 的 send message 参数里已经有 `inject_skills` 字段。
 
 缺口：
 

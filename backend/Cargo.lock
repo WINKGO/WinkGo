@@ -5750,10 +5750,8 @@ name = "winkgo-agent-config"
 version = "0.2.7"
 dependencies = [
  "anyhow",
- "chrono",
  "dirs",
  "glob",
- "reqwest",
  "serde",
  "serde_json",
  "thiserror 2.0.18",

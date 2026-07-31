@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { ResponseMapperKey } from './mappers';
 
 export type HttpRoute = {

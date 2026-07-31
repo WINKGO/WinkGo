@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use dashmap::DashMap;
 use winkgo_common::{TimestampMs, now_ms};
 

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use tracing::warn;
 use winkgo_ai_agent::AgentSendError;
 use winkgo_common::{ErrorChain, now_ms};

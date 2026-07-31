@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -26,6 +27,7 @@ type AgentCardProps =
       boundAssistants: Assistant[];
       onTestConnection: () => void;
       onConfigure: () => void;
+      onOpenSetup: () => void;
       isTesting?: boolean;
     }
   | {
@@ -120,6 +122,10 @@ const AgentCard: React.FC<AgentCardProps> = (props) => {
   });
 
   const stop = (event: React.MouseEvent) => event.stopPropagation();
+  const openSetup = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (props.type === 'official') props.onOpenSetup();
+  };
 
   return (
     <div
@@ -152,11 +158,30 @@ const AgentCard: React.FC<AgentCardProps> = (props) => {
             >
               {t(statusLabelKey(displayStatus))}
             </Tag>
-            {diagnostics && (
+            {props.type === 'official' ? (
+              <Tooltip
+                content={
+                  <span className='block max-w-320px'>
+                    {diagnostics ? <span className='mb-4px block'>{diagnostics}</span> : null}
+                    <span>{t('settings.agentManagement.openAgentSetupHint')}</span>
+                  </span>
+                }
+              >
+                <button
+                  aria-label={t('settings.agentManagement.openAgentSetup', { name: agent.name })}
+                  className='size-20px flex flex-shrink-0 items-center justify-center rd-full border-none bg-transparent p-0 text-12px text-t-secondary transition-colors hover:bg-fill-2 hover:text-primary-6'
+                  data-testid={`agent-row-setup-${agent.id}`}
+                  type='button'
+                  onClick={openSetup}
+                >
+                  ⓘ
+                </button>
+              </Tooltip>
+            ) : diagnostics ? (
               <Tooltip content={diagnostics}>
                 <Typography.Text className='flex-shrink-0 text-11px text-t-secondary'>ⓘ</Typography.Text>
               </Tooltip>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

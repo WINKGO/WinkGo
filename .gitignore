@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 # Logs
 logs
 *.log
@@ -194,6 +195,12 @@ tests/e2e/report/
 # Local-only external/generated product assets
 /docs/vendor/*
 !/docs/vendor/aionui-source-notice-manifest.txt
+!/docs/vendor/aionui-modification-manifest.tsv
+!/docs/vendor/aioncore-modification-manifest.tsv
+!/docs/vendor/aionrs-modification-manifest.tsv
+!/docs/vendor/aionui-upstream-inventory.tsv
+!/docs/vendor/aioncore-upstream-inventory.tsv
+!/docs/vendor/aionrs-upstream-inventory.tsv
 /public/knowledge-canvas/
 /resources/winkgo/provider-skills/
 /packages/desktop/winkgo_native_drop.node

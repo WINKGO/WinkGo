@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use serde::{Deserialize, Serialize};
 
 /// Response for `GET /api/system/info`.
@@ -113,11 +114,11 @@ mod tests {
     fn test_update_check_request_with_options() {
         let raw = json!({
             "include_prerelease": true,
-            "repo": "xuweihafeichangniu-lab/wink-go"
+            "repo": "xuweihafeichangniu-lab/winkgo"
         });
         let req: UpdateCheckRequest = serde_json::from_value(raw).unwrap();
         assert!(req.include_prerelease);
-        assert_eq!(req.repo.as_deref(), Some("xuweihafeichangniu-lab/wink-go"));
+        assert_eq!(req.repo.as_deref(), Some("xuweihafeichangniu-lab/winkgo"));
     }
 
     // -- UpdateCheckResult --

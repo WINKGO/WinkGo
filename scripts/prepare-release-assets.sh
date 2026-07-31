@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Modified from AionUI by WINK GO contributors in 2026.
 # prepare-release-assets.sh
 #
 # Normalize electron-updater metadata from multi-arch build artifacts
@@ -30,12 +31,20 @@ mkdir -p "$OUTPUT_DIR"
 
 # Keep the canonical license and attribution documents next to every public
 # release, in addition to the copies embedded in each distributable.
-for legal_file in LICENSE NOTICE THIRD_PARTY_NOTICES.md; do
+for legal_file in LICENSE NOTICE THIRD_PARTY_NOTICES.md PRIVACY.md TERMS.md; do
   if [ ! -s "$legal_file" ]; then
     echo "::error::Missing or empty legal document: $legal_file"
     exit 1
   fi
   cp -f "$legal_file" "$OUTPUT_DIR/$legal_file"
+done
+
+for legal_file in THIRD_PARTY_DEPENDENCIES.json THIRD_PARTY_LICENSES.txt; do
+  if [ ! -s "legal/$legal_file" ]; then
+    echo "::error::Missing or empty generated legal artifact: legal/$legal_file"
+    exit 1
+  fi
+  cp -f "legal/$legal_file" "$OUTPUT_DIR/$legal_file"
 done
 
 # ---------------------------------------------------------------------------
@@ -142,7 +151,7 @@ else
   VERSION=$(node -p "require('./package.json').version")
 fi
 MISSING=0
-for required in latest.yml latest-mac.yml latest-linux.yml latest-linux-arm64.yml; do
+for required in latest.yml latest-win-arm64.yml latest-mac.yml latest-arm64-mac.yml latest-linux.yml latest-linux-arm64.yml; do
   if [ ! -f "$OUTPUT_DIR/$required" ]; then
     echo "::error::Missing required updater metadata: $required"
     MISSING=1
@@ -155,6 +164,12 @@ done
 echo "==> Validating desktop release assets ..."
 
 for arch in x64 arm64; do
+  asset="WINK-GO-Free-Setup-${VERSION}-${arch}.exe"
+  if [ ! -f "$OUTPUT_DIR/$asset" ]; then
+    echo "::error::Missing Windows installer: $asset"
+    MISSING=1
+  fi
+
   for ext in dmg zip; do
     asset="WINK-GO-Free-${VERSION}-mac-${arch}.${ext}"
     if [ ! -f "$OUTPUT_DIR/$asset" ]; then
@@ -166,6 +181,12 @@ for arch in x64 arm64; do
       MISSING=1
     fi
   done
+
+  asset="WINK-GO-Free-${VERSION}-linux-${arch}.deb"
+  if [ ! -f "$OUTPUT_DIR/$asset" ]; then
+    echo "::error::Missing Linux package: $asset"
+    MISSING=1
+  fi
 done
 
 # ---------------------------------------------------------------------------

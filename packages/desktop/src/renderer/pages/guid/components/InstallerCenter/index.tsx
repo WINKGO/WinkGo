@@ -3,7 +3,7 @@ import antigravityLogo from '@/renderer/assets/product-logos/antigravity.png';
 import claudeLogo from '@/renderer/assets/product-logos/claude.png';
 import codexLogo from '@/renderer/assets/product-logos/codex.svg';
 import { Button, Message, Modal, Tag } from '@arco-design/web-react';
-import { Apple, DownloadOne, Windows } from '@icon-park/react';
+import { Apple, Link, Windows } from '@icon-park/react';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isMacOS } from '@/renderer/utils/platform';
@@ -45,7 +45,7 @@ const InstallerCenter: React.FC<InstallerCenterProps> = ({ visible, onCancel }) 
   const preferredPlatform = isMacOS() ? 'macos' : 'windows';
   const groups = useMemo(() => getInstallerGroups(preferredPlatform), [preferredPlatform]);
 
-  const handleDownload = async (installer: InstallerItem) => {
+  const handleOpenOfficialPage = async (installer: InstallerItem) => {
     if (!isTrustedInstallerUrl(installer.downloadUrl)) {
       Message.error(t('guid.installerCenter.downloadFailed'));
       return;
@@ -54,7 +54,7 @@ const InstallerCenter: React.FC<InstallerCenterProps> = ({ visible, onCancel }) 
     try {
       await openExternalUrl(installer.downloadUrl);
     } catch (error) {
-      console.error('[InstallerCenter] Failed to open installer URL:', error);
+      console.error('[InstallerCenter] Failed to open official installation page:', error);
       Message.error(t('guid.installerCenter.downloadFailed'));
     }
   };
@@ -105,42 +105,39 @@ const InstallerCenter: React.FC<InstallerCenterProps> = ({ visible, onCancel }) 
                 </div>
 
                 <div className={styles.cardGrid}>
-                  {group.installers.map((installer) => {
-                    const packageType = isWindows ? '.EXE' : '.DMG';
-                    return (
-                      <article className={`${styles.installerCard} ${TONE_CLASSES[installer.tone]}`} key={installer.id}>
-                        <div className={styles.cardHeader}>
-                          <span
-                            className={`${styles.productLogoFrame} ${PRODUCT_LOGO_SHAPES[installer.product]}`}
-                            aria-hidden='true'
-                          >
-                            <img className={styles.productLogo} src={PRODUCT_LOGOS[installer.product]} alt='' />
-                          </span>
-                          <span className={styles.packageType}>{packageType}</span>
-                        </div>
-                        <div className={styles.cardCopy}>
-                          <strong>{installer.productName}</strong>
-                          <span>
-                            {t('guid.installerCenter.environmentSetup', {
-                              platform: platformLabel,
-                            })}
-                          </span>
-                        </div>
-                        <Button
-                          className={styles.downloadButton}
-                          type='primary'
-                          icon={<DownloadOne theme='outline' size='16' fill='currentColor' />}
-                          onClick={() => void handleDownload(installer)}
+                  {group.installers.map((installer) => (
+                    <article className={`${styles.installerCard} ${TONE_CLASSES[installer.tone]}`} key={installer.id}>
+                      <div className={styles.cardHeader}>
+                        <span
+                          className={`${styles.productLogoFrame} ${PRODUCT_LOGO_SHAPES[installer.product]}`}
+                          aria-hidden='true'
                         >
-                          {t('common.download')}
-                        </Button>
-                      </article>
-                    );
-                  })}
+                          <img className={styles.productLogo} src={PRODUCT_LOGOS[installer.product]} alt='' />
+                        </span>
+                      </div>
+                      <div className={styles.cardCopy}>
+                        <strong>{installer.productName}</strong>
+                        <span>
+                          {t('guid.installerCenter.environmentSetup', {
+                            platform: platformLabel,
+                          })}
+                        </span>
+                      </div>
+                      <Button
+                        className={styles.downloadButton}
+                        type='primary'
+                        icon={<Link theme='outline' size='16' fill='currentColor' />}
+                        onClick={() => void handleOpenOfficialPage(installer)}
+                      >
+                        {t('guid.installerCenter.openOfficialPage')}
+                      </Button>
+                    </article>
+                  ))}
                 </div>
               </section>
             );
           })}
+          <p className={styles.thirdPartyDisclaimer}>{t('guid.installerCenter.thirdPartyDisclaimer')}</p>
         </div>
       </div>
     </Modal>

@@ -4,6 +4,7 @@ description: |
   Use when the user wants a local file or image sent back, such as "send me the file"
   or "发给我".
 ---
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 
 # Weixin File Send
 

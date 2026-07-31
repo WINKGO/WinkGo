@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Supplemental tests for Phase 8 — RuntimeDiscovery.
 // Covers test-plan.md TC-21 through TC-37.
 //

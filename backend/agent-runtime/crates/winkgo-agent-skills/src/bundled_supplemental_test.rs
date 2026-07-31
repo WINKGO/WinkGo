@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Phase 10 supplemental tests — loader integration for bundled skills.
 // Covers TC-10.20~10.22 and TC-10.26:
 //   TC-10.20: bundled skills appear in load_all_skills (normal mode)

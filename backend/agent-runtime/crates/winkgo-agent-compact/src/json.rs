@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 const INLINE_THRESHOLD: usize = 80;
 
 fn compact_value(value: &serde_json::Value) -> String {

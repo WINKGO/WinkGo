@@ -1,7 +1,7 @@
 {
   "name": "WINK GO",
   "short_name": "WINK GO",
-  "description": "WINK GO multi-model AI workspace for mobile and desktop browsers.",
+  "description": "WINK GO local-first AI agent workspace for mobile and desktop browsers.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

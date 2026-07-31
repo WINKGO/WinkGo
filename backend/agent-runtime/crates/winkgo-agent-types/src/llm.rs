@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use serde_json::Value;
 
 use crate::message::{StopReason, TokenUsage, ToolUseId};

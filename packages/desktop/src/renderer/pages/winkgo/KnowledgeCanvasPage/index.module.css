@@ -161,6 +161,43 @@
   animation: canvas-breathe 1.25s ease-in-out infinite alternate;
 }
 
+.unavailable {
+  height: 100%;
+  padding: 32px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--color-text-2);
+}
+
+.unavailable h2 {
+  margin: 16px 0 6px;
+  color: var(--color-text-1);
+  font-size: 17px;
+}
+
+.unavailable p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.unavailableMark {
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  color: #315fce;
+  background: linear-gradient(145deg, #edf4ff, #dfe9ff);
+}
+
 @keyframes canvas-breathe {
   from {
     transform: scale(0.96);
@@ -182,7 +219,8 @@
 }
 
 :global([data-theme='dark']) .canvasMark,
-:global([data-theme='dark']) .loadingMark {
+:global([data-theme='dark']) .loadingMark,
+:global([data-theme='dark']) .unavailableMark {
   color: #a7bdff;
   background: rgba(91, 125, 213, 0.2);
 }

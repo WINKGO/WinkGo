@@ -19,7 +19,6 @@
         "ru-RU": "Создаёт, редактирует и анализирует профессиональные документы Word с помощью officecli: отчёты, предложения, письма, служебные записки и другое.",
         "uk-UA": "Створюйте, редагуйте та аналізуйте професійні документи Word за допомогою officecli: звіти, пропозиції, листи, нотатки тощо."
       },
-      "avatar": "avatars/word-creator.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "officecli-docx"
@@ -54,7 +53,8 @@
           "Створити звіт про статус проекту з водяним знаком DRAFT, кольоровою таблицею статусів та діаграмою Ганта"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/word-creator.jpg"
     },
     {
       "id": "ppt-creator",
@@ -74,7 +74,6 @@
         "ru-RU": "Создаёт, редактирует и анализирует профессиональные презентации PowerPoint с помощью officecli: выразительный дизайн, разнообразные макеты и сильная визуальная подача.",
         "uk-UA": "Створюйте, редагуйте та аналізуйте професійні презентації PowerPoint за допомогою officecli: виразний дизайн, різноманітні макети та візуальний вплив."
       },
-      "avatar": "avatars/ppt-creator.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "officecli-pptx"
@@ -109,7 +108,8 @@
           "Створити дорожню карту фінтех-продукту на 10 слайдів для платформи цифрових платежів з аналізом інвестицій"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/ppt-creator.jpg"
     },
     {
       "id": "excel-creator",
@@ -129,7 +129,6 @@
         "ru-RU": "Создаёт, редактирует и анализирует профессиональные таблицы Excel с помощью officecli: финансовые модели, дашборды, трекеры и анализ данных.",
         "uk-UA": "Створюйте, редагуйте та аналізуйте професійні таблиці Excel за допомогою officecli: фінансові моделі, дашборди, трекери та аналіз даних."
       },
-      "avatar": "avatars/excel-creator.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "officecli-xlsx"
@@ -164,7 +163,8 @@
           "Створити бюджетний трекер із формулами розбіжностей між аркушами та гістограмою \"бюджет проти факту\""
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/excel-creator.jpg"
     },
     {
       "id": "morph-ppt",
@@ -184,7 +184,6 @@
         "ru-RU": "Создаёт профессиональные презентации с анимацией Morph через officecli. Поддерживает разные визуальные стили и полный цикл от идеи до готовых слайдов.",
         "uk-UA": "Створюйте професійні презентації з анімацією Morph за допомогою officecli. Підтримує різні візуальні стилі та повний робочий процес від ідеї до готових слайдів."
       },
-      "avatar": "avatars/morph-ppt.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "morph-ppt"
@@ -219,7 +218,8 @@
           "Створи презентацію про кавовий бренд у стилі мінімалістичного преміуму"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/morph-ppt.jpg"
     },
     {
       "id": "morph-ppt-3d",
@@ -235,7 +235,6 @@
         "en-US": "Turn a GLB 3D model into a cinematic Morph presentation. The model is the visual hero — close-up for details, bird's eye for structure, low angle for drama, with smooth Morph transitions between every shot. Note: 3D models and Morph transitions require Microsoft PowerPoint to display correctly.",
         "zh-CN": "把 GLB 3D 模型变成电影感 Morph 演示文稿。模型是视觉主角——特写看细节、俯视看结构、仰拍看气势，每页之间用 Morph 转场做流畅的镜头运动。注意：3D 模型和 Morph 转场效果需要在微软 PowerPoint 中打开才能正常显示。"
       },
-      "avatar": "avatars/morph-ppt-3d.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "morph-ppt-3d",
@@ -261,7 +260,8 @@
           "围绕这个 3D 模型做一份像电影预告片一样的演示。要有大气的高潮时刻、细腻的特写镜头、开阔的全景俯瞰。故事要契合模型本身的特征——不要用跟模型无关的通用文案。"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/morph-ppt-3d.jpg"
     },
     {
       "id": "pitch-deck-creator",
@@ -281,7 +281,6 @@
         "ru-RU": "Создаёт инвесторские питч-деки, презентации запусков и корпоративные продажи: градиентный дизайн, графики, таблицы конкурентов, слайды команды и заметки спикера. Подходит для стадий от seed до Series A и выше.",
         "uk-UA": "Створюйте інвесторські пітч-деки, презентації продуктів та корпоративні продажі: градієнтний дизайн, графіки, таблиці конкурентів, слайди команди та нотатки доповідача. Підходить для стадій від Seed до Series A+."
       },
-      "avatar": "avatars/pitch-deck-creator.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "officecli-pitch-deck"
@@ -316,7 +315,8 @@
           "Створити 10 слайдів корпоративної презентації для платформи кібербезпеки з аналізом ROI та графіком впровадження"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/pitch-deck-creator.jpg"
     },
     {
       "id": "dashboard-creator",
@@ -336,7 +336,6 @@
         "ru-RU": "Преобразует CSV и табличные данные в аккуратные Excel-дашборды: KPI-карточки, графики с привязкой к данным, спарклайны и условное форматирование. Масштабирует сложность под объём данных - от краткой сводки до полноценной аналитической панели.",
         "uk-UA": "Перетворюйте CSV або табличні дані на професійні дашборди Excel: KPI-картки, графіки з прив'язкою до даних, спарклайни та умовне форматування. Автоматично масштабує складність під обсяг даних."
       },
-      "avatar": "avatars/dashboard-creator.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "officecli-data-dashboard"
@@ -371,7 +370,8 @@
           "Зробити дашборд \"бюджет проти факту\" для 8 відділів з індикаторами розбіжностей"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/dashboard-creator.jpg"
     },
     {
       "id": "academic-paper",
@@ -391,7 +391,6 @@
         "ru-RU": "Создаёт академические статьи, научные работы и white paper со строгой структурой: нативное оглавление Word, формулы LaTeX в OMML, библиография в форматах APA/Physics/Chicago, сноски, многоколоночная вёрстка и стили под тип работы.",
         "uk-UA": "Створюйте структуровані академічні статті, наукові роботи та White Papers: зміст Word, формули LaTeX в OMML, бібліографія (APA/Physics/Chicago), виноски та багатоколонкова верстка."
       },
-      "avatar": "avatars/academic-paper.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "officecli-academic-paper"
@@ -426,7 +425,8 @@
           "Створити наукову роботу в стилі APA про організаційну культуру з 3 таблицями даних та 15 джерелами"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/academic-paper.jpg"
     },
     {
       "id": "financial-model-creator",
@@ -446,7 +446,6 @@
         "ru-RU": "Строит финансовые модели на основе текстового запроса: три финансовые формы, DCF-оценка, cap table, сценарный анализ, таблицы чувствительности и долговые графики. Все значения выводятся через связные формульные цепочки от исходных предположений.",
         "uk-UA": "Будуйте фінансові моделі на основі формул за текстовим запитом: три фінансові форми, DCF-оцінка, Cap Tables, сценарний аналіз та графіки боргів."
       },
-      "avatar": "avatars/financial-model-creator.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "officecli-financial-model"
@@ -481,7 +480,8 @@
           "Побудувати Cap Table з раундами Seed та раундом A, преференціями ліквідації"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/financial-model-creator.jpg"
     },
     {
       "id": "openclaw-setup",
@@ -501,7 +501,6 @@
         "ru-RU": "Эксперт по установке, развёртыванию, настройке и устранению неполадок OpenClaw. Помогает пройти настройку, диагностирует проблемы и подсказывает безопасные практики.",
         "uk-UA": "Експертний посібник зі встановлення, розгортання, налаштування та усунення несправностей OpenClaw. Допомагає з налаштуванням та безпекою."
       },
-      "avatar": "avatars/openclaw-setup.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "openclaw-setup",
@@ -537,18 +536,19 @@
           "Налаштувати канал Telegram для інтеграції з OpenClaw"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/openclaw-setup.jpg"
     },
     {
       "id": "cowork",
       "sort_order": 160,
       "default_enabled": false,
-      "name": "Cowork",
+      "name": "Workspace Operator",
       "name_i18n": {
-        "en-US": "Cowork",
-        "zh-CN": "Cowork",
-        "ru-RU": "Cowork",
-        "uk-UA": "Cowork"
+        "en-US": "Workspace Operator",
+        "zh-CN": "工作区执行助手",
+        "ru-RU": "Оператор рабочего пространства",
+        "uk-UA": "Оператор робочого простору"
       },
       "description": "Autonomous task execution with file operations, document processing, and multi-step workflow planning.",
       "description_i18n": {
@@ -557,13 +557,11 @@
         "ru-RU": "Автономный помощник для выполнения задач с работой с файлами, обработкой документов и многошаговым планированием.",
         "uk-UA": "Автономне виконання завдань з роботою з файлами, обробкою документів та багатокроковим плануванням робочих процесів."
       },
-      "avatar": "avatars/cowork.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "skill-creator",
         "officecli-pptx",
         "officecli-docx",
-        "pdf",
         "officecli-xlsx"
       ],
       "custom_skill_names": [],
@@ -571,32 +569,28 @@
       "rule_file": "rules/cowork.{locale}.md",
       "prompts": [
         "Analyze the current project structure and suggest improvements",
-        "Automate the build and deployment process",
-        "Extract and summarize key information from all PDF files"
+        "Automate the build and deployment process"
       ],
       "prompts_i18n": {
         "en-US": [
           "Analyze the current project structure and suggest improvements",
-          "Automate the build and deployment process",
-          "Extract and summarize key information from all PDF files"
+          "Automate the build and deployment process"
         ],
         "zh-CN": [
           "分析当前项目结构并建议改进方案",
-          "自动化构建和部署流程",
-          "提取并总结所有 PDF 文件的关键信息"
+          "自动化构建和部署流程"
         ],
         "ru-RU": [
           "Проанализируй структуру текущего проекта и предложи улучшения",
-          "Автоматизируй процесс сборки и развёртывания",
-          "Извлеки и обобщи ключевую информацию из всех PDF-файлов"
+          "Автоматизируй процесс сборки и развёртывания"
         ],
         "uk-UA": [
           "Проаналізувати структуру поточного проекту та запропонувати покращення",
-          "Автоматизувати процес збірки та розгортання",
-          "Витягти та узагальнити ключову інформацію з усіх файлів PDF"
+          "Автоматизувати процес збірки та розгортання"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/cowork.jpg"
     },
     {
       "id": "game-3d",
@@ -616,7 +610,6 @@
         "ru-RU": "Генерирует полноценную 3D-игру-платформер со сбором предметов в одном HTML-файле.",
         "uk-UA": "Генеруйте повноцінну 3D-гру-платформер зі збором предметів в одному HTML-файлі."
       },
-      "avatar": "avatars/game-3d.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [],
       "custom_skill_names": [],
@@ -649,27 +642,27 @@
           "Побудувати 3D-гру з дослідженням лабіринту"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/game-3d.jpg"
     },
     {
       "id": "ui-ux-pro-max",
       "sort_order": 120,
       "default_enabled": false,
-      "name": "UI/UX Pro Max",
+      "name": "UI/UX Design Studio",
       "name_i18n": {
-        "en-US": "UI/UX Pro Max",
-        "zh-CN": "UI/UX 专业设计师",
-        "ru-RU": "UI/UX Pro Max",
-        "uk-UA": "UI/UX Pro Max"
+        "en-US": "UI/UX Design Studio",
+        "zh-CN": "UI/UX 设计工作室",
+        "ru-RU": "Студия UI/UX-дизайна",
+        "uk-UA": "Студія UI/UX-дизайну"
       },
-      "description": "Professional UI/UX design intelligence with 57 styles, 95 color palettes, 56 font pairings, and stack-specific best practices.",
+      "description": "A practical UI/UX assistant for accessible flows, responsive layouts, reusable design systems, and implementation reviews.",
       "description_i18n": {
-        "en-US": "Professional UI/UX design intelligence with 57 styles, 95 color palettes, 56 font pairings, and stack-specific best practices.",
-        "zh-CN": "专业 UI/UX 设计智能助手，包含 57 种风格、95 个配色方案、56 个字体配对及技术栈最佳实践。",
-        "ru-RU": "Профессиональный UI/UX-помощник с 57 стилями, 95 цветовыми палитрами, 56 сочетаниями шрифтов и лучшими практиками для разных стеков.",
-        "uk-UA": "Професійний UI/UX-помічник з 57 стилями, 95 кольоровими палітрами, 56 поєднаннями шрифтів та найкращими практиками для різних технологій."
+        "en-US": "A practical UI/UX assistant for accessible flows, responsive layouts, reusable design systems, and implementation reviews.",
+        "zh-CN": "面向可访问流程、响应式布局、可复用设计系统和实现审查的实用 UI/UX 助手。",
+        "ru-RU": "Практичный UI/UX-помощник для доступных сценариев, адаптивных макетов, дизайн-систем и проверки реализации.",
+        "uk-UA": "Практичний UI/UX-помічник для доступних сценаріїв, адаптивних макетів, дизайн-систем і перевірки реалізації."
       },
-      "avatar": "avatars/ui-ux-pro-max.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [],
       "custom_skill_names": [],
@@ -702,80 +695,27 @@
           "Розробити інтерфейс дашборду для SaaS-продукту"
         ]
       },
-      "models": []
-    },
-    {
-      "id": "planning-with-files",
-      "sort_order": 150,
-      "default_enabled": false,
-      "name": "Planning with Files",
-      "name_i18n": {
-        "en-US": "Planning with Files",
-        "zh-CN": "文件规划助手",
-        "ru-RU": "Планирование с файлами",
-        "uk-UA": "Планування з файлами"
-      },
-      "description": "Manus-style file-based planning for complex tasks. Uses task_plan.md, findings.md, and progress.md to maintain persistent context.",
-      "description_i18n": {
-        "en-US": "Manus-style file-based planning for complex tasks. Uses task_plan.md, findings.md, and progress.md to maintain persistent context.",
-        "zh-CN": "Manus 风格的文件规划，用于复杂任务。使用 task_plan.md、findings.md 和 progress.md 维护持久化上下文。",
-        "ru-RU": "Файловое планирование в стиле Manus для сложных задач. Использует task_plan.md, findings.md и progress.md для сохранения устойчивого контекста.",
-        "uk-UA": "Файлове планування в стилі Manus для складних завдань. Використовує task_plan.md, findings.md та progress.md для збереження контексту."
-      },
-      "avatar": "avatars/planning-with-files.jpg",
-      "agent_ref": "winkgo_agent",
-      "enabled_skills": [],
-      "custom_skill_names": [],
-      "disabled_builtin_skills": [],
-      "rule_file": "rules/planning-with-files.{locale}.md",
-      "prompts": [
-        "Plan a comprehensive refactoring task with milestones",
-        "Break down the feature implementation into actionable steps",
-        "Create a project plan for migrating to a new framework"
-      ],
-      "prompts_i18n": {
-        "en-US": [
-          "Plan a comprehensive refactoring task with milestones",
-          "Break down the feature implementation into actionable steps",
-          "Create a project plan for migrating to a new framework"
-        ],
-        "zh-CN": [
-          "规划一个包含里程碑的全面重构任务",
-          "将功能实现拆分为可执行的步骤",
-          "创建迁移到新框架的项目计划"
-        ],
-        "ru-RU": [
-          "Спланируй комплексную задачу рефакторинга с вехами",
-          "Разбей реализацию функции на конкретные шаги",
-          "Создай план проекта по миграции на новый фреймворк"
-        ],
-        "uk-UA": [
-          "Спланувати повний рефакториринг з контрольними точками",
-          "Розбити реалізацію функції на конкретні кроки",
-          "Створити план міграції на новий фреймворк"
-        ]
-      },
-      "models": []
+      "models": [],
+      "avatar": "avatars/ui-ux-pro-max.jpg"
     },
     {
       "id": "human-3-coach",
       "sort_order": 190,
       "default_enabled": false,
-      "name": "HUMAN 3.0 Coach",
+      "name": "Balanced Growth Coach",
       "name_i18n": {
-        "en-US": "HUMAN 3.0 Coach",
-        "zh-CN": "HUMAN 3.0 教练",
-        "ru-RU": "Коуч HUMAN 3.0",
-        "uk-UA": "Коуч HUMAN 3.0"
+        "en-US": "Balanced Growth Coach",
+        "zh-CN": "平衡成长教练",
+        "ru-RU": "Коуч сбалансированного развития",
+        "uk-UA": "Коуч збалансованого розвитку"
       },
-      "description": "Personal development coach based on HUMAN 3.0 framework: 4 Quadrants (Mind/Body/Spirit/Vocation), 3 Levels, 3 Growth Phases.",
+      "description": "A practical reflection and goal-setting coach for wellbeing, learning, relationships, and meaningful work.",
       "description_i18n": {
-        "en-US": "Personal development coach based on HUMAN 3.0 framework: 4 Quadrants (Mind/Body/Spirit/Vocation), 3 Levels, 3 Growth Phases.",
-        "zh-CN": "基于 HUMAN 3.0 框架的个人发展教练：4 象限（思维/身体/精神/职业）、3 层次、3 成长阶段。",
-        "ru-RU": "Коуч по личному развитию на основе фреймворка HUMAN 3.0: 4 квадранта (ум, тело, дух, призвание), 3 уровня и 3 фазы роста.",
-        "uk-UA": "Коуч з особистого розвитку на основі фреймворка HUMAN 3.0: 4 квадранти (Розум/Тіло/Дух/Призвання), 3 рівні та 3 фази росту."
+        "en-US": "A practical reflection and goal-setting coach for wellbeing, learning, relationships, and meaningful work.",
+        "zh-CN": "面向身心状态、学习、关系和有意义工作的实用反思与目标规划助手。",
+        "ru-RU": "Практичный помощник для рефлексии и постановки целей в самочувствии, обучении, отношениях и осмысленной работе.",
+        "uk-UA": "Практичний помічник для рефлексії та постановки цілей у самопочутті, навчанні, стосунках і змістовній роботі."
       },
-      "avatar": "avatars/human-3-coach.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [],
       "custom_skill_names": [],
@@ -808,7 +748,8 @@
           "Створити план особистого розвитку на наступні 3 місяці"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/human-3-coach.jpg"
     },
     {
       "id": "social-job-publisher",
@@ -828,7 +769,6 @@
         "ru-RU": "Разворачивает запрос на найм в полноценное описание вакансии и изображения, а затем публикует это в соцсетях через коннекторы.",
         "uk-UA": "Розгортає запит на найм у повноцінний опис вакансії та зображення, а потім публікує це в соцмережах через конектори."
       },
-      "avatar": "avatars/social-job-publisher.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "xiaohongshu-recruiter",
@@ -864,62 +804,8 @@
           "Створити пост про вакансію для кількох платформ (LinkedIn, X)"
         ]
       },
-      "models": []
-    },
-    {
-      "id": "moltbook",
-      "sort_order": 200,
-      "default_enabled": false,
-      "name": "moltbook",
-      "name_i18n": {
-        "en-US": "moltbook",
-        "zh-CN": "moltbook",
-        "ru-RU": "moltbook",
-        "uk-UA": "moltbook"
-      },
-      "description": "The social network for AI agents. Post, comment, upvote, and create communities.",
-      "description_i18n": {
-        "en-US": "The social network for AI agents. Post, comment, upvote, and create communities.",
-        "zh-CN": "AI 代理的社交网络。发帖、评论、投票、创建社区。",
-        "ru-RU": "Социальная сеть для AI-агентов: публикации, комментарии, голосования и создание сообществ.",
-        "uk-UA": "Соціальна мережа для AI-агентів. Публікації, коментарі, голосування та створення спільнот."
-      },
-      "avatar": "avatars/moltbook.jpg",
-      "agent_ref": "winkgo_agent",
-      "enabled_skills": [
-        "moltbook"
-      ],
-      "custom_skill_names": [],
-      "disabled_builtin_skills": [],
-      "rule_file": "rules/moltbook.{locale}.md",
-      "prompts": [
-        "Check my moltbook feed for latest updates",
-        "Post an interesting update to moltbook",
-        "Check for new direct messages"
-      ],
-      "prompts_i18n": {
-        "en-US": [
-          "Check my moltbook feed for latest updates",
-          "Post an interesting update to moltbook",
-          "Check for new direct messages"
-        ],
-        "zh-CN": [
-          "查看我的 moltbook 最新动态",
-          "在 moltbook 发布一条有趣的动态",
-          "检查是否有新私信"
-        ],
-        "ru-RU": [
-          "Проверь мою ленту moltbook на наличие новых обновлений",
-          "Опубликуй интересное обновление в moltbook",
-          "Проверь новые личные сообщения"
-        ],
-        "uk-UA": [
-          "Перевірити стрічку moltbook на наявність оновлень",
-          "Опублікувати цікавий пост у moltbook",
-          "Перевірити нові особисті повідомлення"
-        ]
-      },
-      "models": []
+      "models": [],
+      "avatar": "avatars/social-job-publisher.jpg"
     },
     {
       "id": "beautiful-mermaid",
@@ -939,7 +825,6 @@
         "ru-RU": "Создаёт блок-схемы, sequence-, state-, class- и ER-диаграммы с красивыми темами оформления.",
         "uk-UA": "Створюйте блок-схеми, діаграми послідовності, станів, класів та ER-діаграми з красивими темами оформлення."
       },
-      "avatar": "avatars/beautiful-mermaid.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "mermaid"
@@ -974,62 +859,8 @@
           "Створити діаграму архітектури системи"
         ]
       },
-      "models": []
-    },
-    {
-      "id": "story-roleplay",
-      "sort_order": 140,
-      "default_enabled": false,
-      "name": "Story Roleplay",
-      "name_i18n": {
-        "en-US": "Story Roleplay",
-        "zh-CN": "故事角色扮演",
-        "ru-RU": "Ролевые истории",
-        "uk-UA": "Рольові історії"
-      },
-      "description": "Immersive story roleplay. Start by: 1) Natural language to create characters, 2) Paste PNG images, or 3) Open folder with character cards (PNG/JSON) and world info.",
-      "description_i18n": {
-        "en-US": "Immersive story roleplay. Start by: 1) Natural language to create characters, 2) Paste PNG images, or 3) Open folder with character cards (PNG/JSON) and world info.",
-        "zh-CN": "沉浸式故事角色扮演。三种开始方式：1) 自然语言直接对话创建角色，2) 直接粘贴PNG图片，3) 打开包含角色卡（PNG/JSON）和世界书的文件夹。",
-        "ru-RU": "Иммерсивный сюжетный ролевой режим. Можно начать тремя способами: описать персонажей словами, вставить PNG-изображения или открыть папку с карточками персонажей и лором мира.",
-        "uk-UA": "Іммерсивний сюжетний рольовий режим. Можна почати трьома способами: описати персонажів словами, вставити PNG-зображення або відкрити папку з картками персонажів та лором світу."
-      },
-      "avatar": "avatars/story-roleplay.jpg",
-      "agent_ref": "winkgo_agent",
-      "enabled_skills": [
-        "story-roleplay"
-      ],
-      "custom_skill_names": [],
-      "disabled_builtin_skills": [],
-      "rule_file": "rules/story-roleplay.{locale}.md",
-      "prompts": [
-        "Start an epic fantasy adventure with a brave warrior",
-        "Create a detailed character with backstory and personality",
-        "Begin an interactive story in a sci-fi setting"
-      ],
-      "prompts_i18n": {
-        "en-US": [
-          "Start an epic fantasy adventure with a brave warrior",
-          "Create a detailed character with backstory and personality",
-          "Begin an interactive story in a sci-fi setting"
-        ],
-        "zh-CN": [
-          "开始一个勇敢战士的史诗奇幻冒险",
-          "创建一个有背景故事和个性的详细角色",
-          "在科幻设定中开始一个互动故事"
-        ],
-        "ru-RU": [
-          "Начни эпическое фэнтези-приключение с отважным воином",
-          "Создай детального персонажа с предысторией и характером",
-          "Начни интерактивную историю в научно-фантастическом сеттинге"
-        ],
-        "uk-UA": [
-          "Почати епічну фентезі-пригоду з хоробрим воїном",
-          "Створити детального персонажа з історією та характером",
-          "Почати інтерактивну історію в науково-фантастичному сетингу"
-        ]
-      },
-      "models": []
+      "models": [],
+      "avatar": "avatars/beautiful-mermaid.jpg"
     },
     {
       "id": "word-form-creator",
@@ -1049,7 +880,6 @@
         "ru-RU": "Создаёт заполняемые формы Word (.docx) с реальными элементами управления содержимым, флажками, полями MERGEFIELD и защитой документа — редактируются только заданные поля, остальное заблокировано. HR-анкеты, опросы, шаблоны контрактов / SOW, комплаенс-чеклисты, медицинские опросники.",
         "uk-UA": "Створюйте заповнювані форми Word (.docx) зі справжніми елементами керування вмістом, полями-прапорцями, MERGEFIELD для злиття пошти та захистом документа — редагуються лише задані поля, решта залишається заблокованою. HR-анкети, опитування, шаблони контрактів / SOW, комплаєнс-чеклисти, медичні анкети."
       },
-      "avatar": "📋",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "officecli-word-form"
@@ -1084,27 +914,27 @@
           "Зроби .docx-анкету медичного прийому з випадаючим списком причини візиту, текстовими полями для алергій / прийнятих ліків, сіткою прапорців за минулими станами та рядком підпису внизу."
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "📋"
     },
     {
       "id": "winkgo-assistant",
       "sort_order": 0,
       "default_enabled": true,
-      "name": "WinkGo Butler",
+      "name": "WINK GO Butler",
       "name_i18n": {
-        "en-US": "WinkGo Butler",
-        "zh-CN": "WinkGo管家",
-        "ru-RU": "Дворецкий WinkGo",
-        "uk-UA": "Дворецький WinkGo"
+        "en-US": "WINK GO Butler",
+        "zh-CN": "WINK GO 管家",
+        "ru-RU": "Дворецкий WINK GO",
+        "uk-UA": "Дворецький WINK GO"
       },
-      "description": "Your all-in-one WinkGo butler: set up assistants, skills, MCP servers and LLM providers; set up remote access so you can reach WinkGo from your phone or share a link; and diagnose problems like stuck conversations, failing models, or a scheduled task that didn't run.",
+      "description": "Your all-in-one WINK GO butler: set up assistants, skills, MCP servers and LLM providers; set up remote access so you can reach WINK GO from your phone or share a link; and diagnose problems like stuck conversations, failing models, or a scheduled task that didn't run.",
       "description_i18n": {
-        "en-US": "Your all-in-one WinkGo butler: set up assistants, skills, MCP servers and LLM providers; set up remote access so you can reach WinkGo from your phone or share a link; and diagnose problems like stuck conversations, failing models, or a scheduled task that didn't run.",
-        "zh-CN": "你的 WinkGo 全能管家：配置助手、技能、MCP 服务器与 LLM 模型；设置远程访问，让你在手机或外网也能打开 WinkGo、生成分享链接；还能诊断卡住的会话、失败的模型调用，或定时任务为何没执行。",
-        "ru-RU": "Ваш универсальный дворецкий WinkGo: настройка ассистентов, навыков, серверов MCP и провайдеров LLM; настройка удалённого доступа, чтобы открывать WinkGo с телефона или делиться ссылкой; и диагностика проблем — зависших разговоров, сбоев моделей или почему не выполнилась запланированная задача.",
-        "uk-UA": "Ваш універсальний дворецький WinkGo: налаштування асистентів, навичок, серверів MCP і провайдерів LLM; налаштування віддаленого доступу, щоб відкривати WinkGo з телефона або ділитися посиланням; і діагностика проблем — зависань розмов, збоїв моделей або чому не виконалося заплановане завдання."
+        "en-US": "Your all-in-one WINK GO butler: set up assistants, skills, MCP servers and LLM providers; set up remote access so you can reach WINK GO from your phone or share a link; and diagnose problems like stuck conversations, failing models, or a scheduled task that didn't run.",
+        "zh-CN": "你的 WINK GO 全能管家：配置助手、技能、MCP 服务器与 LLM 模型；设置远程访问，让你在手机或外网也能打开 WINK GO、生成分享链接；还能诊断卡住的会话、失败的模型调用，或定时任务为何没执行。",
+        "ru-RU": "Ваш универсальный дворецкий WINK GO: настройка ассистентов, навыков, серверов MCP и провайдеров LLM; настройка удалённого доступа, чтобы открывать WINK GO с телефона или делиться ссылкой; и диагностика проблем — зависших разговоров, сбоев моделей или почему не выполнилась запланированная задача.",
+        "uk-UA": "Ваш універсальний дворецький WINK GO: налаштування асистентів, навичок, серверів MCP і провайдерів LLM; налаштування віддаленого доступу, щоб відкривати WINK GO з телефона або ділитися посиланням; і діагностика проблем — зависань розмов, збоїв моделей або чому не виконалося заплановане завдання."
       },
-      "avatar": "avatars/winkgo-assistant.jpg",
       "agent_ref": "winkgo_agent",
       "enabled_skills": [
         "winkgo-config",
@@ -1116,37 +946,38 @@
       "rule_file": "rules/winkgo-assistant.{locale}.md",
       "prompts": [
         "Add a new LLM provider and API key, then set it as the default model",
-        "Set up remote access for me, so I can open WinkGo from my phone when I'm out",
+        "Set up remote access for me, so I can open WINK GO from my phone when I'm out",
         "A conversation is stuck — please diagnose what's wrong",
         "Create a new assistant and attach a skill to it"
       ],
       "prompts_i18n": {
         "en-US": [
           "Add a new LLM provider and API key, then set it as the default model",
-          "Set up remote access for me, so I can open WinkGo from my phone when I'm out",
+          "Set up remote access for me, so I can open WINK GO from my phone when I'm out",
           "A conversation is stuck — please diagnose what's wrong",
           "Create a new assistant and attach a skill to it"
         ],
         "zh-CN": [
           "添加一个新的 LLM 模型和 API Key，并设为默认模型",
-          "帮我配置远程访问，让我在外面用手机也能打开 WinkGo",
+          "帮我配置远程访问，让我在外面用手机也能打开 WINK GO",
           "有个会话卡住了，帮我诊断哪里出了问题",
           "创建一个新助手，并给它绑定一个技能"
         ],
         "ru-RU": [
           "Добавь нового провайдера LLM и API-ключ, затем сделай его моделью по умолчанию",
-          "Настрой удалённый доступ, чтобы я мог открывать WinkGo с телефона, когда меня нет",
+          "Настрой удалённый доступ, чтобы я мог открывать WINK GO с телефона, когда меня нет",
           "Разговор завис — пожалуйста, диагностируй, что не так",
           "Создай нового ассистента и подключи к нему навык"
         ],
         "uk-UA": [
           "Додай нового провайдера LLM та API-ключ, потім зроби його моделлю за замовчуванням",
-          "Налаштуй віддалений доступ, щоб я міг відкривати WinkGo з телефона, коли мене немає",
+          "Налаштуй віддалений доступ, щоб я міг відкривати WINK GO з телефона, коли мене немає",
           "Розмова зависла — будь ласка, діагностуй, що не так",
           "Створи нового асистента й підключи до нього навичку"
         ]
       },
-      "models": []
+      "models": [],
+      "avatar": "avatars/winkgo-assistant.jpg"
     }
   ]
 }

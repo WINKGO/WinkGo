@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! SQLite-backed `acp_session` repository.
 
 use serde_json::Value;

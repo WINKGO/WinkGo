@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `SessionError` — crate-owned error (AGENTS.md: Domain crates use crate-owned
 //! errors, never a new `AppError`). Distinct from the in-state terminal
 //! `ErrorReason` (that models a session that REACHED an error state); this is

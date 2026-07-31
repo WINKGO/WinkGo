@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Plan mode system prompt instructions.
 //
 // These prompts guide the LLM's behavior while in plan mode: what tools to

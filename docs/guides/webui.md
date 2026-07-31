@@ -1,6 +1,8 @@
-# WinkGo WebUI Mode - Startup Guide
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
 
-WinkGo supports WebUI mode, allowing you to access the application through a web browser. This guide covers how to start WebUI mode on all supported platforms.
+# WINK GO WebUI Mode - Startup Guide
+
+WINK GO supports WebUI mode, allowing you to access the application through a web browser. This guide covers how to start WebUI mode on all supported platforms.
 
 ## Table of Contents
 
@@ -16,10 +18,10 @@ WinkGo supports WebUI mode, allowing you to access the application through a web
 
 ## What is WebUI Mode?
 
-WebUI mode starts WinkGo with an embedded web server, allowing you to:
+WebUI mode starts WINK GO with an embedded web server, allowing you to:
 
 - Access the application through any modern web browser
-- Use WinkGo from remote devices on the same network (with `--remote` flag)
+- Use WINK GO from remote devices on the same network (with `--remote` flag)
 - Run the application headless on servers
 
 Default access URL: `http://localhost:25808` (check the application output if the configured port differs)
@@ -27,6 +29,8 @@ Default access URL: `http://localhost:25808` (check the application output if th
 ---
 
 ## Windows
+
+> **兼容名称 / Legacy compatibility names:** WINK GO continues to recognize legacy executable, command, install-path, service, script, package, protocol, data-directory, and environment-variable names such as `WINK-GO.exe`, `WinkGo.exe`, `winkgo`, `WinkGo`, and `WINKGO_*`. The commands below retain those names where compatibility requires them.
 
 ### Method 1: Command Line (Recommended)
 
@@ -36,7 +40,7 @@ Open **Command Prompt** or **PowerShell** and run:
 # Using full path
 "C:\Program Files\WinkGo\WinkGo.exe" --webui
 
-# Or if WinkGo is in your PATH
+# Or if the legacy compatibility executable is in your PATH
 WinkGo.exe --webui
 ```
 
@@ -47,7 +51,7 @@ WinkGo.exe --webui
    ```
    "C:\Program Files\WinkGo\WinkGo.exe" --webui
    ```
-3. Name it **WinkGo WebUI**
+3. Name it **WINK GO WebUI**
 4. Click **Finish**
 5. Double-click the shortcut to launch
 
@@ -104,13 +108,13 @@ chmod +x start-winkgo-webui.sh
    ```bash
    /Applications/WinkGo.app/Contents/MacOS/WinkGo --webui
    ```
-5. Save as **WinkGo WebUI.app**
+5. Save as **WINK GO WebUI.app**
 6. Double-click to launch
 
 ### Method 4: Add to Dock
 
 1. Create an Automator app (Method 3)
-2. Drag **WinkGo WebUI.app** to your Dock
+2. Drag **WINK GO WebUI.app** to your Dock
 3. Click the Dock icon to start WebUI mode anytime
 
 ---
@@ -129,24 +133,14 @@ winkgo --webui
 /opt/WinkGo/winkgo --webui
 ```
 
-#### For AppImage
-
-```bash
-# Make AppImage executable (first time only)
-chmod +x WinkGo-*.AppImage
-
-# Run with --webui flag
-./WinkGo-*.AppImage --webui
-```
-
 ### Method 2: Create Desktop Entry
 
 Create `~/.local/share/applications/winkgo-webui.desktop`:
 
 ```ini
 [Desktop Entry]
-Name=WinkGo WebUI
-Comment=Start WinkGo in WebUI mode
+Name=WINK GO WebUI
+Comment=Start WINK GO in WebUI mode
 Exec=/opt/WinkGo/winkgo --webui
 Icon=winkgo
 Terminal=false
@@ -189,7 +183,7 @@ Create `/etc/systemd/system/winkgo-webui.service`:
 
 ```ini
 [Unit]
-Description=WinkGo WebUI Service
+Description=WINK GO WebUI Service
 After=network.target
 
 [Service]
@@ -218,11 +212,11 @@ sudo systemctl status winkgo-webui.service
 
 ## Android (Termux)
 
-**Important Note**: Electron desktop mode is **not supported** on Android. However, you can run WinkGo in WebUI mode using Termux with a prooted Linux environment.
+**Important Note**: Electron desktop mode is **not supported** on Android. However, you can run WINK GO in WebUI mode using Termux with a prooted Linux environment.
 
-> **Community Contribution**: This guide is contributed by [@Manamama](https://github.com/Manamama). Special thanks for making WinkGo accessible on Android devices! 🙏
+> **Community Contribution**: This guide is contributed by [@Manamama](https://github.com/Manamama). Special thanks for making WINK GO accessible on Android devices! 🙏
 >
-> **Original Tutorial**: [Running WinkGo WebUI on Android via Termux + Proot Ubuntu](https://gist.github.com/Manamama/b4f903c279b5e73bdad4c2c0a58d5ddd)
+> **Original Tutorial**: [Running WINK GO WebUI on Android via Termux + Proot Ubuntu](https://gist.github.com/Manamama/b4f903c279b5e73bdad4c2c0a58d5ddd)
 >
 > **Related Issues**: [#217 - Android Support Discussion](https://github.com/xuweihafeichangniu-lab/wink-go/issues/217)
 
@@ -281,27 +275,27 @@ apt install -y \
     libcups2
 ```
 
-#### 4. Download and Install WinkGo
+#### 4. Download and Install WINK GO
+
+> WINK GO Free release assets use the pattern `WINK-GO-Free-VERSION-linux-ARCH.deb`. The installed executable may retain the legacy-compatible name `WinkGo`.
 
 ```bash
-# Download the ARM64 .deb package (replace VERSION with the actual version)
+# Download the ARM64 .deb package.
 # Check latest version at: https://github.com/xuweihafeichangniu-lab/wink-go/releases
-wget https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/vVERSION/WinkGo_VERSION_arm64.deb
-
-# Example (replace VERSION with the release tag, e.g. v1.5.2):
-wget https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/vVERSION/WinkGo_VERSION_arm64.deb
+VERSION=2.2.0
+wget "https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-arm64.deb"
 
 # Install the package
-apt install -y ./WinkGo_*.deb
+apt install -y "./WINK-GO-Free-${VERSION}-linux-arm64.deb"
 
 # Verify installation
 which WinkGo
 ```
 
-#### 5. Launch WinkGo WebUI
+#### 5. Launch WINK GO WebUI
 
 ```bash
-# Start WinkGo in WebUI mode with no-sandbox flag
+# Start WINK GO in WebUI mode with the legacy compatibility executable and no-sandbox flag
 WinkGo --no-sandbox --webui
 ```
 
@@ -331,7 +325,7 @@ These errors are related to D-Bus and X server, which are not needed for WebUI m
 
 ### Remote Access on LAN
 
-To access WinkGo from other devices on your local network:
+To access WINK GO from other devices on your local network:
 
 ```bash
 # Start with --remote flag
@@ -364,11 +358,11 @@ chmod +x /opt/WinkGo/winkgo
 
 #### Out of Memory
 
-WinkGo requires sufficient RAM. Close other apps if you encounter memory issues.
+WINK GO requires sufficient RAM. Close other apps if you encounter memory issues.
 
 #### Cannot Access from Browser
 
-1. Check if WinkGo is running: look for "Server started" message
+1. Check if WINK GO is running: look for "Server started" message
 2. Try using Termux's built-in browser or Chrome
 3. Clear browser cache
 
@@ -377,24 +371,24 @@ WinkGo requires sufficient RAM. Close other apps if you encounter memory issues.
 1. **Use a lightweight browser** - Chrome or Firefox Focus recommended
 2. **Close background apps** - Free up RAM for better performance
 3. **Use WiFi** - More stable than mobile data for remote access
-4. **Keep device charged** - Running WinkGo consumes battery
+4. **Keep device charged** - Running WINK GO consumes battery
 
 ### Tested Environment
 
 - **Device**: Android 14
 - **Termux Version**: 0.118.0
-- **WinkGo Version**: Latest release (e.g. 1.5.2)
+- **WINK GO Version**: Latest release
 - **Proot-distro**: Ubuntu (latest)
 
 ### Creating a Startup Script
 
-For convenience, create a script to launch WinkGo quickly:
+For convenience, create a script to launch WINK GO quickly:
 
 ```bash
 # Create script in Ubuntu (proot)
 cat > ~/start-winkgo.sh << 'EOF'
 #!/bin/bash
-echo "Starting WinkGo WebUI..."
+echo "Starting WINK GO WebUI..."
 WinkGo --no-sandbox --webui --remote
 EOF
 
@@ -494,7 +488,7 @@ If port 25808 is already in use, the application will automatically try the next
 
 ```cmd
 # Allow through Windows Firewall
-netsh advfirewall firewall add rule name="WinkGo WebUI" dir=in action=allow protocol=TCP localport=25808
+netsh advfirewall firewall add rule name="WINK GO WebUI" dir=in action=allow protocol=TCP localport=25808
 ```
 
 **Linux (UFW):**
@@ -504,7 +498,7 @@ sudo ufw allow 25808/tcp
 ```
 
 **macOS:**
-Go to **System Preferences** → **Security & Privacy** → **Firewall** → **Firewall Options** → Add WinkGo
+Go to **System Preferences** → **Security & Privacy** → **Firewall** → **Firewall Options** → Add WINK GO
 
 ### Application Not Found
 
@@ -571,7 +565,7 @@ winkgo --webui --port 8080
 
 ## User Configuration File
 
-From v1.5.0+, you can store persistent WebUI preferences in `webui.config.json` located in your Electron user-data folder:
+You can store persistent WebUI preferences in `webui.config.json` located in your Electron user-data folder. The folder names shown below are retained as legacy compatibility names so existing settings continue to work:
 
 | Platform | Location                                                 |
 | -------- | -------------------------------------------------------- |
@@ -690,10 +684,10 @@ If you encounter any issues:
 2. Search [existing issues](https://github.com/xuweihafeichangniu-lab/wink-go/issues)
 3. Create a [new issue](https://github.com/xuweihafeichangniu-lab/wink-go/issues/new) with:
    - Your OS and version
-   - WinkGo version
+   - WINK GO version
    - Steps to reproduce
    - Error messages or logs
 
 ---
 
-**Happy using WinkGo in WebUI mode!** 🚀
+**Happy using WINK GO in WebUI mode!** 🚀

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import FlexFullContainer from '@/renderer/components/layout/FlexFullContainer';
 import { isElectronDesktop, resolveExtensionAssetUrl } from '@/renderer/utils/platform';
 import { type IExtensionSettingsTab } from '@/common/adapter/ipcBridge';
@@ -20,7 +21,7 @@ import {
 import classNames from 'classnames';
 import React, { startTransition, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { Tooltip } from '@arco-design/web-react';
 import { getSiderTooltipProps } from '@/renderer/utils/ui/siderTooltip';
 import { BUILTIN_TAB_IDS, LEGACY_ANCHOR_REMAP } from '../settingsNavigation';

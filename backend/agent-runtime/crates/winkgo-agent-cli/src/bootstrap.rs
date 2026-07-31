@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Shared initialization steps for winkgo-agent-cli entry points.
 //!
 //! `run.rs` (terminal REPL) and `json_stream` (host-integration protocol)

@@ -216,17 +216,61 @@ function Test-ManagedNodeContract {
     [object]$Node
   )
 
-  if (-not $Node -or -not (Test-StringField $Node 'version') -or -not (Test-StringField $Node 'root') -or -not (Test-StringField $Node 'executable')) {
+  if (-not $Node -or -not (Test-StringField $Node 'version') -or -not (Test-StringField $Node 'root') -or -not (Test-StringField $Node 'executable') -or -not (Test-StringArrayField $Node 'requiredFiles')) {
     $Failures.Add((New-Failure 'publish_or_install_missing' 'node' '' $ManagedRoot 'invalid_schema')) | Out-Null
     return
   }
-  if (-not (Test-ContractRelativePath $Node.root) -or -not (Test-ContractRelativePath $Node.executable)) {
-    $Failures.Add((New-Failure 'publish_or_install_missing' 'node' $Node.version $ManagedRoot 'invalid_contract_path')) | Out-Null
-    return
+  $requiredFiles = @($Node.requiredFiles)
+  foreach ($pathValue in @($Node.root, $Node.executable) + $requiredFiles) {
+    if (-not (Test-ContractRelativePath $pathValue)) {
+      $Failures.Add((New-Failure 'publish_or_install_missing' 'node' $Node.version $ManagedRoot 'invalid_contract_path')) | Out-Null
+      return
+    }
+  }
+
+  foreach ($requiredLegalFile in @('LICENSE', 'node_modules/npm/LICENSE')) {
+    if ($requiredFiles -notcontains $requiredLegalFile) {
+      $Failures.Add((New-Failure 'publish_or_install_missing' 'node' $Node.version $ManagedRoot "missing_node_legal_file:$requiredLegalFile")) | Out-Null
+    }
   }
 
   $nodeRoot = Join-ContractPath $ManagedRoot $Node.root
   Test-NonEmptyFile $Failures 'node' $Node.version (Join-ContractPath $nodeRoot $Node.executable) $true $nodeRoot | Out-Null
+  foreach ($requiredFile in $requiredFiles) {
+    Test-NonEmptyFile $Failures 'node' $Node.version (Join-ContractPath $nodeRoot $requiredFile) $false $nodeRoot | Out-Null
+  }
+}
+
+function Test-ForbiddenManagedExternalCliArtifacts {
+  param(
+    [System.Collections.Generic.List[object]]$Failures,
+    [string]$ManagedRoot
+  )
+
+  if (-not (Test-Path -LiteralPath $ManagedRoot -PathType Container)) {
+    return
+  }
+
+  foreach ($item in Get-ChildItem -LiteralPath $ManagedRoot -Recurse -Force -ErrorAction SilentlyContinue) {
+    $relative = $item.FullName.Substring($ManagedRoot.Length).TrimStart('\').Replace('\', '/')
+    $forbiddenPath = $relative -match '(?i)(^|/)cli/(claude|codex)(/|$)' -or
+      $relative -match '(?i)(^|/)node_modules/@(anthropic-ai/claude-code|openai/codex)(-|/|$)' -or
+      $item.Name -match '(?i)^(claude|codex|codex-code-mode-host|codex-command-runner|codex-windows-sandbox-setup)(\.exe)?$' -or
+      $item.Name -match '(?i)^codex-(path|resources)$'
+    if ($forbiddenPath) {
+      $Failures.Add((New-Failure 'publish_or_install_missing' 'managed-resources' '' $item.FullName 'forbidden_bundled_external_cli')) | Out-Null
+      if ($item.PSIsContainer) {
+        continue
+      }
+    }
+
+    if (-not $item.PSIsContainer -and $item.Length -le 2097152 -and $item.Extension -match '(?i)^\.(json|lock|txt|md)$') {
+      $contents = Get-Content -LiteralPath $item.FullName -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
+      if ($contents -match '@anthropic-ai/claude-code' -or $contents -match '@openai/codex') {
+        $Failures.Add((New-Failure 'publish_or_install_missing' 'managed-resources' '' $item.FullName 'forbidden_bundled_external_cli')) | Out-Null
+      }
+    }
+  }
 }
 
 function Test-ManagedCliContract {
@@ -248,8 +292,7 @@ function Test-ManagedCliContract {
     return
   }
 
-  # requiredFiles / requiredDirectories default to empty (claude has none; codex
-  # lists its vendor sidecar subtree). Absent is allowed.
+  # Historical schema fields remain optional for non-forbidden future tools.
   $requiredFiles = @($Cli.requiredFiles)
   $requiredDirectories = @($Cli.requiredDirectories)
   foreach ($pathValue in @($Cli.root, $Cli.executable) + $requiredFiles + $requiredDirectories) {
@@ -293,13 +336,11 @@ function Test-ManagedClisContract {
       continue
     }
     $seen[$cli.name] = $true
-    $validClis += $cli
-  }
-
-  foreach ($requiredName in @('claude', 'codex')) {
-    if (-not $seen.ContainsKey($requiredName)) {
-      $Failures.Add((New-Failure 'publish_or_install_missing' $requiredName '' $ManagedRoot 'missing_required_cli')) | Out-Null
+    if ($cli.name -match '(?i)^(claude|codex)$') {
+      $Failures.Add((New-Failure 'publish_or_install_missing' $cli.name $cli.version $ManagedRoot 'forbidden_bundled_external_cli')) | Out-Null
+      continue
     }
+    $validClis += $cli
   }
 
   foreach ($cli in $validClis) {
@@ -367,6 +408,7 @@ function Test-BundledResourcesOnce {
 
   $managedRoot = Join-Path $baseDir 'managed-resources'
   if (Test-Directory $failures 'managed-resources' '' $managedRoot) {
+    Test-ForbiddenManagedExternalCliArtifacts $failures $managedRoot
     Test-ManagedResourcesContract $failures $managedRoot
   }
 

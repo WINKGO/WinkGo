@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Project / Folder creation-binding authority.
 //!
 //! `winkgo-project` is the single authority for the consistency of the three

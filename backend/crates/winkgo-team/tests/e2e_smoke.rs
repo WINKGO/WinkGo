@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! End-to-end smoke tests for the team subsystem.
 //!
 //! **Purpose:** guard against the "agent claims a tool works but it is an

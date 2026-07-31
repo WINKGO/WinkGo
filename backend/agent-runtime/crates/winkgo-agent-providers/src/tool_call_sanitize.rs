@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DroppedToolCallReason {
     EmptyName,

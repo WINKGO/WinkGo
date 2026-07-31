@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use crate::types::SkillSource;
 use winkgo_agent_config::hooks::{HookDef, HooksConfig};
 

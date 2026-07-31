@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Pure helpers that compute `conversation.extra.skills` values. No I/O here
 //! — callers (e.g. `ConversationService::create`) fetch the auto-inject name
 //! set up-front and pass it in. This keeps unit tests deterministic and keeps

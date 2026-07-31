@@ -1,4 +1,5 @@
 #![warn(clippy::disallowed_types)]
+// Modified from AionCore by WINK GO contributors in 2026.
 
 //! AI agent lifecycle, worker task dispatch, and skill management.
 pub mod active_lease;

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use winkgo_agent_config::compat::OpenAiApiMode;
 use winkgo_agent_types::message::ImageInputCapability;
 

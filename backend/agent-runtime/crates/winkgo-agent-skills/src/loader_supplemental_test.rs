@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use super::*;
 use crate::types::{FrontmatterData, LoadedFrom, SkillSource};
 use std::fs;

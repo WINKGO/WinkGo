@@ -27,7 +27,8 @@ describe('Windows bundled winkgo_core install verifier', () => {
 
   it('logs machine-readable contract failures', () => {
     expect(script).toContain('duplicate_cli_name');
-    expect(script).toContain('missing_required_cli');
+    expect(script).toContain('forbidden_bundled_external_cli');
+    expect(script).toContain('missing_node_legal_file');
     expect(script).toContain('unsupported_schema_version');
     expect(script).toContain('invalid_schema');
     expect(script).toContain('result=fail runtime=$RuntimeKey failures=$summary');
@@ -40,7 +41,7 @@ describe('Windows bundled winkgo_core install verifier', () => {
 
   const runOnWindows = process.platform === 'win32' ? it : it.skip;
 
-  runOnWindows('fails an old-version-only Codex CLI install directory', () => {
+  runOnWindows('rejects any managed Codex CLI install directory', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'winkgo-install-verify-'));
     const installDir = join(tmp, 'install');
     const managedRoot = join(installDir, 'resources', 'bundled-winkgo-core', 'win32-x64', 'managed-resources');
@@ -54,8 +55,8 @@ describe('Windows bundled winkgo_core install verifier', () => {
         arch: 'x64',
       });
       writeFile(join(managedRoot, 'node', 'node-v24.11.0-win-x64', 'node.exe'), 'x');
-      // claude is present at its pinned version.
-      writeFile(join(managedRoot, 'cli', 'claude', '2.1.215', 'win32-x64', 'claude.exe'), 'x');
+      writeFile(join(managedRoot, 'node', 'node-v24.11.0-win-x64', 'LICENSE'), 'node license');
+      writeFile(join(managedRoot, 'node', 'node-v24.11.0-win-x64', 'node_modules', 'npm', 'LICENSE'), 'npm license');
       writeJson(join(managedRoot, 'manifest.json'), {
         schemaVersion: 2,
         runtimeKey: 'win32-x64',
@@ -63,30 +64,12 @@ describe('Windows bundled winkgo_core install verifier', () => {
           version: '24.11.0',
           root: 'node/node-v24.11.0-win-x64',
           executable: 'node.exe',
+          requiredFiles: ['LICENSE', 'node_modules/npm/LICENSE'],
         },
-        clis: [
-          {
-            name: 'claude',
-            version: '2.1.215',
-            root: 'cli/claude/2.1.215/win32-x64',
-            platformDirectory: 'win32-x64',
-            executable: 'claude.exe',
-            requiredFiles: [],
-            requiredDirectories: [],
-          },
-          {
-            name: 'codex',
-            version: '0.144.6',
-            root: 'cli/codex/0.144.6/win32-x64',
-            platformDirectory: 'win32-x64',
-            executable: `vendor/${codexTriple}/bin/codex.exe`,
-            requiredFiles: [],
-            requiredDirectories: [`vendor/${codexTriple}`],
-          },
-        ],
+        clis: [],
       });
 
-      // Only an OLD codex version exists on disk; the contract pins 0.144.6.
+      // Any managed Codex tree is forbidden, regardless of version or contract.
       const oldRoot = join(managedRoot, 'cli', 'codex', '0.100.0', 'win32-x64');
       writeFile(join(oldRoot, 'vendor', codexTriple, 'bin', 'codex.exe'), 'x');
 
@@ -110,7 +93,8 @@ describe('Windows bundled winkgo_core install verifier', () => {
 
       expect(result.status).not.toBe(0);
       const log = readFileSync(logPath, 'utf8');
-      expect(log).toContain('cli/codex/0.144.6');
+      expect(log).toContain('forbidden_bundled_external_cli');
+      expect(log).toContain('cli/codex/0.100.0');
       expect(log).toContain('result=fail');
     } finally {
       rmSync(tmp, { recursive: true, force: true });

@@ -32,14 +32,32 @@
     "statusUnreachable": "Nicht erreichbar",
     "statusAvailable": "Verfügbar"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "Die WINK GO-AI-Analyse ist fehlgeschlagen. Versuchen Sie es später erneut.",
+    "backToChat": "Zurück zum Chat",
+    "frameTitle": "WINK GO-Wissensfläche",
+    "loading": "Wissensfläche wird geöffnet…",
+    "open": "Wissensfläche öffnen",
+    "pageLabel": "WINK GO-Wissensfläche",
+    "reload": "Wissensfläche neu laden",
+    "statusAnalyzing": "WINK GO AI analysiert",
+    "statusReady": "Lokale Fläche · KI verfügbar",
+    "statusUnavailable": "Experimentell · Nicht enthalten",
+    "subtitle": "Webseiten, Dokumente und Ideen in bearbeitbare Wissensstrukturen umwandeln",
+    "title": "Wissensfläche",
+    "unavailableDescription": "Die öffentliche Version enthält nicht die vollständige Canvas-Laufzeit. Sie bleibt deaktiviert, bis Quellcode, Lizenzen und Veröffentlichungsunterlagen geprüft sind.",
+    "unavailableTitle": "Die Wissensfläche ist noch experimentell"
+  },
   "installerCenter": {
     "entry": "Software-Installationscenter",
     "title": "WINK GO Installationscenter",
-    "subtitle": "Ein-Klick-Bereitstellungspakete für Codex, Claude Code und Antigravity",
-    "windows": "Windows-Installationspakete",
-    "macos": "macOS-Installationspakete",
-    "environmentSetup": "{{platform}} schnell einrichten",
-    "downloadFailed": "Der Download-Link konnte nicht geöffnet werden",
+    "subtitle": "Offizielle Installationsseiten für Codex, Claude Code und Antigravity öffnen",
+    "windows": "Windows-Installationshinweise",
+    "macos": "macOS-Installationshinweise",
+    "environmentSetup": "Offizielle Installationsanleitung für {{platform}} ansehen",
+    "openOfficialPage": "Offizielle Installationsseite öffnen",
+    "thirdPartyDisclaimer": "Codex, Claude Code und Antigravity sind Produkte Dritter. WINK GO hostet oder empfiehlt sie nicht und garantiert weder Verfügbarkeit noch Kompatibilität; es gelten die Bedingungen der Anbieter.",
+    "downloadFailed": "Die offizielle Installationsseite konnte nicht geöffnet werden",
     "recommended": "Empfohlen"
   }
 }

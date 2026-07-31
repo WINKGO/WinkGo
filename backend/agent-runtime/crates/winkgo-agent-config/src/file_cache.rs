@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use serde::{Deserialize, Serialize};
 
 /// Configuration for the file state cache.

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Materialize the embedded builtin-skills corpus to disk.
 
 use std::path::Path;

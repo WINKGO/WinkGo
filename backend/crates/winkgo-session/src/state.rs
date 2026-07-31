@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `SessionState` — the server-authoritative session FSM (§C 6.1, frozen).
 //!
 //! P0 has EXACTLY 4 enum variants. `RequiresAction` is NOT a variant — it is a

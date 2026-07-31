@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 mod api;
 pub mod fold;
 pub mod json;

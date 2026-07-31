@@ -5,10 +5,12 @@
  */
 
 import { app, globalShortcut, ipcMain, shell } from 'electron';
+import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import nodePath from 'node:path';
 import { ipcBridge } from '@/common';
 import type { WinkGoShortcutAction } from '@/common/adapter/ipcBridge';
+import { isTrustedIpcSender } from '@/common/platform/electronSecurity';
 import {
   canRevealWinkGoFile,
   organizeWinkGoFiles,
@@ -124,14 +126,30 @@ const triggerShortcutAction = (action: WinkGoShortcutAction): boolean => {
   return true;
 };
 
+const resolveDefaultFileShelfFolder = (): string => {
+  const documents = app.getPath('documents');
+  const current = nodePath.join(documents, process.platform === 'win32' ? 'WINK GO 收纳箱' : 'WINK GO Inbox');
+  const legacy = nodePath.join(documents, process.platform === 'win32' ? 'WINK GO 收纳箱' : 'WINK GO Inbox');
+  return existsSync(legacy) && !existsSync(current) ? legacy : current;
+};
+
 /** Registers local file organizer IPC and its opt-in desktop shortcuts. */
 export function initWinkGoFilesBridge(): void {
-  ipcMain.handle('winkgo-files:persist-dropped-file', (_event, payload: VirtualDroppedFile) =>
-    persistVirtualDroppedFile(payload)
-  );
-  ipcBridge.winkGoFiles.getDefaultFolder.provider(() =>
-    nodePath.join(app.getPath('documents'), process.platform === 'win32' ? 'WINK GO 收纳箱' : 'WINK GO Inbox')
-  );
+  ipcMain.handle('winkgo-files:persist-dropped-file', (event, payload: VirtualDroppedFile) => {
+    if (!isTrustedIpcSender(event, ['main', 'island'])) throw new Error('IPC_FORBIDDEN');
+    if (
+      !payload ||
+      typeof payload !== 'object' ||
+      !(payload.data instanceof ArrayBuffer) ||
+      typeof payload.name !== 'string' ||
+      payload.name.length > 512 ||
+      (payload.type !== undefined && (typeof payload.type !== 'string' || payload.type.length > 256))
+    ) {
+      throw new Error('INVALID_DROPPED_FILE');
+    }
+    return persistVirtualDroppedFile(payload);
+  });
+  ipcBridge.winkGoFiles.getDefaultFolder.provider(resolveDefaultFileShelfFolder);
   ipcBridge.winkGoFiles.organize.provider((request) => organizeWinkGoFiles(request));
   ipcBridge.winkGoFiles.undo.provider(({ operations }) => undoWinkGoFiles(operations));
   ipcBridge.winkGoFiles.showItemInFolder.provider(async ({ path: filePath }) => {

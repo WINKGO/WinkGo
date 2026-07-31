@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `winkgo_core mcp-team-stdio` subcommand: MCP stdio server for team tools.
 //!
 //! Uses the `rmcp` crate (Rust MCP SDK) for protocol handling. Tool calls are

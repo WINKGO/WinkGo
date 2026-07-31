@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import type { ElectronApplication, Page } from '@playwright/test';

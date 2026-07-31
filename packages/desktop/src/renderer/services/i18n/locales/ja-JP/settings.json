@@ -433,6 +433,15 @@
   "skills": "スキル",
   "tools": "ツール",
   "toolsDescription": "MCP サーバーと画像生成などの組み込みツールを設定します。画像生成は、モデルページで画像対応モデルを設定した後にのみ有効化できます。",
+  "mcpWorkspace": {
+    "title": "MCP 設定",
+    "description": "汎用 MCP サービスと、ESP32 XiaoZhi および連携ミニプログラム用の独立したデバイスチャネルを管理します。",
+    "general": "汎用 MCP",
+    "xiaozhi": "XiaoZhi MCP 接続",
+    "relayToggleLabel": "クラウド端末リレーを有効にする",
+    "relayDisclosureTitle": "クラウド端末リレーを有効にする前にご確認ください",
+    "relayDisclosureBody": "有効にすると、このコンピューターは {{domain}} との接続を維持し、アカウント・インストール・デスクトップ識別子、端末名、接続状態とペアリングコード状態、およびミニプログラムから意図的に中継したテキスト、音声文字起こし、タスク結果、リモート WebUI の要求と応答（ファイル内容や認証情報を含む場合があります）を送信します。法的運営主体とサーバー所在地は一般公開前に補完する必要があります。第三者提供または越境移転には別途通知し、必要な同意を取得します。第三者のネットワーク、モデル、音声サービスには料金が発生する場合があります。いつでも無効にできます。"
+  },
   "modelDescription": "すべてのアシスタントで使用する LLM プロバイダーと API キーを設定します。カスタムモデルに対応するのは WINK GO のみで、他のエージェントは各自の組み込みモデルを使用します。",
   "capabilities": "能力拡張",
   "capabilitiesTab": {
@@ -672,7 +681,7 @@
   "mcpAuthenticated": "認証済み",
   "mcpDisconnected": "未テスト",
   "mcpError": "直近のテストに失敗",
-  "mcpErrorNodeCommandNotFound": "コマンド {{command}} を準備できませんでした。WinkGoCore は通常、管理対象の Node ランタイムを自動で準備します。接続テストを再試行し、それでも失敗する場合はバックエンドログを確認するか、この MCP サーバーに絶対コマンドパスを設定してください。",
+  "mcpErrorNodeCommandNotFound": "コマンド {{command}} を準備できませんでした。WINK GO Core は通常、管理対象の Node ランタイムを自動で準備します。接続テストを再試行し、それでも失敗する場合はバックエンドログを確認するか、この MCP サーバーに絶対コマンドパスを設定してください。",
   "mcpErrorBunCommandNotFound": "Command {{command}} was not found. Install Bun (which includes bun/bunx), restart WINK GO, or configure this MCP server to use an absolute command path.",
   "mcpErrorUvCommandNotFound": "Command {{command}} was not found. Install uv, restart WINK GO, or configure this MCP server to use an absolute command path.",
   "mcpErrorPythonCommandNotFound": "Command {{command}} was not found. Install Python, restart WINK GO, or configure this MCP server to use an absolute command path.",
@@ -786,7 +795,7 @@
   "bugReportScreenshotUploaded": "（{{count}} 枚アップロード済み）",
   "bugReportScreenshotDropzoneText": "クリック、ドラッグ、またはここに貼り付け",
   "bugReportScreenshotFormats": "PNG、JPG、GIF に対応",
-  "bugReportAutoInfo": "送信時にシステム情報と直近3日間のログが自動的に添付され、問題の特定に役立ちます",
+  "bugReportAutoInfo": "送信されるのは入力した説明と選択したスクリーンショットだけです。ログやデータベース診断情報が自動送信されることはありません。",
   "bugReportSubmit": "送信",
   "bugReportCancel": "キャンセル",
   "bugReportSuccess": "報告が送信されました。フィードバックありがとうございます",
@@ -1108,8 +1117,8 @@
     "marketUpdate": "更新",
     "marketEmpty": "インストール可能な Agent が見つかりませんでした。ネットワーク接続を確認し、GitHub に正常にアクセスできることを確認してください。",
     "marketContributionHint": "新しい Agent をマーケットに追加したいですか？",
-    "marketContributionAction": "WinkGoHub に PR を送る",
-    "marketComingSoon": "WinkGoHub market is coming soon.",
+    "marketContributionAction": "WINK GO Hub に PR を送る",
+    "marketComingSoon": "WINK GO Hub market is coming soon.",
     "detectCustomAgent": "カスタムエージェントを検出",
     "editCustomAgent": "カスタムエージェントを編集",
     "officialAgents": "公式エージェント",
@@ -1140,6 +1149,7 @@
     "errorCodes": {
       "command_not_found": "Install {{command}} and retry the connection test.",
       "qoderCliRequired": "Qoder IDE と Qoder Agent CLI は別のコンポーネントです。{{command}} を別途インストールしてください。IDE 付属の qoder コマンドは ACP に対応しておらず、代用できません。",
+      "claudeCliRequired": "Install the official Claude Code CLI separately and make sure {{command}} is on PATH. WINK GO does not bundle Claude Code or reuse Claude.ai Free/Pro/Max subscription OAuth; configure ANTHROPIC_API_KEY or a compatible API gateway.",
       "acp_init_failed": "The CLI started but failed during initialization. Complete sign-in or first-run setup, then retry the connection test.",
       "health_check_failed": "Open {{name}} once to finish setup or sign-in, then retry the connection test.",
       "session_send_failed": "Fix the credentials or network issue affecting {{name}}, then start a new conversation or retry the connection test.",
@@ -1180,7 +1190,7 @@
     "envScenarioApiKey": "API キーまたはアクセストークンの不足（ANTHROPIC_API_KEY、OPENAI_API_KEY など）——「要サインイン」/ 接続失敗の最も一般的な原因",
     "envScenarioBaseUrl": "カスタム API エンドポイントまたはゲートウェイ（ANTHROPIC_BASE_URL、OPENAI_BASE_URL など）。自己ホストまたはプロキシ経由のサービス向け",
     "envScenarioProxy": "ネットワークプロキシ設定（HTTPS_PROXY、HTTP_PROXY など）。エージェントが直接インターネットに接続できない場合",
-    "envOauthNote": "注意：CLI 内でのアカウントログイン（例：Google アカウントで Gemini にサインイン）の代わりにはなりません。OAuth ログインはターミナルで CLI から行ってください。",
+    "envOauthNote": "WINK GO does not reuse third-party GUI subscription credentials. Configure the API keys or gateway tokens required by each tool here. Use vendor OAuth only where that vendor explicitly permits third-party client use.",
     "emptyOverridesError": "保存する前に、起動パスまたは少なくとも 1 つの環境変数を入力してください。"
   },
   "remoteAgent": {
@@ -1293,8 +1303,7 @@
   "autoInjectedSkillsHint": "すべての会話に自動的に読み込まれます。有効化は不要で、エージェントが使用するタイミングを判断します。",
   "legal": {
     "title": "法的情報",
-    "summary": "WINK GO の一部のコードは AionUi を基に変更され、Apache License 2.0 に基づき引き続き提供されます。",
-    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "summary": "WINK GO は Apache License 2.0 に基づいて公開されています。",
     "apacheLicense": "Apache 2.0 ライセンス",
     "notice": "配布通知",
     "thirdPartyNotices": "サードパーティー通知"

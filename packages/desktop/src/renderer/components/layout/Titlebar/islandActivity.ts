@@ -128,7 +128,7 @@ export const friendlyIslandToolName = (value: unknown): string => {
   const original = sanitizeIslandActivityText(value, '本地任务');
   const normalized = original.toLocaleLowerCase();
   const source = resolveSource(original);
-  const service = source === 'WINK GO' ? '' : source;
+  const service = /^(?:WINK GO|WINK GO)$/i.test(source) ? '' : source;
   const action =
     normalized.includes('search') && normalized.includes('play')
       ? '搜索播放'

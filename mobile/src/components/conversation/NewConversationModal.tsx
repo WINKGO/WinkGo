@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React, { useEffect, useState } from 'react';
 import { View, Modal, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -24,9 +25,7 @@ export function NewConversationModal({ visible, onClose, onAgentSelected }: NewC
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const tint = useThemeColor({}, 'tint');
   const background = useThemeColor({}, 'background');
-  const surface = useThemeColor({}, 'surface');
   const border = useThemeColor({}, 'border');
-  const text = useThemeColor({}, 'text');
 
   useEffect(() => {
     if (visible) {

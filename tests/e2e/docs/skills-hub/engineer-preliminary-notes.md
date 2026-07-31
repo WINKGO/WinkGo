@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # SkillsHub E2E 工程师预备笔记
 
 **作者**: skills-engineer-2

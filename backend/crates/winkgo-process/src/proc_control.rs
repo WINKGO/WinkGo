@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Kill + identity-gated liveness probing (IC-1 core).
 //!
 //! The crate spawns each child as its own process-group leader, so teardown

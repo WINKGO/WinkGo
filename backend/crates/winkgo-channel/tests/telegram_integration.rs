@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for the Telegram plugin.
 //!
 //! Tests the TelegramPlugin through the public ChannelPlugin trait interface

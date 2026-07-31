@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use serde::Serialize;
 use winkgo_common::TimestampMs;
 use winkgo_db::{DbError, FolderRow, ProjectExplorerRow, ProjectRow};

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Setup and top-level orchestration for the JSON stream protocol.
 //!
 //! Flow: build protocol plumbing (writer/sink/approval manager) → bootstrap

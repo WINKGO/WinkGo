@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use tracing::info;
 use winkgo_api_types::{AgentErrorCode, AgentErrorOwnership};
 use winkgo_common::{AgentKillReason, AgentType};

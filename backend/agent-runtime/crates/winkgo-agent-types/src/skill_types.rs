@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 /// Effort level for a skill invocation or reasoning model.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EffortLevel {

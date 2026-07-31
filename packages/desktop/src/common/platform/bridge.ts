@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2026 AionUi (aionui.com)
@@ -133,17 +134,34 @@ export const subscribe = <Params = unknown, Data = unknown>(
       .then((result) => emit(`subscribe.callback-${name}${request.id}`, result))
       .catch((error: unknown) => {
         console.error(`[bridge] Provider "${name}" failed:`, error);
+        // This callback is broadcast through both Electron windows and WebSocket
+        // clients. Never put an arbitrary exception message on that transport:
+        // it can contain local paths, request data, tokens, or provider secrets.
+        emit(`subscribe.callback-${name}${request.id}.error`, {
+          code: 'BRIDGE_PROVIDER_FAILED',
+        });
       });
   });
 
 export const invoke = <Data = unknown>(name: string, data?: unknown): Promise<Data> => {
   const id = createRequestId(name);
   const callbackName = `subscribe.callback-${name}${id}`;
+  const errorCallbackName = `${callbackName}.error`;
 
-  return new Promise<Data>((resolve) => {
-    const dispose = on(callbackName, (result) => {
+  return new Promise<Data>((resolve, reject) => {
+    let disposeResult = noop;
+    let disposeError = noop;
+    const dispose = () => {
+      disposeResult();
+      disposeError();
+    };
+    disposeResult = on(callbackName, (result) => {
       dispose();
       resolve(result as Data);
+    });
+    disposeError = on(errorCallbackName, (_failure) => {
+      dispose();
+      reject(new Error('BRIDGE_PROVIDER_FAILED'));
     });
     emit(`subscribe-${name}`, { id, data });
   });

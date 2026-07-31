@@ -13,6 +13,7 @@
   "settings": "设置",
   "system": "系统",
   "about": "关于我们",
+  "localAccount": "本地账户",
   "back": "返回聊天",
   "goBack": "返回",
   "add": "添加",
@@ -304,12 +305,12 @@
   "backendStartup": {
     "incompatibleRuntime": {
       "title": "当前系统不支持内置后端",
-      "description": "WINK GO 已打开，但本地 WinkGoCore 后端无法在当前 Linux 版本上运行。请升级到受支持的 Linux 发行版后重启 WINK GO。",
+      "description": "WINK GO 已打开，但本地 WINK GO Core 后端无法在当前 Linux 版本上运行。请升级到受支持的 Linux 发行版后重启 WINK GO。",
       "requiredVersions": "需要的运行时符号：{{versions}}"
     },
     "incompleteInstallation": {
       "title": "WINK GO 安装不完整",
-      "description": "当前安装缺少必要的本地资源，WinkGoCore 无法启动。请下载并重新安装最新版 WINK GO；如果重新安装后仍然出现，请检查系统安全软件或杀毒软件是否隔离了 WinkGoCore。",
+      "description": "当前安装缺少必要的本地资源，WINK GO Core 无法启动。请下载并重新安装最新版 WINK GO；如果重新安装后仍然出现，请检查系统安全软件或杀毒软件是否隔离了 WINK GO Core。",
       "downloadLatest": "下载最新版",
       "sendDiagnostics": "发送诊断报告",
       "diagnosticsSent": "诊断报告已发送",
@@ -323,7 +324,7 @@
     },
     "dataMigration": {
       "title": "本地数据迁移失败",
-      "description": "WINK GO 已打开，但 WinkGoCore 在初始化本地数据时停止。重复安装 WINK GO 未必能解决此问题。请发送诊断报告或联系支持，以便检查本地数据库迁移状态。",
+      "description": "WINK GO 已打开，但 WINK GO Core 在初始化本地数据时停止。重复安装 WINK GO 未必能解决此问题。请发送诊断报告或联系支持，以便检查本地数据库迁移状态。",
       "sendDiagnostics": "发送诊断报告",
       "diagnosticsSent": "诊断报告已发送",
       "diagnosticsReportSuccess": "诊断报告已发送",
@@ -331,7 +332,7 @@
     },
     "localDataRepair": {
       "title": "本地数据修复失败",
-      "description": "WINK GO 已打开，但 WinkGoCore 在准备本地启动数据时停止，例如 assistant 或智能体记录。重新安装 WINK GO 可能无法解决此问题。请发送诊断报告或联系支持，以便检查本地数据库。",
+      "description": "WINK GO 已打开，但 WINK GO Core 在准备本地启动数据时停止，例如 assistant 或智能体记录。重新安装 WINK GO 可能无法解决此问题。请发送诊断报告或联系支持，以便检查本地数据库。",
       "sendDiagnostics": "发送诊断",
       "diagnosticsSent": "诊断已发送",
       "diagnosticsReportSuccess": "诊断报告已发送",
@@ -339,7 +340,7 @@
     },
     "startupDirectory": {
       "title": "启动目录不可用",
-      "description": "WINK GO 已打开，但由于配置的工作目录或日志目录不存在、不可访问或权限受限，WinkGoCore 无法启动。请确认这些目录存在且可写，然后重启 WINK GO。",
+      "description": "WINK GO 已打开，但由于配置的工作目录或日志目录不存在、不可访问或权限受限，WINK GO Core 无法启动。请确认这些目录存在且可写，然后重启 WINK GO。",
       "sendDiagnostics": "发送诊断报告",
       "diagnosticsSent": "诊断报告已发送",
       "diagnosticsReportSuccess": "诊断报告已发送",

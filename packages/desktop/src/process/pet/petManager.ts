@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -12,6 +13,8 @@ import { PetStateMachine } from './petStateMachine';
 import { PetIdleTicker } from './petIdleTicker';
 import { PetEventBridge } from './petEventBridge';
 import { setPetNotifyHook } from '../../common/adapter/main';
+import { isTrustedIpcSender, resolveTrustedDevServerUrl } from '../../common/platform/electronSecurity';
+import { registerTrustedWindowSecurity } from '../startup/electronSecurity';
 import {
   initPetConfirmManager,
   updateAnchorBounds,
@@ -121,10 +124,21 @@ export function createPetWindow(): void {
     hasShadow: false,
     focusable: false,
     webPreferences: {
+      allowRunningInsecureContent: false,
       preload: path.join(PRELOAD_DIR, 'petPreload.js'),
       contextIsolation: true,
+      navigateOnDragDrop: false,
       nodeIntegration: false,
+      safeDialogs: true,
+      sandbox: true,
+      webSecurity: true,
+      webviewTag: false,
     },
+  });
+  registerTrustedWindowSecurity(petWindow, {
+    role: 'pet-render',
+    productionEntryFile: path.join(RENDERER_DIR, 'pet.html'),
+    devServerUrl: resolveTrustedDevServerUrl(process.env['ELECTRON_RENDERER_URL']),
   });
 
   if (process.platform === 'darwin') {
@@ -152,10 +166,21 @@ export function createPetWindow(): void {
     hasShadow: false,
     focusable: false,
     webPreferences: {
+      allowRunningInsecureContent: false,
       preload: path.join(PRELOAD_DIR, 'petHitPreload.js'),
       contextIsolation: true,
+      navigateOnDragDrop: false,
       nodeIntegration: false,
+      safeDialogs: true,
+      sandbox: true,
+      webSecurity: true,
+      webviewTag: false,
     },
+  });
+  registerTrustedWindowSecurity(petHitWindow, {
+    role: 'pet-hit',
+    productionEntryFile: path.join(RENDERER_DIR, 'pet-hit.html'),
+    devServerUrl: resolveTrustedDevServerUrl(process.env['ELECTRON_RENDERER_URL']),
   });
 
   if (process.platform === 'darwin') {
@@ -340,13 +365,13 @@ function computeInitialPosition(size: number): { x: number; y: number } {
 
 function loadContent(): void {
   if (!petWindow || !petHitWindow) return;
-  const rendererUrl = process.env['ELECTRON_RENDERER_URL'];
+  const rendererUrl = app.isPackaged ? null : resolveTrustedDevServerUrl(process.env['ELECTRON_RENDERER_URL']);
 
-  if (!app.isPackaged && rendererUrl) {
-    petWindow.loadURL(`${rendererUrl}/pet/pet.html`).catch((error) => {
+  if (rendererUrl) {
+    petWindow.loadURL(new URL('/pet/pet.html', rendererUrl).toString()).catch((error) => {
       console.error('[Pet] loadURL failed for pet window:', error);
     });
-    petHitWindow.loadURL(`${rendererUrl}/pet/pet-hit.html`).catch((error) => {
+    petHitWindow.loadURL(new URL('/pet/pet-hit.html', rendererUrl).toString()).catch((error) => {
       console.error('[Pet] loadURL failed for pet-hit window:', error);
     });
   } else {
@@ -364,7 +389,8 @@ function loadContent(): void {
 // ---------------------------------------------------------------------------
 
 function registerIpcHandlers(): void {
-  ipcMain.on('pet:drag-start', () => {
+  ipcMain.on('pet:drag-start', (event) => {
+    if (!isTrustedIpcSender(event, ['pet-hit'])) return;
     if (!petWindow || petWindow.isDestroyed() || !petHitWindow || petHitWindow.isDestroyed()) return;
 
     // Defensive: if a previous drag never reached drag-end (e.g. dropped
@@ -415,11 +441,22 @@ function registerIpcHandlers(): void {
     }, DRAG_WATCHDOG_MS);
   });
 
-  ipcMain.on('pet:drag-end', () => {
+  ipcMain.on('pet:drag-end', (event) => {
+    if (!isTrustedIpcSender(event, ['pet-hit'])) return;
     endDrag();
   });
 
-  ipcMain.on('pet:click', (_event, data: { side: string; count: number }) => {
+  ipcMain.on('pet:click', (event, data: { side: string; count: number }) => {
+    if (
+      !isTrustedIpcSender(event, ['pet-hit']) ||
+      !data ||
+      (data.side !== 'left' && data.side !== 'right') ||
+      !Number.isInteger(data.count) ||
+      data.count < 1 ||
+      data.count > 100
+    ) {
+      return;
+    }
     if (!stateMachine || !idleTicker) return;
 
     idleTicker.resetIdle();
@@ -440,7 +477,8 @@ function registerIpcHandlers(): void {
     }
   });
 
-  ipcMain.on('pet:context-menu', () => {
+  ipcMain.on('pet:context-menu', (event) => {
+    if (!isTrustedIpcSender(event, ['pet-hit'])) return;
     if (!petHitWindow || petHitWindow.isDestroyed()) return;
 
     const sizeKeys = { 200: 'pet.sizeSmall', 280: 'pet.sizeMedium', 360: 'pet.sizeLarge' } as const;
@@ -487,7 +525,14 @@ function registerIpcHandlers(): void {
     menu.popup({ window: petHitWindow });
   });
 
-  ipcMain.on('pet:set-ignore-mouse-events', (_event, ignore: boolean, options?: { forward: boolean }) => {
+  ipcMain.on('pet:set-ignore-mouse-events', (event, ignore: boolean, options?: { forward: boolean }) => {
+    if (
+      !isTrustedIpcSender(event, ['pet-hit']) ||
+      typeof ignore !== 'boolean' ||
+      (options !== undefined && (!options || typeof options !== 'object' || typeof options.forward !== 'boolean'))
+    ) {
+      return;
+    }
     if (!petHitWindow || petHitWindow.isDestroyed()) return;
     petHitWindow.setIgnoreMouseEvents(ignore, options);
     lastHitIgnoreState = ignore;

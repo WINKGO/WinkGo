@@ -28,14 +28,14 @@ import {
   Video,
 } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ipcBridge } from '@/common';
 import type { ICronJob, WinkGoFormatEngineStatus, WinkGoFormatPreset } from '@/common/adapter/ipcBridge';
 import documentConvertIcon from '@renderer/assets/format-tools/document-convert.png';
-import winkGoWordmark from '@renderer/assets/logos/brand/app.png';
 import FileTypeIcon from '@renderer/pages/conversation/Workspace/components/FileTypeIcon';
 import { useWinkGoIslandFilePreferences } from '@renderer/hooks/system/useWinkGoIslandFilePreferences';
 import {
+  WINK_GO_BRAND_ICON as winkGoWordmark,
   resolveIslandDynamicIdentity,
   resolveMediaIdentity,
   resolveNotificationIdentity,
@@ -139,7 +139,7 @@ type IslandToast = {
 };
 
 const getIslandToastDisplayText = (toast: IslandToast | null): string =>
-  toast?.text.replace(/^WINK GO\s*·\s*/i, '') ?? '';
+  toast?.text.replace(/^(?:WINK GO|WINK GO)\s*·\s*/i, '') ?? '';
 
 type IslandFormatPreset = {
   id: WinkGoFormatPreset;
@@ -879,7 +879,7 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
     windowsRuntime.media,
     windowsRuntime.notification,
   ]);
-  const visibleSummary = floating ? summary.replace(/^WINK GO(?:\s*[·•-]\s*|\s+)/i, '') : summary;
+  const visibleSummary = floating ? summary.replace(/^(?:WINK GO|WINK GO)(?:\s*[·•-]\s*|\s+)/i, '') : summary;
   const capsuleLabel = floating ? `WINK GO ${visibleSummary}`.trim() : summary;
   const dynamicIdentity = useMemo(
     () =>

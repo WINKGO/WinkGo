@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { cleanup, render, screen, within } from '@testing-library/react';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -73,7 +74,7 @@ vi.mock('@renderer/pages/team/components/TeamCreateModal', () => ({ default: () 
 vi.mock('@renderer/utils/ui/siderTooltip', () => ({ cleanupSiderTooltips: vi.fn() }));
 vi.mock('@renderer/utils/ui/focus', () => ({ blurActiveElement: vi.fn() }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-vi.mock('react-router-dom', () => ({ useNavigate: () => fixtures.navigate }));
+vi.mock('react-router', () => ({ useNavigate: () => fixtures.navigate }));
 vi.mock('swr', () => ({ useSWRConfig: () => ({ mutate: fixtures.globalMutate }) }));
 vi.mock('@/common', () => ({
   ipcBridge: {

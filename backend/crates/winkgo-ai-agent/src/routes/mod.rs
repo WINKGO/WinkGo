@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! HTTP routes for the ai-agent crate, grouped by capability.
 //!
 //! - [`agent`] — agent-registry endpoints (`/api/agents*`, including

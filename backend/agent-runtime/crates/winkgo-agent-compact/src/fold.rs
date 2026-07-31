@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 const MIN_FOLD_COUNT: usize = 3;
 const MIN_PREFIX_RATIO: f64 = 0.5;
 

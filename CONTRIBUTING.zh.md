@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # 贡献指南
 
 > **English version**: [CONTRIBUTING.md](CONTRIBUTING.md)
@@ -10,6 +12,23 @@
 - [bun](https://bun.sh)
 - [Rust stable + Cargo](https://rustup.rs)，用于构建本地 WINK GO Core 后端
 - [prek](https://github.com/j178/prek)（`npm install -g @j178/prek`）
+
+## 贡献权利与 DCO
+
+所有贡献均按仓库的 Apache License 2.0 提交。提交者在 commit 中加入
+`Signed-off-by`，即表示其确认
+[Developer Certificate of Origin 1.1](https://developercertificate.org/)：
+贡献由本人创作，或本人有权按所声明许可证提交，并理解公开贡献记录会被保留。
+
+请使用以下命令为每个 commit 签署：
+
+```bash
+git commit -s
+```
+
+不得提交雇主或客户的机密材料、无权复制的代码、生成资产或未经权利核验的
+AI 辅助内容。引入第三方材料时，必须记录准确来源、版本或 commit、许可证、
+版权/NOTICE 以及修改说明。提交者应自行取得必要的雇主或客户授权。
 
 ## 规则一：原子化 PR
 

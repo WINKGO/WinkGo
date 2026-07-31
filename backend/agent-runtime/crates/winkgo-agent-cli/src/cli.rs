@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
@@ -115,15 +116,16 @@ pub(crate) struct Cli {
 
 #[derive(Subcommand)]
 pub(crate) enum Commands {
+    /// Reserved legacy command. Subscriber OAuth is intentionally unsupported.
+    #[command(hide = true)]
+    Auth {
+        #[arg(hide = true, value_parser = reject_removed_auth_action)]
+        action: String,
+    },
     /// Configuration file management
     Config {
         #[command(subcommand)]
         action: ConfigAction,
-    },
-    /// Authentication (Anthropic OAuth)
-    Auth {
-        #[command(subcommand)]
-        action: AuthAction,
     },
     /// Session management
     Session {
@@ -137,20 +139,16 @@ pub(crate) enum Commands {
     },
 }
 
+fn reject_removed_auth_action(_: &str) -> Result<String, String> {
+    Err("subscriber OAuth commands were removed; configure a provider API key instead".to_owned())
+}
+
 #[derive(Subcommand)]
 pub(crate) enum ConfigAction {
     /// Generate a default config file
     Init,
     /// Print config file path and exit
     Path,
-}
-
-#[derive(Subcommand)]
-pub(crate) enum AuthAction {
-    /// Login with Anthropic account (OAuth device flow)
-    Login,
-    /// Logout (remove saved OAuth credentials)
-    Logout,
 }
 
 #[derive(Subcommand)]

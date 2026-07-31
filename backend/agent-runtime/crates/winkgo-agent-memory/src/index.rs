@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // MEMORY.md index management and truncation.
 //
 // The index file (`MEMORY.md`) is a lightweight directory of all memory

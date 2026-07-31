@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 name: Discussion Triage
 
 # Discussions have no assignee mechanism, so notify the on-duty owner by

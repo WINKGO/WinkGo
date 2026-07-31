@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use rstest::rstest;
 use winkgo_agent_protocol::commands::{ApprovalScope, ProtocolCommand, SessionMode};
 

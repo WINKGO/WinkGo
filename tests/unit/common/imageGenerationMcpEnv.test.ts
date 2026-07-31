@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { describe, expect, it } from 'vitest';
 
 import { IMAGE_GEN_ENV_KEYS, resolveImageGenerationMcpEnv } from '@/common/config/imageGenerationMcpEnv';

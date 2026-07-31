@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use sqlx::Row;
 use winkgo_db::{
     DatabaseInitOptions, init_database, init_database_memory, init_database_with_options, maybe_copy_legacy_database,

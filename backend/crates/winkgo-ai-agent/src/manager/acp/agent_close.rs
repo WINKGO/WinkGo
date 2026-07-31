@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Close-path helpers for `AcpAgentManager`.
 //!
 //! Centralises the logic that turns a `send_message` failure into a

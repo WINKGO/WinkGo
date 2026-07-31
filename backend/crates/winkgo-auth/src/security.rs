@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use axum::extract::Request;
 use axum::http::header::{
     CONTENT_SECURITY_POLICY, HeaderValue, REFERRER_POLICY, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS, X_XSS_PROTECTION,

@@ -14,14 +14,32 @@
     "searchPlaceholder": "プロジェクトを検索…",
     "noProject": "プロジェクトなし"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "WINK GO AI の分析に失敗しました。しばらくしてから再試行してください。",
+    "backToChat": "チャットに戻る",
+    "frameTitle": "WINK GO ナレッジキャンバス",
+    "loading": "ナレッジキャンバスを開いています…",
+    "open": "ナレッジキャンバスを開く",
+    "pageLabel": "WINK GO ナレッジキャンバス",
+    "reload": "ナレッジキャンバスを再読み込み",
+    "statusAnalyzing": "WINK GO AI が分析中",
+    "statusReady": "ローカルキャンバス · AI 利用可能",
+    "statusUnavailable": "実験機能 · 未提供",
+    "subtitle": "ウェブページ、文書、アイデアを編集可能な知識構造に整理します",
+    "title": "ナレッジキャンバス",
+    "unavailableDescription": "公開版には完全なキャンバス実行コンポーネントが含まれていません。ソース、ライセンス、公開資料の審査完了後に提供します。",
+    "unavailableTitle": "ナレッジキャンバスは実験段階です"
+  },
   "installerCenter": {
     "entry": "ソフトウェアインストールセンター",
     "title": "WINK GO インストールセンター",
-    "subtitle": "Codex、Claude Code、Antigravity のワンクリック導入パッケージ",
-    "windows": "Windows インストーラー",
-    "macos": "macOS インストーラー",
-    "environmentSetup": "{{platform}} 環境をすばやくセットアップ",
-    "downloadFailed": "ダウンロードリンクを開けませんでした",
+    "subtitle": "Codex、Claude Code、Antigravity の公式インストールページを開きます",
+    "windows": "Windows インストールガイド",
+    "macos": "macOS インストールガイド",
+    "environmentSetup": "{{platform}} の公式インストールガイドを見る",
+    "openOfficialPage": "公式インストールページを開く",
+    "thirdPartyDisclaimer": "Codex、Claude Code、Antigravity は第三者の製品です。WINK GO はこれらをホスト、推奨せず、提供状況や互換性を保証しません。各ベンダーの規約が適用されます。",
+    "downloadFailed": "公式インストールページを開けませんでした",
     "recommended": "おすすめ"
   }
 }

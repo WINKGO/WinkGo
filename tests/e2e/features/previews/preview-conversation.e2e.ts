@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * E2E: Preview panel — file click triggers preview.
  *

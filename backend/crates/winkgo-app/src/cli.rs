@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! CLI argument definitions for the `winkgo_core` binary.
 //!
 //! Kept separate from `main.rs` to isolate the clap surface (struct + enum +

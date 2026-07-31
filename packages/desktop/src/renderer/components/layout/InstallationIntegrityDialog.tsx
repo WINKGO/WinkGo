@@ -1,10 +1,11 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { Button, Message, Modal, Space, Typography } from '@arco-design/web-react';
 import type { TFunction } from 'i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type FeedbackEventTags, submitFeedbackReport } from '@/renderer/services/feedback/submitFeedbackReport';
+import { submitFeedbackReport } from '@/renderer/services/feedback/submitFeedbackReport';
 
-const WINKGO_DOWNLOAD_URL = 'https://winkgo.top/';
+const WINKGO_DOWNLOAD_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go/releases';
 const INSTALLATION_INTEGRITY_REPORT_FLUSH_TIMEOUT_MS = 2000;
 
 type InstallationIntegrityDialogKind =
@@ -84,56 +85,20 @@ export function getInstallationIntegrityDiagnosticsSentText(
     : t('common.backendStartup.incompleteInstallation.diagnosticsSent');
 }
 
-function buildInstallationIntegrityTags(diagnostics: InstallationIntegrityDiagnostics): FeedbackEventTags {
-  const tags: FeedbackEventTags = {
-    'winkgo.installation_integrity.user_report': 'true',
-    'winkgo.installation_integrity.report_source': diagnostics.source,
-  };
-
-  if (diagnostics.runtime?.failureKind) {
-    tags['winkgo.installation_integrity.failure_kind'] = diagnostics.runtime.failureKind;
-  }
-  if (diagnostics.runtime?.resource) {
-    tags['winkgo.runtime_resource'] = diagnostics.runtime.resource;
-  }
-  if (diagnostics.runtime?.resourceId) {
-    tags['winkgo.runtime_resource_id'] = diagnostics.runtime.resourceId;
-  }
-  if (diagnostics.runtime?.scopeKind) {
-    tags['winkgo.runtime_scope'] = diagnostics.runtime.scopeKind;
-  }
-
-  const reason = diagnostics.backendStartupFailure?.reason;
-  if (typeof reason === 'string') {
-    tags['winkgo.backend_startup_failure.reason'] = reason;
-  }
-  const backendBoundaryCode = diagnostics.backendStartupFailure?.backendBoundaryCode;
-  if (typeof backendBoundaryCode === 'string') {
-    tags['winkgo.backend_startup_failure.backend_boundary_code'] = backendBoundaryCode;
-  }
-  const backendBoundaryStage = diagnostics.backendStartupFailure?.backendBoundaryStage;
-  if (typeof backendBoundaryStage === 'string') {
-    tags['winkgo.backend_startup_failure.backend_boundary_stage'] = backendBoundaryStage;
-  }
-
-  return tags;
-}
-
 export async function reportInstallationIntegrityDiagnostics(
   diagnostics: InstallationIntegrityDiagnostics,
   t: TFunction,
   diagnosticsKind: InstallationIntegrityDialogKind = 'incomplete_installation'
 ): Promise<void> {
   await submitFeedbackReport({
-    collectLogs: true,
+    // Send only the same human-readable description shown in the dialog.
+    // Runtime objects, backend failures, tags, logs, and database diagnostics
+    // stay local unless a future UI explicitly previews and opts into them.
+    collectLogs: false,
     description: diagnostics.description ?? getBackendStartupInstallationDescription(t),
-    extra: {
-      installation_integrity: diagnostics,
-    },
     flushTimeoutMs: INSTALLATION_INTEGRITY_REPORT_FLUSH_TIMEOUT_MS,
     module: 'installation-integrity',
     moduleLabel: getInstallationIntegrityTitle(t, diagnosticsKind),
-    tags: buildInstallationIntegrityTags(diagnostics),
   });
 
   if (typeof window !== 'undefined' && window.__winkgoE2ETest) {

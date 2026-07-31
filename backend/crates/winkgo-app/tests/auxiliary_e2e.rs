@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! E2E integration tests for auxiliary conversation routes.
 //!
 //! Tests cover: workspace browse, side-question,

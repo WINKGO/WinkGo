@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Supplemental tests for frontmatter.rs — covers test-plan.md cases not in impl tests.
 // Included from frontmatter_test.rs as frontmatter_supplemental_test.
 // `use super::*` gives access to private functions in frontmatter.rs.

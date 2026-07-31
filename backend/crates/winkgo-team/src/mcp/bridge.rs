@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Stdio bridge descriptors consumed by ACP `session/new.mcp_servers`.
 //!
 //! Flow: `TeamSessionService::ensure_session` builds a `TeamMcpStdioServerSpec`

@@ -14,14 +14,32 @@
     "searchPlaceholder": "Пошук проєктів…",
     "noProject": "Без проєкту"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "Не вдалося виконати аналіз WINK GO AI. Спробуйте пізніше.",
+    "backToChat": "Повернутися до чату",
+    "frameTitle": "Полотно знань WINK GO",
+    "loading": "Відкриваємо полотно знань…",
+    "open": "Відкрити полотно знань",
+    "pageLabel": "Полотно знань WINK GO",
+    "reload": "Перезавантажити полотно знань",
+    "statusAnalyzing": "WINK GO AI виконує аналіз",
+    "statusReady": "Локальне полотно · ШІ доступний",
+    "statusUnavailable": "Експериментально · Не включено",
+    "subtitle": "Перетворюйте вебсторінки, документи та ідеї на редаговані структури знань",
+    "title": "Полотно знань",
+    "unavailableDescription": "Публічна збірка не містить повного середовища полотна. Воно залишатиметься вимкненим до перевірки джерел, ліцензій і матеріалів випуску.",
+    "unavailableTitle": "Полотно знань ще експериментальне"
+  },
   "installerCenter": {
     "entry": "Центр встановлення програм",
     "title": "Центр встановлення WINK GO",
-    "subtitle": "Пакети швидкого встановлення Codex, Claude Code та Antigravity",
-    "windows": "Інсталятори Windows",
-    "macos": "Інсталятори macOS",
-    "environmentSetup": "Швидке налаштування для {{platform}}",
-    "downloadFailed": "Не вдалося відкрити посилання для завантаження",
+    "subtitle": "Відкрийте офіційні сторінки встановлення Codex, Claude Code та Antigravity",
+    "windows": "Інструкція зі встановлення для Windows",
+    "macos": "Інструкція зі встановлення для macOS",
+    "environmentSetup": "Переглянути офіційну інструкцію зі встановлення для {{platform}}",
+    "openOfficialPage": "Відкрити офіційну сторінку встановлення",
+    "thirdPartyDisclaimer": "Codex, Claude Code та Antigravity — сторонні продукти. WINK GO не розміщує й не рекламує їх і не гарантує доступність або сумісність; застосовуються умови постачальників.",
+    "downloadFailed": "Не вдалося відкрити офіційну сторінку встановлення",
     "recommended": "Рекомендовано"
   }
 }

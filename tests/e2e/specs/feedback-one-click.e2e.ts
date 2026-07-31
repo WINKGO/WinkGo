@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * One-click feedback – verifies the feedback infrastructure introduced for
  * the inline "一键反馈 >>" error-adjacent links.

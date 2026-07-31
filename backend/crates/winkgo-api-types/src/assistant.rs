@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! HTTP contract types for `/api/assistants/*`.
 //!
 //! Mirror of `src/common/types/assistantTypes.ts` on the frontend; any

@@ -1,7 +1,8 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2026 AionUi (aionui.com)
- * Modifications Copyright 2026 WINK GO (winkgo.top)
+ * Modifications Copyright 2026 WINK GO contributors.
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -17,13 +18,12 @@ vi.mock('react-i18next', () => ({
       ({
         'common.version': 'Version',
         'settings.legal.title': 'Legal information',
-        'settings.legal.summary':
-          'Portions of WINK GO are derived from AionUi and remain licensed under Apache License 2.0.',
-        'settings.legal.attribution':
-          'Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).',
+        'settings.legal.summary': 'WINK GO is released under Apache License 2.0.',
         'settings.legal.apacheLicense': 'Apache 2.0 License',
         'settings.legal.notice': 'Distribution notice',
         'settings.legal.thirdPartyNotices': 'Third-party notices',
+        'login.privacyPolicy': 'Privacy Policy',
+        'login.termsOfService': 'Terms of Service',
       })[key] ?? key,
   }),
 }));
@@ -36,7 +36,7 @@ import AboutModalContent from '@/renderer/components/settings/SettingsModal/cont
 
 describe('AboutModalContent', () => {
   beforeEach(() => {
-    vi.stubGlobal('__APP_VERSION__', '2.1.45');
+    vi.stubGlobal('__APP_VERSION__', '2.2.0');
   });
 
   afterEach(() => {
@@ -45,28 +45,28 @@ describe('AboutModalContent', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows WINK GO branding, version, and readable legal attribution', () => {
+  it('shows WINK GO branding, version, and a link to the legal documents', () => {
     const { container } = render(<AboutModalContent />);
 
-    expect(screen.getByRole('img', { name: 'WINK GO' })).toBeInTheDocument();
-    expect(screen.getByText('https://winkgo.top/')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'https://winkgo.top/' })).toHaveAttribute('href', 'https://winkgo.top/');
-    expect(screen.getByRole('link', { name: 'https://winkgo.top/' })).toHaveAttribute(
-      'aria-label',
-      'https://winkgo.top/'
+    expect(screen.getByText('WINK GO')).toBeInTheDocument();
+    expect(screen.getByText('github.com/xuweihafeichangniu-lab/wink-go')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'https://github.com/xuweihafeichangniu-lab/wink-go' })).toHaveAttribute(
+      'href',
+      'https://github.com/xuweihafeichangniu-lab/wink-go'
     );
-    expect(
-      screen.getByText('Portions of WINK GO are derived from AionUi and remain licensed under Apache License 2.0.')
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Copyright 2025-2026 AionUi/)).toBeInTheDocument();
-    expect(screen.getByText('Version 2.1.45')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'https://github.com/xuweihafeichangniu-lab/wink-go' })).toHaveAttribute(
+      'aria-label',
+      'https://github.com/xuweihafeichangniu-lab/wink-go'
+    );
+    expect(screen.getByText('WINK GO is released under Apache License 2.0.')).toBeInTheDocument();
+    expect(screen.getByText('Version 2.2.0')).toBeInTheDocument();
     expect(screen.getByTestId('about-attribution')).toHaveClass('text-12px');
     expect(screen.getByTestId('about-attribution')).not.toHaveClass('opacity-20');
     expect(screen.getByRole('link', { name: 'Apache-2.0' })).toHaveAttribute(
       'href',
       'https://www.apache.org/licenses/LICENSE-2.0'
     );
-    expect(container.querySelectorAll('img')).toHaveLength(1);
+    expect(container.querySelectorAll('img')).toHaveLength(0);
     expect(container.querySelectorAll('a')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Legal information' })).toBeInTheDocument();
   });
@@ -83,15 +83,23 @@ describe('AboutModalContent', () => {
     expect(screen.getByTestId('legal-document-license')).toHaveTextContent('Apache License');
 
     fireEvent.click(screen.getByText('Third-party notices'));
-    expect(screen.getByTestId('legal-document-third-party')).toHaveTextContent('AionUi release');
+    expect(screen.getByTestId('legal-document-third-party')).toHaveTextContent('AionUI, AionCore, and aionrs');
+
+    fireEvent.click(screen.getByText('Privacy Policy'));
+    expect(screen.getByTestId('legal-document-privacy')).toHaveTextContent('local-first');
+    expect(screen.getByTestId('legal-document-privacy')).toHaveTextContent('1394748660@qq.com');
+
+    fireEvent.click(screen.getByText('Terms of Service'));
+    expect(screen.getByTestId('legal-document-terms')).toHaveTextContent('open-source license');
+    expect(screen.getByTestId('legal-document-terms')).toHaveTextContent('1394748660@qq.com');
   });
 
-  it('opens the WINK GO website externally', () => {
+  it('opens the WINK GO project page externally', () => {
     render(<AboutModalContent />);
 
-    fireEvent.click(screen.getByRole('link', { name: 'https://winkgo.top/' }));
+    fireEvent.click(screen.getByRole('link', { name: 'https://github.com/xuweihafeichangniu-lab/wink-go' }));
 
-    expect(openExternalUrlMock).toHaveBeenCalledWith('https://winkgo.top/');
+    expect(openExternalUrlMock).toHaveBeenCalledWith('https://github.com/xuweihafeichangniu-lab/wink-go');
   });
 
   it('opens the Apache-2.0 license externally', () => {

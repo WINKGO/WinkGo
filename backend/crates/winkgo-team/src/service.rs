@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 mod describe_support;
 mod response_builder;
 pub(crate) mod spawn_support;

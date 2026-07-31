@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use winkgo_agent_types::{message::ContentBlock, skill_types::ContextModifier};
 
 pub(crate) const DEFAULT_MAX_TOOL_CALL_MALFORMED: usize = 3;

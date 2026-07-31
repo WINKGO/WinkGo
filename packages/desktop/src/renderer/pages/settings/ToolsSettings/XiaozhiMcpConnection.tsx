@@ -6,15 +6,16 @@
 
 import { ipcBridge } from '@/common';
 import type { WinkGoXiaozhiConfig, WinkGoXiaozhiSaveRequest, WinkGoXiaozhiSnapshot } from '@/common/adapter/ipcBridge';
-import winkGoLogo from '@/renderer/assets/brand/wink-go-icon.png';
+import { WINK_GO_BRAND_ICON as winkGoLogo, WINK_GO_DISPLAY_NAME } from '@/renderer/utils/model/winkGoBranding';
 import { openExternalUrl } from '@/renderer/utils/platform';
-import { Button, Input, InputNumber, Message, Switch, Tag } from '@arco-design/web-react';
+import { Button, Input, InputNumber, Message, Switch, Tag, Tooltip } from '@arco-design/web-react';
 import {
   Api,
   Broadcast,
   CheckOne,
   Connection,
   Cpu,
+  Help,
   Key,
   LinkCloud,
   Phone,
@@ -24,6 +25,8 @@ import {
   Shield,
 } from '@icon-park/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 import './xiaozhi-mcp-connection.css';
 
 type FormState = Pick<
@@ -36,14 +39,15 @@ type FormState = Pick<
 };
 
 const DEFAULT_CONFIG: WinkGoXiaozhiConfig = {
-  schemaVersion: 4,
+  schemaVersion: 5,
+  relayConsentVersion: 0,
   runtimeApi: 'http://127.0.0.1:8121',
   lanIp: '127.0.0.1',
   bridgePort: 8776,
   relayUrl: 'wss://winkgo.top/desktop',
   desktopId: '',
   bindingCode: '',
-  relayEnabled: true,
+  relayEnabled: false,
   hardwareEnabled: true,
   mobileEnabled: false,
   hardwareEndpoint: 'wss://api.xiaozhi.me/mcp/',
@@ -181,6 +185,8 @@ const ConnectionFlow: React.FC<{ steps: ConnectionStep[]; testing: boolean }> = 
 };
 
 const XiaozhiMcpConnection: React.FC = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const [snapshot, setSnapshot] = useState<WinkGoXiaozhiSnapshot | null>(null);
   const [form, setForm] = useState<FormState>(() => toForm(DEFAULT_CONFIG));
   const [loading, setLoading] = useState(false);
@@ -469,11 +475,13 @@ const XiaozhiMcpConnection: React.FC = () => {
         <div className='relative flex items-center justify-between gap-22px max-md:flex-col max-md:items-stretch'>
           <div className='flex min-w-0 items-center gap-14px'>
             <span className='size-58px shrink-0 flex items-center justify-center rd-17px border border-border-2 bg-1 shadow-md'>
-              <img alt='WINK GO' className='size-46px object-contain' src={winkGoLogo} />
+              <img alt={WINK_GO_DISPLAY_NAME} className='size-46px object-contain' src={winkGoLogo} />
             </span>
             <div>
-              <span className='text-10px font-700 tracking-1.4px text-primary-6'>WINK GO DEVICE BRIDGE</span>
-              <h2 className='m-0 mt-3px text-21px text-t-primary'>小智 MCP 连接中心</h2>
+              <span className='text-10px font-700 tracking-1.4px text-primary-6'>
+                {t('settings.mcpWorkspace.deviceBridgeEyebrow', { brand: WINK_GO_DISPLAY_NAME })}
+              </span>
+              <h2 className='m-0 mt-3px text-21px text-t-primary'>{t('settings.mcpWorkspace.connectionCenter')}</h2>
               <p className='m-0 mt-4px max-w-560px text-11px leading-18px text-t-secondary'>
                 一套界面管理本机 Runtime、云端设备中转、ESP32 与手机小程序；每个账号、每台电脑独立隔离。
               </p>
@@ -571,7 +579,7 @@ const XiaozhiMcpConnection: React.FC = () => {
               <div>
                 <strong className='block text-12px text-t-primary'>本机 Runtime 服务</strong>
                 <small className='mt-2px block text-10px text-t-tertiary'>
-                  WINK GO 在本机访问工具和技能的基础服务地址
+                  {t('settings.mcpWorkspace.runtimeServiceDescription', { brand: WINK_GO_DISPLAY_NAME })}
                 </small>
               </div>
             </div>
@@ -649,12 +657,30 @@ const XiaozhiMcpConnection: React.FC = () => {
                 </div>
               </div>
               <Switch
+                aria-describedby='winkgo-cloud-relay-disclosure'
+                aria-label={t('settings.mcpWorkspace.relayToggleLabel')}
                 checked={form.relayEnabled}
                 onChange={(relayEnabled) => setForm((current) => ({ ...current, relayEnabled }))}
               />
             </div>
+            <div
+              className='mb-10px rd-10px border border-orange-3 bg-orange-1 px-10px py-9px text-10px leading-16px text-t-secondary'
+              data-testid='xiaozhi-relay-disclosure'
+              id='winkgo-cloud-relay-disclosure'
+            >
+              <strong className='mb-3px block text-11px text-orange-7'>
+                {t('settings.mcpWorkspace.relayDisclosureTitle')}
+              </strong>
+              <span>
+                {t('settings.mcpWorkspace.relayDisclosureBody', {
+                  domain: 'wss://winkgo.top/desktop',
+                })}
+              </span>
+            </div>
             <label className='block'>
-              <span className='mb-6px block text-11px font-600 text-t-secondary'>WINK GO 手机绑定中转</span>
+              <span className='mb-6px block text-11px font-600 text-t-secondary'>
+                {t('settings.mcpWorkspace.relayServiceLabel', { brand: WINK_GO_DISPLAY_NAME })}
+              </span>
               <div className='xiaozhi-input-shell rd-10px bg-1 p-2px'>
                 <Input
                   className='!border-transparent !bg-transparent'
@@ -701,12 +727,29 @@ const XiaozhiMcpConnection: React.FC = () => {
       >
         <div className='flex items-start justify-between gap-12px border-b border-border-2 pb-11px'>
           <div>
-            <h3 className='m-0 flex items-center gap-7px text-15px text-t-primary'>
+            <h3 className='m-0 flex flex-wrap items-center gap-7px text-15px text-t-primary'>
               <Phone theme='outline' size='18' />
-              手机小程序设备绑定
+              <span>手机小程序设备绑定</span>
+              <Tooltip content={t('settings.mcpWorkspace.bindingHelp')}>
+                <button
+                  aria-label={t('settings.mcpWorkspace.bindingHelpLabel')}
+                  className='size-20px flex items-center justify-center rd-full border border-border-2 bg-1 p-0 text-t-secondary transition-colors hover:border-primary-4 hover:text-primary-6'
+                  type='button'
+                >
+                  <Help theme='outline' size='13' />
+                </button>
+              </Tooltip>
+              <Button
+                className='!h-24px !px-7px !text-11px'
+                size='mini'
+                type='text'
+                onClick={() => navigate('/settings/webui')}
+              >
+                {t('settings.mcpWorkspace.webuiConfiguration')}
+              </Button>
             </h3>
             <p className='m-0 mt-3px text-10px text-t-tertiary'>
-              10 位码只绑定当前微信账号与这台 WINK GO，5 分钟内使用一次即失效。
+              {t('settings.mcpWorkspace.pairingCodeDescription', { brand: WINK_GO_DISPLAY_NAME })}
             </p>
           </div>
           <div className='flex shrink-0 items-center gap-8px'>

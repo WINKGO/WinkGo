@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration coverage for the `/api/skills/assistant-rule/*` and
 //! `/api/skills/assistant-skill/*` source dispatch introduced by T1b.
 //!

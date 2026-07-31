@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -91,6 +92,16 @@ function isUserFeedbackEvent(event: { tags?: Record<string, unknown> }): boolean
   return event.tags?.type === 'user-feedback' || event.tags?.['winkgo.installation_integrity.user_report'] === 'true';
 }
 
+/**
+ * Automatic diagnostics are never enabled in a packaged end-user build.
+ * Developers may opt in for a local, unpackaged troubleshooting session with
+ * WINKGO_TELEMETRY_ENABLED=1. User-initiated feedback remains available and is
+ * handled separately by the feedback dialog.
+ */
+export function isAutomaticTelemetryEnabled(): boolean {
+  return !app.isPackaged && process.env.WINKGO_TELEMETRY_ENABLED === '1';
+}
+
 function isBackendStartupSecondaryEvent(event: { tags?: Record<string, unknown> }, haystacks: string[]): boolean {
   if (isBackendStartupFailureEvent(event) || isUserFeedbackEvent(event)) {
     return false;
@@ -104,7 +115,16 @@ export function initSentry(): void {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: app.isPackaged ? 'production' : 'development',
+    // Do not install crash, session, breadcrumb, tracing, screenshot, ANR or
+    // minidump collectors. The SDK remains available solely for the explicit
+    // feedback action and the opt-in unpackaged developer diagnostics below.
+    defaultIntegrations: [],
+    sendDefaultPii: false,
+    tracesSampleRate: 0,
     beforeSend(event) {
+      if (!isUserFeedbackEvent(event) && !isAutomaticTelemetryEnabled()) {
+        return null;
+      }
       const haystacks = collectEventSearchText(event);
       if (GPU_CRASH_DROP_PATTERNS.some((re) => haystacks.some((h) => re.test(h)))) {
         return null;
@@ -127,6 +147,7 @@ export function initSentry(): void {
  * a stable device identifier.
  */
 export function setSentryDeviceId(): void {
+  if (!isAutomaticTelemetryEnabled()) return;
   const id = getOrCreateAnalyticsId();
   Sentry.setUser({ id });
   Sentry.setTag('device_id', id);
@@ -221,6 +242,7 @@ const BACKEND_STARTUP_FLUSH_TIMEOUT_MS = 2000;
 
 export async function captureBackendStartupFailure(error: unknown): Promise<void> {
   (globalThis as typeof globalThis & { __backendStartupFailed?: boolean }).__backendStartupFailed = true;
+  if (!isAutomaticTelemetryEnabled()) return;
   const capturedError = error instanceof Error ? error : new Error(String(error));
   const details = getBackendStartupDetails(error);
   const failureInfo = classifyBackendStartupFailure(error);
@@ -533,6 +555,7 @@ async function runStartupLogReport(): Promise<void> {
  * retries.
  */
 export function scheduleStartupLogReport(window: BrowserWindow): void {
+  if (!isAutomaticTelemetryEnabled()) return;
   const trigger = () => {
     setTimeout(() => {
       runStartupLogReport().catch((err) => {

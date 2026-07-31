@@ -1,3 +1,4 @@
+<!-- Modified from aionrs by WINK GO contributors in 2026. -->
 # AGENTS.md
 
 Rules and conventions for AI assistants and contributors working on winkgo_agent.

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::ffi::OsString;
 use std::io::{self, Read, Write};
 use std::process::ExitCode;

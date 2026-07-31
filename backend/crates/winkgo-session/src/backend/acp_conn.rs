@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! 007 §C1 (ACP variant): `AcpConnection` / `AcpSessionBackend` — the third
 //! `SessionBackend`, over the **Agent Client Protocol** (`session/*` JSON-RPC)
 //! spoken by ACP CLIs / bridges (hermes, codex-acp, claude-acp, opencode, …).

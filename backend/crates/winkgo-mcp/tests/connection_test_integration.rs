@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for McpConnectionTestService.
 //!
 //! Tests from test-plan §2 (Connection Test):

@@ -1,7 +1,8 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
- * Modifications Copyright 2026 WINK GO (winkgo.top)
+ * Modifications Copyright 2026 WINK GO contributors.
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -13,8 +14,11 @@ import { assistantRuntimeKey, type Assistant } from '@/common/types/agent/assist
 import { resolveLocaleKey } from '@/common/utils';
 import { resolveAgentLogo, useAgentLogos } from '@/renderer/utils/model/agentLogo';
 import { isLikelyLocalFilePath, resolveAssistantAvatar } from '@/renderer/utils/model/assistantAvatar';
-import winkGoLogo from '@/renderer/assets/logos/brand/app.png?inline';
-import { brandAssistantForDisplay, WINK_GO_CLI_DISPLAY_NAME } from '@/renderer/utils/model/winkGoBranding';
+import {
+  brandAssistantForDisplay,
+  WINK_GO_BRAND_ICON as winkGoLogo,
+  WINK_GO_CLI_DISPLAY_NAME,
+} from '@/renderer/utils/model/winkGoBranding';
 import useSWR from 'swr';
 export interface PresetAssistantInfo {
   name: string;

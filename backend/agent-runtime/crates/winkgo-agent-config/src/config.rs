@@ -1,9 +1,9 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::auth::{AuthConfig, OAuthManager};
 use crate::compact::CompactConfig;
 use crate::compat::ProviderCompat;
 use crate::file_cache::FileCacheConfig;
@@ -111,8 +111,6 @@ pub struct ConfigFile {
 
     pub bedrock: Option<BedrockConfig>,
     pub vertex: Option<VertexConfig>,
-    pub auth: Option<AuthConfig>,
-
     #[serde(default)]
     pub mcp: McpConfig,
 
@@ -579,15 +577,9 @@ fn resolve_api_key(cli_key: Option<&str>, config_key: Option<&str>, provider: Pr
         }
     }
 
-    // Try OAuth credentials as last resort
-    let oauth = OAuthManager::new(AuthConfig::default());
-    if oauth.has_credentials() {
-        return Ok(String::new()); // Will be resolved at runtime via OAuth
-    }
-
     anyhow::bail!(
         "No API key found. Provide via --api-key, config file, environment variable \
-         (API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY), or run 'winkgo_agent auth login'."
+         (API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY)."
     )
 }
 
@@ -727,10 +719,9 @@ fn merge_config_files(global: ConfigFile, project: ConfigFile) -> ConfigFile {
         global.file_cache
     };
 
-    // Bedrock/Vertex/Auth: project overrides global
+    // Bedrock/Vertex: project overrides global
     let bedrock = project.bedrock.or(global.bedrock);
     let vertex = project.vertex.or(global.vertex);
-    let auth = project.auth.or(global.auth);
 
     // Compact: project overrides global for any non-default field.
     // Since CompactConfig uses serde defaults, a fully-default project config
@@ -764,7 +755,6 @@ fn merge_config_files(global: ConfigFile, project: ConfigFile) -> ConfigFile {
         hooks,
         bedrock,
         vertex,
-        auth,
         mcp,
         logging,
     }
@@ -938,12 +928,6 @@ default = "auto"                 # auto, powershell, pwsh, cmd, bash, zsh, sh, o
 # project_id = "my-gcp-project"
 # region = "us-central1"
 # credentials_file = "/path/to/service-account.json"  # or use ADC
-
-# OAuth settings (for `winkgo_agent auth login` with Claude.ai account)
-# [auth]
-# auth_url = "https://claude.ai/oauth"
-# token_url = "https://claude.ai/oauth/token"
-# client_id = "winkgo_agent"
 
 # Named profiles for quick switching (--profile <name>)
 # [profiles.deepseek]

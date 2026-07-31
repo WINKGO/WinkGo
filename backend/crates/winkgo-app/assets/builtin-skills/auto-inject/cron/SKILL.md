@@ -2,6 +2,7 @@
 name: cron
 description: Scheduled task management - create, query, update scheduled tasks to automatically execute operations at specified times.
 ---
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 
 # Scheduled Task Skill
 

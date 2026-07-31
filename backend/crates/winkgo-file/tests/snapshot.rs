@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for workspace snapshot (tasks 7.9 + 7.10).
 //!
 //! Tests exercise `ISnapshotService` through `SnapshotService`, verifying

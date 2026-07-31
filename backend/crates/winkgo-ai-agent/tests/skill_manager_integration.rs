@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for the skill system.
 //!
 //! These tests verify the full skill lifecycle:

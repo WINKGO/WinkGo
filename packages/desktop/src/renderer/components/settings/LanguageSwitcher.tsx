@@ -1,7 +1,9 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import WinkGoSelect from '@/renderer/components/base/WinkGoSelect';
 import type { SelectHandle } from '@arco-design/web-react/es/Select/interface';
 import React, { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LANGUAGE_OPTIONS } from '@/common/config/i18n';
 import { changeLanguage } from '@/renderer/services/i18n';
 
 const LanguageSwitcher: React.FC = () => {
@@ -30,19 +32,11 @@ const LanguageSwitcher: React.FC = () => {
   return (
     <div className='flex items-center gap-8px'>
       <WinkGoSelect ref={selectRef} className='w-160px' value={i18n.language} onChange={handleLanguageChange}>
-        <WinkGoSelect.Option value='zh-CN'>简体中文</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='zh-TW'>繁體中文</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='ja-JP'>日本語</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='ko-KR'>한국어</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='tr-TR'>Türkçe</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='ru-RU'>Русский</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='uk-UA'>Українська</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='pt-BR'>Português (BR)</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='de-DE'>Deutsch</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='es-ES'>Español</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='fr-FR'>Français</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='fa-IR'>فارسی</WinkGoSelect.Option>
-        <WinkGoSelect.Option value='en-US'>English</WinkGoSelect.Option>
+        {LANGUAGE_OPTIONS.map(({ code, label }) => (
+          <WinkGoSelect.Option key={code} value={code}>
+            {label}
+          </WinkGoSelect.Option>
+        ))}
       </WinkGoSelect>
     </div>
   );

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Cross-crate lifecycle hook traits.
 //!
 //! Hooks defined here let lower-layer crates (e.g. `winkgo-ai-agent`,

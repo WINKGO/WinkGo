@@ -1,5 +1,6 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
-import type { NavigateFunction } from 'react-router-dom';
+import type { NavigateFunction } from 'react-router';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,7 +14,7 @@ const serviceMocks = vi.hoisted(() => ({
   searchMessages: vi.fn().mockResolvedValue({ items: [], has_more: false }),
 }));
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useLocation: () => ({ pathname: testState.pathname, search: '', hash: '' }),
   useNavigate: () => vi.fn(),
 }));

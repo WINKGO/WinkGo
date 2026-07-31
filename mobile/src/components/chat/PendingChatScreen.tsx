@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
@@ -23,7 +24,7 @@ import { getAgentModes, supportsModeSwitch } from '../../constants/agentModes';
 type AcpModelInfo = {
   currentModelId: string | null;
   currentModelLabel: string | null;
-  availableModels: Array<{ id: string; label: string }>;
+  availableModels: { id: string; label: string }[];
   canSwitch: boolean;
   source: 'configOption' | 'models';
   configOptionId?: string;

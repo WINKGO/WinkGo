@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use serde_json::{Value, json};
 use winkgo_api_types::{TEAM_TOOLS_SCHEMA_VERSION, team_tool_descriptors};
 

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use super::*;
 
 #[cfg(test)]
@@ -307,19 +308,10 @@ mod tests {
             std::env::remove_var("ANTHROPIC_API_KEY");
         }
 
-        // Only fails if OAuth credentials file is also absent, which is true in CI.
-        // We accept either an error OR an empty key (Bedrock/Vertex path), but for
-        // Anthropic with no key at all the function should return an error.
         let result = resolve_api_key(None, None, ProviderType::Anthropic);
-
-        // The result is either an error (no OAuth file) or Ok (OAuth file found).
-        // We can only assert the error path reliably when the OAuth file is absent.
-        if let Err(e) = result {
-            let msg = e.to_string();
-            assert!(msg.contains("No API key found"));
-        }
-        // If OAuth credentials exist on the test machine, the function returns Ok("").
-        // Both outcomes are correct; the important invariant is no panic.
+        let error = result.expect_err("Anthropic must require an explicit API key");
+        assert!(error.to_string().contains("No API key found"));
+        assert!(error.to_string().contains("ANTHROPIC_API_KEY"));
     }
 
     #[test]

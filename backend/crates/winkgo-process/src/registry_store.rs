@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Persisted registry of processes THIS crate spawned (IC-4).
 //!
 //! Lives in its own subdir `{data_dir}/runtime/winkgo-process/registry.json`,

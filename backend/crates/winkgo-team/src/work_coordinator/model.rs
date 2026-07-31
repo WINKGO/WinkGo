@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use winkgo_api_types::TeamRunTargetRole;
 use winkgo_common::TimestampMs;
 

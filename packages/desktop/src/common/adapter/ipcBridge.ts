@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -538,6 +539,7 @@ export type WinkGoAuthErrorCode =
   | 'validationError'
   | 'licenseDenied'
   | 'tooManyAttempts'
+  | 'localError'
   | 'serverError'
   | 'networkError'
   | 'unknown';
@@ -553,6 +555,9 @@ export type WinkGoAuthCredentials = {
   username: string;
   password: string;
   phone?: string;
+  privacyVersion?: string;
+  termsVersion?: string;
+  source?: 'desktop_login' | 'desktop_registration';
 };
 
 export type WinkGoOrganizerMode = 'move' | 'copy';
@@ -785,6 +790,7 @@ export type WinkGoXiaozhiTestRecord = {
 
 export type WinkGoXiaozhiConfig = {
   schemaVersion: number;
+  relayConsentVersion: number;
   runtimeApi: string;
   lanIp: string;
   bridgePort: number;

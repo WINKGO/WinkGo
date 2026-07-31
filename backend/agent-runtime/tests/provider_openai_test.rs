@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use winkgo_agent::provider::LlmProvider;
 use winkgo_agent::provider::compat::ProviderCompat;
 use winkgo_agent::provider::debug::DebugConfig;

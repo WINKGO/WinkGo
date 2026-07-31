@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { submitFeedbackReport } from '@/renderer/services/feedback/submitFeedbackReport';
 
@@ -122,6 +123,38 @@ describe('submitFeedbackReport', () => {
       expect.objectContaining({
         extra: {
           description: 'No logs available',
+        },
+      }),
+      { attachments: [] }
+    );
+  });
+
+  it('redacts credentials, phone numbers, and local paths from automatic context', async () => {
+    await submitFeedbackReport({
+      collectLogs: false,
+      description: 'User-selected description',
+      extra: {
+        apiKey: 'sk-this-must-not-leak',
+        device: {
+          phone: '13800138000',
+          resourcesPath: 'C:\\Users\\alice\\AppData\\Local\\WINK GO',
+        },
+        safeError: 'failed at C:\\Users\\alice\\secret.txt with token-abcdefghijklmnop',
+      },
+      module: 'system-settings',
+      moduleLabel: 'System Settings',
+    });
+
+    expect(sentryMocks.captureEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extra: {
+          description: 'User-selected description',
+          apiKey: '<redacted>',
+          device: {
+            phone: '<redacted>',
+            resourcesPath: '<redacted>',
+          },
+          safeError: 'failed at <local-path> with <redacted-token>',
         },
       }),
       { attachments: [] }

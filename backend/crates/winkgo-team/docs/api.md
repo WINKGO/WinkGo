@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Team HTTP API
 
 所有端点前缀 `/api/teams`，全部需要 JWT。响应统一 `ApiResponse<T>` / `ErrorResponse`。DTO 定义在 `crates/winkgo-api-types/src/team.rs`。

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React from 'react';
 /**
  * @license
@@ -61,14 +62,7 @@ vi.mock('@/renderer/utils/platform', () => ({
 
 vi.mock('@/renderer/hooks/context/AuthContext', () => ({
   useAuth: () => ({
-    can: () => true,
-    edition: {
-      edition: 'pro',
-      plan: 'pro',
-      label: 'WINK GO Pro',
-      capabilities: ['skills.premium', 'skills.cloud-catalog'],
-      maxDevices: 3,
-    },
+    can: () => false,
   }),
 }));
 
@@ -89,7 +83,7 @@ vi.mock('@arco-design/web-react', async (importOriginal) => {
   };
 });
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useLocation: () => ({ pathname: searchParamsMock.pathname }),
   useNavigate: () => searchParamsMock.navigate,
   useSearchParams: () => [searchParamsMock.current, searchParamsMock.setSearchParams],
@@ -409,6 +403,8 @@ describe('SkillsHubSettings', () => {
     await waitFor(() => expect(mocks.listWinkGoSkillsCatalog).toHaveBeenCalled());
     fireEvent.click(screen.getByTestId('settings-tab-winkGo'));
     expect(await screen.findByTestId('wink-go-skill-card-codex')).toHaveTextContent('10 actions');
+    expect(screen.getByTestId('settings-tab-winkGo')).not.toHaveTextContent('PRO');
+    expect(screen.queryByText(/高级技能属于 Pro|免费版|查看 WINK GO Pro/)).not.toBeInTheDocument();
     expect(screen.getByTestId('wink-go-skill-logo-codex')).toHaveAttribute('aria-label', 'Codex logo');
     expect(screen.getByTestId('wink-go-skill-logo-codex')).not.toHaveTextContent('C');
 

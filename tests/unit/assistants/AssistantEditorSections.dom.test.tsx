@@ -1,8 +1,9 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfigProvider } from '@arco-design/web-react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import AssistantEditorSections from '@/renderer/pages/settings/AssistantSettings/AssistantEditorSections';
 import type { AssistantEditorViewModel } from '@/renderer/pages/settings/AssistantSettings/types';
 

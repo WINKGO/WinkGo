@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -42,7 +43,7 @@ interface AutoUpdateCheckParams {
   includePrerelease?: boolean;
 }
 
-const DEFAULT_USER_AGENT = 'WINK-GO';
+const DEFAULT_USER_AGENT = 'WINK GO';
 const ALLOWED_DOWNLOAD_HOSTS = new Set<string>(['winkgo.top', 'www.winkgo.top']);
 const MAX_REDIRECTS = 8;
 

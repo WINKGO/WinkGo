@@ -1,13 +1,13 @@
-# AionUi source notice manifest
+# Legacy AionUi source-notice index (retained for attribution history)
 #
 # Upstream release: v2.1.41
 # Upstream commit: 2d8925fc67a97a20996fadcd2a0862b778b572ba
 # Source: https://github.com/iOfficeAI/AionUi
 #
-# Every row identifies a current WINK GO source file that contained an AionUi
-# Apache-2.0 copyright notice at the pinned upstream commit. Renamed paths are
-# recorded explicitly. Each current file preserves the original notice and adds
-# a prominent WINK GO modification notice.
+# This older index covers files that carried explicit upstream copyright text;
+# it is not the complete Apache-2.0 section 4(b) modification inventory.
+# The canonical path/hash/disposition inventory is now:
+# docs/vendor/aionui-modification-manifest.tsv
 #
 # Columns: upstream copyright year, current path, upstream path
 

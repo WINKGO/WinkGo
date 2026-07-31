@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

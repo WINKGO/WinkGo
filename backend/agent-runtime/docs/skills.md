@@ -1,3 +1,4 @@
+<!-- Modified from aionrs by WINK GO contributors in 2026. -->
 # Skills
 
 Skills are named prompt snippets that the agent can invoke on demand.  They

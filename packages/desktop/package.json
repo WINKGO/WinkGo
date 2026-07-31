@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "WINK GO desktop Electron application",
-  "homepage": "https://winkgo.top/",
+  "homepage": "https://github.com/xuweihafeichangniu-lab/wink-go",
   "bugs": {
     "url": "https://github.com/xuweihafeichangniu-lab/wink-go/issues"
   },
@@ -15,5 +15,6 @@
   "main": "../../out/main/index.js",
   "dependencies": {
     "@winkgo/web-host": "workspace:*"
-  }
+  },
+  "x-upstream-modification-notice": "Modified from AionUI by WINK GO contributors in 2026."
 }

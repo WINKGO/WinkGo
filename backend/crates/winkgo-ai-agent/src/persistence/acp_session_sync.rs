@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Per-session persistence consumer driven by domain events.
 //!
 //! Subscribes to `mpsc::Receiver<AcpSessionEvent>` (not the UI broadcast)

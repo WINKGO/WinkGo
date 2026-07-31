@@ -1,9 +1,10 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use serde::Deserialize;
 use winkgo_api_types::{GitHubReleaseAsset, UpdateCheckRequest, UpdateCheckResult, UpdateReleaseInfo};
 
 use crate::error::SystemError;
 
-const DEFAULT_REPO: &str = "xuweihafeichangniu-lab/wink-go";
+const DEFAULT_REPO: &str = "xuweihafeichangniu-lab/winkgo";
 const GITHUB_API_BASE: &str = "https://api.github.com";
 
 /// Service that checks GitHub Releases for available updates.

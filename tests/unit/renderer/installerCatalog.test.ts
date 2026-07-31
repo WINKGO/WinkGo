@@ -13,12 +13,18 @@ describe('installer catalog', () => {
     expect(results.every(Boolean)).toBe(true);
   });
 
-  it('uses only official vendor pages for Codex and Claude Code', () => {
-    const vendorUrls = INSTALLER_CATALOG.filter((installer) => installer.product !== 'antigravity').map(
-      (installer) => new URL(installer.downloadUrl).hostname
-    );
+  it('uses only official vendor installation pages', () => {
+    const vendorUrls = INSTALLER_CATALOG.map((installer) => new URL(installer.downloadUrl).hostname);
 
-    expect(vendorUrls).toEqual(['openai.com', 'docs.anthropic.com', 'openai.com', 'docs.anthropic.com']);
+    expect(vendorUrls).toEqual([
+      'openai.com',
+      'docs.anthropic.com',
+      'antigravity.google',
+      'openai.com',
+      'docs.anthropic.com',
+      'antigravity.google',
+    ]);
+    expect(INSTALLER_CATALOG.every((installer) => !/\.(?:exe|dmg)(?:$|[?#])/i.test(installer.downloadUrl))).toBe(true);
     expect(INSTALLER_CATALOG.some((installer) => installer.downloadUrl.includes('xuweihafeichangniu-lab'))).toBe(false);
   });
 

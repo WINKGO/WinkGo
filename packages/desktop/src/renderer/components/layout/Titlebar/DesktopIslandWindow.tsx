@@ -5,7 +5,7 @@
  */
 
 import React, { useLayoutEffect } from 'react';
-import { HashRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router';
 import TitlebarDynamicIsland from './TitlebarDynamicIsland';
 import './desktop-island-window.css';
 

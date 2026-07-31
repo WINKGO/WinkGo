@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -10,7 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_PLATFORM_VALUE, MODEL_PLATFORMS } from '@renderer/utils/model/modelPlatforms';
+import { DEFAULT_PLATFORM_VALUE, getProviderLogo, MODEL_PLATFORMS } from '@renderer/utils/model/modelPlatforms';
 
 describe('MODEL_PLATFORMS ordering', () => {
   it('keeps Custom first and pins both Moonshot entries right after it', () => {
@@ -32,5 +33,16 @@ describe('MODEL_PLATFORMS ordering', () => {
       'https://api.moonshot.cn/v1',
       'https://api.moonshot.ai/v1',
     ]);
+  });
+
+  it('uses the neutral LinkCloud fallback instead of bundled provider marks', () => {
+    expect(MODEL_PLATFORMS.every((platform) => platform.logo === null)).toBe(true);
+    expect(
+      getProviderLogo({
+        name: 'OpenAI',
+        base_url: 'https://api.openai.com/v1',
+        platform: 'custom',
+      })
+    ).toBeNull();
   });
 });

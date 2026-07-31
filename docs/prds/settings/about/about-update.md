@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # 设置页 → 关于 & 检查更新 (F-ABOUT)
 
 > 本文档覆盖「设置 → 关于」页面的全部功能，包括应用信息展示、版本更新（检查/下载/安装）、外部链接导航、问题报告。
@@ -12,7 +14,7 @@
 **正常流程**（用户视角）：
 
 1. 用户打开「设置 → 关于」页面
-2. 页面顶部居中显示应用名 "WinkGo"（h3 标题）
+2. 页面顶部居中显示应用名 "WINK GO"（h3 标题）
 3. 下方显示应用描述（通过 i18n 系统，随语言设置变化）
 4. 显示当前版本号 badge（格式 `v{x.y.z}`），版本号来自打包时的 `package.json`
 5. 版本号旁有 GitHub 图标，点击在系统浏览器中打开项目仓库 `https://github.com/xuweihafeichangniu-lab/wink-go`
@@ -24,7 +26,7 @@
 
 **验收标准**：
 
-- [ ] 显示应用名 "WinkGo"
+- [ ] 显示应用名 "WINK GO"
 - [ ] 显示应用描述（通过 i18n 系统，随语言设置变化）
 - [ ] 版本号格式为 `v{x.y.z}`，与 `package.json` 一致
 - [ ] GitHub 图标点击打开项目仓库页面
@@ -381,14 +383,14 @@
 
 **链接列表**：
 
-| 序号 | 标题     | 行为               | 目标                                                         |
-| ---- | -------- | ------------------ | ------------------------------------------------------------ |
+| 序号 | 标题     | 行为               | 目标                                                           |
+| ---- | -------- | ------------------ | -------------------------------------------------------------- |
 | 1    | 帮助文档 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink-go/wiki`     |
 | 2    | 更新日志 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink-go/releases` |
 | 3    | 意见反馈 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink-go/issues`   |
-| 4    | 问题报告 | **打开应用内弹窗** | FeedbackReportModal（见 F-ABOUT-11）                         |
-| 5    | 联系我们 | 打开外部链接       | `https://winkgo.top`                                         |
-| 6    | 官网     | 打开外部链接       | `https://winkgo.top`                                         |
+| 4    | 问题报告 | **打开应用内弹窗** | FeedbackReportModal（见 F-ABOUT-11）                           |
+| 5    | 联系我们 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink-go/issues`   |
+| 6    | 项目主页 | 打开外部链接       | `https://github.com/xuweihafeichangniu-lab/wink-go`          |
 
 **打开机制**：
 
@@ -581,10 +583,11 @@ Scope: PR4 final verification for Windows NSIS updates.
 
 Implemented behavior:
 
+- `WinkGo.exe` and `%APPDATA%\WinkGo` below are retained legacy-compatible executable and data-path names; the public application name is WINK GO.
 - Both x64 and arm64 installers run the shared `WINKGO_VERIFY_CORE_APP_FILES` macro before bundled WINK GO Core verification.
 - Missing `WinkGo.exe`, core DLLs, or `resources\app.asar` fails through `WINKGO_FAIL_UX` with code `E1031` and logs the missing label and path.
 - Bundled WINK GO Core verification remains `E1030`.
-- If a silent `--updated` install cannot close WinkGo after retries, the installer writes `%APPDATA%\WinkGo\installer-last-failure.json`.
+- If a silent `--updated` install cannot close WINK GO after retries, the installer writes `%APPDATA%\WinkGo\installer-last-failure.json`.
 - On next renderer startup, the update notification consumes that marker once through `update.installer-last-failure.consume`, deletes the valid marker, and shows retry, log, and feedback actions.
 
 Marker schema:
@@ -608,4 +611,4 @@ Manual verification:
 - Build an x64 installer with `ffmpeg.dll` removed from the unpacked app payload. Expected: installer fails with `E1031`, and logs include `missing label=ffmpeg.dll path=...`.
 - Build an x64 installer with `resources\app.asar` removed. Expected: same `E1031` path.
 - Run normal x64 and arm64 installs. Expected: shared core verification runs before bundled WINK GO Core verification and installation succeeds.
-- Run silent `/S --updated` while WinkGo cannot be closed. Expected: marker file appears under `%APPDATA%\WinkGo`; next app launch shows the update failure notification; the following launch does not show it again.
+- Run silent `/S --updated` while WINK GO cannot be closed. Expected: marker file appears under `%APPDATA%\WinkGo`; next app launch shows the update failure notification; the following launch does not show it again.

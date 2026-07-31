@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for IProviderRepository.
 //!
 //! Tests exercise the public trait interface against an in-memory SQLite database.

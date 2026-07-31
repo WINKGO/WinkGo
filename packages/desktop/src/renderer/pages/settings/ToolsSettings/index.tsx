@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -13,20 +14,17 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import { Button } from '@arco-design/web-react';
 import { Api, Cpu } from '@icon-park/react';
 import ToolsModalContent from '@/renderer/components/settings/SettingsModal/contents/ToolsModalContent';
 import SettingsPageWrapper from '../components/SettingsPageWrapper';
 import SettingsPageHeader from '../components/SettingsPageHeader';
 import XiaozhiMcpConnection from './XiaozhiMcpConnection';
-import { useAuth } from '@/renderer/hooks/context/AuthContext';
-import WinkGoProFeatureCard from '@/renderer/components/winkgo/WinkGoProFeatureCard';
 
 const ToolsSettings: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
-  const { can } = useAuth();
   const isMcpWorkspace = location.pathname === '/mcp';
   const [workspace, setWorkspace] = React.useState<'servers' | 'xiaozhi'>('servers');
 
@@ -36,10 +34,10 @@ const ToolsSettings: React.FC = () => {
         <SettingsPageHeader
           data-testid='tools-header'
           sticky={!isMcpWorkspace}
-          title={isMcpWorkspace ? 'MCP 配置' : t('settings.tools', { defaultValue: 'Tools' })}
+          title={isMcpWorkspace ? t('settings.mcpWorkspace.title') : t('settings.tools', { defaultValue: 'Tools' })}
           description={
             isMcpWorkspace
-              ? '管理通用 MCP 服务，以及 ESP32 小智与手机小程序的独立设备通道。'
+              ? t('settings.mcpWorkspace.description')
               : t('settings.toolsDescription', {
                   defaultValue: 'Configure MCP servers and built-in tools such as image generation.',
                 })
@@ -57,7 +55,7 @@ const ToolsSettings: React.FC = () => {
                   type={workspace === 'servers' ? 'secondary' : 'text'}
                   onClick={() => setWorkspace('servers')}
                 >
-                  通用 MCP
+                  {t('settings.mcpWorkspace.general')}
                 </Button>
                 <Button
                   className={workspace === 'xiaozhi' ? '!bg-1 !shadow-sm' : ''}
@@ -66,23 +64,13 @@ const ToolsSettings: React.FC = () => {
                   type={workspace === 'xiaozhi' ? 'secondary' : 'text'}
                   onClick={() => setWorkspace('xiaozhi')}
                 >
-                  小智 MCP 连接 {!can('mcp.miniapp') && <span className='ml-4px text-10px'>PRO</span>}
+                  {t('settings.mcpWorkspace.xiaozhi')}
                 </Button>
               </div>
             ) : undefined
           }
         />
-        {!isMcpWorkspace || workspace === 'servers' ? (
-          <ToolsModalContent />
-        ) : (
-          <WinkGoProFeatureCard
-            capability='mcp.miniapp'
-            title='小智与手机小程序连接属于 WINK GO Pro'
-            description='升级后可使用独立设备身份、手机绑定转发、ESP32 小智通道和远程连接诊断。'
-          >
-            <XiaozhiMcpConnection />
-          </WinkGoProFeatureCard>
-        )}
+        {!isMcpWorkspace || workspace === 'servers' ? <ToolsModalContent /> : <XiaozhiMcpConnection />}
       </div>
     </SettingsPageWrapper>
   );

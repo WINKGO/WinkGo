@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # WINK GO 文档中心
 
 这里收录 WINK GO · AI 智能体工作台的产品说明、用户指南、开发规范、设计文档与多语言摘要。

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! 007 §C5 (codex variant): `CodexConnection` / `CodexSessionBackend` over
 //! `codex app-server --stdio` JSON-RPC. This is the REAL point of feature 007 —
 //! the first non-claude backend, proving the seam is genuinely transport-
@@ -75,8 +76,8 @@ impl BackendConnection for CodexConnection {
         let mut args = vec!["app-server".to_string()];
         args.extend(config.extra_args.iter().cloned());
         let cmd = winkgo_common::CommandSpec {
-            // Orchestration-resolved bundled CLI (packaged app) or bare "codex"
-            // (dev → PATH). See SessionConfig.cli_program.
+            // User-installed CLI resolved from an explicit override or PATH.
+            // See SessionConfig.cli_program.
             command: config.cli_program.clone().unwrap_or_else(|| "codex".into()),
             args,
             // #103 (parity with claude_conn): forward the orchestration-filled
@@ -1180,7 +1181,7 @@ impl CodexSessionBackend {
         let mut args = vec!["app-server".to_string()];
         args.extend(self.wake.config.extra_args.iter().cloned());
         let cmd = winkgo_common::CommandSpec {
-            // Same bundled-CLI resolution + spawn env as the initial spawn
+            // Same user-installed CLI resolution + spawn env as the initial spawn
             // (R16 continuity).
             command: self.wake.config.cli_program.clone().unwrap_or_else(|| "codex".into()),
             args,

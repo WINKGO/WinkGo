@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use std::os::windows::io::RawHandle;
 
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE};

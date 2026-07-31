@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 name: Build Pipeline (Reusable)
 
 on:
@@ -24,7 +25,7 @@ on:
         type: boolean
         default: false
       winkgo_core_run_id:
-        description: 'Optional WINK GO Core Manual Build workflow run id to bundle instead of the pinned release'
+        description: 'Optional WINK GO Core manual-build workflow run id to bundle instead of the pinned release'
         type: string
         default: ''
 
@@ -56,6 +57,9 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Verify third-party dependency license inventory
+        run: node scripts/licenses/generate-third-party-licenses.cjs --check-locks
 
       - name: Run postinstall
         run: bun run postinstall || true
@@ -380,23 +384,10 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $Command = $env:WINDOWS_BUILD_COMMAND
-          $BuildFailed = $false
-
-          try {
-            Write-Host "Running Windows build command: $Command"
-            iex $Command
-            Write-Host "Windows build completed successfully"
-          } catch {
-            $BuildFailed = $true
-            Write-Warning "${{ matrix.platform }} build failed but will not block the workflow"
-            Write-Host "::notice title=Windows build skipped::${{ matrix.platform }} build failed (see logs above) but workflow is allowed to continue."
-          }
-
-          if ($BuildFailed) {
-            "result=failure" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          } else {
-            "result=success" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          }
+          Write-Host "Running Windows build command: $Command"
+          iex $Command
+          Write-Host "Windows build completed successfully"
+          "result=success" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
         env:
           WINDOWS_BUILD_COMMAND: ${{ matrix.command }}
           WINKGO_BACKEND_RUN_ID: ${{ inputs.winkgo_core_run_id }}
@@ -460,6 +451,10 @@ jobs:
         run: |
           set +e  # Handle errors manually
 
+          # A failed build must never be allowed to reuse an artifact from an
+          # earlier attempt in the same workspace.
+          rm -f out/*.dmg
+
           # Run build command
           ${{ matrix.command }} 2>&1 | tee "${RUNNER_TEMP}/build.log"
           BUILD_EXIT_CODE=${PIPESTATUS[0]}
@@ -478,10 +473,16 @@ jobs:
             exit 0
           fi
 
-          # Build failed - check if it's just notarization failure
+          # Build failed - allow only a narrowly identified notarization or
+          # stapling failure, and independently rerun the packed-payload
+          # privacy/license gate before retaining the DMG.
           if [ "$DMG_EXISTS" = true ]; then
-            # DMG exists but build failed - likely notarization issue
-            if grep -qiE "notariz|staple" "${RUNNER_TEMP}/build.log"; then
+            if grep -qiE "failed to notarize|notarization (failed|error)|notarytool.*(failed|error)|failed to staple|stapling failed" "${RUNNER_TEMP}/build.log"; then
+              if ! node scripts/audit-release-privacy.cjs --packed; then
+                echo "❌ Packed payload audit failed after notarization failure"
+                echo "notarization_status=build_failed" >> $GITHUB_OUTPUT
+                exit 1
+              fi
               echo "⚠️ DMG created but notarization failed"
               echo "notarization_status=failed" >> $GITHUB_OUTPUT
               echo "::warning title=Notarization Failed::DMG was built and signed successfully, but **notarization failed**."

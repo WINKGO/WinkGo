@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 FROM node:22-bookworm-slim AS builder
 
 ARG TARGETARCH

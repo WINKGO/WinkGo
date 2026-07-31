@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use winkgo_common::McpSource;
 
 use crate::adapter::{DetectedServer, McpAgentAdapter};

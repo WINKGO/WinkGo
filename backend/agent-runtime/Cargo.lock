@@ -3875,16 +3875,13 @@ name = "winkgo-agent-config"
 version = "0.2.7"
 dependencies = [
  "anyhow",
- "chrono",
  "dirs",
  "glob",
- "reqwest",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror",
  "tokio",
- "tokio-test",
  "toml",
  "tracing",
  "tracing-appender",
@@ -3893,7 +3890,6 @@ dependencies = [
  "winkgo-agent-compact",
  "winkgo-agent-process",
  "winkgo-agent-types",
- "wiremock",
  "workspace-hack",
 ]
 

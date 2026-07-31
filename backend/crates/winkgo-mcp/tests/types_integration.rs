@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for winkgo-mcp core types.
 //!
 //! Tests the public API surface: McpServer construction from DB rows,

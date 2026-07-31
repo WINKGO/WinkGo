@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Modified from AionUI by WINK GO contributors in 2026.
 
 const {
   copyFileSync,

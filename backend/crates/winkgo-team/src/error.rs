@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use serde_json::{Value, json};
 
 #[derive(Debug, thiserror::Error)]

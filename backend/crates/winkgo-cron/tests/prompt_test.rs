@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use winkgo_cron::prompt::{
     SKILL_SUGGEST_FILENAME, build_existing_conversation_prompt, build_new_conversation_prompt,
     build_new_conversation_prompt_with_skill_suggest, build_new_conversation_with_skill_prompt,

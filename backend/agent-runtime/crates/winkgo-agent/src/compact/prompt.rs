@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Compact prompt templates for LLM-based conversation summarization.
 //!
 //! Provides the 9-section summary prompt, response parsing, and

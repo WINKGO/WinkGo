@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! E2E integration tests for Custom Agent CRUD and try-connect endpoints.
 //!
 //! Covers:

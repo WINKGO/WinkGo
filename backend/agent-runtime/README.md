@@ -1,3 +1,4 @@
+<!-- Modified from aionrs by WINK GO contributors in 2026. -->
 # winkgo_agent
 
 A Rust-based LLM tool-use agent for the command line. It connects to LLM APIs, autonomously invokes local tools (file I/O, shell, search, etc.), and completes tasks end-to-end.
@@ -21,7 +22,7 @@ A Rust-based LLM tool-use agent for the command line. It connects to LLM APIs, a
 - **File state cache** — LRU cache with read deduplication and write tracking
 - **Prompt caching** — Anthropic cache_control for up to 90% cost reduction
 - **Profile inheritance** — Named profiles with `extends` for quick provider/model switching
-- **OAuth login** — Use Claude.ai subscription directly, no API key needed
+- **Explicit provider credentials** — Anthropic and OpenAI require user-supplied API keys
 - **AGENTS.md injection** — Hierarchical loading of project instructions with @include support
 
 ## Quick Start
@@ -113,7 +114,7 @@ winkgo_agent --max-tool-call-failure-turns 2 "Run the task"
 | [Getting Started](docs/getting-started.md) | Installation, CLI reference, configuration, usage examples |
 | [Built-in Tools](docs/tools.md) | Detailed reference for all 7 tools |
 | [MCP Integration](docs/mcp.md) | Model Context Protocol client setup and usage |
-| [Providers & Auth](docs/providers.md) | Multi-provider config, profiles, Bedrock, Vertex, OAuth |
+| [Providers & Auth](docs/providers.md) | Multi-provider config, profiles, Bedrock, Vertex, and provider credentials |
 | [Advanced Features](docs/advanced.md) | Sub-agents, hooks, prompt caching, VCR, AGENTS.md |
 | [Troubleshooting](docs/troubleshooting.md) | Common errors and solutions |
 | [JSON Stream Protocol](docs/json-stream-protocol.md) | Host integration protocol (`--json-stream` mode) |
@@ -122,7 +123,7 @@ winkgo_agent --max-tool-call-failure-turns 2 "Run the task"
 
 | Provider | Auth | Notes |
 |----------|------|-------|
-| Anthropic | API Key / OAuth | Prompt caching, streaming, vision |
+| Anthropic | API Key | Prompt caching, streaming, vision |
 | OpenAI | API Key | Reasoning models (`o1`/`o3`), compatible with DeepSeek, Qwen, Ollama, Gemini, vLLM |
 | AWS Bedrock | SigV4 | Regional endpoints, AWS credential chain, schema sanitization, actionable error hints |
 | Google Vertex AI | GCP OAuth2 / Service Account | Metadata server auto-detection |

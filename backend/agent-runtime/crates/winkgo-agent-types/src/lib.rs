@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Pure, provider-neutral data types shared across all winkgo_agent crates.
 // No dependencies on other winkgo-* crates.
 

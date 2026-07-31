@@ -433,6 +433,15 @@
   "skills": "مهارت‌ها",
   "tools": "ابزارها",
   "toolsDescription": "سرورهای MCP و ابزارهای داخلی مانند تولید تصویر را پیکربندی کنید. تولید تصویر تنها پس از پیکربندی یک مدل پشتیبان تصویر در صفحه مدل فعال می‌شود.",
+  "mcpWorkspace": {
+    "title": "پیکربندی MCP",
+    "description": "خدمات عمومی MCP و کانال دستگاه مستقل برای ESP32 XiaoZhi و مینی‌برنامه همراه را مدیریت کنید.",
+    "general": "MCP عمومی",
+    "xiaozhi": "اتصال MCP به XiaoZhi",
+    "relayToggleLabel": "فعال‌سازی واسط ابری دستگاه",
+    "relayDisclosureTitle": "پیش از فعال‌سازی واسط ابری بررسی کنید",
+    "relayDisclosureBody": "پس از فعال‌سازی، این رایانه اتصال خود را با {{domain}} حفظ می‌کند و شناسه‌های حساب، نصب و دسکتاپ، نام دستگاه، وضعیت اتصال و کد جفت‌سازی، و محتوایی را که آگاهانه از مینی‌برنامه منتقل می‌کنید ارسال می‌کند: متن، رونویسی گفتار، نتیجه کارها و درخواست‌ها و پاسخ‌های WebUI راه‌دور (که ممکن است شامل محتوای فایل یا اطلاعات احراز هویت باشد). هویت بهره‌بردار قانونی و محل سرور باید پیش از عرضه عمومی تکمیل شود؛ برای دریافت توسط شخص ثالث یا انتقال برون‌مرزی اطلاع‌رسانی جداگانه و مجوز لازم ارائه خواهد شد. خدمات شبکه، مدل یا گفتار شخص ثالث ممکن است هزینه داشته باشند. هر زمان می‌توانید آن را خاموش کنید."
+  },
   "modelDescription": "ارائه‌دهندگان LLM و کلیدهای API را برای استفاده در همه دستیارها پیکربندی کنید. تنها WINK GO از مدل‌های سفارشی پشتیبانی می‌کند؛ سایر عامل‌ها از مدل‌های داخلی خود استفاده می‌کنند.",
   "capabilities": "قابلیت‌ها",
   "capabilitiesTab": {
@@ -673,7 +682,7 @@
   "mcpAuthenticated": "احراز هویت شده",
   "mcpDisconnected": "آزمایش نشده",
   "mcpError": "آخرین آزمایش ناموفق بود",
-  "mcpErrorNodeCommandNotFound": "دستور {{command}} قابل آماده‌سازی نبود. WinkGoCore معمولاً زمان اجرای مدیریت‌شده Node را به‌صورت خودکار فراهم می‌کند. آزمایش اتصال را تکرار کنید، لاگ‌های بک‌اند را بررسی کنید، یا این سرور MCP را با مسیر مطلق دستور پیکربندی کنید.",
+  "mcpErrorNodeCommandNotFound": "دستور {{command}} قابل آماده‌سازی نبود. WINK GO Core معمولاً زمان اجرای مدیریت‌شده Node را به‌صورت خودکار فراهم می‌کند. آزمایش اتصال را تکرار کنید، لاگ‌های بک‌اند را بررسی کنید، یا این سرور MCP را با مسیر مطلق دستور پیکربندی کنید.",
   "mcpErrorBunCommandNotFound": "دستور {{command}} یافت نشد. Bun را نصب کنید (که شامل bun/bunx می‌شود)، WINK GO را ری‌استارت کنید، یا این سرور MCP را با مسیر مطلق دستور پیکربندی کنید.",
   "mcpErrorUvCommandNotFound": "دستور {{command}} یافت نشد. uv را نصب کنید، WINK GO را ری‌استارت کنید، یا این سرور MCP را با مسیر مطلق دستور پیکربندی کنید.",
   "mcpErrorPythonCommandNotFound": "دستور {{command}} یافت نشد. Python را نصب کنید، WINK GO را ری‌استارت کنید، یا این سرور MCP را با مسیر مطلق دستور پیکربندی کنید.",
@@ -798,7 +807,7 @@
   "bugReportScreenshotUploaded": "({{count}} مورد آپلود شد)",
   "bugReportScreenshotDropzoneText": "اسکرین‌شات‌ها را کلیک، بکشید یا جای‌گذاری کنید",
   "bugReportScreenshotFormats": "از PNG، JPG، GIF پشتیبانی می‌شود",
-  "bugReportAutoInfo": "اطلاعات سیستم و لاگ‌های ۳ روز اخیر به‌صورت خودکار پیوست می‌شوند تا سریع‌تر مشکل را پیدا کنیم",
+  "bugReportAutoInfo": "فقط توضیحات و تصویرهایی که خودتان انتخاب می‌کنید ارسال می‌شوند. گزارش‌ها و داده‌های تشخیصی پایگاه‌داده هرگز خودکار بارگذاری نمی‌شوند.",
   "bugReportSubmit": "ارسال",
   "bugReportCancel": "لغو",
   "bugReportSuccess": "گزارش ارسال شد، ممنون از بازخورد شما",
@@ -1118,8 +1127,8 @@
     "marketUpdate": "به‌روزرسانی",
     "marketEmpty": "ایجنت قابل نصبی یافت نشد. اتصال شبکه خود را بررسی کنید و مطمئن شوید GitHub در دسترس است.",
     "marketContributionHint": "می‌خواهید ایجنت جدیدی در اینجا فهرست شود؟",
-    "marketContributionAction": "یک PR روی WinkGoHub باز کنید",
-    "marketComingSoon": "بازار WinkGoHub به‌زودی عرضه خواهد شد.",
+    "marketContributionAction": "یک PR روی WINK GO Hub باز کنید",
+    "marketComingSoon": "بازار WINK GO Hub به‌زودی عرضه خواهد شد.",
     "detectCustomAgent": "شناسایی ایجنت سفارشی",
     "editCustomAgent": "ویرایش ایجنت سفارشی",
     "officialAgents": "ایجنت‌های رسمی",
@@ -1150,6 +1159,7 @@
     "errorCodes": {
       "command_not_found": "{{command}} را نصب کنید و آزمایش اتصال را دوباره انجام دهید.",
       "qoderCliRequired": "Qoder IDE و Qoder Agent CLI دو مؤلفهٔ جدا هستند. {{command}} را جداگانه نصب کنید؛ فرمان qoder همراه IDE از ACP پشتیبانی نمی‌کند و نمی‌تواند جایگزین آن شود.",
+      "claudeCliRequired": "Install the official Claude Code CLI separately and make sure {{command}} is on PATH. WINK GO does not bundle Claude Code or reuse Claude.ai Free/Pro/Max subscription OAuth; configure ANTHROPIC_API_KEY or a compatible API gateway.",
       "acp_init_failed": "CLI شروع شد اما هنگام مقداردهی اولیه ناموفق بود. ورود یا راه‌اندازی اولیه را کامل کنید، سپس آزمایش اتصال را دوباره انجام دهید.",
       "health_check_failed": "{{name}} را یک‌بار باز کنید تا راه‌اندازی یا ورود کامل شود، سپس آزمایش اتصال را دوباره انجام دهید.",
       "session_send_failed": "مشکل اعتبارنامه یا شبکه مربوط به {{name}} را رفع کنید، سپس یک مکالمه جدید شروع کنید یا آزمایش اتصال را دوباره انجام دهید.",
@@ -1190,7 +1200,7 @@
     "envScenarioApiKey": "کلید API یا توکن دسترسی مفقود (مثلاً ANTHROPIC_API_KEY، OPENAI_API_KEY) — علت رایج «نیاز به ورود» یا شکست اتصال",
     "envScenarioBaseUrl": "نقطه پایانی یا دروازه API سفارشی (مثلاً ANTHROPIC_BASE_URL، OPENAI_BASE_URL) برای سرویس‌های خودمیزبان یا پروکسی‌شده",
     "envScenarioProxy": "تنظیمات پراکسی شبکه (مثلاً HTTPS_PROXY، HTTP_PROXY) وقتی ایجنت نمی‌تواند مستقیم به اینترنت وصل شود",
-    "envOauthNote": "توجه: این جایگزین ورود حساب داخل CLI نیست (مثلاً ورود به Gemini با حساب Google). برای ورود مبتنی بر OAuth، از طریق CLI در ترمینال وارد شوید.",
+    "envOauthNote": "WINK GO does not reuse third-party GUI subscription credentials. Configure the API keys or gateway tokens required by each tool here. Use vendor OAuth only where that vendor explicitly permits third-party client use.",
     "emptyOverridesError": "قبل از ذخیره، مسیر راه‌اندازی یا حداقل یک متغیر محیطی وارد کنید."
   },
   "remoteAgent": {
@@ -1291,8 +1301,7 @@
   "autoInjectedSkillsHint": "در هر گفتگو به‌طور خودکار بارگذاری می‌شوند — نیازی به فعال‌سازی نیست؛ عامل تصمیم می‌گیرد چه زمانی از آن‌ها استفاده کند.",
   "legal": {
     "title": "اطلاعات حقوقی",
-    "summary": "بخش‌هایی از کد WINK GO بر پایه AionUi تغییر یافته و همچنان تحت مجوز Apache License 2.0 ارائه می‌شود.",
-    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "summary": "WINK GO تحت مجوز Apache License 2.0 منتشر می‌شود.",
     "apacheLicense": "مجوز Apache 2.0",
     "notice": "اطلاعیه توزیع",
     "thirdPartyNotices": "اطلاعیه‌های شخص ثالث"

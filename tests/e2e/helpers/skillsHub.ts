@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { Page } from '@playwright/test';
 import { invokeBridge } from './bridge';
 import { httpGet, httpPost, httpDelete } from './httpBridge';

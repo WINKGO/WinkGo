@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Modified from AionUI by WINK GO contributors in 2026.
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';

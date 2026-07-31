@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # 后端 Team 模块 GAP 调研（rebase 后最新代码）
 
 > **调研范围**：仓库 `/Users/testuser/.superset/worktrees/winkgo-backend/repeated-algebra/`，分支 `docs/api-for-frontend`，HEAD `21abc46`。

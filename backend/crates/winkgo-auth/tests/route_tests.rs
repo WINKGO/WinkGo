@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for auth REST API routes.
 //!
 //! Covers test-plan items T4 (login), T5 (logout), T6 (auth status),
@@ -702,7 +703,7 @@ async fn t11_5_qr_login_missing_token() {
 // ===========================================================================
 
 #[tokio::test]
-async fn qr_login_page_returns_html() {
+async fn qr_login_page_submits_the_backend_qr_token_contract() {
     let (app, _ctx) = test_app().await;
 
     let req = get_anonymous("/qr-login");
@@ -711,6 +712,8 @@ async fn qr_login_page_returns_html() {
     assert_eq!(resp.status(), StatusCode::OK);
     let content_type = resp.headers().get("content-type").unwrap().to_str().unwrap();
     assert!(content_type.contains("text/html"));
+    let html = String::from_utf8(resp.into_body().collect().await.unwrap().to_bytes().to_vec()).unwrap();
+    assert!(html.contains("JSON.stringify({ qr_token: token })"));
 }
 
 // ===========================================================================

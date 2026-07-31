@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Plan Mode: state management, tool implementations, prompts, and file I/O.
 //
 // Plan Mode restricts the agent to read-only tools while composing an

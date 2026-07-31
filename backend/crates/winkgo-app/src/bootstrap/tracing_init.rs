@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Tracing subscriber + log file initialization for the binary.
 //!
 //! Lives in the binary tree (not lib) because it owns process-global

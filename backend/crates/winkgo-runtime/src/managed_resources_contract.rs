@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
@@ -5,7 +6,6 @@ use std::path::{Component, Path, PathBuf};
 
 pub const MANAGED_RESOURCES_CONTRACT_FILE: &str = "manifest.json";
 pub const MANAGED_RESOURCES_CONTRACT_SCHEMA_VERSION: u8 = 2;
-const REQUIRED_CLI_NAMES: [&str; 2] = ["claude", "codex"];
 const SUPPORTED_RUNTIME_KEYS: [&str; 6] = [
     "win32-x64",
     "win32-arm64",
@@ -30,26 +30,27 @@ pub struct ManagedNodeResourceContract {
     pub version: String,
     pub root: String,
     pub executable: String,
+    /// Legal/runtime files that must remain beside the official Node.js
+    /// distribution. `LICENSE` is mandatory for every bundled platform.
+    #[serde(default)]
+    pub required_files: Vec<String>,
 }
 
-/// A bundled agent CLI (claude / codex). Unlike the removed ACP-tool contract
-/// there is no node bridge or local manifest — the CLI is a native binary (plus,
-/// for codex, sidecars under its `vendor/<triple>` subtree captured via
-/// `required_files` / `required_directories`).
+/// Historical managed-CLI contract shape retained for schema compatibility.
+/// Claude Code and Codex are external user-installed tools and are forbidden
+/// from managed resource contracts.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ManagedCliResourceContract {
     pub name: String,
     pub version: String,
-    /// Relative to the managed-resources root, e.g. `cli/claude/2.1.215/darwin-arm64`.
+    /// Relative to the managed-resources root.
     pub root: String,
     /// Must equal the contract `runtime_key`.
     pub platform_directory: String,
-    /// The main executable, relative to `root` (e.g. `claude` or
-    /// `vendor/aarch64-apple-darwin/bin/codex`).
+    /// The main executable, relative to `root`.
     pub executable: String,
-    /// Extra files that must exist relative to `root` (e.g. codex sidecars
-    /// `codex-path/rg`, `codex-resources/zsh/bin/zsh`). May be empty (claude).
+    /// Extra files that must exist relative to `root`.
     #[serde(default)]
     pub required_files: Vec<String>,
     /// Extra directories that must exist relative to `root`. May be empty.
@@ -137,6 +138,24 @@ fn validate_node_schema(node: &ManagedNodeResourceContract) -> Result<(), Manage
     require_non_empty("node.version", &node.version)?;
     validate_contract_relative_path_field("node.root", &node.root)?;
     validate_contract_relative_path_field("node.executable", &node.executable)?;
+    for (index, entry) in node.required_files.iter().enumerate() {
+        validate_contract_relative_path_field(format!("node.requiredFiles[{index}]"), entry)?;
+    }
+    if !node.required_files.iter().any(|entry| entry == "LICENSE") {
+        return Err(ManagedResourcesContractError::invalid(
+            "node.requiredFiles must include LICENSE",
+        ));
+    }
+    if !node.required_files.iter().any(|entry| {
+        matches!(
+            entry.as_str(),
+            "node_modules/npm/LICENSE" | "lib/node_modules/npm/LICENSE"
+        )
+    }) {
+        return Err(ManagedResourcesContractError::invalid(
+            "node.requiredFiles must include the bundled npm LICENSE",
+        ));
+    }
     Ok(())
 }
 
@@ -145,6 +164,11 @@ fn validate_clis_schema(contract: &ManagedResourcesContract) -> Result<(), Manag
 
     for cli in &contract.clis {
         require_non_empty("clis[].name", &cli.name)?;
+        if matches!(cli.name.to_ascii_lowercase().as_str(), "claude" | "codex") {
+            return Err(ManagedResourcesContractError::invalid(
+                "forbidden bundled external CLI contract entry",
+            ));
+        }
         if !names.insert(cli.name.as_str()) {
             return Err(ManagedResourcesContractError::invalid(format!(
                 "duplicate clis name {}",
@@ -171,14 +195,6 @@ fn validate_clis_schema(contract: &ManagedResourcesContract) -> Result<(), Manag
         }
     }
 
-    for required_name in REQUIRED_CLI_NAMES {
-        if !names.contains(required_name) {
-            return Err(ManagedResourcesContractError::invalid(format!(
-                "missing required clis name {required_name}"
-            )));
-        }
-    }
-
     Ok(())
 }
 
@@ -196,6 +212,15 @@ fn validate_node_paths(root: &Path, node: &ManagedNodeResourceContract) -> Resul
             "required file missing: {}",
             executable.display()
         )));
+    }
+    for required_file in &node.required_files {
+        let path = node_root.join(required_file);
+        if !path.is_file() {
+            return Err(ManagedResourcesContractError::invalid(format!(
+                "required file missing: {}",
+                path.display()
+            )));
+        }
     }
     Ok(())
 }
@@ -281,27 +306,33 @@ mod tests {
                 version: "24.11.0".into(),
                 root: "node/node-v24.11.0-win-x64".into(),
                 executable: "node.exe".into(),
+                required_files: vec!["LICENSE".into(), "node_modules/npm/LICENSE".into()],
             },
-            clis: vec![
-                ManagedCliResourceContract {
-                    name: "claude".into(),
-                    version: "2.1.215".into(),
-                    root: "cli/claude/2.1.215/win32-x64".into(),
-                    platform_directory: "win32-x64".into(),
-                    executable: "claude.exe".into(),
-                    required_files: vec![],
-                    required_directories: vec![],
-                },
-                ManagedCliResourceContract {
-                    name: "codex".into(),
-                    version: "0.144.6".into(),
-                    root: "cli/codex/0.144.6/win32-x64".into(),
-                    platform_directory: "win32-x64".into(),
-                    executable: "vendor/x86_64-pc-windows-msvc/bin/codex.exe".into(),
-                    required_files: vec!["vendor/x86_64-pc-windows-msvc/codex-path/rg.exe".into()],
-                    required_directories: vec!["vendor/x86_64-pc-windows-msvc".into()],
-                },
-            ],
+            clis: vec![],
+        }
+    }
+
+    fn example_external_cli(name: &str) -> ManagedCliResourceContract {
+        ManagedCliResourceContract {
+            name: name.into(),
+            version: "1.0.0".into(),
+            root: format!("cli/{name}/1.0.0/win32-x64"),
+            platform_directory: "win32-x64".into(),
+            executable: "agent.exe".into(),
+            required_files: vec![],
+            required_directories: vec![],
+        }
+    }
+
+    fn materialize_node(root: &Path) {
+        let node = root.join("node").join("node-v24.11.0-win-x64");
+        std::fs::create_dir_all(node.join("node_modules").join("npm")).expect("create npm dir");
+        for path in [
+            node.join("node.exe"),
+            node.join("LICENSE"),
+            node.join("node_modules/npm/LICENSE"),
+        ] {
+            std::fs::write(path, b"license-or-runtime").expect("write required node file");
         }
     }
 
@@ -313,40 +344,49 @@ mod tests {
         assert_eq!(value["schemaVersion"], 2);
         assert_eq!(value["runtimeKey"], "win32-x64");
         assert!(value.get("schema_version").is_none());
-        assert_eq!(value["clis"][0]["name"], "claude");
-        assert_eq!(
-            value["clis"][1]["executable"],
-            "vendor/x86_64-pc-windows-msvc/bin/codex.exe"
-        );
+        assert_eq!(value["node"]["requiredFiles"][0], "LICENSE");
+        assert_eq!(value["clis"], serde_json::json!([]));
     }
 
     #[test]
     fn validate_contract_rejects_duplicate_cli_names() {
         let temp = tempfile::tempdir().expect("tempdir");
         let mut contract = example_contract("win32-x64");
-        contract.clis[1].name = "claude".into();
+        contract.clis.push(example_external_cli("open-agent"));
+        contract.clis.push(example_external_cli("open-agent"));
 
         let error = validate_contract(temp.path(), &contract).expect_err("duplicate name should fail");
 
-        assert!(error.to_string().contains("duplicate clis name claude"));
+        assert!(error.to_string().contains("duplicate clis name open-agent"));
     }
 
     #[test]
-    fn validate_contract_rejects_missing_required_cli_name() {
+    fn validate_contract_allows_no_managed_clis() {
         let temp = tempfile::tempdir().expect("tempdir");
-        let mut contract = example_contract("win32-x64");
-        contract.clis.retain(|cli| cli.name != "codex");
+        let contract = example_contract("win32-x64");
+        materialize_node(temp.path());
 
-        let error = validate_contract(temp.path(), &contract).expect_err("missing required name should fail");
+        validate_contract(temp.path(), &contract).expect("external CLIs are not part of managed resources");
+    }
 
-        assert!(error.to_string().contains("missing required clis name codex"));
+    #[test]
+    fn validate_contract_rejects_bundled_external_clis() {
+        for name in ["claude", "codex"] {
+            let temp = tempfile::tempdir().expect("tempdir");
+            let mut contract = example_contract("win32-x64");
+            contract.clis.push(example_external_cli(name));
+
+            let error = validate_contract(temp.path(), &contract).expect_err("external CLI bundle should fail");
+            assert!(error.to_string().contains("forbidden bundled external CLI"));
+        }
     }
 
     #[test]
     fn validate_contract_rejects_unsafe_relative_paths() {
         let temp = tempfile::tempdir().expect("tempdir");
-        for bad in ["/abs/path", "cli\\claude", "", "../escape", "cli/../escape"] {
+        for bad in ["/abs/path", "cli\\codex", "", "../escape", "cli/../escape"] {
             let mut contract = example_contract("win32-x64");
+            contract.clis.push(example_external_cli("open-agent"));
             contract.clis[0].root = bad.into();
 
             let error = validate_contract(temp.path(), &contract).expect_err("unsafe path should fail");
@@ -359,6 +399,7 @@ mod tests {
     fn validate_contract_rejects_platform_mismatch() {
         let temp = tempfile::tempdir().expect("tempdir");
         let mut contract = example_contract("win32-x64");
+        contract.clis.push(example_external_cli("open-agent"));
         contract.clis[0].platform_directory = "linux-x64".into();
 
         let error = validate_contract(temp.path(), &contract).expect_err("platform mismatch should fail");

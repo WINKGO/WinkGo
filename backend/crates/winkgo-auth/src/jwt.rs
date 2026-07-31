@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::fmt::Write as _;
 use std::sync::RwLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

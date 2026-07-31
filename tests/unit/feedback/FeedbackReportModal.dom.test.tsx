@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -157,26 +158,10 @@ describe('FeedbackReportModal — prefill', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('submits feedback tags and extra context to Sentry', async () => {
+  it('submits only user-visible feedback fields', async () => {
     const user = userEvent.setup();
     const onCancel = vi.fn();
-    renderModal(
-      <FeedbackReportModal
-        visible={true}
-        onCancel={onCancel}
-        defaultModule='conversation-session'
-        feedbackTags={{
-          agent_error_code: 'USER_LLM_PROVIDER_AUTH_FAILED',
-          agent_error_ownership: 'user_llm_provider',
-        }}
-        feedbackExtra={{
-          agent_error: {
-            code: 'USER_LLM_PROVIDER_AUTH_FAILED',
-            ownership: 'user_llm_provider',
-          },
-        }}
-      />
-    );
+    renderModal(<FeedbackReportModal visible={true} onCancel={onCancel} defaultModule='conversation-session' />);
 
     await user.type(screen.getByPlaceholderText('settings.bugReportDescriptionPlaceholder'), 'provider failed');
     await user.click(screen.getByText('settings.bugReportSubmit'));
@@ -187,16 +172,12 @@ describe('FeedbackReportModal — prefill', () => {
 
     expect(sentryMocks.setTag).toHaveBeenCalledWith('type', 'user-feedback');
     expect(sentryMocks.setTag).toHaveBeenCalledWith('module', 'conversation-session');
-    expect(sentryMocks.setTag).toHaveBeenCalledWith('agent_error_code', 'USER_LLM_PROVIDER_AUTH_FAILED');
-    expect(sentryMocks.setTag).toHaveBeenCalledWith('agent_error_ownership', 'user_llm_provider');
+    expect(sentryMocks.setTag).not.toHaveBeenCalledWith('agent_error_code', expect.anything());
+    expect(sentryMocks.setTag).not.toHaveBeenCalledWith('agent_error_ownership', expect.anything());
     expect(sentryMocks.captureEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         extra: {
           description: 'provider failed',
-          agent_error: {
-            code: 'USER_LLM_PROVIDER_AUTH_FAILED',
-            ownership: 'user_llm_provider',
-          },
         },
       }),
       expect.objectContaining({ attachments: [] })
@@ -204,7 +185,7 @@ describe('FeedbackReportModal — prefill', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('submits route and module diagnostics context for DB attachment collection', async () => {
+  it('does not collect local logs or database diagnostics implicitly', async () => {
     window.location.hash = '#/conversation/conv-1';
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
@@ -225,32 +206,18 @@ describe('FeedbackReportModal — prefill', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const user = userEvent.setup();
-    renderModal(
-      <FeedbackReportModal
-        visible={true}
-        onCancel={vi.fn()}
-        defaultModule='system-settings'
-        feedbackDiagnosticsContext={{
-          explicitContext: { conversationId: 'conv-1' },
-          explicitProfiles: ['conversation-session'],
-          routeAtOpen: '#/conversation/conv-1',
-        }}
-      />
-    );
+    renderModal(<FeedbackReportModal visible={true} onCancel={vi.fn()} defaultModule='system-settings' />);
 
     await user.type(screen.getByPlaceholderText('settings.bugReportDescriptionPlaceholder'), 'wrong module selected');
     await user.click(screen.getByText('settings.bugReportSubmit'));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledOnce();
+      expect(sentryMocks.captureEvent).toHaveBeenCalledOnce();
     });
-    const [path, options] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(path).toContain('/api/system/diagnostics/feedback-report?');
-    expect(path).toContain('conversation_id=conv-1');
-    expect(path).toContain('profiles=conversation-session');
-    expect(path).toContain('route_at_open=%23%2Fconversation%2Fconv-1');
-    expect(path).toContain('route_at_submit=%23%2Fconversation%2Fconv-1');
-    expect(path).toContain('selected_module=system-settings');
-    expect(options.method).toBe('GET');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(sentryMocks.captureEvent).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ attachments: [] })
+    );
   });
 });

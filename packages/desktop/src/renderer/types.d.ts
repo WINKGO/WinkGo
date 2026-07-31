@@ -1,3 +1,6 @@
+// Modified from AionUI by WINK GO contributors in 2026.
+/// <reference types="vite/client" />
+
 declare module '*.svg' {
   const content: string;
   export default content;

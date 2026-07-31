@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for McpAgentAdapter trait and DetectedServer.
 //!
 //! Uses a mock adapter to verify the trait's public API contract:

@@ -423,6 +423,15 @@
   "skills": "Habilidades",
   "tools": "Herramientas",
   "toolsDescription": "Configura servidores MCP y herramientas integradas como la generación de imágenes. La generación de imágenes solo se puede activar tras configurar un modelo compatible con imágenes en la página de Modelos.",
+  "mcpWorkspace": {
+    "title": "Configuración de MCP",
+    "description": "Gestiona los servicios MCP generales y el canal de dispositivo independiente para ESP32 XiaoZhi y el miniprograma complementario.",
+    "general": "MCP general",
+    "xiaozhi": "Conexión MCP de XiaoZhi",
+    "relayToggleLabel": "Activar la retransmisión de dispositivos en la nube",
+    "relayDisclosureTitle": "Revise antes de activar la retransmisión en la nube",
+    "relayDisclosureBody": "Al activarla, este equipo mantiene una conexión con {{domain}} y envía identificadores de cuenta, instalación y escritorio, el nombre del dispositivo, el estado de conexión y del código de emparejamiento, además del contenido que usted reenvíe deliberadamente desde el miniprograma: texto, transcripciones de voz, resultados de tareas y solicitudes y respuestas de WebUI remoto (que pueden contener archivos o datos de autenticación). El operador legal y la ubicación del servidor deben completarse antes del lanzamiento público; cualquier transferencia a terceros o transfronteriza tendrá un aviso separado y la autorización necesaria. Los servicios externos de red, modelos o voz pueden cobrar tarifas. Puede desactivarla en cualquier momento."
+  },
   "modelDescription": "Configura proveedores de LLM y claves de API para usar en todos los asistentes. Solo WINK GO admite modelos personalizados; los demás agentes usan sus modelos integrados.",
   "capabilities": "Capacidades",
   "capabilitiesTab": {
@@ -663,7 +672,7 @@
   "mcpAuthenticated": "Autenticado",
   "mcpDisconnected": "No probado",
   "mcpError": "Última prueba falló",
-  "mcpErrorNodeCommandNotFound": "El comando {{command}} no pudo prepararse. WinkGoCore generalmente provisiona su runtime de Node administrado automáticamente. Reintenta la prueba de conexión, revisa los registros del backend si sigue fallando, o configura este servidor MCP para usar una ruta de comando absoluta.",
+  "mcpErrorNodeCommandNotFound": "El comando {{command}} no pudo prepararse. WINK GO Core generalmente provisiona su runtime de Node administrado automáticamente. Reintenta la prueba de conexión, revisa los registros del backend si sigue fallando, o configura este servidor MCP para usar una ruta de comando absoluta.",
   "mcpErrorBunCommandNotFound": "El comando {{command}} no se encontró. Instala Bun (que incluye bun/bunx), reinicia WINK GO, o configura este servidor MCP para usar una ruta de comando absoluta.",
   "mcpErrorUvCommandNotFound": "El comando {{command}} no se encontró. Instala uv, reinicia WINK GO, o configura este servidor MCP para usar una ruta de comando absoluta.",
   "mcpErrorPythonCommandNotFound": "El comando {{command}} no se encontró. Instala Python, reinicia WINK GO, o configura este servidor MCP para usar una ruta de comando absoluta.",
@@ -788,7 +797,7 @@
   "bugReportScreenshotUploaded": "({{count}} subidas)",
   "bugReportScreenshotDropzoneText": "Haz clic, arrastra o pega capturas de pantalla aquí",
   "bugReportScreenshotFormats": "Admite PNG, JPG, GIF",
-  "bugReportAutoInfo": "La información del sistema y los registros de los últimos 3 días se adjuntarán automáticamente para ayudarnos a localizar el problema más rápido",
+  "bugReportAutoInfo": "Solo se envían tu descripción y las capturas que selecciones. Los registros y diagnósticos de base de datos nunca se cargan automáticamente.",
   "bugReportSubmit": "Enviar",
   "bugReportCancel": "Cancelar",
   "bugReportSuccess": "Reporte enviado, gracias por tus comentarios",
@@ -1108,8 +1117,8 @@
     "marketUpdate": "Actualizar",
     "marketEmpty": "No se encontraron agentes instalables. Verifica tu conexión de red y asegúrate de que GitHub sea accesible.",
     "marketContributionHint": "¿Quieres que se liste un nuevo agente aquí?",
-    "marketContributionAction": "Abre un PR en WinkGoHub",
-    "marketComingSoon": "El mercado de WinkGoHub llegará pronto.",
+    "marketContributionAction": "Abre un PR en WINK GO Hub",
+    "marketComingSoon": "El mercado de WINK GO Hub llegará pronto.",
     "detectCustomAgent": "Detectar agente personalizado",
     "editCustomAgent": "Editar agente personalizado",
     "localAgentsEmpty": "No se detectaron agentes locales",
@@ -1140,6 +1149,7 @@
     "errorCodes": {
       "command_not_found": "Install {{command}} and retry the connection test.",
       "qoderCliRequired": "Qoder IDE y la CLI de Qoder Agent son componentes distintos. Instala {{command}} por separado; el comando qoder incluido con el IDE no admite ACP y no puede sustituirlo.",
+      "claudeCliRequired": "Install the official Claude Code CLI separately and make sure {{command}} is on PATH. WINK GO does not bundle Claude Code or reuse Claude.ai Free/Pro/Max subscription OAuth; configure ANTHROPIC_API_KEY or a compatible API gateway.",
       "acp_init_failed": "The CLI started but failed during initialization. Complete sign-in or first-run setup, then retry the connection test.",
       "health_check_failed": "Open {{name}} once to finish setup or sign-in, then retry the connection test.",
       "session_send_failed": "Fix the credentials or network issue affecting {{name}}, then start a new conversation or retry the connection test.",
@@ -1260,7 +1270,7 @@
     "envScenarioApiKey": "Missing API key or access token (e.g. ANTHROPIC_API_KEY, OPENAI_API_KEY) — the common cause of \"needs sign-in\" / connection failures",
     "envScenarioBaseUrl": "Custom API endpoint or gateway (e.g. ANTHROPIC_BASE_URL, OPENAI_BASE_URL) for self-hosted or proxied services",
     "envScenarioProxy": "Network proxy settings (e.g. HTTPS_PROXY, HTTP_PROXY) when the agent cannot reach the internet directly",
-    "envOauthNote": "Note: this cannot replace an account login inside the CLI (e.g. signing in to Gemini with a Google account). For OAuth-based login, sign in via the CLI in a terminal.",
+    "envOauthNote": "WINK GO does not reuse third-party GUI subscription credentials. Configure the API keys or gateway tokens required by each tool here. Use vendor OAuth only where that vendor explicitly permits third-party client use.",
     "emptyOverridesError": "Enter a launch path or at least one environment variable before saving."
   },
   "assistantAgentUnavailable": "The required agent is currently unavailable.",
@@ -1291,8 +1301,7 @@
   "autoInjectedSkillsHint": "Se cargan automáticamente en cada conversación: no hace falta activarlas; el agente decide cuándo usarlas.",
   "legal": {
     "title": "Información legal",
-    "summary": "Parte del código de WINK GO deriva de AionUi y continúa bajo la licencia Apache License 2.0.",
-    "attribution": "Copyright 2025-2026 AionUi (aionui.com) · Modifications Copyright 2026 WINK GO (winkgo.top).",
+    "summary": "WINK GO se publica bajo la licencia Apache License 2.0.",
     "apacheLicense": "Licencia Apache 2.0",
     "notice": "Aviso de distribución",
     "thirdPartyNotices": "Avisos de terceros"

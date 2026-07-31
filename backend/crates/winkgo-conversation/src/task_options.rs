@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Shared helpers for translating a [`ConversationRow`] into the inputs
 //! agent factories expect.
 //!

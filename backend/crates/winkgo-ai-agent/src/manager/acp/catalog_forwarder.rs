@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Forwards ACP session events to the catalog sync channel.
 //!
 //! Subscribes to the manager's stream event broadcast and projects

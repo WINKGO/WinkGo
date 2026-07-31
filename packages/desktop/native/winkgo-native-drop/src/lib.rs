@@ -1,3 +1,8 @@
+// Copyright 2020-2023 Tauri Programme within The Commons Conservancy
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
+// Modified from Wry 0.55.1 by WINK GO contributors in 2026.
+
 #![cfg(windows)]
 
 use napi_derive::napi;

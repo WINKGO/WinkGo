@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { TooltipProps } from '@arco-design/web-react';
 
 /**

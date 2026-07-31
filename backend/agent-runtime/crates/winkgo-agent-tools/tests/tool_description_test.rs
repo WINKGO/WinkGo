@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Integration tests for enhanced tool descriptions (TC-4.2-01 through TC-4.2-08).
 //!
 //! These are black-box tests that verify each tool's description contains

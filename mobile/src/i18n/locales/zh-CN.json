@@ -143,6 +143,8 @@
       "apacheLicense": "Apache 2.0 许可证",
       "notice": "分发声明",
       "thirdPartyNotices": "第三方声明",
+      "privacyPolicy": "隐私政策",
+      "termsOfService": "服务条款",
       "unavailable": "当前构建未包含这份法律文件。"
     }
   }

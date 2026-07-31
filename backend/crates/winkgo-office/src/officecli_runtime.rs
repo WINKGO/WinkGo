@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::ffi::{OsStr, OsString};
 #[cfg(test)]
 use std::path::Path;
@@ -11,12 +12,14 @@ use winkgo_runtime::resolve_command_path;
 // from many server deployments (winkgo#3212 follow-up).
 pub(crate) const OFFICECLI_INSTALL_SH_MIRROR_URL: &str = "https://d.officecli.ai/install.sh";
 pub(crate) const OFFICECLI_INSTALL_PS1_MIRROR_URL: &str = "https://d.officecli.ai/install.ps1";
+pub(crate) const OFFICECLI_INSTALL_SH_SHA256: &str = "2a0fdae06f4a018ea8d8516c69bfa5eeeb53406aacb5fa16fd07a9e572991bb6";
+pub(crate) const OFFICECLI_INSTALL_PS1_SHA256: &str =
+    "ef24f389b27bc5a85142b1d414f3d25047aa62c5188d9b9789940435b22b6c45";
 pub(crate) const OFFICECLI_INSTALL_SH_URL: &str =
-    "https://raw.githubusercontent.com/xuweihafeichangniu-lab/OfficeCli/main/install.sh";
+    "https://raw.githubusercontent.com/iOfficeAI/OfficeCLI/e04dee2af5a0822db867edd67fcf29c9e02739fc/install.sh";
 pub(crate) const OFFICECLI_INSTALL_PS1_URL: &str =
-    "https://raw.githubusercontent.com/xuweihafeichangniu-lab/OfficeCli/main/install.ps1";
-pub(crate) const OFFICECLI_LATEST_RELEASE_URL: &str =
-    "https://github.com/xuweihafeichangniu-lab/OfficeCli/releases/latest";
+    "https://raw.githubusercontent.com/iOfficeAI/OfficeCLI/e04dee2af5a0822db867edd67fcf29c9e02739fc/install.ps1";
+pub(crate) const OFFICECLI_LATEST_RELEASE_URL: &str = "https://github.com/iOfficeAI/OfficeCLI/releases/latest";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum OfficecliInstallPlatform {
@@ -52,7 +55,7 @@ pub(crate) fn install_command_for_platform(platform: OfficecliInstallPlatform) -
                 OsString::from("Bypass"),
                 OsString::from("-Command"),
                 OsString::from(format!(
-                    "$ErrorActionPreference='Stop'; try {{ $s = irm {OFFICECLI_INSTALL_PS1_MIRROR_URL} }} catch {{ $s = irm {OFFICECLI_INSTALL_PS1_URL} }}; iex $s"
+                    "$ErrorActionPreference='Stop'; $f=Join-Path ([IO.Path]::GetTempPath()) ('winkgo-officecli-'+[Guid]::NewGuid().ToString('N')+'.ps1'); try {{ try {{ Invoke-WebRequest -UseBasicParsing -Uri '{OFFICECLI_INSTALL_PS1_MIRROR_URL}' -OutFile $f -TimeoutSec 30 }} catch {{ Invoke-WebRequest -UseBasicParsing -Uri '{OFFICECLI_INSTALL_PS1_URL}' -OutFile $f -TimeoutSec 300 }}; $h=(Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash.ToLowerInvariant(); if ($h -ne '{OFFICECLI_INSTALL_PS1_SHA256}') {{ throw 'OfficeCLI installer integrity check failed.' }}; & $f }} finally {{ Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue }}"
                 )),
             ],
         },
@@ -64,7 +67,7 @@ pub(crate) fn install_command_for_platform(platform: OfficecliInstallPlatform) -
                 // dropped mid-stream would otherwise let the fallback output
                 // concatenate after a partial script.
                 OsString::from(format!(
-                    "f=$(mktemp) || exit 1; (curl -fsSL {OFFICECLI_INSTALL_SH_MIRROR_URL} -o \"$f\" || curl -fsSL {OFFICECLI_INSTALL_SH_URL} -o \"$f\") && bash \"$f\"; s=$?; rm -f \"$f\"; exit $s"
+                    "f=$(mktemp) || exit 1; trap 'rm -f \"$f\"' EXIT; (curl -fsSL --max-time 30 {OFFICECLI_INSTALL_SH_MIRROR_URL} -o \"$f\" || curl -fsSL --max-time 300 {OFFICECLI_INSTALL_SH_URL} -o \"$f\") || exit 1; if command -v sha256sum >/dev/null 2>&1; then h=$(sha256sum \"$f\" | awk '{{print $1}}'); elif command -v shasum >/dev/null 2>&1; then h=$(shasum -a 256 \"$f\" | awk '{{print $1}}'); else echo 'SHA-256 tool not found; refusing to execute OfficeCLI installer.' >&2; exit 1; fi; [ \"$h\" = \"{OFFICECLI_INSTALL_SH_SHA256}\" ] || {{ echo 'OfficeCLI installer integrity check failed.' >&2; exit 1; }}; bash \"$f\""
                 )),
             ],
         },
@@ -176,8 +179,13 @@ mod tests {
         let unix_text = format!("{:?} {:?}", unix.program, unix.args);
         let windows_text = format!("{:?} {:?}", windows.program, windows.args);
 
-        assert!(unix_text.contains("xuweihafeichangniu-lab/OfficeCli/main/install.sh"));
-        assert!(windows_text.contains("xuweihafeichangniu-lab/OfficeCli/main/install.ps1"));
+        assert!(unix_text.contains("iOfficeAI/OfficeCLI/e04dee2af5a0822db867edd67fcf29c9e02739fc/install.sh"));
+        assert!(windows_text.contains("iOfficeAI/OfficeCLI/e04dee2af5a0822db867edd67fcf29c9e02739fc/install.ps1"));
+        assert!(!unix_text.contains("xuweihafeichangniu-lab"));
+        assert!(!windows_text.contains("xuweihafeichangniu-lab"));
+        assert!(unix_text.contains(OFFICECLI_INSTALL_SH_SHA256));
+        assert!(windows_text.contains(OFFICECLI_INSTALL_PS1_SHA256));
+        assert!(!windows_text.contains("iex"));
     }
 
     // Servers that cannot reach raw.githubusercontent.com (the common case on
@@ -192,12 +200,13 @@ mod tests {
         let windows_text = format!("{:?} {:?}", windows.program, windows.args);
 
         let unix_mirror = unix_text.find("https://d.officecli.ai/install.sh");
-        let unix_github = unix_text.find("xuweihafeichangniu-lab/OfficeCli/main/install.sh");
+        let unix_github = unix_text.find("iOfficeAI/OfficeCLI/e04dee2af5a0822db867edd67fcf29c9e02739fc/install.sh");
         assert!(unix_mirror.is_some(), "unix installer must include the mirror URL");
         assert!(unix_mirror < unix_github, "unix installer must try the mirror first");
 
         let windows_mirror = windows_text.find("https://d.officecli.ai/install.ps1");
-        let windows_github = windows_text.find("xuweihafeichangniu-lab/OfficeCli/main/install.ps1");
+        let windows_github =
+            windows_text.find("iOfficeAI/OfficeCLI/e04dee2af5a0822db867edd67fcf29c9e02739fc/install.ps1");
         assert!(
             windows_mirror.is_some(),
             "windows installer must include the mirror URL"

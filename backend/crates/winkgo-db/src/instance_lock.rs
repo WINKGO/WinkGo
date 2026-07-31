@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Data-dir process-level instance guard (Sentry 135525166 Option A).
 //!
 //! A long-lived, non-blocking exclusive `flock` on a lock file next to the

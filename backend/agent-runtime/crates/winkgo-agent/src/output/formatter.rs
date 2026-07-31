@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use crossterm::execute;
 use crossterm::style::{Attribute, Color, Print, ResetColor, SetAttribute, SetForegroundColor};
 use std::io::{self, Write};

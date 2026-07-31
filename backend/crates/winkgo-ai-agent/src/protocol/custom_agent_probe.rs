@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Two-step probe for custom ACP agents.
 //!
 //! Step 1: `which`/`where` — resolve the first token of `command` on

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use reqwest::Client;
 use winkgo_api_types::{OpenAISpeechToTextConfig, SpeechToTextProvider, SpeechToTextResult};
 

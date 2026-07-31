@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Pure helper functions for the snapshot service.
 //!
 //! All functions here are synchronous and take no `&self` — they can be

@@ -1,10 +1,11 @@
+<!-- Modified from aionrs by WINK GO contributors in 2026. -->
 # Providers & Authentication
 
 ## Supported Providers
 
 | Provider | Auth Method | Notes |
 |----------|------------|-------|
-| Anthropic | API Key / OAuth | Prompt caching, streaming, vision |
+| Anthropic | API Key | Prompt caching, streaming, vision |
 | OpenAI | API Key | Compatible with DeepSeek, Qwen, Ollama, vLLM |
 | AWS Bedrock | SigV4 | Regional endpoints, AWS credential chain |
 | Google Vertex AI | GCP OAuth2 / Service Account | Metadata server auto-detection |
@@ -229,32 +230,8 @@ model = "claude-sonnet-4@20250514"
 
 ---
 
-## OAuth Login (Claude.ai)
+## Anthropic credentials
 
-Use your Claude.ai subscription (Pro/Team/Enterprise) directly — no API key needed.
-
-### Login
-
-```bash
-winkgo_agent auth login
-```
-
-1. Displays an authorization URL and code
-2. Open the URL in your browser and enter the code
-3. Credentials are saved alongside the global config (run `winkgo_agent config path` to find the directory)
-4. Subsequent runs auto-load saved credentials (with auto-refresh)
-
-### Logout
-
-```bash
-winkgo_agent auth logout
-```
-
-### Configuring OAuth Endpoints
-
-```toml
-[auth]
-auth_url = "https://claude.ai/oauth"
-token_url = "https://claude.ai/oauth/token"
-client_id = "winkgo_agent"
-```
+The Anthropic provider requires an explicit API key through `--api-key`,
+`providers.anthropic.api_key`, `API_KEY`, or `ANTHROPIC_API_KEY`. Account
+subscription credentials are not accepted or stored by this CLI.

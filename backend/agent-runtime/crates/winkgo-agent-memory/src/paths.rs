@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Path resolution and directory management for the memory system.
 //
 // Provides functions to compute memory directory locations, validate

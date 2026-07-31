@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use super::*;
 
 // Helper: run execute_shell_commands with LoadedFrom::Skills

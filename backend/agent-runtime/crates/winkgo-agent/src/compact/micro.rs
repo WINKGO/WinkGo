@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Microcompact: clear old tool result content without any LLM call.
 //!
 //! This is the lightest compaction level.  It walks the conversation,

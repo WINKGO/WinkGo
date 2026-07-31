@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for file read/write operations (task 7.4).
 //!
 //! These tests exercise `read_file`, `read_file_buffer`, and `write_file`

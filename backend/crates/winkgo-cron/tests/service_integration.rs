@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for `CronService`.
 //!
 //! Uses real SQLite (in-memory), mock broadcaster, and stubs for

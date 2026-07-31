@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
@@ -18,6 +19,9 @@ export default defineConfig({
   test: {
     globals: true,
     testTimeout: 10000,
+    // Keep Windows CI and developer machines from spawning enough jsdom
+    // workers at once to starve slow renderer-module imports.
+    maxWorkers: 4,
     // Use projects to run different environments (Vitest 4+)
     projects: [
       // Node environment tests (existing tests)

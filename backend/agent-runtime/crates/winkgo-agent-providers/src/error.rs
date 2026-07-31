@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 #[derive(Debug, thiserror::Error)]
 pub enum ProviderError {
     #[error("HTTP error: {0}")]

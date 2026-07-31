@@ -1,7 +1,8 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { ipcBridge } from '@/common';
 import { Spin } from '@arco-design/web-react';
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'react-router';
 import useSWR from 'swr';
 import TeamPage from './TeamPage';
 

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `winkgo_core config` subcommand: agent-facing automation CLI for WinkGo config.
 
 use std::collections::BTreeMap;

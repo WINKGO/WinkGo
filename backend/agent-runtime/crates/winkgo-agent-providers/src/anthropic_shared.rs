@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Shared Anthropic message/tool building and SSE parsing logic.
 // Used by AnthropicProvider, BedrockProvider, and VertexProvider.
 

@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 node_modules/
 .expo/
 dist/
@@ -8,6 +9,7 @@ android/
 .env.local
 build-*.ipa
 build-*.apk
+assets/legal/
 build-*.aab
 
 # @generated expo-cli sync-2b81b286409207a5da26e14c78851eb30d8ccbdb

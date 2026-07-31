@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `SessionEvent` — the canonical, backend-agnostic event vocabulary (§C 6.2,
 //! frozen). The `BackendAdapter` framing+parse stage emits these; the
 //! monomorphic reducer consumes ONLY these. Orchestration also lowers

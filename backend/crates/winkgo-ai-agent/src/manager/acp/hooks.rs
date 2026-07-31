@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Built-in `PreSendHook`s for the ACP prompt pipeline.
 //!
 //! Each hook reads a one-shot flag on `AcpSession` (or a `pending_*`

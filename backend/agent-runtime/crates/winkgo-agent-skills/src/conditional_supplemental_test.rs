@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Supplemental tests for Phase 8 — ConditionalSkillManager.
 // Covers test-plan.md TC-1 through TC-20, plus AC-10 and AC-11.
 

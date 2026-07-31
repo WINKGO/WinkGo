@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * WebSocket client with automatic reconnection, heartbeat keep-alive,
  * and typed event dispatch for winkgo_core communication.

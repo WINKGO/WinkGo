@@ -13,6 +13,7 @@
   "settings": "Settings",
   "system": "System",
   "about": "About Us",
+  "localAccount": "Local account",
   "back": "Back to Chat",
   "goBack": "Back",
   "add": "Add",
@@ -304,12 +305,12 @@
   "backendStartup": {
     "incompatibleRuntime": {
       "title": "This system is not supported by the bundled backend",
-      "description": "WINK GO opened, but the local WinkGoCore backend cannot run on this Linux version. Please upgrade to a supported Linux distribution and restart WINK GO.",
+      "description": "WINK GO opened, but the local WINK GO Core backend cannot run on this Linux version. Please upgrade to a supported Linux distribution and restart WINK GO.",
       "requiredVersions": "Required runtime symbols: {{versions}}"
     },
     "incompleteInstallation": {
       "title": "WINK GO installation is incomplete",
-      "description": "This installation is missing required local resources, so WinkGoCore cannot start. Please download and reinstall the latest WINK GO. If the issue returns after reinstalling, check whether security or antivirus software quarantined WinkGoCore.",
+      "description": "This installation is missing required local resources, so WINK GO Core cannot start. Please download and reinstall the latest WINK GO. If the issue returns after reinstalling, check whether security or antivirus software quarantined WINK GO Core.",
       "downloadLatest": "Download latest",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
@@ -323,7 +324,7 @@
     },
     "dataMigration": {
       "title": "Local data migration failed",
-      "description": "WINK GO opened, but WinkGoCore stopped while initializing local data. Reinstalling WINK GO may not fix this. Send a diagnostics report or contact support so the local database migration can be inspected.",
+      "description": "WINK GO opened, but WINK GO Core stopped while initializing local data. Reinstalling WINK GO may not fix this. Send a diagnostics report or contact support so the local database migration can be inspected.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
@@ -331,7 +332,7 @@
     },
     "localDataRepair": {
       "title": "Local data repair failed",
-      "description": "WINK GO opened, but WinkGoCore stopped while preparing local startup data such as assistant or agent records. Reinstalling WINK GO may not fix this. Send a diagnostics report or contact support so the local database can be inspected.",
+      "description": "WINK GO opened, but WINK GO Core stopped while preparing local startup data such as assistant or agent records. Reinstalling WINK GO may not fix this. Send a diagnostics report or contact support so the local database can be inspected.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",
@@ -339,7 +340,7 @@
     },
     "startupDirectory": {
       "title": "Startup directory is unavailable",
-      "description": "WINK GO opened, but WinkGoCore could not start because the configured work or log directory is missing, unavailable, or blocked by permissions. Check that the configured directories exist and are writable, then restart WINK GO.",
+      "description": "WINK GO opened, but WINK GO Core could not start because the configured work or log directory is missing, unavailable, or blocked by permissions. Check that the configured directories exist and are writable, then restart WINK GO.",
       "sendDiagnostics": "Send diagnostics",
       "diagnosticsSent": "Diagnostics sent",
       "diagnosticsReportSuccess": "Diagnostics report sent",

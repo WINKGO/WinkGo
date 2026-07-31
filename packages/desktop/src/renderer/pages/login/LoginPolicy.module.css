@@ -1,0 +1,66 @@
+.policyCheckbox {
+  align-items: flex-start;
+}
+
+.policyLabel {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.policyLink {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-1);
+  font: inherit;
+  font-weight: 600;
+  line-height: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.policyLink:hover,
+.policyLink:focus-visible {
+  color: var(--color-primary);
+}
+
+.policyLink:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 24%, transparent);
+  outline-offset: 2px;
+}
+
+.policyModal {
+  width: min(880px, calc(100vw - 32px));
+}
+
+.policyBaseline {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-fill-1);
+  color: var(--color-text-2);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.policyDocument {
+  max-height: 60vh;
+  margin: 0;
+  overflow: auto;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--color-fill-1);
+  color: var(--color-text-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

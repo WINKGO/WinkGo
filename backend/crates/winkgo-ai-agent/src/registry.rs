@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Process-wide snapshot of the `agent_metadata` catalog.
 //!
 //! The table is the single source of truth for every agent the user can
@@ -877,7 +878,7 @@ fn apply_cached_availability(meta: &mut AgentMetadata) -> Option<UnavailableReas
     }
     if !has_availability_snapshot(meta) {
         meta.available = false;
-        return if is_builtin_managed_agent(meta) {
+        return if is_builtin_direct_cli_agent(meta) {
             None
         } else if meta.command.as_deref().filter(|s| !s.is_empty()).is_none() {
             Some(UnavailableReason::NoCommand)
@@ -889,7 +890,7 @@ fn apply_cached_availability(meta: &mut AgentMetadata) -> Option<UnavailableReas
     None
 }
 
-fn is_builtin_managed_agent(meta: &AgentMetadata) -> bool {
+fn is_builtin_direct_cli_agent(meta: &AgentMetadata) -> bool {
     meta.agent_source == AgentSource::Builtin && matches!(meta.backend.as_deref(), Some("claude") | Some("codex"))
 }
 
@@ -1400,11 +1401,10 @@ fn probe_resolved_command(meta: &AgentMetadata) -> Result<PathBuf, UnavailableRe
         return Err(UnavailableReason::Disabled);
     }
 
-    // Builtin claude/codex run as direct CLIs now: availability is a PATH-only
-    // probe of the primary command (packaged app ships the binary, but PATH
-    // presence is our proxy for "user installed + authenticated" — see
-    // managed_cli / cli_probe). No node/ACP-tool preparation is involved.
-    if is_builtin_managed_agent(meta) {
+    // Builtin claude/codex run as direct external CLIs: availability resolves
+    // only the user's explicit command override or separately installed PATH
+    // command. WINK GO never provisions these vendor CLIs.
+    if is_builtin_direct_cli_agent(meta) {
         let primary = crate::cli_probe::command_name(meta).ok_or(UnavailableReason::NoCommand)?;
         return probe_command_candidate(primary).ok_or_else(|| UnavailableReason::PrimaryMissing {
             binary: primary.to_owned(),
@@ -1472,7 +1472,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn find_builtin_claude_uses_managed_acp_runtime_metadata() {
+    async fn find_builtin_claude_uses_direct_cli_metadata() {
         let reg = registry().await;
         let m = reg.find_builtin_by_backend("claude").await.unwrap();
         assert!(m.command.is_none());

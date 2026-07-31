@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for image processing operations (task 7.6).
 //!
 //! These tests exercise `get_image_base64` and `fetch_remote_image`

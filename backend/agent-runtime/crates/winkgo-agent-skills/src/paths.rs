@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use std::path::{Path, PathBuf};
 
 use winkgo_agent_config::config::app_config_dir;

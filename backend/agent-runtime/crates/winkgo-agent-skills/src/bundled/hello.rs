@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use super::{BundledSkillDefinition, register_bundled_skill};
 
 /// Register the built-in "hello" skill used to validate the bundled skill framework.

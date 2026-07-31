@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use agent_client_protocol::schema::Meta as SdkMeta;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

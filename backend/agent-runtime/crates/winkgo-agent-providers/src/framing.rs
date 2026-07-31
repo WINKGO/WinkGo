@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use base64::Engine as _;
 use serde_json::Value;
 

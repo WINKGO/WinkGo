@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use crate::error::AgentError;
 use crate::manager::acp::AcpAgentManager;
 use crate::manager::acp::mode_normalize::agent_metadata_uses_meta_resume;

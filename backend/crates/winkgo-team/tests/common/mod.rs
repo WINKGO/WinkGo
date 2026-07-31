@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::sync::Mutex;
 use winkgo_common::now_ms;
 use winkgo_db::models::{MailboxMessageRow, TeamRow, TeamTaskRow};

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Assistant User-Data Migration — E2E suite (Task 5 of
  * 2026-04-23-assistant-user-data-migration-plan).

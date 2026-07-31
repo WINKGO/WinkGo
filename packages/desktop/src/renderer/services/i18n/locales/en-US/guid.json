@@ -14,14 +14,32 @@
     "searchPlaceholder": "Search projects…",
     "noProject": "No Project"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "WINK GO AI analysis failed. Try again later.",
+    "backToChat": "Back to chat",
+    "frameTitle": "WINK GO Knowledge Canvas",
+    "loading": "Opening Knowledge Canvas…",
+    "open": "Open Knowledge Canvas",
+    "pageLabel": "WINK GO Knowledge Canvas",
+    "reload": "Reload Knowledge Canvas",
+    "statusAnalyzing": "WINK GO AI is analyzing",
+    "statusReady": "Local canvas · AI available",
+    "statusUnavailable": "Experimental · Not included",
+    "subtitle": "Turn web pages, documents, and ideas into editable knowledge structures",
+    "title": "Knowledge Canvas",
+    "unavailableDescription": "The public build does not include the complete canvas runtime. It will remain disabled until source, licensing, and release materials pass review.",
+    "unavailableTitle": "Knowledge Canvas is still experimental"
+  },
   "installerCenter": {
     "entry": "Software Install Center",
     "title": "WINK GO Install Center",
-    "subtitle": "One-click deployment packages for Codex, Claude Code, and Antigravity",
-    "windows": "Windows installers",
-    "macos": "macOS installers",
-    "environmentSetup": "Quick setup for {{platform}}",
-    "downloadFailed": "Failed to open the download link",
+    "subtitle": "Open the official installation pages for Codex, Claude Code, and Antigravity",
+    "windows": "Windows setup guidance",
+    "macos": "macOS setup guidance",
+    "environmentSetup": "View the official {{platform}} installation guide",
+    "openOfficialPage": "Open official installation page",
+    "thirdPartyDisclaimer": "Codex, Claude Code, and Antigravity are third-party products. WINK GO does not host, endorse, or guarantee their availability or compatibility; vendor terms apply.",
+    "downloadFailed": "Failed to open the official installation page",
     "recommended": "Recommended"
   }
 }

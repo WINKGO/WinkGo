@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # SkillsHub E2E 测试策略
 
 **文档版本**: v1.0

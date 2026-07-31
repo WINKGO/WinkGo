@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 /// Abstraction over output channels (terminal vs JSON stream protocol)
 pub trait OutputSink: Send + Sync {
     /// Stream text delta from LLM

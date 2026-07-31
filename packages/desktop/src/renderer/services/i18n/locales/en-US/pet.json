@@ -1,6 +1,8 @@
 {
   "desktopPet": "Desktop Pet",
   "enable": "Enable Desktop Pet",
+  "butlerSetup": "Ask the butler to set it up",
+  "butlerSetupPrompt": "Create a desktop pet for me. I will attach an image for you to turn into the pet.",
   "size": "Pet Size",
   "sizeSmall": "Small ({{px}}px)",
   "sizeMedium": "Medium ({{px}}px)",

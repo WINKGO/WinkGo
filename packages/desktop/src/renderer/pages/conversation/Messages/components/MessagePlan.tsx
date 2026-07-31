@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { Badge } from '@arco-design/web-react';
 import { IconCheckCircle, IconDown, IconRight } from '@arco-design/web-react/icon';
 import React, { useState } from 'react';

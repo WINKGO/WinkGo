@@ -1,22 +1,27 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::process::ExitCode;
 
 use crate::cli::PrepareManagedResourcesArgs;
 use crate::commands::error::{CliBoundaryCode, CliBoundaryError};
 use winkgo_runtime::ensure_node_runtime;
-use winkgo_runtime::managed_cli::{managed_cli_contract_for_export, prepare_managed_cli_to_root};
 use winkgo_runtime::managed_resources::export_node_runtime_to_root;
 use winkgo_runtime::managed_resources_contract::{
     MANAGED_RESOURCES_CONTRACT_SCHEMA_VERSION, ManagedResourcesContract, validate_contract, write_contract,
 };
-use winkgo_runtime::node_runtime::managed_node_contract_for_export;
-
-const MANAGED_CLI_NAMES: [&str; 2] = ["claude", "codex"];
+use winkgo_runtime::node_runtime::{managed_node_contract_for_export, managed_node_runtime_key};
 
 const SUBCOMMAND: &str = "prepare-managed-resources";
 
 pub async fn run_prepare_managed_resources(args: PrepareManagedResourcesArgs) -> Result<ExitCode, CliBoundaryError> {
     let output_root = args.bundle_out;
     std::fs::create_dir_all(&output_root).map_err(|_| prepare_managed_resources_error("output.create"))?;
+    // Reused build outputs may contain historical managed Claude/Codex trees.
+    // Both are external, user-installed CLIs now and must not enter a release.
+    let stale_cli_root = output_root.join("cli");
+    if stale_cli_root.exists() {
+        std::fs::remove_dir_all(&stale_cli_root)
+            .map_err(|_| prepare_managed_resources_error("output.remove_forbidden_clis"))?;
+    }
 
     let node_runtime = ensure_node_runtime()
         .await
@@ -32,33 +37,16 @@ pub async fn run_prepare_managed_resources(args: PrepareManagedResourcesArgs) ->
     println!("Prepared managed resources under {}", output_root.display());
     println!("  node   -> {}", exported_node.display());
 
-    let mut prepared_clis = Vec::new();
-    for name in MANAGED_CLI_NAMES {
-        let prepared = prepare_managed_cli_to_root(name, &output_root)
-            .await
-            .map_err(|error| prepare_managed_resources_error_with_detail("cli.prepare", error))?;
-        println!("  {:<6} -> {}", name, prepared.root.display());
-        prepared_clis.push(prepared);
-    }
-
     let node = managed_node_contract_for_export(&output_root, &exported_node)
         .map_err(|error| prepare_managed_resources_error_with_detail("contract.write", error))?;
-    let mut clis = Vec::new();
-    for prepared in &prepared_clis {
-        clis.push(
-            managed_cli_contract_for_export(&output_root, prepared)
-                .map_err(|error| prepare_managed_resources_error_with_detail("contract.write", error))?,
-        );
-    }
-    let runtime_key = clis
-        .first()
-        .map(|cli| cli.platform_directory.clone())
-        .ok_or_else(|| prepare_managed_resources_error("contract.write"))?;
+    let runtime_key = managed_node_runtime_key()
+        .map_err(|error| prepare_managed_resources_error_with_detail("contract.write", error))?
+        .to_owned();
     let contract = ManagedResourcesContract {
         schema_version: MANAGED_RESOURCES_CONTRACT_SCHEMA_VERSION,
         runtime_key,
         node,
-        clis,
+        clis: Vec::new(),
     };
     let manifest_path = write_contract(&output_root, &contract)
         .map_err(|error| prepare_managed_resources_error_with_detail("contract.write", error))?;

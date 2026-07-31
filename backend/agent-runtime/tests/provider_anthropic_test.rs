@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Integration tests for AnthropicProvider using wiremock to mock the Anthropic API.
 
 use wiremock::matchers::{header, method, path};

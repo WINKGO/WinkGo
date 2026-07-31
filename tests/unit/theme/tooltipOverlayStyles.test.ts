@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -50,7 +51,7 @@ describe('arco tooltip and popover overlay styles', () => {
   });
 
   it('keeps decorative preset css from re-skinning tooltip surfaces', () => {
-    const presetFiles = ['retro-windows.css', 'misaka-mikoto.css', 'discourse-horizon.css', 'hello-kitty.css'];
+    const presetFiles = ['retro-windows.css', 'discourse-horizon.css'];
 
     for (const file of presetFiles) {
       const css = fs.readFileSync(path.join(presetDir, file), 'utf8');

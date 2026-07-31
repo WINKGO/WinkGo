@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Butler diagnose button — the "Ask the Butler" chip next to the feedback
  * pill on conversation error bubbles. Clicking it must jump to the home chat

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! E2E coverage for the agent-facing `winkgo_core team` CLI fallback.
 
 use std::process::Stdio;

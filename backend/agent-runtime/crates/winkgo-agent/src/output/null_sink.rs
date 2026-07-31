@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use super::OutputSink;
 
 /// Silent output sink that discards all output.

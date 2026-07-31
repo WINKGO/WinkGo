@@ -2,6 +2,7 @@
 name: openclaw-setup
 description: 'OpenClaw usage expert: Helps you install, deploy, configure, and use OpenClaw personal AI assistant. Can diagnose issues, create bots, execute automated tasks, etc. Use when users need to install OpenClaw, configure Gateway, set up Channels, create Agents, troubleshoot issues, or perform OpenClaw-related operations.'
 ---
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 
 > **⚠️ Platform note — read before running any command.** The shell snippets in this skill are written for **macOS / Linux** (bash/zsh). Always check which OS you are on first. On **Windows** do **not** run them verbatim — the underlying tool/CLI commands are usually cross-platform, but the surrounding shell syntax is not. Translate it to PowerShell before running:
 >
@@ -36,7 +37,7 @@ description: 'OpenClaw usage expert: Helps you install, deploy, configure, and u
 **在回答任何 OpenClaw 问题之前，先执行环境诊断，确认工具可以被找到：**
 
 ```bash
-# 1. 检查 WinkGo 工作进程中实际可用的 PATH
+# 1. 检查 WINK GO 工作进程中实际可用的 PATH
 node -e "console.log('PATH entries:', process.env.PATH.split(require('path').delimiter).length); console.log('First 3:', process.env.PATH.split(require('path').delimiter).slice(0,3))"
 
 # 2. 检查 openclaw 是否在 PATH 中可找到
@@ -51,7 +52,7 @@ npm root -g && npm bin -g
 - ✅ `openclaw` 找到了 → 环境正常，继续正常操作
 - ❌ `openclaw NOT found in PATH` → 环境问题，按以下步骤排查：
   1. 先确认 `openclaw` 已安装：`npm list -g openclaw`
-  2. 若已安装但找不到，说明 PATH 不包含 npm 全局 bin 目录，这通常是 WinkGo 启动方式（非终端）导致的
+  2. 若已安装但找不到，说明 PATH 不包含 npm 全局 bin 目录，这通常是 WINK GO 启动方式（非终端）导致的
   3. 临时解决：在命令中使用绝对路径，例如 `$(npm bin -g)/openclaw doctor`
 
 ## 快速判断用户状态

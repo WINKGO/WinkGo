@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Shared TLS connector for STT streaming WebSocket upstreams.
 //!
 //! `tokio_tungstenite::connect_async` relies on rustls's process-level default

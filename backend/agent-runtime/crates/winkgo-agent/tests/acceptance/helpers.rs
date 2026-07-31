@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Shared helpers for acceptance tests: provider detection and config builders.
 
 use winkgo_agent_config::compat::ProviderCompat;

@@ -1,6 +1,7 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import classNames from 'classnames';
 import React, { Suspense, startTransition, useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, type NavigateOptions } from 'react-router-dom';
+import { useLocation, useNavigate, type NavigateOptions } from 'react-router';
 import { ConnectionPointTwo, Down, FileConversion, Lightning, Tips } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
 import { usePreviewContext } from '@renderer/pages/conversation/Preview/context/PreviewContext';
@@ -8,7 +9,6 @@ import { cleanupSiderTooltips, getSiderTooltipProps } from '@renderer/utils/ui/s
 import { useAuth } from '@renderer/hooks/context/AuthContext';
 import { useLayoutContext } from '@renderer/hooks/context/LayoutContext';
 import { blurActiveElement } from '@renderer/utils/ui/focus';
-import { useThemeContext } from '@renderer/hooks/context/ThemeContext';
 import {
   SiderToolbar,
   SiderSearchEntry,
@@ -52,8 +52,7 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
     [navigate]
   );
   const { closePreview } = usePreviewContext();
-  const { logout, status, user, can, edition } = useAuth();
-  const { theme, setTheme } = useThemeContext();
+  const { logout, status, user } = useAuth();
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [workspaceToolsExpanded, setWorkspaceToolsExpanded] = useState(() => {
     if (typeof window === 'undefined') return true;
@@ -150,10 +149,6 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
     },
     [closePreview, navigateWithoutBlockingInput, onSessionClick]
   );
-
-  const handleQuickThemeToggle = () => {
-    void setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
 
   const handleLogout = useCallback(async () => {
     cleanupSiderTooltips();
@@ -263,9 +258,6 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
                   <>
                     <span className={siderStyles.workspaceToolsBrand}>
                       <span className={siderStyles.workspaceToolsLabel}>{t('common.winkGoWorkspace.toolsGroup')}</span>
-                      <span className='ml-6px rd-full bg-fill-2 px-6px py-1px text-9px font-700 text-t-tertiary'>
-                        {edition.accountEdition === 'pro' ? 'PRO' : 'FREE'}
-                      </span>
                     </span>
                     <span className={siderStyles.workspaceToolsCount}>4</span>
                   </>
@@ -317,7 +309,6 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
                     collapsed={collapsed}
                     siderTooltipProps={siderTooltipProps}
                     testId='sider-inspiration-center'
-                    badge={can('inspiration.full') ? undefined : 'PRO'}
                     onClick={() => handleWorkspaceFeatureClick('/inspiration')}
                   />
                   <SiderFeatureEntry
@@ -366,11 +357,9 @@ const Sider: React.FC<SiderProps> = ({ onSessionClick, collapsed = false }) => {
         isMobile={isMobile}
         isSettings={isSettings}
         collapsed={collapsed}
-        theme={theme}
         siderTooltipProps={siderTooltipProps}
         onSettingsClick={handleSettingsClick}
         onSettingsIntent={preloadSettingsShell}
-        onThemeToggle={handleQuickThemeToggle}
         user={authenticatedUser}
         onLogoutClick={handleLogout}
       />

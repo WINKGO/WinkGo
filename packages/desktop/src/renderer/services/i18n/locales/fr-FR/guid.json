@@ -14,14 +14,32 @@
     "searchPlaceholder": "Rechercher des projets…",
     "noProject": "Aucun projet"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "L’analyse WINK GO AI a échoué. Réessayez plus tard.",
+    "backToChat": "Retour au chat",
+    "frameTitle": "Canevas de connaissances WINK GO",
+    "loading": "Ouverture du canevas de connaissances…",
+    "open": "Ouvrir le canevas de connaissances",
+    "pageLabel": "Canevas de connaissances WINK GO",
+    "reload": "Recharger le canevas de connaissances",
+    "statusAnalyzing": "WINK GO AI analyse",
+    "statusReady": "Canevas local · IA disponible",
+    "statusUnavailable": "Expérimental · Non inclus",
+    "subtitle": "Transformez pages web, documents et idées en structures de connaissances modifiables",
+    "title": "Canevas de connaissances",
+    "unavailableDescription": "La version publique n’inclut pas l’environnement complet du canevas. Il restera désactivé jusqu’à la validation des sources, des licences et des éléments de publication.",
+    "unavailableTitle": "Le canevas de connaissances est encore expérimental"
+  },
   "installerCenter": {
     "entry": "Centre d’installation",
     "title": "Centre d’installation WINK GO",
-    "subtitle": "Packs de déploiement en un clic pour Codex, Claude Code et Antigravity",
-    "windows": "Installateurs Windows",
-    "macos": "Installateurs macOS",
-    "environmentSetup": "Configuration rapide pour {{platform}}",
-    "downloadFailed": "Impossible d’ouvrir le lien de téléchargement",
+    "subtitle": "Ouvrez les pages d’installation officielles de Codex, Claude Code et Antigravity",
+    "windows": "Guide d’installation Windows",
+    "macos": "Guide d’installation macOS",
+    "environmentSetup": "Voir le guide d’installation officiel pour {{platform}}",
+    "openOfficialPage": "Ouvrir la page d’installation officielle",
+    "thirdPartyDisclaimer": "Codex, Claude Code et Antigravity sont des produits tiers. WINK GO ne les héberge ni ne les cautionne et ne garantit pas leur disponibilité ou leur compatibilité ; les conditions des fournisseurs s’appliquent.",
+    "downloadFailed": "Impossible d’ouvrir la page d’installation officielle",
     "recommended": "Recommandé"
   }
 }

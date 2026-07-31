@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 export type HubExtensionStatus =
   | 'not_installed'
   | 'installing'

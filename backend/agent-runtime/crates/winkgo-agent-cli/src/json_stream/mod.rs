@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! JSON stream protocol entry point for host integration (e.g. WINK GO).
 //!
 //! This file is a façade — module declarations and re-export only.

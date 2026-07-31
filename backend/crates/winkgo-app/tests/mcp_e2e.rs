@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! MCP E2E tests beyond CRUD: connection test, agent config discovery, OAuth, auth.
 //!
 //! Covers test-plan sections 2 (connection test error paths), 3 (agent config discovery),

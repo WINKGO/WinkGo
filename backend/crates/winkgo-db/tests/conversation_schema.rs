@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use sqlx::Row;
 use winkgo_db::{init_database_memory, models::ConversationRow, models::MessageRow};
 

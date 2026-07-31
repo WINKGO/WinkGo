@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for contribution resolution (test-plan CR-1..CR-10).
 //!
 //! These are black-box tests that exercise the public resolver APIs with

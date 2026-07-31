@@ -1,6 +1,8 @@
-# WinkGo Headless Server Deployment Guide
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
 
-Deploy WinkGo WebUI on headless Linux servers — cloud VMs, Kubernetes Pods, and containers — with proxy auto-fallback support.
+# WINK GO Headless Server Deployment Guide
+
+Deploy WINK GO WebUI on headless Linux servers — cloud VMs, Kubernetes Pods, and containers — with proxy auto-fallback support.
 
 **Translations**: [中文版](#中文版--chinese-version) below.
 
@@ -21,18 +23,21 @@ Deploy WinkGo WebUI on headless Linux servers — cloud VMs, Kubernetes Pods, an
 
 - Linux x86_64 (Ubuntu 20.04+ / Debian 11+ recommended)
 - At least 2GB RAM
-- WinkGo `.deb` package from [Releases](https://github.com/xuweihafeichangniu-lab/wink-go/releases)
+- WINK GO `.deb` package from [Releases](https://github.com/xuweihafeichangniu-lab/wink-go/releases)
 
 ---
 
 ## Installation
 
+> **兼容名称 / Legacy compatibility names:** WINK GO continues to recognize legacy executable, command, install-path, service, script, package, process, protocol, data-directory, and environment-variable names such as `WinkGo`, `winkgo`, `/opt/WinkGo`, and `WINKGO_*`. Deployment commands below retain those names where compatibility requires them.
+
 ```bash
-# Download the latest .deb package
-wget https://github.com/xuweihafeichangniu-lab/wink-go/releases/latest/download/WinkGo-linux-amd64.deb
+# Replace this value with the version shown on the WINK GO Releases page.
+VERSION=2.2.0
+wget "https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-x64.deb"
 
 # Install
-sudo dpkg -i WinkGo-linux-amd64.deb
+sudo dpkg -i "WINK-GO-Free-${VERSION}-linux-x64.deb"
 sudo apt-get install -f  # Fix missing dependencies
 ```
 
@@ -42,7 +47,7 @@ sudo apt-get install -f  # Fix missing dependencies
 
 ## Virtual Display (Xvfb)
 
-WinkGo is an Electron app and requires a display server. On headless servers (no monitor), use Xvfb to create a virtual display:
+WINK GO is an Electron app and requires a display server. On headless servers (no monitor), use Xvfb to create a virtual display:
 
 ```bash
 sudo apt-get install -y xvfb
@@ -60,7 +65,7 @@ Create `/opt/WinkGo/start-winkgo.sh`:
 
 ```bash
 #!/bin/bash
-# WinkGo WebUI headless startup script
+# WINK GO WebUI headless startup script
 # Usage: ./start-winkgo.sh [start|stop|restart|status]
 
 PIDFILE="/var/run/winkgo.pid"
@@ -69,10 +74,10 @@ WORKDIR="$HOME"  # Change to your workspace directory
 
 start() {
     if [ -f "$PIDFILE" ] && kill -0 "$(cat $PIDFILE)" 2>/dev/null; then
-        echo "WinkGo is already running (PID: $(cat $PIDFILE))"
+        echo "WINK GO is already running (PID: $(cat $PIDFILE))"
         return 1
     fi
-    echo "Starting WinkGo WebUI..."
+    echo "Starting WINK GO WebUI..."
     cd "$WORKDIR"
 
     nohup xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
@@ -81,10 +86,10 @@ start() {
     echo $! > "$PIDFILE"
     sleep 3
     if kill -0 "$(cat $PIDFILE)" 2>/dev/null; then
-        echo "WinkGo started successfully (PID: $(cat $PIDFILE))"
+        echo "WINK GO started successfully (PID: $(cat $PIDFILE))"
         echo "WebUI: http://$(hostname -I | awk '{print $1}'):25808"
     else
-        echo "WinkGo failed to start. Check log: $LOGFILE"
+        echo "WINK GO failed to start. Check log: $LOGFILE"
         rm -f "$PIDFILE"
         return 1
     fi
@@ -92,17 +97,17 @@ start() {
 
 stop() {
     if [ ! -f "$PIDFILE" ]; then
-        echo "WinkGo is not running (no PID file)"
+        echo "WINK GO is not running (no PID file)"
         return 1
     fi
     PID=$(cat "$PIDFILE")
-    echo "Stopping WinkGo (PID: $PID)..."
+    echo "Stopping WINK GO (PID: $PID)..."
     kill "$PID" 2>/dev/null
     sleep 2
     kill -9 "$PID" 2>/dev/null
     pkill -f "WinkGo --webui" 2>/dev/null
     rm -f "$PIDFILE"
-    echo "WinkGo stopped."
+    echo "WINK GO stopped."
 }
 
 restart() {
@@ -113,10 +118,10 @@ restart() {
 
 status() {
     if [ -f "$PIDFILE" ] && kill -0 "$(cat $PIDFILE)" 2>/dev/null; then
-        echo "WinkGo is running (PID: $(cat $PIDFILE))"
+        echo "WINK GO is running (PID: $(cat $PIDFILE))"
         ss -tlnp | grep 25808
     else
-        echo "WinkGo is not running."
+        echo "WINK GO is not running."
         rm -f "$PIDFILE" 2>/dev/null
     fi
 }
@@ -134,13 +139,13 @@ esac
 chmod +x /opt/WinkGo/start-winkgo.sh
 ```
 
-> **Tip**: `WORKDIR` determines the directory WinkGo can access for file operations. Set it to your project workspace.
+> **Tip**: `WORKDIR` determines the directory WINK GO can access for file operations. Set it to your project workspace.
 
 ---
 
 ## Remote Access
 
-WinkGo WebUI listens on port **25808**. Choose a method based on your network setup:
+WINK GO WebUI listens on port **25808**. Choose a method based on your network setup:
 
 ### Option A: Direct Access (Public IP)
 
@@ -187,7 +192,7 @@ ssh -R 7897:127.0.0.1:7897 user@YOUR_SERVER_IP
 
 > Replace `7897` with your actual proxy port. The tunnel is active as long as the SSH session is open.
 
-### Step 2: PAC File for WinkGo (Electron / Chromium Layer)
+### Step 2: PAC File for WINK GO (Electron / Chromium Layer)
 
 Using `--proxy-server` is fragile — when the proxy goes down, **all** requests fail including the WebUI itself. Instead, use a **PAC (Proxy Auto-Configuration) file** that provides automatic fallback.
 
@@ -253,13 +258,13 @@ PROMPT_COMMAND="_auto_proxy;${PROMPT_COMMAND}"
 - SSH tunnel disconnected → proxy env vars cleared, commands use direct connection
 - No manual intervention or terminal restart needed
 
-### Step 4: WinkGo Internal Proxy (Gemini API)
+### Step 4: WINK GO Internal Proxy (Gemini API)
 
-For Gemini API calls, configure the proxy inside WinkGo WebUI:
+For Gemini API calls, configure the proxy inside WINK GO WebUI:
 
 **Settings → Gemini Settings → Proxy** → `http://127.0.0.1:7897`
 
-> This proxy is handled by WinkGo's Node.js layer (separate from the Chromium layer). When the SSH tunnel is down, Gemini API calls will fail, but the WebUI and other APIs remain functional.
+> This proxy is handled by WINK GO's Node.js layer (separate from the Chromium layer). When the SSH tunnel is down, Gemini API calls will fail, but the WebUI and other APIs remain functional.
 
 ---
 
@@ -267,8 +272,8 @@ For Gemini API calls, configure the proxy inside WinkGo WebUI:
 
 | Issue                                     | Solution                                                     |
 | ----------------------------------------- | ------------------------------------------------------------ |
-| `dpkg` dependency errors in containers    | `dpkg --force-all -i WinkGo-linux-amd64.deb`                 |
-| WinkGo can only access `/tmp`             | Set `WORKDIR` in the startup script to your workspace path   |
+| `dpkg` dependency errors in containers    | `dpkg --force-all -i WINK-GO-Free-VERSION-linux-x64.deb`   |
+| WINK GO can only access `/tmp`          | Set `WORKDIR` in the startup script to your workspace path   |
 | WebUI not accessible remotely             | Check firewall rules, or use ngrok / SSH tunnel              |
 | All requests fail when proxy is down      | Use PAC file (`--proxy-pac-url`) instead of `--proxy-server` |
 | `curl` fails after SSH tunnel disconnects | Add `PROMPT_COMMAND` auto-detect to `~/.bashrc` (see Step 3) |
@@ -290,7 +295,7 @@ For Gemini API calls, configure the proxy inside WinkGo WebUI:
 │       │                                          │
 │       ▼                                          │
 │  ┌────────────────────────────┐                  │
-│  │  WinkGo (Electron)        │                   │
+│  │  WINK GO (Electron)     │                   │
 │  │  ├─ Chromium (port 25808) │                   │
 │  │  │  └─ proxy.pac          │──► PAC decides:   │
 │  │  │     per-request        │   PROXY or DIRECT │
@@ -316,24 +321,27 @@ For Gemini API calls, configure the proxy inside WinkGo WebUI:
 
 # 中文版 / Chinese Version
 
-# WinkGo 无头服务器部署指南
+# WINK GO 无头服务器部署指南
 
-在无图形界面的 Linux 服务器（云主机、K8s Pod、容器）上部署 WinkGo WebUI，支持代理自动回退。
+在无图形界面的 Linux 服务器（云主机、K8s Pod、容器）上部署 WINK GO WebUI，支持代理自动回退。
 
 ## 前置条件
 
 - Linux x86_64（推荐 Ubuntu 20.04+ / Debian 11+）
 - 至少 2GB 内存
-- WinkGo `.deb` 安装包（[下载地址](https://github.com/xuweihafeichangniu-lab/wink-go/releases)）
+- WINK GO `.deb` 安装包（[下载地址](https://github.com/xuweihafeichangniu-lab/wink-go/releases)）
 
 ## 安装
 
+> **兼容名称 / legacy compatibility name：**WINK GO 继续识别 `WinkGo`、`winkgo`、`/opt/WinkGo`、旧包文件名、进程名及环境变量等兼容名称。下列部署命令在兼容所需之处保留这些名称。
+
 ```bash
-# 下载最新 .deb 包
-wget https://github.com/xuweihafeichangniu-lab/wink-go/releases/latest/download/WinkGo-linux-amd64.deb
+# 将版本号替换为 WINK GO Releases 页面显示的版本
+VERSION=2.2.0
+wget "https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-x64.deb"
 
 # 安装
-sudo dpkg -i WinkGo-linux-amd64.deb
+sudo dpkg -i "WINK-GO-Free-${VERSION}-linux-x64.deb"
 sudo apt-get install -f  # 修复依赖
 ```
 
@@ -341,7 +349,7 @@ sudo apt-get install -f  # 修复依赖
 
 ## 虚拟显示 (Xvfb)
 
-WinkGo 是 Electron 应用，需要显示服务。无头服务器需安装 Xvfb：
+WINK GO 是 Electron 应用，需要显示服务。无头服务器需安装 Xvfb：
 
 ```bash
 sudo apt-get install -y xvfb
@@ -355,7 +363,7 @@ sudo apt-get install -y xvfb
 
 ```bash
 #!/bin/bash
-# WinkGo WebUI 无头启动脚本
+# WINK GO WebUI 无头启动脚本
 # 用法: ./start-winkgo.sh [start|stop|restart|status]
 
 PIDFILE="/var/run/winkgo.pid"
@@ -364,10 +372,10 @@ WORKDIR="$HOME"  # 改为你的工作目录
 
 start() {
     if [ -f "$PIDFILE" ] && kill -0 "$(cat $PIDFILE)" 2>/dev/null; then
-        echo "WinkGo 已在运行 (PID: $(cat $PIDFILE))"
+        echo "WINK GO 已在运行 (PID: $(cat $PIDFILE))"
         return 1
     fi
-    echo "正在启动 WinkGo WebUI..."
+    echo "正在启动 WINK GO WebUI..."
     cd "$WORKDIR"
 
     nohup xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
@@ -376,10 +384,10 @@ start() {
     echo $! > "$PIDFILE"
     sleep 3
     if kill -0 "$(cat $PIDFILE)" 2>/dev/null; then
-        echo "WinkGo 启动成功 (PID: $(cat $PIDFILE))"
+        echo "WINK GO 启动成功 (PID: $(cat $PIDFILE))"
         echo "WebUI: http://$(hostname -I | awk '{print $1}'):25808"
     else
-        echo "WinkGo 启动失败，请查看日志: $LOGFILE"
+        echo "WINK GO 启动失败，请查看日志: $LOGFILE"
         rm -f "$PIDFILE"
         return 1
     fi
@@ -387,27 +395,27 @@ start() {
 
 stop() {
     if [ ! -f "$PIDFILE" ]; then
-        echo "WinkGo 未在运行"
+        echo "WINK GO 未在运行"
         return 1
     fi
     PID=$(cat "$PIDFILE")
-    echo "正在停止 WinkGo (PID: $PID)..."
+    echo "正在停止 WINK GO (PID: $PID)..."
     kill "$PID" 2>/dev/null
     sleep 2
     kill -9 "$PID" 2>/dev/null
     pkill -f "WinkGo --webui" 2>/dev/null
     rm -f "$PIDFILE"
-    echo "WinkGo 已停止。"
+    echo "WINK GO 已停止。"
 }
 
 restart() { stop; sleep 1; start; }
 
 status() {
     if [ -f "$PIDFILE" ] && kill -0 "$(cat $PIDFILE)" 2>/dev/null; then
-        echo "WinkGo 运行中 (PID: $(cat $PIDFILE))"
+        echo "WINK GO 运行中 (PID: $(cat $PIDFILE))"
         ss -tlnp | grep 25808
     else
-        echo "WinkGo 未在运行。"
+        echo "WINK GO 未在运行。"
         rm -f "$PIDFILE" 2>/dev/null
     fi
 }
@@ -420,7 +428,7 @@ esac
 
 ## 远程访问
 
-WinkGo WebUI 监听端口 **25808**，根据网络环境选择访问方式：
+WINK GO WebUI 监听端口 **25808**，根据网络环境选择访问方式：
 
 | 方式       | 适用场景              | 命令                                       |
 | ---------- | --------------------- | ------------------------------------------ |
@@ -438,7 +446,7 @@ WinkGo WebUI 监听端口 **25808**，根据网络环境选择访问方式：
 ssh -R 7897:127.0.0.1:7897 user@YOUR_SERVER
 ```
 
-### 第二步：PAC 代理文件（WinkGo Electron 层）
+### 第二步：PAC 代理文件（WINK GO Electron 层）
 
 `--proxy-server` 的问题：代理一断，**所有请求**全挂。改用 PAC 文件实现自动回退。
 
@@ -486,7 +494,7 @@ PROMPT_COMMAND="_auto_proxy;${PROMPT_COMMAND}"
 
 **原理**：`PROMPT_COMMAND` 在每次命令提示符前执行，自动检测代理端口是否可达，实时切换。
 
-### 第四步：WinkGo 内置代理（Gemini API）
+### 第四步：WINK GO 内置代理（Gemini API）
 
 在 WebUI 中设置：**Settings → Gemini Settings → Proxy** → `http://127.0.0.1:7897`
 
@@ -494,11 +502,11 @@ PROMPT_COMMAND="_auto_proxy;${PROMPT_COMMAND}"
 
 ## 常见问题
 
-| 问题                   | 解决方案                              |
-| ---------------------- | ------------------------------------- |
-| 容器内 dpkg 依赖报错   | `dpkg --force-all -i` 强制安装        |
-| WinkGo 只能访问 /tmp   | 修改启动脚本中的 `WORKDIR`            |
-| 远程无法访问 WebUI     | 检查防火墙/安全组，或使用 ngrok       |
-| 代理断开后所有请求失败 | 用 PAC 文件替代 `--proxy-server`      |
-| SSH 断开后 curl 失败   | bashrc 添加 `PROMPT_COMMAND` 自动检测 |
-| 端口 25808 被占用      | `kill $(lsof -t -i:25808)` 后重启     |
+| 问题                    | 解决方案                              |
+| ----------------------- | ------------------------------------- |
+| 容器内 dpkg 依赖报错    | `dpkg --force-all -i` 强制安装        |
+| WINK GO 只能访问 /tmp | 修改启动脚本中的 `WORKDIR`            |
+| 远程无法访问 WebUI      | 检查防火墙/安全组，或使用 ngrok       |
+| 代理断开后所有请求失败  | 用 PAC 文件替代 `--proxy-server`      |
+| SSH 断开后 curl 失败    | bashrc 添加 `PROMPT_COMMAND` 自动检测 |
+| 端口 25808 被占用       | `kill $(lsof -t -i:25808)` 后重启     |

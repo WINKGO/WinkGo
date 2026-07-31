@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -30,7 +31,7 @@ export class StartupArchitectureMismatchError extends Error {
   readonly details: StartupArchitectureMismatchDetails;
 
   constructor(details: StartupArchitectureMismatchDetails) {
-    super('WinkGo package architecture does not match this Mac. Please download the matching package.');
+    super('WINK GO package architecture does not match this Mac. Please download the matching package.');
     this.name = 'StartupArchitectureMismatchError';
     this.details = details;
   }

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Modified from AionUI by WINK GO contributors in 2026.
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -89,8 +90,11 @@ fs.cpSync(backendSrc, backendDest, { recursive: true });
 // 8. Copy license and attribution documents into the standalone distribution
 const legalDest = path.join(tarballContentDir, 'legal');
 fs.mkdirSync(legalDest, { recursive: true });
-for (const legalFile of ['LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md']) {
+for (const legalFile of ['LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md', 'TERMS.md']) {
   fs.copyFileSync(path.join(projectRoot, legalFile), path.join(legalDest, legalFile));
+}
+for (const legalFile of ['THIRD_PARTY_DEPENDENCIES.json', 'THIRD_PARTY_LICENSES.txt']) {
+  fs.copyFileSync(path.join(projectRoot, 'legal', legalFile), path.join(legalDest, legalFile));
 }
 
 // 9. Create tarball

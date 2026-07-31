@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use serde_json::{Value, json};
 use std::fmt;
 use winkgo_agent_config::compat::{self, ProviderCompat, ToolWireShape};

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! 007 §3 / C7: the `ConversationSession` — the conversation-side façade over
 //! the seam. This is the SKELETON 007 ships (R14); the actual WIRING into
 //! `winkgo-conversation` (replacing `RuntimeCompletionPublisher` + the hardcoded

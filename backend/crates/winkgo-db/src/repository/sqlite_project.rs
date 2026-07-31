@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use sqlx::{Row, SqlitePool};
 use winkgo_common::{generate_prefixed_id, now_ms};
 

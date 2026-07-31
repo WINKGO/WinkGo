@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `ManagedProcess` — the live handle for a subprocess THIS crate spawned.
 //!
 //! Freshly written (not moved from the existing CliAgentProcess). Owns the

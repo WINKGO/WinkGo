@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use std::borrow::Cow;
 use std::path::Path;
 use std::sync::{Arc, RwLock};

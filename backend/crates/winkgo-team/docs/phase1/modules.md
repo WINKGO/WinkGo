@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Phase1 模块拆解（全量 5 波）
 
 > **范围**：phase1 = **完整调研 + 全量开发计划**。本文档覆盖 5 波（Wave 1 → Wave 5）共 **87 个模块**。Wave 1/2 = 最小闭环；Wave 3/4/5 = 规范化 / 鲁棒性 / 业务闭环补全。

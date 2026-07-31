@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # 设置页 → Agents → 远端 Agents (F-RAGENT)
 
 > 本文档覆盖「设置 → Agents → 远端 Agents」页面的全部功能，包括 Remote Agent 的列表展示、创建/编辑/删除 (CRUD)、连接测试、OpenClaw 配对握手、会话管理、消息收发与流式响应、工具调用展示、权限审批、连接状态管理。
@@ -319,7 +321,7 @@ Bridge 端逐字段映射到 DB 列名（仅更新 `updates` 中不为 `undefine
 | ----------------------------- | ------------------------------------------------------------------------ |
 | `minProtocol` / `maxProtocol` | `3` / `4`（同时兼容 v3 与 v4 Gateway，2026.5.12 起 Gateway 默认要求 v4） |
 | `client.id`                   | `'gateway-client'`                                                       |
-| `client.displayName`          | `'WinkGo'`                                                               |
+| `client.displayName`          | `'WinkGo'`（为兼容既有 Gateway 保留的协议值；公开产品名为 WINK GO）    |
 | `client.mode`                 | `'backend'`                                                              |
 | `caps`                        | `['tool-events']`（必须声明以接收 tool call 事件）                       |
 | `role`                        | `'operator'`                                                             |
@@ -794,10 +796,10 @@ Gateway 通过 `agent` / `agent.event` 事件推送工具调用信息：
 
 > 此功能与 Remote Agent 设置页无直接 UI 交互，降级为关联模块说明。
 
-`openclawConflictDetector.ts` 检测 OpenClaw 的 Lark/Telegram channels 是否与 WinkGo Channels 使用相同凭据：
+`openclawConflictDetector.ts` 检测 OpenClaw 的 Lark/Telegram channels 是否与 WINK GO Channels 使用相同凭据：
 
-- **Lark 冲突**: 比较 `channels.feishu.accounts[*].appId` 与 WinkGo appId
-- **Telegram 冲突**: 比较 `channels.telegram.botToken` 与 WinkGo botToken
+- **Lark 冲突**: 比较 `channels.feishu.accounts[*].appId` 与 WINK GO appId
+- **Telegram 冲突**: 比较 `channels.telegram.botToken` 与 WINK GO botToken
 - 配置读取路径: 环境变量 → `~/.openclaw/openclaw.json` → 遗留路径
 
 **当前限制**：冲突检测结果通过 `console.warn` 输出，无 UI 呈现。导出的 `getConflictResolutionSteps()` 提供解决方案建议文本，但尚未集成到任何 UI 组件中。

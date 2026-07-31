@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Black-box integration tests for engine compaction integration (TC-2.6-*).
 //!
 //! These tests exercise the full `AgentEngine::run()` loop and verify

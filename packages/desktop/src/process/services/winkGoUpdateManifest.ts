@@ -7,7 +7,7 @@
 import type { UpdateReleaseInfo } from '@/common/update/updateTypes';
 import semver from 'semver';
 
-export const WINKGO_OFFICIAL_SITE_URL = 'https://winkgo.top/';
+export const WINKGO_OFFICIAL_SITE_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go/releases';
 const BUILD_EDITION =
   String(process.env.WINKGO_EDITION || 'free')
     .trim()
@@ -49,7 +49,15 @@ const normalizeOfficialUrl = (value: unknown): string => {
 
   try {
     const parsed = new URL(text);
-    if (parsed.protocol === 'https:' && (parsed.hostname === 'winkgo.top' || parsed.hostname === 'www.winkgo.top')) {
+    const winkGoRepositoryPath = '/xuweihafeichangniu-lab/winkgo';
+    const normalizedPath = parsed.pathname.replace(/\/+$/, '');
+    const isWinkGoReleasePage =
+      parsed.protocol === 'https:' &&
+      parsed.hostname === 'github.com' &&
+      (normalizedPath === winkGoRepositoryPath ||
+        normalizedPath === `${winkGoRepositoryPath}/releases` ||
+        normalizedPath.startsWith(`${winkGoRepositoryPath}/releases/`));
+    if (isWinkGoReleasePage) {
       return parsed.toString();
     }
   } catch {
@@ -91,9 +99,9 @@ export const normalizeWinkGoUpdateManifest = (rawManifest: unknown): UpdateRelea
     publishedAt: firstText(manifest.generatedAt) || undefined,
     prerelease: semver.prerelease(version) !== null,
     draft: false,
-    // Customer downloads stay behind the official website. The standard
-    // electron-updater feed handles direct binary updates when /releases is
-    // deployed; the manual fallback must never save a website HTML page as EXE.
+    // The public fallback opens the WINK GO GitHub release page. The standard
+    // electron-updater feed handles direct binary updates; the manual fallback
+    // must never save an HTML page as an executable.
     assets: [],
   };
 };
@@ -109,7 +117,7 @@ export const fetchWinkGoUpdateManifest = async (
     const response = await fetcher(manifestUrl, {
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'WINK-GO',
+        'User-Agent': 'WINK GO',
       },
       signal: controller.signal,
     });

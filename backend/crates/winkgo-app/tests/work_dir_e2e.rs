@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests verifying that --work-dir is used for conversation workspace creation.
 
 use winkgo_api_types::CreateConversationRequest;

@@ -1,3 +1,4 @@
+; Modified from AionUI by WINK GO contributors in 2026.
 !ifndef WINKGO_INSTALLER_REMOVE_REGISTRY_NSH
 !define WINKGO_INSTALLER_REMOVE_REGISTRY_NSH
 

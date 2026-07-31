@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for extension loading (test-plan EL-1..EL-5).
 //!
 //! These tests exercise `load_all` and `filter_by_engine_compatibility` as

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for dependency management (test-plan DM-1 through DM-9).
 //!
 //! Black-box tests exercising the public API surface of

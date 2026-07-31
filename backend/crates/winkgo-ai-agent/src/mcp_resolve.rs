@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Neutral MCP server resolution (Wave 0c E) — the SINGLE source of truth for
 //! turning a conversation's configured MCP servers into the SDK-free
 //! [`SessionMcpServer`] shape the clean-slate session stack carries in

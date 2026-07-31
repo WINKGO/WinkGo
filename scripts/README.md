@@ -1,6 +1,8 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # Build Scripts Documentation
 
-This directory contains scripts for building and packaging WinkGo across different platforms and architectures.
+This directory contains scripts for building and packaging WINK GO across different platforms and architectures.
 
 ## Scripts Overview
 
@@ -104,7 +106,7 @@ const { rebuildWithElectronRebuild } = require('./scripts/rebuildNativeModules')
 rebuildWithElectronRebuild({
   platform: 'linux',
   arch: 'arm64',
-  electronVersion: '37.3.1',
+  electronVersion: '41.10.3',
 });
 ```
 
@@ -118,7 +120,7 @@ rebuildSingleModule({
   moduleRoot: '/path/to/app.asar.unpacked/node_modules/better-sqlite3',
   platform: 'linux',
   arch: 'arm64',
-  electronVersion: '37.3.1',
+  electronVersion: '41.10.3',
 });
 ```
 

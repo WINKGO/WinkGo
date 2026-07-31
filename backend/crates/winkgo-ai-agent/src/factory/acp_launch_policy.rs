@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use crate::cc_switch;
 use crate::manager::acp::mode_normalize::normalize_requested_mode;
 use crate::shared_kernel::PersistedSessionState;

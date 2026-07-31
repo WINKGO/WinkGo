@@ -1,12 +1,13 @@
 ---
 name: winkgo-config
 description: >-
-  Configure WinkGo itself through the bundled winkgo_core config CLI: create and edit assistants, update assistant rules, inspect and import skills, manage MCP servers, configure model providers, update settings, manage agents, configure scheduled tasks, and manage app configuration from an agent conversation. Use when the user wants you to set up or modify an WinkGo assistant, attach skills, change an assistant's system prompt, add MCP or model provider configuration, schedule recurring work, or otherwise configure their WinkGo installation, including when the user needs to know whether assistant changes affect the current conversation or only new conversations.
+  Configure WINK GO itself through the bundled winkgo_core config CLI: create and edit assistants, update assistant rules, inspect and import skills, manage MCP servers, configure model providers, update settings, manage agents, configure scheduled tasks, and manage app configuration from an agent conversation. Use when the user wants you to set up or modify an WINK GO assistant, attach skills, change an assistant's system prompt, add MCP or model provider configuration, schedule recurring work, or otherwise configure their WINK GO installation, including when the user needs to know whether assistant changes affect the current conversation or only new conversations.
 ---
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 
-# WinkGo Config
+# WINK GO Config
 
-Configure WinkGo with the bundled agent-facing CLI. Do not discover ports, do
+Configure WINK GO with the bundled agent-facing CLI. Do not discover ports, do
 not call raw backend paths, and do not depend on tools outside the bundled
 `winkgo_core` binary.
 
@@ -69,7 +70,7 @@ rules or defaults.
 
 ## Assistant Change Timing
 
-WinkGo persists assistant configuration immediately, but running conversations
+WINK GO persists assistant configuration immediately, but running conversations
 may keep the assistant snapshot created when the conversation started. Use this
 timing model when reporting successful assistant changes:
 

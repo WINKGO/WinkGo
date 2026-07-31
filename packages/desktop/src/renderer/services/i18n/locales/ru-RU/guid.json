@@ -14,14 +14,32 @@
     "searchPlaceholder": "Поиск проектов…",
     "noProject": "Без проекта"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "Не удалось выполнить анализ WINK GO AI. Повторите попытку позже.",
+    "backToChat": "Вернуться в чат",
+    "frameTitle": "Холст знаний WINK GO",
+    "loading": "Открытие холста знаний…",
+    "open": "Открыть холст знаний",
+    "pageLabel": "Холст знаний WINK GO",
+    "reload": "Перезагрузить холст знаний",
+    "statusAnalyzing": "WINK GO AI выполняет анализ",
+    "statusReady": "Локальный холст · ИИ доступен",
+    "statusUnavailable": "Экспериментально · Не включено",
+    "subtitle": "Преобразуйте веб-страницы, документы и идеи в редактируемые структуры знаний",
+    "title": "Холст знаний",
+    "unavailableDescription": "Публичная сборка не содержит полный компонент холста. Он останется отключённым до проверки исходников, лицензий и материалов выпуска.",
+    "unavailableTitle": "Холст знаний пока экспериментальный"
+  },
   "installerCenter": {
     "entry": "Центр установки программ",
     "title": "Центр установки WINK GO",
-    "subtitle": "Пакеты быстрой установки Codex, Claude Code и Antigravity",
-    "windows": "Установщики Windows",
-    "macos": "Установщики macOS",
-    "environmentSetup": "Быстрая настройка для {{platform}}",
-    "downloadFailed": "Не удалось открыть ссылку для скачивания",
+    "subtitle": "Откройте официальные страницы установки Codex, Claude Code и Antigravity",
+    "windows": "Инструкция по установке для Windows",
+    "macos": "Инструкция по установке для macOS",
+    "environmentSetup": "Открыть официальную инструкцию по установке для {{platform}}",
+    "openOfficialPage": "Открыть официальную страницу установки",
+    "thirdPartyDisclaimer": "Codex, Claude Code и Antigravity — сторонние продукты. WINK GO не размещает и не рекламирует их и не гарантирует доступность или совместимость; применяются условия поставщиков.",
+    "downloadFailed": "Не удалось открыть официальную страницу установки",
     "recommended": "Рекомендуется"
   }
 }

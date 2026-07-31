@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Startup-time PATH enhancement.
 //!
 //! Call [`enhance_process_path`] from `main()` **before any worker thread

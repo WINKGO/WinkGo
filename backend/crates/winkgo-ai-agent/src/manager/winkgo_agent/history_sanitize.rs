@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Sanitize a resumed winkgo_agent session's message history before it is replayed
 //! to a provider.
 //!

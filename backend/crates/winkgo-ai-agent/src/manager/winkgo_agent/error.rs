@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use winkgo_agent::error::AgentError as WinkGoAgentAgentError;
 use winkgo_agent_providers::ProviderError;
 use winkgo_api_types::{

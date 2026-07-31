@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # winkgo-team
 
 多 Agent 协作模块：一个团队 = 一个 Lead + N 个 Teammate，共享任务板与邮箱，Lead 派单、Teammate 执行、完成后通知 Lead 汇总。

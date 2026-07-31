@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -12,7 +13,7 @@ import SystemSettings from '@/renderer/pages/settings/SystemSettings';
 
 const mockUseLocation = vi.fn();
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useLocation: () => mockUseLocation(),
 }));
 

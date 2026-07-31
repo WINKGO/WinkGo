@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use super::{SkillDefinition, SkillIndex};
 
 /// Build a formatted text block listing available skills for injection.

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use serde::{Deserialize, Serialize};
 
 use crate::id::fnv1a_hex8;

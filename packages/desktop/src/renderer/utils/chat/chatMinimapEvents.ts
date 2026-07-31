@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 export const CHAT_MESSAGE_JUMP_EVENT = 'winkgo-chat-message-jump';
 
 export interface ChatMessageJumpDetail {

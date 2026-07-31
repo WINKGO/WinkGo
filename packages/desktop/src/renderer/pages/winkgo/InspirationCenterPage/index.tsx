@@ -11,28 +11,13 @@ import type {
   WinkGoInspirationSnapshot,
 } from '@/common/adapter/ipcBridge';
 import { openExternalUrl } from '@/renderer/utils/platform';
-import { useAuth } from '@/renderer/hooks/context/AuthContext';
 import SettingsPageHeader from '@renderer/pages/settings/components/SettingsPageHeader';
 import SettingsPageWrapper from '@renderer/pages/settings/components/SettingsPageWrapper';
-import {
-  ArrowRight,
-  Check,
-  CheckOne,
-  Copy,
-  FileText,
-  FolderOpen,
-  Link,
-  Lock,
-  Magic,
-  Refresh,
-  Shield,
-  TipsOne,
-} from '@icon-park/react';
+import { ArrowRight, Check, CheckOne, Copy, Link, Lock, Refresh, Shield, TipsOne } from '@icon-park/react';
 import { Button, Input, Message, Tag } from '@arco-design/web-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import { INSPIRATION_TEMPLATES, type InspirationTemplate } from './catalog';
+import { useNavigate } from 'react-router';
 
 const OFFICIAL_LINKS: Partial<Record<WinkGoInspirationProviderId, string>> = {
   'didi-ride': 'https://mcp.didichuxing.com/',
@@ -184,88 +169,6 @@ type ProviderForm = {
   defaultCity: string;
   defaultLocation: string;
   credential: string;
-};
-
-const BASIC_TEMPLATE_ICONS: Record<
-  InspirationTemplate['icon'],
-  React.ComponentType<{ size?: string | number; theme?: 'outline'; fill?: string }>
-> = {
-  folder: FolderOpen,
-  file: FileText,
-  magic: Magic,
-};
-
-/**
- * The Free edition keeps a useful local prompt library. It never touches the
- * managed provider bridge, downloads service adapters or asks for credentials.
- */
-const BasicInspirationCenter: React.FC = () => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-
-  const useTemplate = (template: InspirationTemplate) => {
-    const prompt = t(`common.inspiration.templates.${template.id}.description`);
-    void navigate('/guid', {
-      state: {
-        prefillPrompt: prompt,
-        preservePrefillDraft: true,
-        focusPrefill: true,
-      },
-    });
-  };
-
-  return (
-    <SettingsPageWrapper contentClassName='md:max-w-1120px'>
-      <SettingsPageHeader
-        title={t('common.winkGoWorkspace.inspirationCenter')}
-        description={t('common.inspiration.sourceNote')}
-        data-testid='inspiration-center-basic-header'
-        actions={
-          <Button type='primary' onClick={() => void openExternalUrl('https://winkgo.top/')}>
-            解锁 Pro 生活服务
-          </Button>
-        }
-      />
-      <section className='mt-18px rd-18px border border-border-2 bg-2 p-16px'>
-        <div className='mb-14px flex items-center justify-between gap-12px'>
-          <div>
-            <h2 className='m-0 text-16px text-t-primary'>{t('common.inspiration.templateLibrary')}</h2>
-            <p className='m-0 mt-4px text-12px text-t-tertiary'>
-              免费版可直接使用这些本地模板；不会连接滴滴、美团、高德或其他托管服务。
-            </p>
-          </div>
-          <Tag color='gray'>FREE</Tag>
-        </div>
-        <div className='grid grid-cols-3 gap-12px max-lg:grid-cols-2 max-sm:grid-cols-1'>
-          {INSPIRATION_TEMPLATES.map((template) => {
-            const Icon = BASIC_TEMPLATE_ICONS[template.icon];
-            return (
-              <button
-                key={template.id}
-                type='button'
-                className='min-h-176px flex flex-col rd-15px border border-border-2 bg-1 p-16px text-left transition-colors hover:border-primary-4 hover:bg-primary-1'
-                data-testid={`basic-inspiration-${template.id}`}
-                onClick={() => useTemplate(template)}
-              >
-                <span className='size-39px flex items-center justify-center rd-11px bg-fill-2 text-t-secondary'>
-                  <Icon theme='outline' size='20' fill='currentColor' />
-                </span>
-                <strong className='mt-14px text-14px text-t-primary'>
-                  {t(`common.inspiration.templates.${template.id}.title`)}
-                </strong>
-                <span className='mt-7px line-clamp-3 text-11px leading-19px text-t-tertiary'>
-                  {t(`common.inspiration.templates.${template.id}.description`)}
-                </span>
-                <span className='mt-auto pt-12px text-11px text-primary-6'>
-                  {t('common.inspiration.useTemplate')} →
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-    </SettingsPageWrapper>
-  );
 };
 
 const toForm = (provider: WinkGoInspirationProvider): ProviderForm => ({
@@ -743,9 +646,6 @@ const FullInspirationCenterPage: React.FC = () => {
   );
 };
 
-const InspirationCenterPage: React.FC = () => {
-  const { can } = useAuth();
-  return can('inspiration.full') ? <FullInspirationCenterPage /> : <BasicInspirationCenter />;
-};
+const InspirationCenterPage: React.FC = () => <FullInspirationCenterPage />;
 
 export default InspirationCenterPage;

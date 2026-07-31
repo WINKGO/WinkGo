@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use axum::http::{HeaderMap, Request, header};
 
 use winkgo_common::constants::COOKIE_NAME;

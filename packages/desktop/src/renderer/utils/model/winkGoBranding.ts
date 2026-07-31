@@ -30,6 +30,7 @@ import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
 
 export const WINK_GO_DISPLAY_NAME = 'WINK GO';
 export const WINK_GO_CLI_DISPLAY_NAME = 'WINK GO CLI';
+export const WINK_GO_BRAND_ICON = winkGoLogo;
 
 /**
  * The WINK GO asset is imported by the renderer, so Electron resolves it to a

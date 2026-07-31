@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 param(
   [string]$Dsn,
   [string]$LogPath,
@@ -391,7 +392,7 @@ try {
   })
   Write-InstallerLog 'report-sent' @{ code = $Code; wrapperCode = $wrapperCode; eventId = $eventId; statusPath = $statusPath; search = $search; issueSearch = $issueSearch; userId = $userId }
   $reportDetails = New-ReportDetailsText $Code $eventId $issueSearch $userId $Session $blockingDiagnostics
-  Show-ReportMessage ('WINK GO installer report sent.' + [Environment]::NewLine + [Environment]::NewLine + 'Press [ Ctrl + C ] in this dialog to copy the diagnostic details, then contact the WINK GO team through:' + [Environment]::NewLine + 'https://winkgo.top/' + [Environment]::NewLine + [Environment]::NewLine + $reportDetails) 'Information'
+  Show-ReportMessage ('WINK GO installer report sent.' + [Environment]::NewLine + [Environment]::NewLine + 'Press [ Ctrl + C ] in this dialog to copy the diagnostic details, then contact the WINK GO team through:' + [Environment]::NewLine + 'https://github.com/xuweihafeichangniu-lab/wink-go/issues' + [Environment]::NewLine + [Environment]::NewLine + $reportDetails) 'Information'
 } catch {
   $errorText = $_.Exception.GetType().FullName + ': ' + $_.Exception.Message
   Write-StatusFile ([ordered]@{

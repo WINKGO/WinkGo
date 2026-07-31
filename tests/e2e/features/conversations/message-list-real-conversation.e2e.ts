@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * MessageList scroll stability E2E on a real conversation page.
  *

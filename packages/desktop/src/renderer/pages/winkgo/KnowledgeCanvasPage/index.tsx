@@ -5,8 +5,10 @@
  */
 
 import { ArrowLeft, MindMapping, Refresh } from '@icon-park/react';
+import { Button } from '@arco-design/web-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 import styles from './index.module.css';
 import {
   isKnowledgeCanvasAnalysisRequest,
@@ -20,6 +22,9 @@ import {
 const CANVAS_ASSET_PATH = './knowledge-canvas/index.html';
 const CANVAS_ASSET_VERSION = '20260726-ai-bridge-1';
 
+export const isKnowledgeCanvasBundleEnabled = () =>
+  import.meta.env.DEV && import.meta.env.VITE_WINKGO_ENABLE_KNOWLEDGE_CANVAS === '1';
+
 export const resolveKnowledgeCanvasUrl = (pageHref: string) => {
   const url = new URL(CANVAS_ASSET_PATH, pageHref);
   url.searchParams.set('v', CANVAS_ASSET_VERSION);
@@ -27,6 +32,7 @@ export const resolveKnowledgeCanvasUrl = (pageHref: string) => {
 };
 
 const KnowledgeCanvasPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [frameKey, setFrameKey] = useState(0);
   const [ready, setReady] = useState(false);
@@ -34,8 +40,11 @@ const KnowledgeCanvasPage: React.FC = () => {
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const activeAnalysisRef = useRef<AbortController | null>(null);
   const canvasUrl = useMemo(() => resolveKnowledgeCanvasUrl(window.location.href), []);
+  const canvasEnabled = useMemo(() => isKnowledgeCanvasBundleEnabled(), []);
 
   useEffect(() => {
+    if (!canvasEnabled) return;
+
     const postToCanvas = (message: KnowledgeCanvasHostMessage) => {
       frameRef.current?.contentWindow?.postMessage(message, '*');
     };
@@ -79,7 +88,7 @@ const KnowledgeCanvasPage: React.FC = () => {
         })
         .catch((error: unknown) => {
           if (abortController.signal.aborted) return;
-          const message = error instanceof Error ? error.message : 'WINK GO AI 分析失败，请稍后重试';
+          const message = error instanceof Error ? error.message : t('guid.knowledgeCanvas.analysisFailed');
           postToCanvas({
             channel: KNOWLEDGE_CANVAS_BRIDGE_CHANNEL,
             version: KNOWLEDGE_CANVAS_BRIDGE_VERSION,
@@ -103,7 +112,7 @@ const KnowledgeCanvasPage: React.FC = () => {
       activeAnalysisRef.current?.abort();
       activeAnalysisRef.current = null;
     };
-  }, []);
+  }, [canvasEnabled, t]);
 
   const reloadCanvas = () => {
     activeAnalysisRef.current?.abort();
@@ -114,63 +123,81 @@ const KnowledgeCanvasPage: React.FC = () => {
   };
 
   return (
-    <section className={styles.page} aria-label='WINK GO 知识画布'>
+    <section className={styles.page} aria-label={t('guid.knowledgeCanvas.pageLabel')}>
       <header className={styles.toolbar}>
         <div className={styles.titleGroup}>
-          <button
-            type='button'
+          <Button
+            type='secondary'
+            shape='circle'
             className={styles.iconButton}
             onClick={() => navigate('/guid')}
-            aria-label='返回聊天'
-            title='返回聊天'
-          >
-            <ArrowLeft theme='outline' size='18' fill='currentColor' strokeWidth={3} />
-          </button>
+            aria-label={t('guid.knowledgeCanvas.backToChat')}
+            title={t('guid.knowledgeCanvas.backToChat')}
+            icon={<ArrowLeft theme='outline' size='18' fill='currentColor' strokeWidth={3} />}
+          />
           <span className={styles.canvasMark} aria-hidden='true'>
             <MindMapping theme='outline' size='19' fill='currentColor' strokeWidth={3} />
           </span>
           <div>
-            <h1 className={styles.title}>知识画布</h1>
-            <p className={styles.subtitle}>把网页、文档与想法整理成可编辑的知识结构</p>
+            <h1 className={styles.title}>{t('guid.knowledgeCanvas.title')}</h1>
+            <p className={styles.subtitle}>{t('guid.knowledgeCanvas.subtitle')}</p>
           </div>
         </div>
 
         <div className={styles.toolbarActions}>
           <span className={styles.offlineBadge}>
             <span className={styles.offlineDot} aria-hidden='true' />
-            {analysisRunning ? 'WINK GO AI 分析中' : '本机画布 · AI 可用'}
+            {!canvasEnabled
+              ? t('guid.knowledgeCanvas.statusUnavailable')
+              : analysisRunning
+                ? t('guid.knowledgeCanvas.statusAnalyzing')
+                : t('guid.knowledgeCanvas.statusReady')}
           </span>
-          <button
-            type='button'
-            className={styles.iconButton}
-            onClick={reloadCanvas}
-            aria-label='重新加载知识画布'
-            title='重新加载'
-          >
-            <Refresh theme='outline' size='18' fill='currentColor' strokeWidth={3} />
-          </button>
+          {canvasEnabled ? (
+            <Button
+              type='secondary'
+              shape='circle'
+              className={styles.iconButton}
+              onClick={reloadCanvas}
+              aria-label={t('guid.knowledgeCanvas.reload')}
+              title={t('guid.knowledgeCanvas.reload')}
+              icon={<Refresh theme='outline' size='18' fill='currentColor' strokeWidth={3} />}
+            />
+          ) : null}
         </div>
       </header>
 
       <div className={styles.canvasShell}>
-        {!ready ? (
-          <div className={styles.loading} role='status'>
-            <span className={styles.loadingMark}>
-              <MindMapping theme='outline' size='24' fill='currentColor' strokeWidth={3} />
+        {!canvasEnabled ? (
+          <div className={styles.unavailable} role='status'>
+            <span className={styles.unavailableMark}>
+              <MindMapping theme='outline' size='28' fill='currentColor' strokeWidth={3} />
             </span>
-            <span>正在打开知识画布…</span>
+            <h2>{t('guid.knowledgeCanvas.unavailableTitle')}</h2>
+            <p>{t('guid.knowledgeCanvas.unavailableDescription')}</p>
           </div>
-        ) : null}
-        <iframe
-          key={frameKey}
-          ref={frameRef}
-          className={styles.canvasFrame}
-          src={canvasUrl}
-          title='WINK GO 知识画布'
-          allow='clipboard-read; clipboard-write; fullscreen'
-          referrerPolicy='no-referrer'
-          onLoad={() => setReady(true)}
-        />
+        ) : (
+          <>
+            {!ready ? (
+              <div className={styles.loading} role='status'>
+                <span className={styles.loadingMark}>
+                  <MindMapping theme='outline' size='24' fill='currentColor' strokeWidth={3} />
+                </span>
+                <span>{t('guid.knowledgeCanvas.loading')}</span>
+              </div>
+            ) : null}
+            <iframe
+              key={frameKey}
+              ref={frameRef}
+              className={styles.canvasFrame}
+              src={canvasUrl}
+              title={t('guid.knowledgeCanvas.frameTitle')}
+              allow='clipboard-read; clipboard-write; fullscreen'
+              referrerPolicy='no-referrer'
+              onLoad={() => setReady(true)}
+            />
+          </>
+        )}
       </div>
     </section>
   );

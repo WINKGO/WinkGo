@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Installation integrity failures happen before the normal app shell is ready,
  * so this spec launches its own Electron instance with a debug startup-failure

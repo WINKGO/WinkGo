@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Application configuration parsed from CLI arguments + key derivation.
 
 use std::path::PathBuf;

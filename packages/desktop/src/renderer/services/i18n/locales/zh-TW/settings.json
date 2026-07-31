@@ -433,6 +433,15 @@
   "skills": "技能",
   "tools": "工具",
   "toolsDescription": "設定 MCP 伺服器與內建工具（如圖像生成）。圖像生成需先在「模型」頁設定支援圖像的模型後才能啟用。",
+  "mcpWorkspace": {
+    "title": "MCP 設定",
+    "description": "管理通用 MCP 服務，以及 ESP32 小智與手機小程式的獨立裝置通道。",
+    "general": "通用 MCP",
+    "xiaozhi": "小智 MCP 連線",
+    "relayToggleLabel": "啟用雲端裝置中繼",
+    "relayDisclosureTitle": "啟用雲端裝置中繼前請確認",
+    "relayDisclosureBody": "啟用後，本機會透過 {{domain}} 與雲端中繼服務保持連線，並傳送帳號識別碼、安裝與桌面識別碼、裝置名稱、連線及配對碼狀態，以及你透過手機小程式主動轉送的文字、語音轉寫、任務結果和遠端 WebUI 請求與回應（可能包含檔案內容或驗證資訊）。營運主體與伺服器所在地須在正式上線前補全；如涉及第三方接收或跨境傳輸，將另行告知並取得必要授權。第三方網路、模型或語音服務可能收費。你可以隨時關閉本開關。"
+  },
   "modelDescription": "設定大模型服務商與 API Key，供所有助手使用。目前僅 WINK GO 支援自訂模型，其它 Agent 使用各自內建的模型。",
   "capabilities": "能力擴展",
   "capabilitiesTab": {
@@ -673,7 +682,7 @@
   "mcpAuthenticated": "已驗證",
   "mcpDisconnected": "未測試",
   "mcpError": "最近一次測試失敗",
-  "mcpErrorNodeCommandNotFound": "無法準備命令 {{command}}。WinkGoCore 通常會自動準備受管的 Node 執行環境。請重試連線測試；若仍失敗，請檢查後端日誌，或把這個 MCP server 改成絕對命令路徑。",
+  "mcpErrorNodeCommandNotFound": "無法準備命令 {{command}}。WINK GO Core 通常會自動準備受管的 Node 執行環境。請重試連線測試；若仍失敗，請檢查後端日誌，或把這個 MCP server 改成絕對命令路徑。",
   "mcpErrorBunCommandNotFound": "找不到命令 {{command}}。請安裝 Bun（包含 bun/bunx），重新啟動 WINK GO，或把這個 MCP server 改成絕對命令路徑。",
   "mcpErrorUvCommandNotFound": "找不到命令 {{command}}。請安裝 uv，重新啟動 WINK GO，或把這個 MCP server 改成絕對命令路徑。",
   "mcpErrorPythonCommandNotFound": "找不到命令 {{command}}。請安裝 Python，重新啟動 WINK GO，或把這個 MCP server 改成絕對命令路徑。",
@@ -798,7 +807,7 @@
   "bugReportScreenshotUploaded": "（已上傳 {{count}} 張）",
   "bugReportScreenshotDropzoneText": "點擊、拖曳或貼上截圖到此處",
   "bugReportScreenshotFormats": "支援 PNG、JPG、GIF",
-  "bugReportAutoInfo": "提交時將自動附帶系統資訊和最近 3 天的日誌，幫助我們更快定位問題",
+  "bugReportAutoInfo": "只會傳送你填寫的說明和主動選擇的截圖；日誌與資料庫診斷絕不會自動上傳。",
   "bugReportSubmit": "提交",
   "bugReportCancel": "取消",
   "bugReportSuccess": "問題已提交，感謝反饋",
@@ -1120,8 +1129,8 @@
     "marketUpdate": "更新",
     "marketEmpty": "暫未發現可安裝的 Agent。請檢查網路連線，並確認目前環境可以正常存取 GitHub。",
     "marketContributionHint": "想讓新的 Agent 出現在市場中？",
-    "marketContributionAction": "前往 WinkGoHub 提交 PR",
-    "marketComingSoon": "WinkGoHub 市場即將上線。",
+    "marketContributionAction": "前往 WINK GO Hub 提交 PR",
+    "marketComingSoon": "WINK GO Hub 市場即將上線。",
     "detectCustomAgent": "識別自訂 Agent",
     "editCustomAgent": "編輯自訂 Agent",
     "officialAgents": "官方 Agents",
@@ -1154,6 +1163,7 @@
     "errorCodes": {
       "command_not_found": "請安裝 {{command}}，然後重新測試連線。",
       "qoderCliRequired": "Qoder IDE 與 Qoder Agent CLI 是兩個不同元件。請另行安裝 {{command}}；IDE 內建的 qoder 命令不支援 ACP，無法替代。",
+      "claudeCliRequired": "請另行安裝 Anthropic 官方 Claude Code CLI，並確認 {{command}} 已加入 PATH。WINK GO 不綑綁 Claude Code，也不重用 Claude.ai 免費版/Pro/Max 訂閱 OAuth；請設定 ANTHROPIC_API_KEY 或相容 API 閘道。",
       "acp_init_failed": "CLI 已啟動，但初始化失敗。請先完成登入或首次設定，然後重新測試連線。",
       "health_check_failed": "請先手動開啟一次 {{name}} 完成設定或登入，然後重新測試連線。",
       "session_send_failed": "請修復 {{name}} 的憑證或網路問題，然後新建對話或重新測試連線。",
@@ -1192,7 +1202,7 @@
     "envScenarioApiKey": "缺少 API 金鑰或存取權杖（如 ANTHROPIC_API_KEY、OPENAI_API_KEY）——這是「需登入」/ 連線失敗最常見的原因",
     "envScenarioBaseUrl": "自訂 API 位址或閘道（如 ANTHROPIC_BASE_URL、OPENAI_BASE_URL），用於自建或代理的服務",
     "envScenarioProxy": "網路代理設定（如 HTTPS_PROXY、HTTP_PROXY），當 Agent 無法直接存取網路時",
-    "envOauthNote": "注意：這無法取代在 CLI 中的帳號登入（例如用 Google 帳號登入 Gemini）。OAuth 登入請在終端機裡透過 CLI 完成。",
+    "envOauthNote": "WINK GO 不重用第三方圖形用戶端的訂閱憑證。請在此設定各工具所需的 API 金鑰或閘道權杖；只有供應商明確允許第三方用戶端使用時，才使用其 OAuth 登入。",
     "emptyOverridesError": "請先填寫啟動路徑或至少一個環境變數。"
   },
   "remoteAgent": {
@@ -1293,8 +1303,7 @@
   "autoInjectedSkillsHint": "每次對話都會自動載入，無需手動啟用；由智能體自行決定何時呼叫。",
   "legal": {
     "title": "法律資訊",
-    "summary": "WINK GO 的部分程式碼基於 AionUi 修改，並繼續依據 Apache License 2.0 授權。",
-    "attribution": "原作 Copyright 2025-2026 AionUi (aionui.com) · WINK GO 修改 Copyright 2026 WINK GO (winkgo.top)。",
+    "summary": "WINK GO 依據 Apache License 2.0 開放原始碼。",
     "apacheLicense": "Apache 2.0 授權條款",
     "notice": "發行聲明",
     "thirdPartyNotices": "第三方聲明"

@@ -1,3 +1,4 @@
+# Modified from aionrs by WINK GO contributors in 2026.
 [package]
 name = "winkgo-agent"
 description = "Agent engine, session management, output sinks, and orchestration for winkgo_agent"

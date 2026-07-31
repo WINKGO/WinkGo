@@ -1,3 +1,4 @@
+# Modified from aionrs by WINK GO contributors in 2026.
 # winkgo_agent justfile — run tasks with `vx just <recipe>`
 # All commands route through `vx` (when available) so the correct tool
 # versions are used. Everything here is cross-platform: recipe bodies avoid

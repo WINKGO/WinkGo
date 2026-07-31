@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -7,6 +8,11 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Left, Right, Refresh, Loading } from '@icon-park/react';
+import {
+  isAllowedWebviewNavigationUrl,
+  isAllowedWebviewPartition,
+  REMOTE_WEBVIEW_PARTITION,
+} from '@/common/platform/electronSecurity';
 
 export interface WebviewHostProps {
   /** URL to display */
@@ -54,10 +60,12 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   const contentRef = useRef<HTMLDivElement | null>(null);
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
   const autoFitPendingRef = useRef(false);
+  const webviewPartition = partition && isAllowedWebviewPartition(partition) ? partition : REMOTE_WEBVIEW_PARTITION;
+  const safeUrl = isAllowedWebviewNavigationUrl(url, webviewPartition) ? url : 'about:blank';
 
   // Navigation state
-  const [currentUrl, setCurrentUrl] = useState(url);
-  const [inputUrl, setInputUrl] = useState(url);
+  const [currentUrl, setCurrentUrl] = useState(safeUrl);
+  const [inputUrl, setInputUrl] = useState(safeUrl);
   const [isLoading, setIsLoading] = useState(true);
   const [zoomFactor, setZoomFactor] = useState(1);
   const [webviewReady, setWebviewReady] = useState(false);
@@ -88,13 +96,13 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
     historyForwardRef.current = [];
     setCanGoBack(false);
     setCanGoForward(false);
-    setCurrentUrl(url);
-    setInputUrl(url);
+    setCurrentUrl(safeUrl);
+    setInputUrl(safeUrl);
     setIsLoading(true);
     setZoomFactor(1);
     setWebviewReady(false);
-    autoFitPendingRef.current = isStarOfficeUrl(url);
-  }, [url]);
+    autoFitPendingRef.current = isStarOfficeUrl(safeUrl);
+  }, [isStarOfficeUrl, safeUrl]);
 
   useEffect(() => {
     const webviewEl = webviewRef.current as any;
@@ -111,6 +119,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
     (targetUrl: string) => {
       const webviewEl = webviewRef.current;
       if (!webviewEl || !targetUrl) return;
+      if (!isAllowedWebviewNavigationUrl(targetUrl, webviewPartition)) return;
       if (targetUrl === currentUrl) return;
 
       if (currentUrl) {
@@ -125,7 +134,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
 
       webviewEl.src = targetUrl;
     },
-    [currentUrl]
+    [currentUrl, webviewPartition]
   );
 
   // Webview event listeners
@@ -473,15 +482,6 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
     [currentUrl]
   );
 
-  // Build webview attributes
-  const webviewAttrs: Record<string, string> = {
-    allowpopups: 'false',
-    webpreferences: 'contextIsolation=no, nodeIntegration=no, nativeWindowOpen=no',
-  };
-  if (partition) {
-    webviewAttrs.partition = partition;
-  }
-
   return (
     <div ref={containerRef} className={`h-full w-full flex flex-col ${className ?? ''}`} style={style}>
       {showNavBar && (
@@ -638,7 +638,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
             opacity: !showNavBar && isLoading ? 0 : 1,
             transition: 'opacity 150ms ease-in',
           }}
-          {...webviewAttrs}
+          partition={webviewPartition}
         />
       </div>
     </div>

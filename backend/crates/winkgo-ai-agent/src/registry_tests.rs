@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use super::*;
 use std::sync::Arc;
 use winkgo_db::{
@@ -71,7 +72,7 @@ async fn probe_resolved_command_keeps_bridge_but_version_probe_targets_primary_c
 }
 
 #[test]
-fn probe_resolved_command_requires_primary_binary_for_builtin_managed_claude() {
+fn probe_resolved_command_requires_primary_binary_for_builtin_direct_claude() {
     let meta = AgentMetadata {
         id: "agent-claude".into(),
         icon: None,
@@ -120,7 +121,7 @@ fn probe_resolved_command_requires_primary_binary_for_builtin_managed_claude() {
 }
 
 #[test]
-fn probe_resolved_command_requires_primary_binary_for_builtin_managed_codex() {
+fn probe_resolved_command_requires_primary_binary_for_builtin_direct_codex() {
     let meta = AgentMetadata {
         id: "agent-codex".into(),
         icon: None,

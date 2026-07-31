@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // AWS Bedrock provider for Claude models.
 // Uses AWS SigV4 authentication and AWS event stream binary framing.
 

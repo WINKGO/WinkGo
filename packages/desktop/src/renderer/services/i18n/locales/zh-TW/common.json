@@ -13,6 +13,7 @@
   "settings": "設定",
   "system": "系統",
   "about": "關於我們",
+  "localAccount": "本機帳戶",
   "back": "返回聊天",
   "goBack": "返回",
   "add": "新增",
@@ -301,12 +302,12 @@
   "backendStartup": {
     "incompatibleRuntime": {
       "title": "目前系統不支援內建後端",
-      "description": "WINK GO 已開啟，但本機 WinkGoCore 後端無法在目前 Linux 版本上執行。請升級到受支援的 Linux 發行版後重新啟動 WINK GO。",
+      "description": "WINK GO 已開啟，但本機 WINK GO Core 後端無法在目前 Linux 版本上執行。請升級到受支援的 Linux 發行版後重新啟動 WINK GO。",
       "requiredVersions": "需要的執行階段符號：{{versions}}"
     },
     "incompleteInstallation": {
       "title": "WINK GO 安裝不完整",
-      "description": "目前安裝缺少必要的本機資源，WinkGoCore 無法啟動。請下載並重新安裝最新版 WINK GO；如果重新安裝後仍然出現，請檢查系統安全軟體或防毒軟體是否隔離了 WinkGoCore。",
+      "description": "目前安裝缺少必要的本機資源，WINK GO Core 無法啟動。請下載並重新安裝最新版 WINK GO；如果重新安裝後仍然出現，請檢查系統安全軟體或防毒軟體是否隔離了 WINK GO Core。",
       "downloadLatest": "下載最新版",
       "sendDiagnostics": "傳送診斷報告",
       "diagnosticsSent": "診斷報告已傳送",
@@ -320,7 +321,7 @@
     },
     "dataMigration": {
       "title": "本地資料遷移失敗",
-      "description": "WINK GO 已開啟，但 WinkGoCore 在初始化本地資料時停止。重新安裝 WINK GO 未必能解決此問題。請傳送診斷報告或聯絡支援，以便檢查本地資料庫遷移狀態。",
+      "description": "WINK GO 已開啟，但 WINK GO Core 在初始化本地資料時停止。重新安裝 WINK GO 未必能解決此問題。請傳送診斷報告或聯絡支援，以便檢查本地資料庫遷移狀態。",
       "sendDiagnostics": "傳送診斷報告",
       "diagnosticsSent": "診斷報告已傳送",
       "diagnosticsReportSuccess": "診斷報告已傳送",
@@ -328,7 +329,7 @@
     },
     "localDataRepair": {
       "title": "本機資料修復失敗",
-      "description": "WINK GO 已開啟，但 WinkGoCore 在準備本機啟動資料時停止，例如 assistant 或代理記錄。重新安裝 WINK GO 可能無法解決此問題。請傳送診斷報告或聯絡支援，以便檢查本機資料庫。",
+      "description": "WINK GO 已開啟，但 WINK GO Core 在準備本機啟動資料時停止，例如 assistant 或代理記錄。重新安裝 WINK GO 可能無法解決此問題。請傳送診斷報告或聯絡支援，以便檢查本機資料庫。",
       "sendDiagnostics": "傳送診斷",
       "diagnosticsSent": "診斷已傳送",
       "diagnosticsReportSuccess": "診斷報告已傳送",
@@ -336,7 +337,7 @@
     },
     "startupDirectory": {
       "title": "啟動目錄無法使用",
-      "description": "WINK GO 已開啟，但因為設定的工作目錄或日誌目錄不存在、無法存取或權限受限，WinkGoCore 無法啟動。請確認這些目錄存在且可寫入，然後重新啟動 WINK GO。",
+      "description": "WINK GO 已開啟，但因為設定的工作目錄或日誌目錄不存在、無法存取或權限受限，WINK GO Core 無法啟動。請確認這些目錄存在且可寫入，然後重新啟動 WINK GO。",
       "sendDiagnostics": "傳送診斷報告",
       "diagnosticsSent": "診斷報告已傳送",
       "diagnosticsReportSuccess": "診斷報告已傳送",

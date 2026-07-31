@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Bounded wait for the data-dir process-level instance guard (Sentry 135525166
 //! Option A).
 //!

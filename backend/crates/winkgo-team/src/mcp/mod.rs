@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 pub mod bridge;
 pub mod protocol;
 pub mod server;

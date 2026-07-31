@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { WebSocketService } from '@/src/services/websocket';
 
 // --- Mock WebSocket ---
@@ -85,10 +86,10 @@ describe('WebSocketService', () => {
   });
 
   describe('connect', () => {
-    it('creates WebSocket with correct URL and token protocol', () => {
+    it('connects to the backend WebSocket endpoint with the token protocol', () => {
       service.connect();
       const ws = latestWS();
-      expect(ws.url).toBe('ws://localhost:8080');
+      expect(ws.url).toBe('ws://localhost:8080/ws');
       expect(ws.protocols).toEqual(['test-token']);
     });
 
@@ -111,6 +112,23 @@ describe('WebSocketService', () => {
 
       service.connect();
       expect(mockWSInstances.length).toBe(count);
+    });
+
+    it('disconnects the old socket and connects to a newly paired computer', () => {
+      service.connect();
+      const oldSocket = latestWS();
+      simulateOpen(oldSocket);
+
+      service.configure('192.168.1.50', '9090', 'replacement-token');
+      service.connect();
+
+      expect(oldSocket.close).toHaveBeenCalledTimes(1);
+      expect(mockWSInstances).toHaveLength(2);
+      expect(latestWS().url).toBe('ws://192.168.1.50:9090/ws');
+      expect(latestWS().protocols).toEqual(['replacement-token']);
+
+      oldSocket.onclose?.({ code: 1000, reason: '' });
+      expect(service.state).toBe('connecting');
     });
   });
 

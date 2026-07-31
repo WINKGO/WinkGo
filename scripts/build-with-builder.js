@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Modified from AionUI by WINK GO contributors in 2026.
 
 /**
  * Simplified build script for WinkGo
@@ -663,6 +664,7 @@ function cleanupWindowsPackOutput() {
   const removed = [];
   const winUnpackedDirRe = /^win(?:-[a-z0-9]+)?-unpacked$/i;
   const winArtifactFileRe = /-win-[^.]+\.(?:exe|msi|zip|7z)$/i;
+  const winkGoInstallerFileRe = /^WINK-GO-(?:Free|Pro)-Setup-.+-(?:x64|arm64|ia32)\.exe$/i;
 
   for (const entry of fs.readdirSync(outDir, { withFileTypes: true })) {
     const fullPath = path.join(outDir, entry.name);
@@ -673,7 +675,7 @@ function cleanupWindowsPackOutput() {
       continue;
     }
 
-    if (entry.isFile() && winArtifactFileRe.test(entry.name)) {
+    if (entry.isFile() && (winArtifactFileRe.test(entry.name) || winkGoInstallerFileRe.test(entry.name))) {
       fs.rmSync(fullPath, { force: true });
       removed.push(entry.name);
     }
@@ -684,14 +686,13 @@ function cleanupWindowsPackOutput() {
   }
 }
 
-function auditFinalWindowsInstallers(buildEdition) {
+function auditFinalWindowsInstallers(buildEdition, targetArch) {
   const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
   const escapedVersion = String(packageJson.version).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedArch = String(targetArch).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const editionLabel = buildEdition === 'pro' ? 'Pro' : 'Free';
-  const installerPattern = new RegExp(
-    `^WINK-GO-${editionLabel}-Setup-${escapedVersion}-(?:x64|arm64|ia32)\\.exe$`,
-    'i'
-  );
+  const artifactPrefix = buildEdition === 'pro' ? 'WINK-GO-Pro' : 'WINK-GO-Free';
+  const installerPattern = new RegExp(`^${artifactPrefix}-Setup-${escapedVersion}-${escapedArch}\\.exe$`, 'i');
   const outDir = path.resolve(__dirname, '..', 'out');
   const installers = fs
     .readdirSync(outDir)
@@ -911,16 +912,13 @@ try {
     throw new Error(`Vite build output is incomplete:\n${viteOutputValidation.problems.join('\n')}`);
   }
 
-  // Privacy gate 1/2: inspect the exact Vite/static inputs before packaging.
-  // A release containing local sessions, developer paths, phone numbers or
-  // secrets must fail before electron-builder creates an installer.
-  execSync('node scripts/audit-release-privacy.cjs --stage', {
-    stdio: 'inherit',
-    env: process.env,
-  });
-
-  // If --pack-only, skip electron-builder distributable creation
+  // A pack-only run deliberately skips backend resource preparation. Audit
+  // the renderer/main/static outputs it did prepare, then stop before Core.
   if (packOnly) {
+    execSync('node scripts/audit-release-privacy.cjs --stage-ui', {
+      stdio: 'inherit',
+      env: process.env,
+    });
     console.log('✅ Package completed! (skipped distributable creation)');
     return;
   }
@@ -939,6 +937,13 @@ try {
 
   // 6. Prepare hub resources (index.json + extension zips for offline fallback)
   execSync('node scripts/prepareHubResources.js', { stdio: 'inherit', env: process.env });
+
+  // Privacy gate 1/2: inspect the exact Vite/static/backend inputs after every
+  // generated release resource has been refreshed for this build.
+  execSync('node scripts/audit-release-privacy.cjs --stage', {
+    stdio: 'inherit',
+    env: process.env,
+  });
 
   // 6. 运行 electron-builder 生成分发包（DMG/ZIP/EXE等）
   // Run electron-builder to create distributables (DMG/ZIP/EXE, etc.)
@@ -1079,7 +1084,7 @@ try {
   if (isWindowsBuild) {
     // Privacy gate 3/3: inspect the final NSIS archive and prove that its
     // embedded app.asar is identical to the just-audited win-unpacked ASAR.
-    auditFinalWindowsInstallers(buildEdition);
+    auditFinalWindowsInstallers(buildEdition, targetArch);
     execSync('node scripts/generate-winkgo-update-manifest.js', {
       stdio: 'inherit',
       env: process.env,

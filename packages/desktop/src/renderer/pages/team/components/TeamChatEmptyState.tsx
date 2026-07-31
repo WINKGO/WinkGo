@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';

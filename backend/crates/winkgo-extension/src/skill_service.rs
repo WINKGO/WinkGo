@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::io;
 use std::path::{Component, Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -998,7 +999,23 @@ async fn replace_existing_path(path: &Path) -> Result<(), ExtensionError> {
         Err(e) => return Err(e.into()),
     };
 
-    if metadata.file_type().is_symlink() || metadata.is_file() {
+    if metadata.file_type().is_symlink() {
+        // Windows directory links are materialized as NTFS junctions.
+        // `remove_file` rejects those with AccessDenied, including when
+        // the junction target has already disappeared. Removing the link
+        // as a directory deletes only the reparse point, not its target.
+        #[cfg(windows)]
+        if let Err(directory_link_error) = tokio::fs::remove_dir(path).await {
+            // Keep file symlinks working as well. A directory junction
+            // cannot be deleted with `remove_file`, so retain its original
+            // error if both strategies fail.
+            if tokio::fs::remove_file(path).await.is_err() {
+                return Err(directory_link_error.into());
+            }
+        }
+        #[cfg(not(windows))]
+        tokio::fs::remove_file(path).await?;
+    } else if metadata.is_file() {
         tokio::fs::remove_file(path).await?;
     } else {
         tokio::fs::remove_dir_all(path).await?;
@@ -1100,14 +1117,9 @@ pub async fn export_skill_with_symlink(skill_path: &Path, target_dir: &Path) -> 
     let target_link = target_dir.join(&skill_name);
     tokio::fs::create_dir_all(target_dir).await?;
 
-    // Remove existing link if present
-    if target_link.exists() {
-        if target_link.is_symlink() || target_link.is_file() {
-            tokio::fs::remove_file(&target_link).await?;
-        } else {
-            tokio::fs::remove_dir_all(&target_link).await?;
-        }
-    }
+    // `Path::exists` is false for dangling links, so inspect and replace
+    // the directory entry itself.
+    replace_existing_path(&target_link).await?;
 
     create_symlink(skill_path, &target_link).await?;
 

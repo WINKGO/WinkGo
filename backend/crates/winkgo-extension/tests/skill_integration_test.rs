@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for skill & rule management (test-plan SM, RM, CP).
 //!
 //! These tests exercise the public API surface of `winkgo_extension::skill_service`

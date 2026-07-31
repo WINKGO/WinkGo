@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Modified from AionCore by WINK GO contributors in 2026.
+# Modified from Anthropic skill-creator by WINK GO contributors in 2026.
 """
 Skill Initializer - Creates a new skill from template
 
@@ -37,7 +39,7 @@ description: [TODO: Complete and informative explanation of what the skill does 
 
 **2. Task-Based** (best for tool collections)
 - Works well when the skill offers different operations/capabilities
-- Example: PDF skill with "Quick Start" → "Merge PDFs" → "Split PDFs" → "Extract Text"
+- Example: image skill with "Quick Start" → "Resize" → "Crop" → "Export"
 - Structure: ## Overview → ## Quick Start → ## Task Category 1 → ## Task Category 2...
 
 **3. Reference/Guidelines** (best for standards or specifications)
@@ -70,8 +72,8 @@ This skill includes example resource directories that demonstrate how to organiz
 Executable code (Python/Bash/etc.) that can be run directly to perform specific operations.
 
 **Examples from other skills:**
-- PDF skill: `fill_fillable_fields.py`, `extract_form_field_info.py` - utilities for PDF manipulation
-- DOCX skill: `document.py`, `utilities.py` - Python modules for document processing
+- Image skill: `resize_image.py`, `export_image.py` - utilities for image processing
+- Data skill: `normalize_rows.py`, `validate_schema.py` - utilities for structured data
 
 **Appropriate for:** Python scripts, shell scripts, or any executable code that performs automation, data processing, or specific operations.
 
@@ -109,9 +111,9 @@ Example helper script for {skill_name}
 This is a placeholder script that can be executed directly.
 Replace with actual implementation or delete if not needed.
 
-Example real scripts from other skills:
-- pdf/scripts/fill_fillable_fields.py - Fills PDF form fields
-- pdf/scripts/convert_pdf_to_images.py - Converts PDF pages to images
+Example scripts from other skills:
+- image/scripts/resize_image.py - Resizes an image
+- data/scripts/validate_schema.py - Validates structured data
 """
 
 def main():

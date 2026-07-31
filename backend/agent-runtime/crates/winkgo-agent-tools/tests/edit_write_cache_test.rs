@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Integration tests for EditTool / WriteTool file-state cache integration
 //! (TC-5.4 and TC-5.4-W series).
 //!

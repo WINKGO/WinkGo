@@ -1,4 +1,6 @@
-# WinkGo - Project Guide
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
+# WINK GO - Project Guide
 
 All contributors (human and AI) must follow [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR. ([Chinese version](CONTRIBUTING.zh.md))
 

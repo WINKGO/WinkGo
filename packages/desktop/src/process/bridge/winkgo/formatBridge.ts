@@ -12,6 +12,7 @@ import {
   runWinkGoFormatConversion,
 } from '@process/services/WinkGoFormatConverterService';
 import { app, BrowserWindow, dialog, shell } from 'electron';
+import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -44,6 +45,13 @@ const mainWindow = (): BrowserWindow | undefined =>
       return rightBounds.width * rightBounds.height - leftBounds.width * leftBounds.height;
     })[0];
 
+const resolveDefaultFormatOutputFolder = (): string => {
+  const documents = app.getPath('documents');
+  const current = path.join(documents, 'WINK GO 格式转换');
+  const legacy = path.join(documents, 'WINK GO 格式转换');
+  return existsSync(legacy) && !existsSync(current) ? legacy : current;
+};
+
 /** Registers the local-only WINK GO format workbench bridge. */
 export function initWinkGoFormatBridge(): void {
   ipcBridge.winkGoFormat.detectEngines.provider(() =>
@@ -59,7 +67,7 @@ export function initWinkGoFormatBridge(): void {
     )
   );
   ipcBridge.winkGoFormat.getDefaultOutputFolder.provider(() =>
-    ensureWinkGoFormatOutputFolder(path.join(app.getPath('documents'), 'WINK GO 格式转换')).catch(() => '')
+    ensureWinkGoFormatOutputFolder(resolveDefaultFormatOutputFolder()).catch(() => '')
   );
   ipcBridge.winkGoFormat.selectFiles.provider(async ({ preset }): Promise<string[]> => {
     try {

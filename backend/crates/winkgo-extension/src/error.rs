@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 /// Extension system domain errors.
 #[derive(Debug, thiserror::Error)]
 pub enum ExtensionError {

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -20,7 +21,7 @@
  */
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useNavigationType, NavigationType } from 'react-router-dom';
+import { useLocation, useNavigate, useNavigationType, NavigationType } from 'react-router';
 
 const MAX_HISTORY = 50;
 

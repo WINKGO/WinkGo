@@ -33,15 +33,7 @@ describe('WINK GO login gateway synchronization', () => {
     mocks.hasCapability.mockReturnValue(true);
   });
 
-  it('returns a successful login without rotating authorization or waiting for the gateway', async () => {
-    let finishRemoteSync: (() => void) | undefined;
-    mocks.startRemoteGateway.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          finishRemoteSync = resolve;
-        })
-    );
-
+  it('does not opt a user into the cloud relay after a successful login', async () => {
     const result = await authenticateAndSyncRemoteGateway(async () => ({
       success: true,
       user: {
@@ -52,8 +44,8 @@ describe('WINK GO login gateway synchronization', () => {
     }));
 
     expect(result.success).toBe(true);
-    expect(mocks.startRemoteGateway).toHaveBeenCalledOnce();
-    finishRemoteSync?.();
+    expect(mocks.startRemoteGateway).not.toHaveBeenCalled();
+    expect(mocks.clearRemoteAuthorization).not.toHaveBeenCalled();
   });
 
   it('does not start gateway synchronization after a failed login', async () => {
@@ -66,7 +58,7 @@ describe('WINK GO login gateway synchronization', () => {
     expect(mocks.startRemoteGateway).not.toHaveBeenCalled();
   });
 
-  it('starts remote gateway synchronization for Free full-access logins', async () => {
+  it('does not start the relay after a Free full-access login', async () => {
     mocks.hasCapability.mockReturnValue(true);
 
     const result = await authenticateAndSyncRemoteGateway(async () => ({
@@ -79,7 +71,7 @@ describe('WINK GO login gateway synchronization', () => {
     }));
 
     expect(result.success).toBe(true);
-    expect(mocks.startRemoteGateway).toHaveBeenCalledOnce();
+    expect(mocks.startRemoteGateway).not.toHaveBeenCalled();
     expect(mocks.clearRemoteAuthorization).not.toHaveBeenCalled();
   });
 

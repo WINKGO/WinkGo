@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 mod fetchers;
 mod url_fixer;
 

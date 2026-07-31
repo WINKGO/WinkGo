@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use rust_xlsxwriter::{Format, Workbook};
 use std::path::PathBuf;
 use tempfile::TempDir;

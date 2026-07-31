@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for `IRemoteAgentRepository`.
 //!
 //! Tests exercise the repository trait interface without knowledge of

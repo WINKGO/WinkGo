@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Assistant service — unified built-in + user assistant CRUD, state
 //! overlays, import, and source-dispatched rule/skill read/write helpers.
 

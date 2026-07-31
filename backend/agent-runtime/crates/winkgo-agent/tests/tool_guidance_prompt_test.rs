@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Integration tests for system prompt tool usage guidance (TC-4.3-01 through TC-4.3-08).
 //!
 //! Black-box tests verifying the "# Using your tools" section is correctly

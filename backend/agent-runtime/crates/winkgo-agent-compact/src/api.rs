@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use crate::level::CompactLevel;
 use crate::{fold, json, sanitize, toon};
 

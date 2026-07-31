@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 mod formatter;
 pub mod null_sink;
 pub mod protocol_sink;

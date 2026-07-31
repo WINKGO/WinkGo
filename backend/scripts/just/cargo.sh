@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Modified from AionCore by WINK GO contributors in 2026.
 set -euo pipefail
 
 cargo_config=()

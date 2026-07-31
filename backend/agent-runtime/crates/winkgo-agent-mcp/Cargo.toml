@@ -1,3 +1,4 @@
+# Modified from aionrs by WINK GO contributors in 2026.
 [package]
 name = "winkgo-agent-mcp"
 description = "MCP (Model Context Protocol) client implementation for winkgo_agent"

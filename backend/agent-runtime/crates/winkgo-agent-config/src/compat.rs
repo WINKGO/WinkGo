@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Configuration-driven provider compatibility layer.
 // Each provider type has default presets; users can override any field via config.
 

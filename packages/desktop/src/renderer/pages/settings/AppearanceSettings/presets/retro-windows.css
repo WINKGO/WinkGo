@@ -1,3 +1,4 @@
+/* Modified from AionUI by WINK GO contributors in 2026. */
 /* ========================================
    Windows Classic Theme - 优化版
    复古 Windows 配色，支持明暗双模式
@@ -902,7 +903,7 @@ input[type='radio']:checked::after {
 }
 
 /* ===== 深色模式背景图 ===== */
-/* 参考 Hello Kitty 模式：只在 ::before 上设置半透明遮罩 */
+/* 只在 ::before 上设置半透明遮罩 */
 [data-theme='dark'] .layout-content.bg-1::before {
   background: linear-gradient(135deg, rgba(26, 42, 58, 0.7) 0%, rgba(30, 46, 62, 0.75) 50%, rgba(26, 42, 58, 0.7) 100%);
 }

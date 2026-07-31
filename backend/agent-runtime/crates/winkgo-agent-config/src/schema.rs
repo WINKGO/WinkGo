@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use serde_json::{Map, Value};
 
 pub const JSON_SCHEMA_DRAFT_2020_12: &str = "https://json-schema.org/draft/2020-12/schema";

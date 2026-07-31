@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Minimal public contract for a running agent task.
 //!
 //! `IAgentTask` captures **only** the operations that every agent type

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Phase 10 inline tests for src/skills/bundled/mod.rs
 // Covers TC-10.01 ~ TC-10.28 (registration API, field mapping, file extraction,
 // resolve_skill_file_path path validation, prepare_bundled_skills, thread safety).

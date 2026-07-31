@@ -1,4 +1,5 @@
 #![allow(clippy::disallowed_types)]
+// Modified from AionCore by WINK GO contributors in 2026.
 
 //! HTTP route handlers for `/api/assistants/*`.
 

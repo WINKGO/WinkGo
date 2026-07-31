@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { Page } from '@playwright/test';
 import { RESPONSE_MAPPERS } from './mappers';
 import { HTTP_ROUTES } from './routes';

@@ -1,3 +1,4 @@
+/* Modified from AionUI by WINK GO contributors in 2026. */
 /* GPU-friendly: transform applies to the + SVG only (see Sider.tsx), not the padded row or icon frame */
 
 .newChatTrigger {

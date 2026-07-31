@@ -1,4 +1,5 @@
 #![allow(clippy::disallowed_types)]
+// Modified from AionCore by WINK GO contributors in 2026.
 
 //! Black-box tests for API response formats (test-plan T3.1, T3.2, T3.3).
 

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Integration tests for memory system context assembly (TC-7).
 //
 // These are black-box tests that verify the memory system is correctly

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Shared protocol I/O context threaded through the JSON stream main loop.
 //!
 //! `dispatch::handle` and `message::handle` both need the same cluster of

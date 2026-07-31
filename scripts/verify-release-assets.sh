@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
+# Modified from AionUI by WINK GO contributors in 2026.
 
 set -euo pipefail
 
 OUTPUT_DIR="${1:-release-assets}"
+VERSION="${2:-${MOCK_VERSION:-}}"
+if [ -z "$VERSION" ]; then
+  VERSION=$(node -p "require('./package.json').version")
+fi
+VERSION="${VERSION#v}"
 ERRORS=0
 
-for f in LICENSE NOTICE THIRD_PARTY_NOTICES.md; do
+for f in LICENSE NOTICE THIRD_PARTY_NOTICES.md THIRD_PARTY_DEPENDENCIES.json THIRD_PARTY_LICENSES.txt PRIVACY.md TERMS.md; do
   if [ ! -s "$OUTPUT_DIR/$f" ]; then
     echo "FAIL: missing or empty legal document: $f"
     ERRORS=$((ERRORS + 1))
@@ -20,6 +26,14 @@ if [ -s "$OUTPUT_DIR/LICENSE" ] && ! grep -q "Apache License" "$OUTPUT_DIR/LICEN
 fi
 if [ -s "$OUTPUT_DIR/NOTICE" ] && ! grep -q "AionUi" "$OUTPUT_DIR/NOTICE"; then
   echo "FAIL: NOTICE does not contain the upstream attribution"
+  ERRORS=$((ERRORS + 1))
+fi
+if [ -s "$OUTPUT_DIR/PRIVACY.md" ] && ! grep -q "Privacy Policy" "$OUTPUT_DIR/PRIVACY.md"; then
+  echo "FAIL: PRIVACY.md does not contain the privacy policy"
+  ERRORS=$((ERRORS + 1))
+fi
+if [ -s "$OUTPUT_DIR/TERMS.md" ] && ! grep -q "Terms of Service" "$OUTPUT_DIR/TERMS.md"; then
+  echo "FAIL: TERMS.md does not contain the terms of service"
   ERRORS=$((ERRORS + 1))
 fi
 
@@ -83,18 +97,24 @@ for f in latest-win-arm64.yml latest-arm64-mac.yml; do
   fi
 done
 
-for f in WINK-GO-Free-Setup-1.0.0-x64.exe WINK-GO-Free-Setup-1.0.0-arm64.exe WINK-GO-Free-1.0.0-mac-x64.dmg WINK-GO-Free-1.0.0-mac-arm64.dmg WINK-GO-Free-1.0.0-linux-x64.deb WINK-GO-Free-1.0.0-linux-arm64.deb; do
-  if [ ! -f "$OUTPUT_DIR/$f" ]; then
-    echo "FAIL: missing distributable: $f"
-    ERRORS=$((ERRORS + 1))
-  else
-    echo "PASS: $f exists"
-  fi
+for arch in x64 arm64; do
+  for f in \
+    "WINK-GO-Free-Setup-${VERSION}-${arch}.exe" \
+    "WINK-GO-Free-${VERSION}-mac-${arch}.dmg" \
+    "WINK-GO-Free-${VERSION}-mac-${arch}.zip" \
+    "WINK-GO-Free-${VERSION}-linux-${arch}.deb"; do
+    if [ ! -f "$OUTPUT_DIR/$f" ]; then
+      echo "FAIL: missing distributable: $f"
+      ERRORS=$((ERRORS + 1))
+    else
+      echo "PASS: $f exists"
+    fi
+  done
 done
 
 # Web-CLI tarballs + checksums
 for plat in darwin-arm64 darwin-x86_64 linux-arm64 linux-x86_64 win-x86_64; do
-  tarball="winkgo-web-1.0.0-${plat}.tar.gz"
+  tarball="winkgo-web-${VERSION}-${plat}.tar.gz"
   for f in "$tarball" "${tarball}.sha256"; do
     if [ ! -f "$OUTPUT_DIR/$f" ]; then
       echo "FAIL: missing web-cli asset: $f"

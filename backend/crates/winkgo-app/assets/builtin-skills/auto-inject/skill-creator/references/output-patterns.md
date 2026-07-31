@@ -1,4 +1,7 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Output Patterns
+
+> **Modification notice:** WINK GO contributors modified this Anthropic-derived file in 2026. See `../SOURCE.md` and `../MODIFICATIONS.md`.
 
 Use these patterns when skills need to produce consistent, high-quality output.
 

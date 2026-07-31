@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! The monomorphic, pure reducer (seam b-side, §C 6.4). `step` is the ONLY
 //! state-synthesis point, shared by all `BackendAdapter`s. No I/O, no clock, no
 //! backend-aware branch (I1). Per-turn memory lives in `SessionState::Running`

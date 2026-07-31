@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * WebSocket connection manager for WinkGo Mobile.
  * Mirrors the protocol from src/adapter/browser.ts:
@@ -53,6 +54,13 @@ export class WebSocketService {
   }
 
   configure(host: string, port: string, token: string) {
+    const hadConfiguration = this.host !== '' || this.port !== '' || this.token !== '';
+    const targetChanged = this.host !== host || this.port !== port || this.token !== token;
+
+    if (hadConfiguration && targetChanged) {
+      this.disconnect();
+    }
+
     this.host = host;
     this.port = port;
     this.token = token;
@@ -85,69 +93,73 @@ export class WebSocketService {
     this.shouldReconnect = true;
     this.setState('connecting');
 
-    const url = `ws://${this.host}:${this.port}`;
+    const url = `ws://${this.host}:${this.port}/ws`;
 
     try {
       // Pass token via Sec-WebSocket-Protocol header (server supports this)
-      this.socket = new WebSocket(url, [this.token]);
-    } catch {
-      this.scheduleReconnect();
-      return;
-    }
+      const socket = new WebSocket(url, [this.token]);
+      this.socket = socket;
 
-    this.socket.onopen = () => {
-      this.reconnectDelay = 500;
-      this.lastPingReceived = Date.now();
-      this.startDeadConnectionCheck();
-      this.setState('connected');
-      this.flushQueue();
-    };
+      socket.onopen = () => {
+        if (this.socket !== socket) return;
+        this.reconnectDelay = 500;
+        this.lastPingReceived = Date.now();
+        this.startDeadConnectionCheck();
+        this.setState('connected');
+        this.flushQueue();
+      };
 
-    this.socket.onmessage = (event: WebSocketMessageEvent) => {
-      try {
-        const payload = JSON.parse(event.data) as WSMessage;
+      socket.onmessage = (event: WebSocketMessageEvent) => {
+        if (this.socket !== socket) return;
+        try {
+          const payload = JSON.parse(event.data) as WSMessage;
 
-        // Handle server heartbeat
-        if (payload.name === 'ping') {
-          this.lastPingReceived = Date.now();
-          this.send('pong', { timestamp: Date.now() });
-          this.heartbeatHandler?.();
-          return;
+          // Handle server heartbeat
+          if (payload.name === 'ping') {
+            this.lastPingReceived = Date.now();
+            this.send('pong', { timestamp: Date.now() });
+            this.heartbeatHandler?.();
+            return;
+          }
+
+          // Handle auth expiration
+          if (payload.name === 'auth-expired') {
+            console.warn('[WS] Authentication expired');
+            void this.handleAuthChallenge();
+            return;
+          }
+
+          this.messageHandler?.(payload.name, payload.data);
+        } catch {
+          // Ignore malformed messages
         }
+      };
 
-        // Handle auth expiration
-        if (payload.name === 'auth-expired') {
-          console.warn('[WS] Authentication expired');
+      socket.onclose = (event: WebSocketCloseEvent) => {
+        if (this.socket !== socket) return;
+        this.socket = null;
+        this.stopDeadConnectionCheck();
+
+        // Close code 1008 = policy violation (token invalid)
+        if (event.code === 1008) {
+          console.warn('[WS] Connection rejected (policy violation)');
           void this.handleAuthChallenge();
           return;
         }
 
-        this.messageHandler?.(payload.name, payload.data);
-      } catch {
-        // Ignore malformed messages
-      }
-    };
+        if (this.shouldReconnect) {
+          this.setState('disconnected');
+          this.scheduleReconnect();
+        }
+      };
 
-    this.socket.onclose = (event: WebSocketCloseEvent) => {
-      this.socket = null;
-      this.stopDeadConnectionCheck();
-
-      // Close code 1008 = policy violation (token invalid)
-      if (event.code === 1008) {
-        console.warn('[WS] Connection rejected (policy violation)');
-        void this.handleAuthChallenge();
-        return;
-      }
-
-      if (this.shouldReconnect) {
-        this.setState('disconnected');
-        this.scheduleReconnect();
-      }
-    };
-
-    this.socket.onerror = () => {
-      this.socket?.close();
-    };
+      socket.onerror = () => {
+        socket.close();
+      };
+    } catch {
+      this.scheduleReconnect();
+      return;
+    }
   }
 
   disconnect() {
@@ -155,8 +167,9 @@ export class WebSocketService {
     this.clearReconnectTimer();
     this.stopDeadConnectionCheck();
     this.messageQueue = [];
-    this.socket?.close();
+    const socket = this.socket;
     this.socket = null;
+    socket?.close();
     this.setState('disconnected');
   }
 

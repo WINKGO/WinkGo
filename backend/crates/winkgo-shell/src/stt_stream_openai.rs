@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! OpenAI Realtime transcription upstream for STT streaming.
 //!
 //! Connects to OpenAI's `/v1/realtime?intent=transcription` WebSocket and

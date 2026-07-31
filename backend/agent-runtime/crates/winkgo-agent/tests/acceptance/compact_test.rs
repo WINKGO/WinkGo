@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Acceptance tests for context compression (all three compaction levels).
 //
 // TC-A2-01 and TC-A2-03 are purely local (no LLM call).

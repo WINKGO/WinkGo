@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -196,6 +197,12 @@ export function formatManagedAgentDiagnosticMessage(t: TFunction, agent: Managed
     case 'bridge_missing':
     case 'primary_missing':
     case 'command_missing':
+      if (agent.backend === 'claude') {
+        return t('settings.agentManagement.errorCodes.claudeCliRequired', {
+          command,
+          defaultValue: fallback,
+        });
+      }
       if (agent.backend === 'qoder') {
         return t('settings.agentManagement.errorCodes.qoderCliRequired', {
           command,

@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # SkillsHubSettings 功能需求文档
 
 ## 1. 页面概述与目的

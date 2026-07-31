@@ -32,14 +32,32 @@
     "cleanup": "Encuentra archivos duplicados e inútiles en esta carpeta y lístalos para que los confirme",
     "create": "Créame una página personal bonita y ábrela cuando esté lista"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "El análisis de WINK GO AI ha fallado. Inténtalo de nuevo más tarde.",
+    "backToChat": "Volver al chat",
+    "frameTitle": "Lienzo de conocimiento de WINK GO",
+    "loading": "Abriendo el lienzo de conocimiento…",
+    "open": "Abrir el lienzo de conocimiento",
+    "pageLabel": "Lienzo de conocimiento de WINK GO",
+    "reload": "Recargar el lienzo de conocimiento",
+    "statusAnalyzing": "WINK GO AI está analizando",
+    "statusReady": "Lienzo local · IA disponible",
+    "statusUnavailable": "Experimental · No incluido",
+    "subtitle": "Convierte páginas web, documentos e ideas en estructuras de conocimiento editables",
+    "title": "Lienzo de conocimiento",
+    "unavailableDescription": "La versión pública no incluye el entorno completo del lienzo. Permanecerá desactivado hasta que se revisen el código fuente, las licencias y los materiales de publicación.",
+    "unavailableTitle": "El lienzo de conocimiento sigue siendo experimental"
+  },
   "installerCenter": {
     "entry": "Centro de instalación de software",
     "title": "Centro de instalación WINK GO",
-    "subtitle": "Paquetes de instalación rápida para Codex, Claude Code y Antigravity",
-    "windows": "Instaladores para Windows",
-    "macos": "Instaladores para macOS",
-    "environmentSetup": "Configuración rápida para {{platform}}",
-    "downloadFailed": "No se pudo abrir el enlace de descarga",
+    "subtitle": "Abre las páginas oficiales de instalación de Codex, Claude Code y Antigravity",
+    "windows": "Guía de instalación para Windows",
+    "macos": "Guía de instalación para macOS",
+    "environmentSetup": "Ver la guía oficial de instalación para {{platform}}",
+    "openOfficialPage": "Abrir la página oficial de instalación",
+    "thirdPartyDisclaimer": "Codex, Claude Code y Antigravity son productos de terceros. WINK GO no los aloja, respalda ni garantiza su disponibilidad o compatibilidad; se aplican los términos de cada proveedor.",
+    "downloadFailed": "No se pudo abrir la página oficial de instalación",
     "recommended": "Recomendado"
   }
 }

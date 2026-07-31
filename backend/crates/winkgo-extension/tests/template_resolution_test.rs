@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for template resolution (test-plan MV-5 through MV-9).
 //!
 //! These test the public API surface of env var and @file: template resolution.

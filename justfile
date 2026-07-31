@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 # WinkGo Development Justfile
 # Usage: just <recipe>
 
@@ -322,12 +323,16 @@ i18n-check:
     bun run i18n:types
     node scripts/check-i18n.js
 
-# Run all checks (lint + format + typecheck + i18n) — mirrors CI code-quality job
-check: lint fmt-check typecheck i18n-check
+# Verify pinned upstream attribution and per-file modification notices
+licenses-check-upstream:
+    bun run licenses:check:upstream
 
-# Pre-push gate: lint + format check + typecheck + i18n + test, then push
+# Run all checks (lint + format + typecheck + i18n + attribution)
+check: lint fmt-check typecheck i18n-check licenses-check-upstream
+
+# Pre-push gate: lint + format + typecheck + i18n + attribution + test, then push
 # Uses --quiet to suppress warnings (exit code is still non-zero on errors)
-push *ARGS: lint-strict fmt-check typecheck i18n-check test
+push *ARGS: lint-strict fmt-check typecheck i18n-check licenses-check-upstream test
     git push {{ ARGS }}
 
 # Lint with only errors reported (for CI/push gates)

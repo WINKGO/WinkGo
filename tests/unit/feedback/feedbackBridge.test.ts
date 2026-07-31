@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -44,6 +45,10 @@ vi.mock('electron', () => ({
   BrowserWindow: {
     fromWebContents: vi.fn(() => currentWindow),
   },
+}));
+
+vi.mock('@/common/platform/electronSecurity', () => ({
+  isTrustedIpcSender: () => true,
 }));
 
 beforeEach(async () => {

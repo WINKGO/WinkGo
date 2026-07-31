@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for the ACP prompt pipeline.
 //!
 //! Unlike acp_agent_integration.rs, these tests do not exercise

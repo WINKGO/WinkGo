@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Assistant Settings Migration — phase-1 governance E2E coverage.
  *

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use winkgo_agent_config::config;
 
 use crate::cli::ConfigAction;

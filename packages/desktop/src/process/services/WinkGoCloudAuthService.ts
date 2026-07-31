@@ -135,6 +135,18 @@ const enforceAuthSessionPolicy = (service: LegacyLicenseService): boolean => {
 const bounded = (value: unknown, max: number): string =>
   (typeof value === 'string' || typeof value === 'number' ? String(value) : '').trim().slice(0, max);
 
+const POLICY_VERSION_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const policyVersions = (
+  credentials: WinkGoAuthCredentials
+): { privacyVersion: string; termsVersion: string } | null => {
+  const privacyVersion = bounded(credentials.privacyVersion, 40);
+  const termsVersion = bounded(credentials.termsVersion, 40);
+  return POLICY_VERSION_PATTERN.test(privacyVersion) && POLICY_VERSION_PATTERN.test(termsVersion)
+    ? { privacyVersion, termsVersion }
+    : null;
+};
+
 const stableAccountId = (account: LegacyLicenseAccount, username: string): string => {
   return toWinkGoCloudAccountId(bounded(account.id, 128), username);
 };
@@ -160,12 +172,21 @@ const errorCode = (result: LegacyLicenseResult): WinkGoAuthErrorCode => {
   if (/invalid.*credential|password.*invalid|account.*not.*found|unauthori[sz]ed/.test(message)) {
     return 'invalidCredentials';
   }
-  if (/already.*exist|account_exists|username.*exist/.test(message)) return 'accountExists';
+  if (/already.*exist|account_exists|username.*exist|phone.*exist/.test(message)) {
+    return 'accountExists';
+  }
   if (/too.*many|rate.*limit/.test(message)) return 'tooManyAttempts';
+  if (/local_auth_state_unavailable|local.*state.*unavailable|profile.*unavailable/.test(message)) {
+    return 'localError';
+  }
+  // Transport errors emitted by the managed license client include the word
+  // "license" (for example, license_service_unreachable). Classify the
+  // transport condition before authorization failures so a real outage is not
+  // presented as a denied device license.
+  if (/unreachable|network|timeout|fetch|econn|dns|socket/.test(message)) return 'networkError';
   if (/license|lease|device.*(?:blocked|denied|disabled|revoked)|authorization/.test(message)) {
     return 'licenseDenied';
   }
-  if (/unreachable|network|timeout|fetch|econn|dns|socket/.test(message)) return 'networkError';
   if (/missing_required_fields|password_too_short|format|validation/.test(message)) return 'validationError';
   return 'serverError';
 };
@@ -221,8 +242,12 @@ export class WinkGoCloudAuthService {
       };
     }
     const status = service.getStatus();
-    const internalSession = service.readSession();
-    const user = toAuthUser(internalSession.account || status.session?.account);
+    // `getStatus()` verifies and snapshots one session read. Reading the file a
+    // second time here would accept unverified account bytes if it changed
+    // between the validation and identity restore. Use only that verified
+    // snapshot, and fail closed when the integrity result is absent.
+    const sessionIntegrityValid = status.sessionIntegrity?.ok === true;
+    const user = sessionIntegrityValid ? toAuthUser(status.session?.account) : null;
     // WINK GO accounts are ordinary product accounts. A successful account
     // login must not be blocked by the old desktop-license/heartbeat system.
     // Remote-device relay credentials are optional and are synchronized
@@ -231,7 +256,7 @@ export class WinkGoCloudAuthService {
     const edition = resolveWinkGoEditionSnapshot({
       buildEdition: normalizeWinkGoBuildEdition(process.env.WINKGO_EDITION),
       authenticated,
-      entitlements: internalSession.entitlements || status.session?.entitlements,
+      entitlements: sessionIntegrityValid ? status.session?.entitlements : undefined,
       developmentBypass: !app?.isPackaged,
     });
     return {
@@ -258,18 +283,22 @@ export class WinkGoCloudAuthService {
   }
 
   async login(credentials: WinkGoAuthCredentials): Promise<WinkGoAuthResult> {
+    const consent = credentials.source === 'desktop_login' ? policyVersions(credentials) : null;
     const result = await this.getService().remoteLogin({
       username: credentials.username,
       password: credentials.password,
+      ...(consent ? { ...consent, source: 'desktop_login' as const } : {}),
     });
     return this.finishAuthentication(result);
   }
 
   async register(credentials: WinkGoAuthCredentials): Promise<WinkGoAuthResult> {
+    const consent = credentials.source === 'desktop_registration' ? policyVersions(credentials) : null;
     const result = await this.getService().remoteRegister({
       username: credentials.username,
       password: credentials.password,
       phone: credentials.phone,
+      ...(consent ? { ...consent, source: 'desktop_registration' as const } : {}),
     });
     return this.finishAuthentication(result);
   }

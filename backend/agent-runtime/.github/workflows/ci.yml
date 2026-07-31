@@ -1,3 +1,4 @@
+# Modified from aionrs by WINK GO contributors in 2026.
 name: CI
 
 on:
@@ -25,6 +26,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+
+      - name: Reject removed Claude subscriber OAuth
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          test ! -e crates/winkgo-agent-config/src/auth.rs
+          test ! -e crates/winkgo-agent-cli/src/commands/cmd_auth.rs
+          if grep -RniE \
+            'claude\.ai[[:space:]]+subscription|winkgo_agent[[:space:]]+auth[[:space:]]+(login|logout)|claude\.ai/oauth' \
+            README.md docs crates; then
+            echo "Claude subscriber OAuth must not be restored." >&2
+            exit 1
+          fi
 
       - name: Setup vx (installs Rust + just from vx.toml)
         uses: loonghao/vx@v0.9.26

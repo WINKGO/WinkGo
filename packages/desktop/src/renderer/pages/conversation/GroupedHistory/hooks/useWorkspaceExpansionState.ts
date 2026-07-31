@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { useEffect, useState } from 'react';
 
 export const WORKSPACE_EXPANSION_STORAGE_KEY = 'winkgo_workspace_expansion';

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Autocompact: context-threshold-triggered LLM summarization.
 //!
 //! When the best-known context size exceeds the configured threshold, this module

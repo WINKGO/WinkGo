@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2026 AionUi (aionui.com)
@@ -105,17 +106,19 @@ describe('local bridge', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  it('logs rejected providers without emitting a success callback', async () => {
-    const { bridge, getIncoming, outbound } = await loadLoopbackBridge();
-    const error = new Error('provider failed');
+  it('returns rejected providers to the caller instead of leaving invoke pending', async () => {
+    const { bridge, outbound } = await loadLoopbackBridge();
+    const sensitiveMessage = 'provider failed at C:\\Users\\Alice\\secret with sk-live-secret';
+    const error = new Error(sensitiveMessage);
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    bridge.buildProvider<string, void>('test.failure').provider(() => Promise.reject(error));
+    const endpoint = bridge.buildProvider<string, void>('test.failure');
+    endpoint.provider(() => Promise.reject(error));
 
-    getIncoming()?.emit('subscribe-test.failure', { id: 'request-1', data: undefined });
-    await Promise.resolve();
-    await Promise.resolve();
+    await expect(endpoint.invoke()).rejects.toThrow('BRIDGE_PROVIDER_FAILED');
 
     expect(console.error).toHaveBeenCalledWith('[bridge] Provider "test.failure" failed:', error);
-    expect(outbound.some(({ name }) => name === 'subscribe.callback-test.failurerequest-1')).toBe(false);
+    const failure = outbound.find(({ name }) => /^subscribe\.callback-test\.failure.+\.error$/.test(name));
+    expect(failure?.data).toEqual({ code: 'BRIDGE_PROVIDER_FAILED' });
+    expect(JSON.stringify(failure)).not.toContain(sensitiveMessage);
   });
 });

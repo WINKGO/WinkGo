@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # winkgo-backend Phase1 — 完整调研 + 全量开发计划
 
 > **阶段目标**：phase1 = **完整调研 + backend 实现 WinkGo 参考 team 能力的全量开发计划**。

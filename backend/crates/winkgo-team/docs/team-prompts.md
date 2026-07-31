@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Team 提示词体系（WinkGo 参考实现）
 
 > 本文档完整记录 WinkGo main 分支中 team 模块的三层提示词设计。
@@ -86,7 +87,7 @@ Step 10: 分配任务 → team_send_message
 
 | 来源 | 格式 |
 |------|------|
-| Preset Assistant | `显示名 (backend)` 例：`Story Roleplay (gemini)` |
+| Preset Assistant | `显示名 (backend)` 例：`Research Assistant (gemini)` |
 | 通用 CLI Agent | 纯 backend 名 例：`claude` |
 
 ### 关键行为规则

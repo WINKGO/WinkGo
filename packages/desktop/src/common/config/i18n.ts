@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -14,6 +15,29 @@ import i18nConfig from '@/common/config/i18n-config.json';
 export const SUPPORTED_LANGUAGES = i18nConfig.supportedLanguages;
 export const DEFAULT_LANGUAGE = i18nConfig.fallbackLanguage;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+
+const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
+  'zh-CN': '简体中文',
+  'en-US': 'English',
+  'ja-JP': '日本語',
+  'zh-TW': '繁體中文',
+  'ko-KR': '한국어',
+  'tr-TR': 'Türkçe',
+  'ru-RU': 'Русский',
+  'uk-UA': 'Українська',
+  'pt-BR': 'Português (BR)',
+  'de-DE': 'Deutsch',
+  'es-ES': 'Español',
+  'fr-FR': 'Français',
+  'fa-IR': 'فارسی',
+};
+
+export const LANGUAGE_OPTIONS: ReadonlyArray<{ code: SupportedLanguage; label: string }> = SUPPORTED_LANGUAGES.map(
+  (code) => ({
+    code,
+    label: LANGUAGE_LABELS[code],
+  })
+);
 
 /**
  * Normalize a language code to a supported BCP 47 tag.

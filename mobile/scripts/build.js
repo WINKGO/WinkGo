@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Build script that auto-increments buildNumber before running eas build.
  *
@@ -12,6 +13,10 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { prepareMobileLegalAssets } = require('./prepare-legal-assets');
+
+const preparedLegalAssets = prepareMobileLegalAssets();
+console.log(`Prepared ${preparedLegalAssets.length} mobile legal assets`);
 
 // Parse command line arguments
 const args = process.argv.slice(2);

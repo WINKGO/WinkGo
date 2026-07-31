@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # 架构文档
 
 WinkGoCore 是 WinkGo 的后端服务，使用 Rust 构建（Axum + Tokio + SQLite）。

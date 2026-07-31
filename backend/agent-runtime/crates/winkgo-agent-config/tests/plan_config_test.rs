@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Black-box integration tests for PlanConfig (TC-3.2-01 through TC-3.2-03).
 //!
 //! These test the public API of PlanConfig from a config-file consumer's

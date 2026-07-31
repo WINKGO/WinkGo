@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+// Modified from AionUI by WINK GO contributors in 2026.
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { bridge } from '../services/bridge';
 import { setPendingInitialMessage } from '../services/pendingInitialMessages';
@@ -277,7 +278,7 @@ export function ConversationProvider({ children }: { children: React.ReactNode }
         return false;
       }
     },
-    [refresh, activeConversationId, conversations]
+    [refresh, activeConversationId, conversations, setActiveConversationId]
   );
 
   const renameConversation = useCallback(

@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 /// Cached state of a file that the model has seen.
 ///
 /// Stored in an LRU cache keyed by normalized file path.

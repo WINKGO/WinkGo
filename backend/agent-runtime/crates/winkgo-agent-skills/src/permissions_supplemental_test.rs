@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Supplemental tests for Phase 5 permission system.
 // Covers test-plan.md cases not present in the existing impl tests:
 //   TC-P5-21: prefix deny rule matches all skills in a namespace, but not bare names without colon

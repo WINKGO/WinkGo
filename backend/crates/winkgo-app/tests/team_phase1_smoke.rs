@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! D11 — Wave-2 app assembly smoke test.
 //!
 //! Minimum guarantee: after D7/D8/D9/D10 merged, `AppServices` composes into

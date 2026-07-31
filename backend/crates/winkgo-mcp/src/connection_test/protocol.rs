@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 // Protocol types, helpers, and message builders for MCP connection testing.
 //
 // This module implements the minimal JSON-RPC 2.0 subset needed for the

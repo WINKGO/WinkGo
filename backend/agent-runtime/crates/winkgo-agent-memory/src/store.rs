@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Memory file read, write, delete, scan, and manifest formatting.
 //
 // This module handles the file-level operations for memory persistence:

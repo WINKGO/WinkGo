@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // End-to-end integration tests for the memory system (TC-8).
 //
 // These tests exercise the full memory lifecycle across multiple modules,

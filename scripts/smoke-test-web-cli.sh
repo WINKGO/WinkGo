@@ -1,4 +1,5 @@
 #!/bin/bash
+# Modified from AionUI by WINK GO contributors in 2026.
 set -e
 
 TARBALL_PATH=$1
@@ -49,7 +50,7 @@ if [ ! -f "package.json" ]; then
 fi
 echo "✓ Found package.json"
 
-for file in legal/LICENSE legal/NOTICE legal/THIRD_PARTY_NOTICES.md; do
+for file in legal/LICENSE legal/NOTICE legal/THIRD_PARTY_NOTICES.md legal/THIRD_PARTY_DEPENDENCIES.json legal/THIRD_PARTY_LICENSES.txt legal/PRIVACY.md legal/TERMS.md; do
   if [ ! -s "$file" ]; then
     echo "❌ Missing or empty legal document: $file"
     exit 1
@@ -58,7 +59,10 @@ for file in legal/LICENSE legal/NOTICE legal/THIRD_PARTY_NOTICES.md; do
 done
 grep -q "Apache License" legal/LICENSE || { echo "❌ LICENSE is invalid"; exit 1; }
 grep -q "AionUi" legal/NOTICE || { echo "❌ NOTICE is missing upstream attribution"; exit 1; }
-grep -q "WINK GO" legal/THIRD_PARTY_NOTICES.md || { echo "❌ Third-party notices are invalid"; exit 1; }
+grep -q "OfficeCLI" legal/THIRD_PARTY_NOTICES.md || { echo "❌ Third-party notices are missing OfficeCLI attribution"; exit 1; }
+grep -q "Apache License 2.0" legal/THIRD_PARTY_NOTICES.md || { echo "❌ Third-party notices are missing the license marker"; exit 1; }
+grep -q "Privacy Policy" legal/PRIVACY.md || { echo "❌ Privacy policy is invalid"; exit 1; }
+grep -q "Terms of Service" legal/TERMS.md || { echo "❌ Terms of service are invalid"; exit 1; }
 
 # 3. Check executable
 echo ""

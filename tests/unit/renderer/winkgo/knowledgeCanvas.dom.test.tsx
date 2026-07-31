@@ -14,11 +14,14 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
 }));
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
 }));
 
-import KnowledgeCanvasPage, { resolveKnowledgeCanvasUrl } from '@renderer/pages/winkgo/KnowledgeCanvasPage';
+import KnowledgeCanvasPage, {
+  isKnowledgeCanvasBundleEnabled,
+  resolveKnowledgeCanvasUrl,
+} from '@renderer/pages/winkgo/KnowledgeCanvasPage';
 import {
   buildKnowledgeCanvasAnalysisPrompt,
   KNOWLEDGE_CANVAS_BRIDGE_CHANNEL,
@@ -44,13 +47,14 @@ describe('KnowledgeCanvasPage', () => {
     );
   });
 
-  it('renders the embedded canvas and returns to chat', () => {
+  it('fails closed when the reviewed canvas runtime is not part of the public build', () => {
     render(<KnowledgeCanvasPage />);
 
-    const frame = screen.getByTitle('WINK GO 知识画布');
-    expect(frame.getAttribute('src')).toContain('/knowledge-canvas/index.html');
+    expect(isKnowledgeCanvasBundleEnabled()).toBe(false);
+    expect(screen.getByText('guid.knowledgeCanvas.unavailableTitle')).toBeTruthy();
+    expect(screen.queryByTitle('guid.knowledgeCanvas.frameTitle')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: '返回聊天' }));
+    fireEvent.click(screen.getByRole('button', { name: 'guid.knowledgeCanvas.backToChat' }));
     expect(mocks.navigate).toHaveBeenCalledWith('/guid');
   });
 

@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # Development Guide
 
 ## Prerequisites
@@ -15,7 +17,7 @@ On Windows, install the Rust MSVC toolchain. If Rust compilation fails because n
 WINK GO is maintained as one monorepo:
 
 ```text
-wink-go/
+winkgo/
 |-- packages/desktop/   # Electron desktop app
 |-- packages/web-host/  # WebUI host and backend lifecycle
 |-- backend/            # Rust winkgo_core and Agent Runtime
@@ -31,7 +33,7 @@ The desktop development server resolves `winkgo-core` from the `PATH` inherited 
 
 ```bash
 git clone https://github.com/xuweihafeichangniu-lab/wink-go.git
-cd wink-go
+cd winkgo
 bun install
 ```
 
@@ -78,7 +80,8 @@ From the repository root, in a terminal where `winkgo-core` is discoverable:
 bun run start
 ```
 
-During startup, WINK GO launches `winkgo-core` automatically and passes the backend port to the renderer. You do not need to start WINK GO Core in a separate terminal.
+During startup, WINK GO automatically launches the compatibility backend executable `winkgo-core`.
+On Windows, use the Rust MSVC toolchain and install Microsoft C++ Build Tools. After installing or changing toolchains, open a new PowerShell window and rerun the WINK GO Core install command.
 
 ## Updating the Local Backend
 
@@ -107,9 +110,9 @@ which winkgo-core
 where.exe winkgo-core
 ```
 
-If the command fails, add Cargo's binary directory to `PATH` and start WinkGo from a new terminal.
+If the command fails, add Cargo's binary directory to `PATH` and start WINK GO from a new terminal.
 
-### `winkgo-core` Works in a Terminal but WinkGo Still Cannot Find It
+### `winkgo-core` Works in a Terminal but WINK GO Still Cannot Find It
 
 Make sure you start `bun run start` from the same terminal environment that can run `winkgo-core --help`. IDE terminals and GUI-launched shells can inherit a different `PATH`; restart the IDE or launch it from a terminal after updating `PATH`.
 
@@ -205,7 +208,7 @@ Use the Rust MSVC toolchain and install Microsoft C++ Build Tools. After install
 
 ## Multi-Instance Development
 
-When you have two clones of the repository (e.g. `WinkGo` and `WinkGo-refactor`) and need to run both simultaneously, the second instance can be started with:
+When you have two clones of the repository (e.g. `winkgo` and `winkgo-refactor`) and need to run both simultaneously, the second instance can be started with:
 
 ```bash
 bun run start:multi
@@ -214,7 +217,7 @@ bun run start:multi
 This sets `WINKGO_MULTI_INSTANCE=1`, which:
 
 - Skips the Electron single-instance lock
-- Uses a separate userData directory (`WinkGo-Dev-2`) to avoid database and config conflicts
+- Uses a separate legacy-compatible userData directory (`WinkGo-Dev-2`) to avoid database and config conflicts
 - Isolates data/config symlink paths (`~/.winkgo-dev-2`, `~/.winkgo-config-dev-2`)
 - Vite renderer, CDP, and WebUI proxy ports auto-increment to avoid collisions
 
@@ -240,7 +243,7 @@ prek run --from-ref origin/main --to-ref HEAD
 
 ## Build System
 
-WinkGo uses **electron-vite** for fast bundling:
+WINK GO uses **electron-vite** for fast bundling:
 
 - **Main process**: bundled with Vite (ESM)
 - **Renderer process**: bundled with Vite (React + TypeScript)

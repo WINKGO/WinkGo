@@ -75,7 +75,7 @@ describe('WINK GO application paths', () => {
     const proUserData = configureBrandedAppPaths(electronApp);
 
     expect(getAppDisplayName()).toBe(PRO_APP_DISPLAY_NAME);
-    expect(proUserData).toBe(path.join(appDataRoot, PRO_APP_DISPLAY_NAME));
+    expect(proUserData).toBe(path.join(appDataRoot, 'WINK GO Pro'));
     expect(state.appName).toBe(PRO_APP_DISPLAY_NAME);
     expect(existsSync(path.join(legacyUserData, 'auth.json'))).toBe(true);
     expect(existsSync(path.join(proUserData, 'auth.json'))).toBe(false);

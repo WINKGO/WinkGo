@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # 对话 - 模型选择器（父级 + 二级子菜单）
 
 > 本文档聚焦「模型选择器」的下拉交互重构。

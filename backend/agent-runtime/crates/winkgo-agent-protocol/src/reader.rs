@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::mpsc;
 

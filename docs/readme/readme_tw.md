@@ -1,10 +1,11 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # WINK GO
 
 WINK GO 是跨平台 AI Agent 桌面工作空間，統一提供 Agent、檔案、工具、技能、排程任務、WebUI 與多 Agent 協作能力。
 
-## 版本狀態
+## 開放、免費的公益專案
 
-- **免費版 2.1.45：完整開放。** 目前可使用現有 Pro 建置中的全部功能。
-- **Pro：預留版本。** 目前不額外解鎖功能，後續用於獨立版本與授權規劃。
+桌面客戶端現有功能向所有使用者開放。第三方模型、API、雲端中轉、語音或其他外部服務可能依服務商規則收費。
 
-[官網](https://winkgo.top) · [程式碼倉庫](https://github.com/xuweihafeichangniu-lab/wink-go) · [下載](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [完整 README](../../readme.md)
+[專案首頁](https://github.com/xuweihafeichangniu-lab/wink-go) · [下載](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [完整 README](../../readme.md)

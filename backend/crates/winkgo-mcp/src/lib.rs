@@ -1,4 +1,5 @@
 #![warn(clippy::disallowed_types)]
+// Modified from AionCore by WINK GO contributors in 2026.
 
 //! MCP server configuration, multi-agent sync adapters, OAuth, and connection testing.
 pub mod adapter;

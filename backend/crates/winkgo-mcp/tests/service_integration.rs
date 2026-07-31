@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for McpConfigService with real SQLite.
 //!
 //! Tests from test-plan §1 (CRUD) at the service layer.

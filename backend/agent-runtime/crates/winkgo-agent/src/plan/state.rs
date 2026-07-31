@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 /// Runtime state for Plan Mode.
 ///
 /// Tracks whether the agent is currently in plan mode and the tool allow-list

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Extracts a user-facing error message from a CLI subprocess's recent stderr.
 //!
 //! ACP / CLI child processes (codex-acp, claude-acp, codex, …) often emit

@@ -1,4 +1,5 @@
 #![warn(clippy::disallowed_types)]
+// Modified from AionCore by WINK GO contributors in 2026.
 
 //! All HTTP request/response DTOs shared across the API surface.
 mod acp;

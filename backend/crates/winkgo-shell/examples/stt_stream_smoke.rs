@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Manual smoke test for the STT streaming upstream adapters against REAL APIs.
 //! Not committed / not part of CI. Run:
 //!   STT_SMOKE_API_KEY=sk-... STT_SMOKE_MODEL=gpt-4o-mini-transcribe \

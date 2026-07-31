@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * prepareHubResources.js
  *
@@ -20,8 +21,8 @@ const HUB_DIR = path.join(PROJECT_ROOT, 'resources', 'hub');
 
 const DEFAULT_TAG = 'dist-latest';
 const BASE_URLS = [
-  `https://raw.githubusercontent.com/xuweihafeichangniu-lab/wink-go/${process.env.WINKGO_HUB_TAG || DEFAULT_TAG}/`,
-  `https://cdn.jsdelivr.net/gh/xuweihafeichangniu-lab/wink-go@${process.env.WINKGO_HUB_TAG || DEFAULT_TAG}/`,
+  `https://raw.githubusercontent.com/xuweihafeichangniu-lab/winkgo/${process.env.WINKGO_HUB_TAG || DEFAULT_TAG}/`,
+  `https://cdn.jsdelivr.net/gh/xuweihafeichangniu-lab/winkgo@${process.env.WINKGO_HUB_TAG || DEFAULT_TAG}/`,
 ];
 
 // ---------------------------------------------------------------------------

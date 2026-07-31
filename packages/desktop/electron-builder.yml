@@ -1,3 +1,5 @@
+# Modified from AionUI by WINK GO contributors in 2026.
+# Upstream notice retained from AionUI v2.1.41: Copyright © 2024 AionUi
 appId: com.winkgo.desktop
 productName: WINK GO
 executableName: WINK-GO
@@ -18,6 +20,9 @@ files:
   - out/renderer/**/*
   # Static resources — use explicit directory inclusion to prevent resource loss
   - public/**/*
+  # The experimental Knowledge Canvas runtime is intentionally isolated until
+  # its source and redistribution rights can be independently verified.
+  - '!public/knowledge-canvas/**'
   - package.json
   # Native modules and their runtime dependencies
   - node_modules/better-sqlite3/**/*
@@ -78,6 +83,11 @@ files:
   # Exclude large packages
   - '!**/node_modules/{@img,@emnapi}/**'
   - '!**/node_modules/@img/sharp-*/**'
+  # sharp/libvips are build-time only (installer asset generation). They must
+  # never enter an end-user Electron payload.
+  - '!**/node_modules/sharp/**'
+  - '!**/node_modules/.bun/sharp@*/**'
+  - '!**/node_modules/.bun/@img+sharp-*/**'
   # Exclude JAR files and JNI libraries that cause notarization issues
   - '!**/*.jar'
   - '!**/*.jnilib'
@@ -103,6 +113,9 @@ files:
 extraResources:
   - from: public
     to: .
+    filter:
+      - '**/*'
+      - '!knowledge-canvas/**'
   - from: resources/app.png
     to: app.png
   # License and attribution documents must remain readable outside app.asar
@@ -113,9 +126,27 @@ extraResources:
     to: legal/NOTICE
   - from: THIRD_PARTY_NOTICES.md
     to: legal/THIRD_PARTY_NOTICES.md
+  - from: legal/THIRD_PARTY_DEPENDENCIES.json
+    to: legal/THIRD_PARTY_DEPENDENCIES.json
+  - from: legal/THIRD_PARTY_LICENSES.txt
+    to: legal/THIRD_PARTY_LICENSES.txt
+  - from: PRIVACY.md
+    to: legal/PRIVACY.md
+  - from: TERMS.md
+    to: legal/TERMS.md
   # winkgo_core binary (pre-compiled per platform/arch, ships its own bun runtime)
   - from: resources/bundled-winkgo-core
     to: bundled-winkgo-core
+    filter:
+      - '**/*'
+      # Core uses this only while preparing the managed runtime. It is not a
+      # distributable input and would duplicate the embedded Node payload.
+      - '!**/.prepare-data/**'
+      # Keep npm itself and its licenses, but omit development-only docs,
+      # manual pages, and the empty package-source .npmrc.
+      - '!**/node_modules/npm/docs/**'
+      - '!**/node_modules/npm/man/**'
+      - '!**/node_modules/npm/.npmrc'
   - from: resources/hub
     to: hub
   # Lightweight, opt-in Windows media and notification bridge used by WINK GO's dynamic island.
@@ -123,13 +154,19 @@ extraResources:
     to: winkgo
     filter:
       - '**/*'
+      - '!provider-skills/**'
+      # Built-in Skills remain in source for item-by-item review, but are not
+      # distributed until each one has an explicit rights and safety approval.
+      - '!skills/**'
       - '!**/__pycache__/**'
       - '!**/*.pyc'
-  # Native OLE drop target ported from the original WINK GO/Wry project.
+  # Native OLE drop target adapted from Wry 0.55.1 for WINK GO.
   # Required for WeChat virtual FileContents, which Chromium cannot expose as
   # ordinary filesystem paths.
   - from: packages/desktop/native/winkgo_native_drop.node
     to: native/winkgo_native_drop.node
+  - from: packages/desktop/native/winkgo-native-drop/vendor/wry-0.55.1
+    to: legal/vendor/wry-0.55.1
 win:
   target:
     - nsis

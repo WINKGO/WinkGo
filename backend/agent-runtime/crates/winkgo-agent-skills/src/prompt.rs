@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use unicode_width::UnicodeWidthStr;
 
 use crate::types::{SkillMetadata, SkillSource};

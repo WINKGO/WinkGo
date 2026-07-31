@@ -1,3 +1,5 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # Package OfficeCLI Skill as WinkGo Assistant
 
 Convert an OfficeCLI skill into a fully wired WinkGo assistant preset, or update an existing one.

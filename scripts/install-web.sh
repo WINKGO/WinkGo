@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+# Modified from AionUI by WINK GO contributors in 2026.
 # ============================================================================
 # WinkGo WebUI — One-Click Installation Script
 # ============================================================================
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/xuweihafeichangniu-lab/wink-go/main/scripts/install-web.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/xuweihafeichangniu-lab/winkgo/main/scripts/install-web.sh | bash
 #   # Or specify version:
 #   VERSION=1.0.0 bash install-web.sh
 #   # Or install to custom directory:
@@ -104,7 +105,7 @@ Environment Variables:
 
 Examples:
   # Install latest version
-  curl -fsSL https://raw.githubusercontent.com/xuweihafeichangniu-lab/wink-go/main/scripts/install-web.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/xuweihafeichangniu-lab/winkgo/main/scripts/install-web.sh | bash
 
   # Install specific version
   VERSION=1.0.0 bash install-web.sh
@@ -171,10 +172,10 @@ resolve_version() {
         info "Resolving latest version from GitHub API..."
 
         if command -v curl &>/dev/null; then
-            VERSION=$(curl -fsSL "https://api.github.com/repos/xuweihafeichangniu-lab/wink-go/releases/latest" \
+            VERSION=$(curl -fsSL "https://api.github.com/repos/xuweihafeichangniu-lab/winkgo/releases/latest" \
                 | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')
         elif command -v wget &>/dev/null; then
-            VERSION=$(wget -qO- "https://api.github.com/repos/xuweihafeichangniu-lab/wink-go/releases/latest" \
+            VERSION=$(wget -qO- "https://api.github.com/repos/xuweihafeichangniu-lab/winkgo/releases/latest" \
                 | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')
         else
             die "curl or wget is required to resolve version. Please install curl or wget."

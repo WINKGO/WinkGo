@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Team session MCP stdio connection types.
 //!
 //! These are promoted from `winkgo-team::mcp::bridge` so that downstream

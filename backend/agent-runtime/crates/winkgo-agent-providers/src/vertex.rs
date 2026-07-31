@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Google Vertex AI provider for Claude models.
 // Uses GCP OAuth2 authentication. Response is standard SSE (same as Anthropic).
 

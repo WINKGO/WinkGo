@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
@@ -23,5 +24,12 @@ describe('Windows fast build scripts', () => {
     expect(buildScript).toContain('packageJson.version = debugAutoUpdateCurrentVersion');
     expect(buildScript).toContain('fs.writeFileSync(packageJsonPath, originalPackageJsonText)');
     expect(buildScript).toMatch(/finally\s*{[\s\S]*restorePackageVersionOverride\(\);[\s\S]*}/);
+  });
+
+  it('removes stale WINK GO installers before auditing a new Windows build', () => {
+    expect(buildScript).toContain(
+      'const winkGoInstallerFileRe = /^WINK GO(?:-Pro)?-Setup-.+-(?:x64|arm64|ia32)\\.exe$/i;'
+    );
+    expect(buildScript).toContain('winArtifactFileRe.test(entry.name) || winkGoInstallerFileRe.test(entry.name)');
   });
 });

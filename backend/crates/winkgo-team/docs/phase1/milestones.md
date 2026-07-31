@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Phase1 里程碑
 
 > **原则**：每个里程碑必须有"可观测的证据"（命令输出 / 日志 / 截图 / WS 事件流 / 测试通过日志）才能声明完成。凭代码 review 说"看起来对"不算。

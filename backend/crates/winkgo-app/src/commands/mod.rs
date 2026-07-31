@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Subcommand implementations for the `winkgo_core` binary.
 //!
 //! This file is a façade — module declarations and re-exports only.

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Channel integration E2E tests.
 //!
 //! Covers test-plan §1-5: plugin CRUD, pairing flow, user management,

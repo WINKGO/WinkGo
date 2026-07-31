@@ -55,7 +55,7 @@ const mocks = vi.hoisted(() => ({
   xiaozhiHandler: undefined as ((snapshot: WinkGoXiaozhiSnapshot) => void) | undefined,
 }));
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
 }));
 

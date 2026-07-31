@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 pub mod bundled;
 pub mod conditional;
 pub mod context_modifier;

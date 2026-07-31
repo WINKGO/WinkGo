@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! The backend seam (§C 6.4, frozen): `AgentIo` (narrow process-I/O) +
 //! `BackendAdapter` (the "how to add other agents" entry: 3 responsibilities).
 //!
@@ -156,9 +157,10 @@ pub trait BackendAdapter: Send + Sync {
     /// process's `CommandSpec.env` (on top of the inherited parent env). Empty =
     /// inherit parent env only. The claude direct-CLI path uses this to carry the
     /// cc-switch provider env; the adapter only forwards it, never sources it.
-    /// `cli_program`: the orchestration-resolved bundled-CLI absolute path.
-    /// `None` ⇒ the adapter uses its historical bare command name resolved via
-    /// PATH (byte-identical to pre-bundling). Forwarded only — never sourced here.
+    /// `cli_program`: the absolute path of the user's separately installed
+    /// official CLI, resolved from a validated command override or `$PATH`.
+    /// `None` ⇒ the adapter uses its historical bare command name. Forwarded
+    /// only — never sourced or downloaded here.
     async fn start_turn(
         &self,
         spawner: &dyn Spawner,

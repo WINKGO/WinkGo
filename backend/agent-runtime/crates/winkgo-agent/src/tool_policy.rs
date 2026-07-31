@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use std::collections::BTreeSet;
 
 /// Runtime authorization policy for tools registered with an agent engine.

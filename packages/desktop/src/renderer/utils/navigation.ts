@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -5,7 +6,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { NavigateFunction, NavigateOptions } from 'react-router-dom';
+import type { NavigateFunction, NavigateOptions } from 'react-router';
 
 /**
  * Module-level handle to React Router's `navigate`, registered once by a

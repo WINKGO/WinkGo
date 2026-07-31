@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Black-box integration tests for protocol detection endpoint.
 //!
 //! Uses `wiremock` to mock remote API responses and tests the full

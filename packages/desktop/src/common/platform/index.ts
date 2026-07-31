@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { existsSync, renameSync } from 'fs';
 import path from 'path';
 import type { App } from 'electron';
@@ -10,6 +11,8 @@ let _services: IPlatformServices | null = null;
 export const APP_DISPLAY_NAME = 'WINK GO';
 export const PRO_APP_DISPLAY_NAME = 'WINK GO Pro';
 export const DEFAULT_WORK_DIR_NAME = 'WINK GO';
+const APP_STORAGE_NAME = 'WINK GO';
+const PRO_APP_STORAGE_NAME = 'WINK GO Pro';
 
 export function getAppDisplayName(): string {
   return normalizeWinkGoBuildEdition(process.env.WINKGO_EDITION) === 'pro' ? PRO_APP_DISPLAY_NAME : APP_DISPLAY_NAME;
@@ -23,6 +26,13 @@ export function getDevAppName(): string {
   const isMultiInstance = process.env.WINKGO_MULTI_INSTANCE === '1';
   const baseName = `${getAppDisplayName()}-Dev`;
   return isMultiInstance ? `${baseName}-2` : baseName;
+}
+
+function getStorageAppName(isPackaged: boolean): string {
+  const isPro = normalizeWinkGoBuildEdition(process.env.WINKGO_EDITION) === 'pro';
+  if (isPackaged) return isPro ? PRO_APP_STORAGE_NAME : APP_STORAGE_NAME;
+  const suffix = process.env.WINKGO_MULTI_INSTANCE === '1' ? '-Dev-2' : '-Dev';
+  return `${isPro ? PRO_APP_STORAGE_NAME : APP_STORAGE_NAME}${suffix}`;
 }
 
 function getLegacyAppName(isPackaged: boolean): string {
@@ -54,9 +64,10 @@ export function configureBrandedAppPaths(
   const appDataRoot = path.dirname(currentUserDataPath);
   const buildEdition = normalizeWinkGoBuildEdition(process.env.WINKGO_EDITION);
   const appName = electronApp.isPackaged ? getAppDisplayName() : getDevAppName();
+  const storageAppName = getStorageAppName(electronApp.isPackaged);
   const legacyAppName = getLegacyAppName(electronApp.isPackaged);
   const legacyUserDataPath = path.join(appDataRoot, legacyAppName);
-  const brandedUserDataPath = path.join(appDataRoot, appName);
+  const brandedUserDataPath = path.join(appDataRoot, storageAppName);
 
   // Only the Free edition inherits the historic WinkGo profile. Pro is a
   // separate product and must start with its own login/session directory;

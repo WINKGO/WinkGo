@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -9,7 +10,7 @@ import { dialog, fs } from '@/common/adapter/ipcBridge';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Message, Tooltip } from '@arco-design/web-react';
-import { ArrowCircleLeft, CloseOne, Moon, SettingTwo, SunOne, UploadPicture } from '@icon-park/react';
+import { ArrowCircleLeft, CloseOne, SettingTwo, UploadPicture } from '@icon-park/react';
 import classNames from 'classnames';
 import type { SiderTooltipProps } from '@renderer/utils/ui/siderTooltip';
 import defaultUserAvatar from '@renderer/assets/brand/winkgo-user-avatar-v1.png';
@@ -24,11 +25,9 @@ interface SiderFooterProps {
   isMobile: boolean;
   isSettings: boolean;
   collapsed?: boolean;
-  theme: string;
   siderTooltipProps: SiderTooltipProps;
   onSettingsClick: () => void;
   onSettingsIntent?: () => void;
-  onThemeToggle: () => void;
   user?: SiderUser;
   onLogoutClick?: () => void;
 }
@@ -102,11 +101,9 @@ const SiderFooter: React.FC<SiderFooterProps> = ({
   isMobile,
   isSettings,
   collapsed = false,
-  theme,
   siderTooltipProps,
   onSettingsClick,
   onSettingsIntent,
-  onThemeToggle,
   user,
   onLogoutClick,
 }) => {
@@ -214,9 +211,6 @@ const SiderFooter: React.FC<SiderFooterProps> = ({
       style={{ lineHeight: 0 }}
     />
   );
-  const showThemeToggle = isSettings && !collapsed;
-  const themeTooltip = theme === 'dark' ? t('settings.lightMode') : t('settings.darkMode');
-
   return (
     <div className='shrink-0 sider-footer mt-auto pt-8px pb-8px border-t border-solid border-[var(--color-border-2)] border-l-0 border-r-0 border-b-0'>
       <div className={classNames('flex', collapsed ? 'flex-col gap-2px' : 'items-center gap-2px')}>
@@ -240,27 +234,6 @@ const SiderFooter: React.FC<SiderFooterProps> = ({
             </span>
           </div>
         </Tooltip>
-        {/* Theme toggle — lightweight icon button, only while inside Settings page (not in collapsed mode) */}
-        {showThemeToggle && (
-          <Tooltip {...siderTooltipProps} content={themeTooltip} position='right'>
-            <div
-              onClick={onThemeToggle}
-              className={classNames(
-                'h-32px w-40px shrink-0 flex items-center justify-center cursor-pointer rd-0.5rem transition-colors text-t-secondary hover:bg-fill-2 hover:text-t-primary active:bg-fill-3',
-                isMobile && 'sider-footer-btn-mobile'
-              )}
-              aria-label={themeTooltip}
-            >
-              <span className='w-28px h-28px flex items-center justify-center shrink-0'>
-                {theme === 'dark' ? (
-                  <SunOne theme='outline' size='18' fill='currentColor' className='block leading-none' />
-                ) : (
-                  <Moon theme='outline' size='18' fill='currentColor' className='block leading-none' />
-                )}
-              </span>
-            </div>
-          </Tooltip>
-        )}
         {user && (
           <div ref={userMenuRef} className={classNames(styles.userMenuRoot, collapsed && styles.userMenuRootCollapsed)}>
             {userMenuOpen && (
@@ -276,7 +249,12 @@ const SiderFooter: React.FC<SiderFooterProps> = ({
                   </span>
                   <span className={styles.userMenuIdentity}>
                     <strong title={profile.displayName}>{profile.displayName}</strong>
-                    <small>WINK GO · {user.provider === 'local' || !user.provider ? 'winkgo' : user.provider}</small>
+                    <small>
+                      WINK GO ·{' '}
+                      {user.provider === 'local' || user.provider === 'winkgo' || !user.provider
+                        ? t('common.localAccount')
+                        : user.provider}
+                    </small>
                   </span>
                 </div>
                 {isEditingProfile ? (

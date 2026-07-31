@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 const { Arch } = require('builder-util');
 const fs = require('fs');
 const path = require('path');
@@ -44,6 +45,14 @@ function verifyLegalDocuments(resourcesDir) {
     LICENSE: ['Apache License'],
     NOTICE: ['AionUi', 'WINK GO'],
     'THIRD_PARTY_NOTICES.md': ['AionUi', 'Apache License 2.0'],
+    'THIRD_PARTY_DEPENDENCIES.json': ['"schemaVersion": 1', '"npmPackages"', '"cargoPackages"'],
+    'THIRD_PARTY_LICENSES.txt': ['WINKGO THIRD-PARTY LICENSE TEXT ARCHIVE', 'Packages:'],
+    'vendor/wry-0.55.1/LICENSE-APACHE': ['Apache License', 'Version 2.0'],
+    'vendor/wry-0.55.1/LICENSE-MIT': ['MIT License', 'Tauri Programme'],
+    'vendor/wry-0.55.1/SOURCE.md': ['Wry', 'a5bf203a1c8dbb3583588382538d6521655222a8'],
+    'vendor/wry-0.55.1/MODIFICATIONS.md': ['WINK GO modifications', 'N-API'],
+    'PRIVACY.md': ['Privacy Policy', '1394748660@qq.com'],
+    'TERMS.md': ['Terms of Service', '1394748660@qq.com'],
   };
   const invalid = [];
   for (const [fileName, requiredMarkers] of Object.entries(requiredLegalDocuments)) {
@@ -59,6 +68,57 @@ function verifyLegalDocuments(resourcesDir) {
     throw new Error(`Packaged app has missing or invalid legal document(s): ${invalid.join(', ')}`);
   }
   console.log(`   ✓ Legal documents verified (${Object.keys(requiredLegalDocuments).length} checks)`);
+}
+
+function fileContainsAnyMarker(filePath, markers) {
+  const descriptor = fs.openSync(filePath, 'r');
+  const chunkSize = 1024 * 1024;
+  const maxMarkerLength = Math.max(...markers.map((marker) => marker.length));
+  const buffer = Buffer.alloc(chunkSize);
+  let carry = Buffer.alloc(0);
+  try {
+    while (true) {
+      const bytesRead = fs.readSync(descriptor, buffer, 0, chunkSize, null);
+      if (bytesRead === 0) return false;
+      const combined = Buffer.concat([carry, buffer.subarray(0, bytesRead)]).toString('latin1');
+      if (markers.some((marker) => combined.includes(marker))) return true;
+      carry = Buffer.from(combined.slice(-(maxMarkerLength - 1)), 'latin1');
+    }
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
+function verifyNoRuntimeSharpLibvips(resourcesDir) {
+  const forbiddenPath = /(?:^|[\\/])node_modules[\\/](?:sharp|@img[\\/]sharp-)|libvips(?:-42)?\.(?:dll|so|dylib)$/i;
+  const forbiddenMarkers = [
+    'node_modules/sharp/',
+    'node_modules\\sharp\\',
+    'node_modules/@img/sharp-',
+    'node_modules\\@img\\sharp-',
+    'libvips-42.dll',
+    'libvips.so',
+    'libvips.dylib',
+  ];
+  const pending = [resourcesDir];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const entryPath = path.join(current, entry.name);
+      const relativePath = path.relative(resourcesDir, entryPath);
+      if (forbiddenPath.test(relativePath)) {
+        throw new Error(`Packaged app contains build-only sharp/libvips payload: ${relativePath}`);
+      }
+      if (entry.isDirectory()) {
+        pending.push(entryPath);
+      } else if (entry.isFile() && (entry.name === 'app.asar' || forbiddenPath.test(entry.name))) {
+        if (fileContainsAnyMarker(entryPath, forbiddenMarkers)) {
+          throw new Error(`Packaged app contains build-only sharp/libvips marker: ${relativePath}`);
+        }
+      }
+    }
+  }
+  console.log('   ✓ Build-only sharp/libvips payload is absent');
 }
 
 function pruneOtherBundledRuntimes(resourcesDir, electronPlatformName, targetArch) {
@@ -109,15 +169,19 @@ function pruneNativeBuildIntermediates(moduleRoot, moduleName) {
   }
 
   const binaryMode = fs.statSync(binaryPath).mode;
-  const temporaryBinary = path.join(moduleRoot, `.winkgo-native-${process.pid}-${Date.now()}.node`);
+  const quarantineRoot = fs.mkdtempSync(path.join(path.resolve(process.cwd(), 'out'), '.winkgo-native-build-'));
+  const quarantinedBuild = path.join(quarantineRoot, 'build');
   try {
-    fs.copyFileSync(binaryPath, temporaryBinary);
-    fs.rmSync(buildDir, { recursive: true, force: true });
+    // Moving the compiler tree out of win-unpacked is atomic on the same
+    // volume and remains reliable on Windows hosts where antivirus/file-index
+    // hooks can make recursive deletion appear successful without removing
+    // every project or tlog file.
+    fs.renameSync(buildDir, quarantinedBuild);
     fs.mkdirSync(releaseDir, { recursive: true });
-    fs.copyFileSync(temporaryBinary, binaryPath);
+    fs.copyFileSync(path.join(quarantinedBuild, 'Release', 'better_sqlite3.node'), binaryPath);
     fs.chmodSync(binaryPath, binaryMode);
   } finally {
-    fs.rmSync(temporaryBinary, { force: true });
+    fs.rmSync(quarantineRoot, { recursive: true, force: true });
   }
 
   console.log(`     ✓ Removed ${moduleName} compiler intermediates; kept only the runtime binary`);
@@ -160,6 +224,7 @@ module.exports = async function afterPack(context) {
 
     verifyBundledResources(resourcesDir, electronPlatformName, targetArch);
     verifyLegalDocuments(resourcesDir);
+    verifyNoRuntimeSharpLibvips(resourcesDir);
     // Keep every capability for the target machine, but do not make an x64
     // customer unpack the unused ARM64 runtime (or vice versa).
     pruneOtherBundledRuntimes(resourcesDir, electronPlatformName, targetArch);

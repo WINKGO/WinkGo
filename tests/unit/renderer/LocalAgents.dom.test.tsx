@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -20,8 +21,8 @@ vi.mock('react-i18next', () => ({
 }));
 
 const navigate = vi.fn();
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+vi.mock('react-router', async () => {
+  const actual = await vi.importActual<typeof import('react-router')>('react-router');
   return {
     ...actual,
     useNavigate: () => navigate,
@@ -97,7 +98,7 @@ import LocalAgents from '@renderer/pages/settings/AgentSettings/LocalAgents';
 import AgentModalContent from '@renderer/components/settings/SettingsModal/contents/AgentModalContent';
 import { SettingsViewModeProvider } from '@renderer/components/settings/SettingsModal/settingsViewContext';
 import { ipcBridge } from '@/common';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { getBoundAssistants } from '@renderer/pages/settings/AgentSettings/BoundAssistants';
 import type { Assistant } from '@/common/types/agent/assistantTypes';
 
@@ -294,7 +295,22 @@ describe('LocalAgents', () => {
 
     fireEvent.click(screen.getByText('settings.agentManagement.localAgentsSetupLink'));
 
-    expect(openExternalUrl).toHaveBeenCalledWith('https://github.com/xuweihafeichangniu-lab/wink-go/wiki/ACP-Setup');
+    expect(openExternalUrl).toHaveBeenCalledWith(
+      'https://github.com/xuweihafeichangniu-lab/wink-go#agent-接入与安装'
+    );
+  });
+
+  it('opens the matching official setup page from each Agent info control', () => {
+    useManagedAgents.mockReturnValue({
+      agents: makeAgents(),
+      revalidate: vi.fn(),
+      refreshCatalog: vi.fn(),
+    });
+
+    render(<LocalAgents />);
+    fireEvent.click(screen.getByTestId('agent-row-setup-acp-claude'));
+
+    expect(openExternalUrl).toHaveBeenCalledWith('https://code.claude.com/docs/en/setup');
   });
 
   it('binds assistants to managed agents by agent_id instead of runtime backend', () => {

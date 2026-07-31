@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for AcpAgentManager.
 //!
 //! **Status: TEMPORARILY IGNORED** — These tests use mock shell scripts that

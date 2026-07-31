@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Acceptance tests for Plan Mode tool filtering and prompt injection (Task 6.4).
 //
 // These tests are LOCAL (no LLM required) and verify that:

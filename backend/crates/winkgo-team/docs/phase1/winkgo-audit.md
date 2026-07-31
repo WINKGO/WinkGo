@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # WinkGo Team 模块后端能力审计（Phase 1）
 
 > **目的**：对照 WinkGo 前端 main 分支（`/Volumes/Macintosh HD/Users/testuser/project/WinkGo/`，commit `ed8a6bcd3`），列出 winkgo-backend 后端需要复刻的所有 team 能力。

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -237,7 +238,6 @@ function parseDiffStats(unifiedDiff: string): { fileName: string; insertions: nu
 }
 
 export function DiffBlock({ content }: { content: any }) {
-  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const surface = useThemeColor({}, 'surface');
   const border = useThemeColor({}, 'border');

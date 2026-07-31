@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -12,6 +13,7 @@
 
 import { ipcMain, app, BrowserWindow } from 'electron';
 import * as path from 'path';
+import { isTrustedIpcSender } from '@/common/platform/electronSecurity';
 import { collectFeedbackLogAttachment } from '../feedback/logs';
 
 type RendererFeedbackLogPayload = {
@@ -21,21 +23,34 @@ type RendererFeedbackLogPayload = {
 };
 
 function normalizeRendererFeedbackLogPayload(payload: RendererFeedbackLogPayload): {
-  details?: unknown;
+  details?: string;
   level: 'info' | 'warn' | 'error';
   message: string;
 } {
   const level = payload.level === 'warn' || payload.level === 'error' ? payload.level : 'info';
-  const message = typeof payload.message === 'string' && payload.message.trim() ? payload.message : 'feedback log';
+  const message =
+    typeof payload.message === 'string' && payload.message.trim()
+      ? payload.message.trim().slice(0, 4096)
+      : 'feedback log';
+  let details: string | undefined;
+  if (payload.details !== undefined) {
+    try {
+      const serialized = JSON.stringify(payload.details);
+      if (serialized && Buffer.byteLength(serialized, 'utf8') <= 64 * 1024) details = serialized;
+    } catch {
+      details = '[unserializable details]';
+    }
+  }
   return {
     level,
     message,
-    details: payload.details,
+    details,
   };
 }
 
-ipcMain.on('feedback:renderer-log', (_event, payload: RendererFeedbackLogPayload) => {
-  const log = normalizeRendererFeedbackLogPayload(payload ?? {});
+ipcMain.on('feedback:renderer-log', (event, payload: RendererFeedbackLogPayload) => {
+  if (!isTrustedIpcSender(event, ['main'])) return;
+  const log = normalizeRendererFeedbackLogPayload(payload && typeof payload === 'object' ? payload : {});
   const args = [`[FeedbackReport:renderer] ${log.message}`];
   if (log.details !== undefined) {
     args.push(log.details as string);
@@ -50,7 +65,8 @@ ipcMain.on('feedback:renderer-log', (_event, payload: RendererFeedbackLogPayload
   }
 });
 
-ipcMain.handle('feedback:collect-logs', async () => {
+ipcMain.handle('feedback:collect-logs', async (event) => {
+  if (!isTrustedIpcSender(event, ['main'])) throw new Error('IPC_FORBIDDEN');
   try {
     let logsDir: string;
     try {
@@ -75,6 +91,7 @@ ipcMain.handle('feedback:collect-logs', async () => {
 });
 
 ipcMain.handle('feedback:capture-screenshot', async (event) => {
+  if (!isTrustedIpcSender(event, ['main'])) throw new Error('IPC_FORBIDDEN');
   try {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win || win.isDestroyed()) {

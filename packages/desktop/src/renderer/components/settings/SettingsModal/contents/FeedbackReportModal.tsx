@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -15,17 +16,7 @@ import { Info } from '@icon-park/react';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { RefTextAreaType } from '@arco-design/web-react/es/Input/textarea';
 import { useTranslation } from 'react-i18next';
-import {
-  type FeedbackAttachment,
-  type FeedbackEventExtra,
-  type FeedbackEventTags,
-  submitFeedbackReport,
-} from '@/renderer/services/feedback/submitFeedbackReport';
-import type {
-  FeedbackDiagnosticsExplicitContext,
-  FeedbackDiagnosticsProfile,
-} from '@/common/types/feedbackDiagnostics';
-import { captureFeedbackRoute } from '@/renderer/services/feedback/routeContext';
+import { type FeedbackAttachment, submitFeedbackReport } from '@/renderer/services/feedback/submitFeedbackReport';
 
 export type { FeedbackEventExtra, FeedbackEventTags } from '@/renderer/services/feedback/submitFeedbackReport';
 
@@ -57,13 +48,6 @@ type FeedbackReportModalProps = {
   onCancel: () => void;
   defaultModule?: string;
   prefilledScreenshots?: PrefilledScreenshot[];
-  feedbackTags?: FeedbackEventTags;
-  feedbackExtra?: FeedbackEventExtra;
-  feedbackDiagnosticsContext?: {
-    explicitContext?: FeedbackDiagnosticsExplicitContext;
-    explicitProfiles?: FeedbackDiagnosticsProfile[];
-    routeAtOpen?: string;
-  };
 };
 
 const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({
@@ -71,9 +55,6 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({
   onCancel,
   defaultModule,
   prefilledScreenshots,
-  feedbackTags,
-  feedbackExtra,
-  feedbackDiagnosticsContext,
 }) => {
   const { t } = useTranslation();
   const talkToButler = useTalkToButler();
@@ -164,19 +145,13 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({
 
       await submitFeedbackReport({
         attachments,
-        collectDbDiagnostics: {
-          explicitContext: feedbackDiagnosticsContext?.explicitContext,
-          explicitProfiles: feedbackDiagnosticsContext?.explicitProfiles,
-          routeAtOpen: feedbackDiagnosticsContext?.routeAtOpen,
-          routeAtSubmit: captureFeedbackRoute(),
-          selectedModule: module,
-        },
-        collectLogs: true,
+        // Description and user-selected screenshots are the complete upload
+        // preview. Local logs and database diagnostics are never attached
+        // implicitly.
+        collectLogs: false,
         description,
-        extra: feedbackExtra,
         module,
         moduleLabel: t(selectedModule?.i18nKey ?? 'settings.bugReportModuleOther'),
-        tags: feedbackTags,
       });
 
       Message.success(t('settings.bugReportSuccess'));
@@ -187,18 +162,7 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({
     } finally {
       setSubmitting(false);
     }
-  }, [
-    module,
-    description,
-    screenshots,
-    t,
-    onCancel,
-    resetForm,
-    selectedModule,
-    feedbackExtra,
-    feedbackTags,
-    feedbackDiagnosticsContext,
-  ]);
+  }, [module, description, screenshots, t, onCancel, resetForm, selectedModule]);
 
   // "Solve via chat": hand the report to the WinkGo Butler for on-the-spot
   // diagnosis instead of submitting to the team. The typed description + module

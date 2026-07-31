@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { startWebHost, startStaticServer } from '@winkgo/web-host';
 import type { WebHostHandle, StaticServerHandle } from '@winkgo/web-host';
 import { setTimeout as delay } from 'node:timers/promises';

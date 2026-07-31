@@ -9,6 +9,8 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import * as path from 'path';
 import { initMainAdapterWithWindow } from '@/common/adapter/main';
+import { isTrustedIpcSender, resolveTrustedDevServerUrl } from '@/common/platform/electronSecurity';
+import { registerTrustedWindowSecurity } from '@process/startup/electronSecurity';
 
 const ISLAND_TOP_MARGIN = 10;
 const COLLAPSED_WIDTH = 250;
@@ -148,6 +150,28 @@ const normalizedSize = ({ width, height }: DesktopIslandSize): DesktopIslandSize
   height: clampInteger(height, MIN_HEIGHT, MAX_HEIGHT),
 });
 
+const isDesktopIslandSize = (value: unknown): value is DesktopIslandSize => {
+  if (!value || typeof value !== 'object') return false;
+  const size = value as Partial<DesktopIslandSize>;
+  return (
+    typeof size.width === 'number' &&
+    Number.isFinite(size.width) &&
+    typeof size.height === 'number' &&
+    Number.isFinite(size.height)
+  );
+};
+
+const isDesktopIslandSettings = (value: unknown): value is DesktopIslandSettings => {
+  if (!value || typeof value !== 'object') return false;
+  const settings = value as Partial<DesktopIslandSettings>;
+  return (
+    typeof settings.autoHideFullscreen === 'boolean' &&
+    typeof settings.opacity === 'number' &&
+    Number.isFinite(settings.opacity) &&
+    typeof settings.visible === 'boolean'
+  );
+};
+
 const centeredBounds = ({ width, height }: DesktopIslandSize): Electron.Rectangle => {
   const cursorPoint = screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(cursorPoint) || screen.getPrimaryDisplay();
@@ -280,20 +304,41 @@ const registerHandlers = (): void => {
   handlersRegistered = true;
 
   ipcMain.handle('winkgo-desktop-island:set-size', (event, size: DesktopIslandSize) => {
-    if (!islandWindow || islandWindow.isDestroyed() || event.sender.id !== islandWindow.webContents.id) return false;
+    if (
+      !isTrustedIpcSender(event, ['island']) ||
+      !isDesktopIslandSize(size) ||
+      !islandWindow ||
+      islandWindow.isDestroyed() ||
+      event.sender.id !== islandWindow.webContents.id
+    ) {
+      return false;
+    }
     resizeIsland(size);
     return true;
   });
   ipcMain.handle('winkgo-desktop-island:ready', (event) => {
-    if (!islandWindow || islandWindow.isDestroyed() || event.sender.id !== islandWindow.webContents.id) return false;
+    if (
+      !isTrustedIpcSender(event, ['island']) ||
+      !islandWindow ||
+      islandWindow.isDestroyed() ||
+      event.sender.id !== islandWindow.webContents.id
+    ) {
+      return false;
+    }
     islandWindow.setOpacity(islandOpacity / 100);
     if (islandVisible) islandWindow.showInactive();
     return true;
   });
-  ipcMain.handle('winkgo-desktop-island:apply-settings', (_event, settings: DesktopIslandSettings) =>
-    applyIslandSettings(settings)
-  );
-  ipcMain.handle('winkgo-desktop-island:navigate-main', (_event, route: string) => showMainWindowAtRoute(route));
+  ipcMain.handle('winkgo-desktop-island:apply-settings', (event, settings: DesktopIslandSettings) => {
+    if (!isTrustedIpcSender(event, ['main', 'island']) || !isDesktopIslandSettings(settings)) return false;
+    return applyIslandSettings(settings);
+  });
+  ipcMain.handle('winkgo-desktop-island:navigate-main', (event, route: string) => {
+    if (!isTrustedIpcSender(event, ['main', 'island']) || typeof route !== 'string' || route.length > 128) {
+      return false;
+    }
+    return showMainWindowAtRoute(route);
+  });
 };
 
 const registerDisplayListeners = (): void => {
@@ -305,7 +350,8 @@ const registerDisplayListeners = (): void => {
 };
 
 export const createDesktopIslandWindow = (options: DesktopIslandWindowOptions): BrowserWindow => {
-  currentOptions = options;
+  const trustedRendererUrl = resolveTrustedDevServerUrl(options.rendererUrl);
+  currentOptions = { ...options, rendererUrl: trustedRendererUrl ?? undefined };
   registerHandlers();
   registerDisplayListeners();
 
@@ -336,8 +382,21 @@ export const createDesktopIslandWindow = (options: DesktopIslandWindowOptions): 
     transparent: true,
     type: process.platform === 'darwin' ? 'panel' : 'toolbar',
     webPreferences: {
+      allowRunningInsecureContent: false,
+      contextIsolation: true,
+      navigateOnDragDrop: false,
+      nodeIntegration: false,
       preload: path.join(__dirname, '../preload/index.js'),
+      safeDialogs: true,
+      sandbox: true,
+      webSecurity: true,
+      webviewTag: false,
     },
+  });
+  registerTrustedWindowSecurity(islandWindow, {
+    role: 'island',
+    productionEntryFile: options.fallbackFile,
+    devServerUrl: trustedRendererUrl,
   });
 
   islandWindow.on('page-title-updated', (event) => {
@@ -362,7 +421,7 @@ export const createDesktopIslandWindow = (options: DesktopIslandWindowOptions): 
     scheduleNativeDropTargetInstall(islandWindow);
   });
 
-  const rendererUrl = options.rendererUrl;
+  const rendererUrl = trustedRendererUrl;
   if (!process.env.WINKGO_E2E_TEST && !islandWindow.isDestroyed()) {
     islandWindow.webContents.on('before-input-event', (_event, input) => {
       if (input.key === 'F12') _event.preventDefault();
@@ -373,7 +432,7 @@ export const createDesktopIslandWindow = (options: DesktopIslandWindowOptions): 
     throw new Error('Failed to register WINK GO desktop island window');
   }
 
-  if (!process.env.ELECTRON_RENDERER_URL || !rendererUrl) {
+  if (!rendererUrl) {
     void islandWindow.loadFile(options.fallbackFile, { hash: '/desktop-island' });
   } else {
     void islandWindow.loadURL(`${rendererUrl.replace(/\/$/, '')}/#/desktop-island`).catch((error) => {

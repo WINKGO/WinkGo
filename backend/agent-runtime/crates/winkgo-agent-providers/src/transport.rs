@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use futures::StreamExt;
 use reqwest::ResponseBuilderExt;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};

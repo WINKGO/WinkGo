@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Black-box integration tests for compact types (TC-2.2-04 through TC-2.2-06).
 //!
 //! These test Message.timestamp serialization and CompactMetadata roundtrip

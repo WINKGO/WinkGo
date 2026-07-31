@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -13,7 +14,18 @@ if ((window as { electronAPI?: unknown }).electronAPI) {
   import('@sentry/electron/renderer')
     .then((Sentry) =>
       Sentry.init({
+        // Manual feedback uses captureEvent directly. Automatic browser error,
+        // session, breadcrumb and performance integrations stay disabled.
+        defaultIntegrations: [],
+        sendDefaultPii: false,
+        tracesSampleRate: 0,
         beforeSend(event) {
+          const isUserInitiatedFeedback =
+            event.tags?.type === 'user-feedback' ||
+            event.tags?.['winkgo.installation_integrity.user_report'] === 'true';
+          if (!isUserInitiatedFeedback) {
+            return null;
+          }
           if (!(window as { __backendStartupFailed?: boolean }).__backendStartupFailed) {
             return event;
           }

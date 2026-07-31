@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! End-to-end tests for the `GET /api/stt/stream` WebSocket endpoint.
 //!
 //! Exercises the full app stack: auth middleware on the upgrade request,

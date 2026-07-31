@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! 007 §3 / §9.12: the orchestrator fold loop — the ONE place `step()` is
 //! called (preserving I9). It drives a `SessionBackend`'s `events()` stream:
 //! routes each `SessionEnvelope` by `session_id` to a per-session FSM, folds it

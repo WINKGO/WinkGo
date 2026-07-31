@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use serde::{Deserialize, Serialize};
 
 // Re-export EffortLevel from winkgo-agent-types (single source of truth)

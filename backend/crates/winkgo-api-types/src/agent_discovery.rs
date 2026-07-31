@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Unified agent metadata surfaced to the frontend.
 //!
 //! A single type replaces the previous split of `DetectedAgent` (API

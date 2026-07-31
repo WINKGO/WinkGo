@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 param(
   [string[]]$Versions = @(),
   [string]$SentryDsnFile = '',
@@ -53,8 +54,8 @@ foreach ($version in $buildVersions) {
       throw "build $version failed with exit code $LASTEXITCODE"
     }
 
-    $source = Join-Path $repoRoot "out\WinkGo-$version-win-x64.exe"
-    $target = Join-Path $OutputDir "WinkGo-$version-win-x64.exe"
+    $source = Join-Path $repoRoot "out\WINK-GO-Free-Setup-$version-x64.exe"
+    $target = Join-Path $OutputDir "WINK-GO-Free-Setup-$version-x64.exe"
     if (-not (Test-Path -LiteralPath $source)) {
       throw "Expected artifact was not produced: $source"
     }

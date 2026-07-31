@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Built-in assistant registry — embeds the manifest + rule/avatar
 //! assets into the binary via `include_dir`, with an optional filesystem
 //! fallback for E2E tests.
@@ -448,24 +449,25 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Avatar asset — emoji vs file
+    // Avatar assets
     // -----------------------------------------------------------------------
 
     #[test]
-    fn avatar_asset_is_none_for_inline_emoji_avatar() {
+    fn embedded_assistants_use_default_avatar_without_unregistered_bitmaps() {
         let reg = BuiltinAssistantRegistry::load_embedded();
-        // word-form-creator still ships with an inline emoji avatar.
-        assert!(reg.avatar_asset("word-form-creator").is_none());
-    }
+        assert!(!reg.has("moltbook"));
 
-    #[test]
-    fn embedded_avatar_asset_returns_bytes_and_extension_for_shipped_file_avatar() {
-        let reg = BuiltinAssistantRegistry::load_embedded();
-        let asset = reg
-            .avatar_asset("word-creator")
-            .expect("shipped word-creator avatar should resolve from the embedded bundle");
-        assert!(!asset.bytes.is_empty());
-        assert_eq!(asset.extension.as_deref(), Some("jpg"));
+        for assistant in reg.all() {
+            assert!(
+                assistant.avatar.is_none(),
+                "official assistant {} must use the UI default avatar",
+                assistant.id
+            );
+            assert!(reg.avatar_asset(&assistant.id).is_none());
+        }
+
+        let design_studio = reg.get("ui-ux-pro-max").expect("UI/UX assistant");
+        assert_eq!(design_studio.name, "UI/UX Design Studio");
     }
 
     #[test]

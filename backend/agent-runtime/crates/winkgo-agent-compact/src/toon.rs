@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 pub fn toon_encode_array(value: &serde_json::Value) -> Option<String> {
     let arr = value.as_array()?;
     if arr.is_empty() {

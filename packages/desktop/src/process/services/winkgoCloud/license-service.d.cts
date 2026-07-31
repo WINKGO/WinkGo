@@ -32,6 +32,14 @@ type LegacyLicenseStatus = {
   usable: boolean;
   degraded?: boolean;
   warning?: string;
+  sessionIntegrity: {
+    ok: boolean;
+    sealed?: boolean;
+    empty?: boolean;
+    legacy?: boolean;
+    serverSigned?: boolean;
+    reason?: string;
+  };
   session?: {
     account?: LegacyLicenseAccount | null;
     entitlements?: Record<string, boolean>;
@@ -43,9 +51,22 @@ type LegacyLicenseService = {
   getStatus(): LegacyLicenseStatus;
   readSession(): LegacyLicenseSession;
   remoteHeartbeat(): Promise<LegacyLicenseResult>;
-  remoteLogin(input: { username: string; password: string }): Promise<LegacyLicenseResult>;
+  remoteLogin(input: {
+    username: string;
+    password: string;
+    privacyVersion?: string;
+    termsVersion?: string;
+    source?: 'desktop_login';
+  }): Promise<LegacyLicenseResult>;
   remoteLogout(): Promise<LegacyLicenseResult>;
-  remoteRegister(input: { username: string; password: string; phone?: string }): Promise<LegacyLicenseResult>;
+  remoteRegister(input: {
+    username: string;
+    password: string;
+    phone?: string;
+    privacyVersion?: string;
+    termsVersion?: string;
+    source?: 'desktop_registration';
+  }): Promise<LegacyLicenseResult>;
 };
 
 type LegacyLicenseModule = {

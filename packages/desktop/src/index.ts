@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -26,8 +27,10 @@ import { assertStartupArchitectureCompatible } from './process/startup/architect
 import { classifyBackendStartupFailure } from './process/startup/backendStartupFailure';
 import { installQuitCleanup } from './process/startup/quitCleanup';
 import { shouldRegisterBackendStartup } from './process/startup/singleInstanceGating';
+import { installElectronSecurityPolicy, registerTrustedWindowSecurity } from './process/startup/electronSecurity';
 import { ProcessConfig } from './process/utils/initStorage';
 import type { BackendStartupFailureInfo } from './common/types/platform/electron';
+import { isTrustedIpcSender, resolveTrustedDevServerUrl } from './common/platform/electronSecurity';
 import { registerWindowMaximizeListeners } from '@process/bridge';
 import { BackendLifecycleManager } from '@winkgo/web-host';
 import { resolveBinaryPath } from '@process/backend';
@@ -77,6 +80,8 @@ import { createDesktopIslandWindow, destroyDesktopIslandWindow } from './process
 import { readCloseToTraySetting } from './process/utils/closeToTraySetting';
 // @ts-expect-error - electron-squirrel-startup doesn't have types
 import electronSquirrelStartup from 'electron-squirrel-startup';
+
+installElectronSecurityPolicy(app);
 
 // ============ Single Instance Lock ============
 // Acquire lock early so the second instance quits before doing unnecessary work.
@@ -213,23 +218,44 @@ let rendererInitialLanguage: string | null = null;
 let backendMigrationsScheduled = false;
 let ensureAdminUserPromise: Promise<void> | null = null;
 
+const MAIN_PRELOAD_ROLES = ['main', 'island'] as const;
+
 ipcMain.on('get-backend-port', (event) => {
+  if (!isTrustedIpcSender(event, MAIN_PRELOAD_ROLES)) {
+    event.returnValue = 0;
+    return;
+  }
   event.returnValue = backendManager.port;
 });
 
 ipcMain.on('get-initial-language', (event) => {
+  if (!isTrustedIpcSender(event, MAIN_PRELOAD_ROLES)) {
+    event.returnValue = null;
+    return;
+  }
   event.returnValue = rendererInitialLanguage;
 });
 
 ipcMain.on('get-backend-startup-failed', (event) => {
+  if (!isTrustedIpcSender(event, MAIN_PRELOAD_ROLES)) {
+    event.returnValue = false;
+    return;
+  }
   event.returnValue = backendStartupFailed;
 });
 
 ipcMain.on('get-backend-startup-failure', (event) => {
+  if (!isTrustedIpcSender(event, MAIN_PRELOAD_ROLES)) {
+    event.returnValue = null;
+    return;
+  }
   event.returnValue = backendStartupFailureInfo;
 });
 
-ipcMain.handle('backend:recover-corrupted-database', async () => {
+ipcMain.handle('backend:recover-corrupted-database', async (event) => {
+  if (!isTrustedIpcSender(event, ['main'])) {
+    throw new Error('IPC_FORBIDDEN');
+  }
   const { recoverCorruptedDatabaseAfterUserConfirmation } = await import('./process/startup/recoverCorruptedDatabase');
 
   await recoverCorruptedDatabaseAfterUserConfirmation({
@@ -413,6 +439,11 @@ function applyDebugBackendStartupFailure(failure: BackendStartupFailureInfo): vo
 const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): void => {
   console.log('[WinkGo] Creating main window...');
   const { x: windowX, y: windowY, width: windowWidth, height: windowHeight } = resolveInitialBounds();
+  const rendererUrl = app.isPackaged ? null : resolveTrustedDevServerUrl(process.env['ELECTRON_RENDERER_URL']);
+  const fallbackFile = path.join(__dirname, '../renderer/index.html');
+  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL'] && !rendererUrl) {
+    console.warn('[WinkGo] Ignoring untrusted ELECTRON_RENDERER_URL; using the packaged renderer');
+  }
 
   // Get app icon for development mode (Windows/Linux need icon in BrowserWindow)
   // In production, icons are set via forge.config.ts packagerConfig
@@ -456,9 +487,21 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
         }
       : { frame: false }),
     webPreferences: {
+      allowRunningInsecureContent: false,
+      contextIsolation: true,
+      navigateOnDragDrop: false,
+      nodeIntegration: false,
       preload: path.join(__dirname, '../preload/index.js'),
+      safeDialogs: true,
+      sandbox: true,
+      webSecurity: true,
       webviewTag: true, // 启用 webview 标签用于 HTML 预览 / Enable webview tag for HTML preview
     },
+  });
+  registerTrustedWindowSecurity(mainWindow, {
+    role: 'main',
+    productionEntryFile: fallbackFile,
+    devServerUrl: rendererUrl,
   });
   console.log(`[WinkGo] Main window created (id=${mainWindow.id})`);
 
@@ -527,11 +570,8 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
     console.log('[WinkGo] Auto-updater disabled via env/CI guard');
   }
 
-  // Load the renderer: dev server URL in development, built HTML file in production
-  const rendererUrl = process.env['ELECTRON_RENDERER_URL'];
-  const fallbackFile = path.join(__dirname, '../renderer/index.html');
-
-  if (!app.isPackaged && rendererUrl) {
+  // Load the renderer: trusted loopback dev server in development, built HTML file otherwise.
+  if (rendererUrl) {
     console.log(`[WinkGo] Loading renderer URL: ${rendererUrl}`);
     mainWindow.loadURL(rendererUrl).catch((error) => {
       console.error('[WinkGo] loadURL failed, falling back to file:', error.message || error);
@@ -548,7 +588,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
 
   if (!isE2ETestMode) {
     createDesktopIslandWindow({
-      rendererUrl,
+      rendererUrl: rendererUrl ?? undefined,
       fallbackFile,
       getMainWindow: () => mainWindow,
     });
@@ -567,7 +607,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
     if (!mainWindow.isDestroyed()) {
       console.log('[WinkGo] Attempting to recover from renderer crash by reloading...');
 
-      if (!app.isPackaged && rendererUrl) {
+      if (rendererUrl) {
         mainWindow.loadURL(rendererUrl).catch((error) => {
           console.error('[WinkGo] Recovery loadURL failed:', error.message || error);
         });

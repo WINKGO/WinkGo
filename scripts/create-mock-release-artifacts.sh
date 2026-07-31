@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Modified from AionUI by WINK GO contributors in 2026.
 
 set -euo pipefail
 

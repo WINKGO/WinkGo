@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Top-level `ProtocolCommand` dispatch for the JSON stream main loop.
 //!
 //! Handles every command except `Message` (which needs the inner

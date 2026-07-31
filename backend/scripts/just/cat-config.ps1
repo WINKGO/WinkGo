@@ -1,3 +1,4 @@
+# Modified from AionCore by WINK GO contributors in 2026.
 $ErrorActionPreference = "Stop"
 
 $configFile = if ([string]::IsNullOrWhiteSpace($env:WINKGO_CONFIG_DEV_FILE)) {

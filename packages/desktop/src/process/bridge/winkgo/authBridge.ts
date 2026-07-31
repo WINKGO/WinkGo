@@ -6,7 +6,7 @@
 
 import { ipcBridge } from '@/common';
 import { winkGoCloudAuthService } from '@process/services/WinkGoCloudAuthService';
-import { clearWinkGoRemoteAuthorization, startWinkGoRemoteGateway } from '@process/services/WinkGoXiaozhiService';
+import { clearWinkGoRemoteAuthorization } from '@process/services/WinkGoXiaozhiService';
 
 export const authenticateAndSyncRemoteGateway = async (
   authenticate: () => Promise<ipcBridge.WinkGoAuthResult>
@@ -14,20 +14,16 @@ export const authenticateAndSyncRemoteGateway = async (
   const result = await authenticate();
   if (!result.success) return result;
 
-  // The current public Free launch includes the complete product experience.
-  // Keep this capability check because it becomes the enforcement point again
-  // when the future paid policy disables managed cloud relay for Free accounts.
+  // Keep this capability check for deployments where managed cloud relay is
+  // disabled by policy.
   if (!winkGoCloudAuthService.hasCapability('remote.desktop')) {
     await clearWinkGoRemoteAuthorization().catch((): undefined => undefined);
     return result;
   }
 
-  // Remote-device relay setup is optional. Do not keep the login screen
-  // waiting for a WebSocket authorization attempt that can take several
-  // seconds on a slow or unavailable network.
-  void startWinkGoRemoteGateway().catch((error) => {
-    console.warn('[WINK GO Auth] Remote gateway credentials are not ready yet', error);
-  });
+  // Authentication never opts a user into the optional cloud relay.
+  // The gateway is started only after the user explicitly enables and saves
+  // the relay setting (or on a later startup when that saved opt-in exists).
   return result;
 };
 

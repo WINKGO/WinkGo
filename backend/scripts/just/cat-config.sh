@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Modified from AionCore by WINK GO contributors in 2026.
 set -euo pipefail
 
 config_file="${WINKGO_CONFIG_DEV_FILE:-$HOME/.winkgo-config-dev/winkgo-config.txt}"

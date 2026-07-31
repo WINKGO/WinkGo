@@ -1,3 +1,4 @@
+<!-- Modified from aionrs by WINK GO contributors in 2026. -->
 # Core Concepts
 
 This document defines the runtime units used by winkgo_agent. These terms matter

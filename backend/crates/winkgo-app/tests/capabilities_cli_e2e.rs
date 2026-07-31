@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! E2E coverage for the top-level agent-facing `winkgo_core capabilities` index.
 
 use tokio::process::Command;

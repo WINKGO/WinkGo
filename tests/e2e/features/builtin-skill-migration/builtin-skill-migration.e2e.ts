@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Built-in Skill Migration — E2E suite (Task 3 of
  * 2026-04-23-builtin-skill-migration-plan).

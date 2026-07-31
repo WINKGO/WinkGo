@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import React from 'react';
 /**
  * @license
@@ -56,7 +57,7 @@ vi.mock('@arco-design/web-react', async (importOriginal) => {
   };
 });
 
-vi.mock('react-router-dom', () => ({
+vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
   useParams: () => mocks.params,
   useLocation: () => ({ pathname: `/settings/skills/detail/${mocks.params.skillName}` }),

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Shallow, WebUI-only directory browser backing `GET /api/fs/browse`.
 //!
 //! Unlike the workspace-scoped `/api/fs/dir` endpoint, this handler lists a

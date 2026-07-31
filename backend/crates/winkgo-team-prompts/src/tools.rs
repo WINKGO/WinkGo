@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 pub use winkgo_api_types::{
     TEAM_DESCRIBE_ASSISTANT_DESCRIPTION, TEAM_LIST_ASSISTANTS_DESCRIPTION, TEAM_SPAWN_AGENT_DESCRIPTION,
     TeamToolDescriptor, TeamToolPermission, TeamToolRole, team_tool_descriptors,

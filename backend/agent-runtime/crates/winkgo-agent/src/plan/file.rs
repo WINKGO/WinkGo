@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Plan file management: path generation, reading, and writing.
 
 use std::fs;

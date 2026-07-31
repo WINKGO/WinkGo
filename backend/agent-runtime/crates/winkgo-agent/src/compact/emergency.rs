@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Emergency truncation: the last safety net before a context overflow.
 //!
 //! When the best-known context size is within `emergency_buffer` of the full

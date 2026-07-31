@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::ffi::OsString;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -30,6 +31,7 @@ const MANAGED_NODE_PROGRESS_STEP_BYTES: u64 = 5 * 1024 * 1024;
 struct PlatformSpec {
     folder_suffix: &'static str,
     archive_ext: &'static str,
+    archive_sha256: &'static str,
     runtime_key: &'static str,
     executable: &'static str,
 }
@@ -47,12 +49,20 @@ impl PlatformSpec {
             ext = self.archive_ext
         )
     }
+
+    fn archive_layout(self) -> ManagedNodeArchiveLayout {
+        if self.archive_ext == "zip" {
+            ManagedNodeArchiveLayout::Windows
+        } else {
+            ManagedNodeArchiveLayout::Unix
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 struct ManagedNodeDownloadSource {
     url: String,
-    sha256: Option<String>,
+    sha256: String,
     source: &'static str,
 }
 
@@ -201,36 +211,42 @@ fn platform_spec() -> Result<PlatformSpec, NodeRuntimeError> {
         ("macos", "aarch64") => Ok(PlatformSpec {
             folder_suffix: "darwin-arm64",
             archive_ext: "tar.gz",
+            archive_sha256: "0be2ab2816a4fa02d1acff014a434f29f56d8d956f5af6a98b70ced6c5f4d201",
             runtime_key: "darwin-arm64",
             executable: "bin/node",
         }),
         ("macos", "x86_64") => Ok(PlatformSpec {
             folder_suffix: "darwin-x64",
             archive_ext: "tar.gz",
+            archive_sha256: "3884671e87f46f773832d98a0a6cabcc5ec4f637084f0f3515b69e66ea27f2f1",
             runtime_key: "darwin-x64",
             executable: "bin/node",
         }),
         ("linux", "aarch64") => Ok(PlatformSpec {
             folder_suffix: "linux-arm64",
             archive_ext: "tar.gz",
+            archive_sha256: "4786d00c4d259d3ff0b2328307f764ef3ced65f2d6e9502d433e68d66238509d",
             runtime_key: "linux-arm64",
             executable: "bin/node",
         }),
         ("linux", "x86_64") => Ok(PlatformSpec {
             folder_suffix: "linux-x64",
             archive_ext: "tar.gz",
+            archive_sha256: "b3c071cdf47aab867c3b2aa287257df12ec5d7c962bf922b32fd33226c4295fd",
             runtime_key: "linux-x64",
             executable: "bin/node",
         }),
         ("windows", "x86_64") => Ok(PlatformSpec {
             folder_suffix: "win-x64",
             archive_ext: "zip",
+            archive_sha256: "1054540bce22b54ec7e50ebc078ec5d090700a77657607a58f6a64df21f49fdd",
             runtime_key: "win32-x64",
             executable: "node.exe",
         }),
         ("windows", "aarch64") => Ok(PlatformSpec {
             folder_suffix: "win-arm64",
             archive_ext: "zip",
+            archive_sha256: "12d3b1aa9696b7411e115a4fa2aef57f95560b5ee16bb62cd69843e535ec72be",
             runtime_key: "win32-arm64",
             executable: "node.exe",
         }),
@@ -268,7 +284,16 @@ fn managed_node_contract_for_export_with_spec(
         version: MANAGED_NODE_VERSION.into(),
         root,
         executable: spec.executable.into(),
+        required_files: managed_node_legal_files_for_layout(spec.archive_layout())
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
     })
+}
+
+/// Runtime key used by the managed Node.js export contract for this host.
+pub fn managed_node_runtime_key() -> Result<&'static str, NodeRuntimeError> {
+    Ok(platform_spec()?.runtime_key)
 }
 
 fn runtime_from_root(root: &Path, source: ResolvedNodeSource) -> Result<ResolvedNodeRuntime, NodeRuntimeError> {
@@ -286,6 +311,7 @@ fn runtime_from_root_for_layout(
             root.display()
         )));
     }
+    validate_managed_node_legal_files(root, layout)?;
 
     prepare_runtime_files(root)?;
 
@@ -358,8 +384,8 @@ fn probe_runtime_root(root: &Path, source: ResolvedNodeSource) -> Result<Resolve
             root.display()
         )));
     }
-
     let layout = current_managed_node_archive_layout();
+    validate_managed_node_legal_files(root, layout)?;
     let node_path = managed_node_path_for_layout(root, layout);
     if !node_path.is_file() {
         return Err(NodeRuntimeError::managed_invalid(format!(
@@ -550,13 +576,11 @@ async fn install_archive(
         .error_for_status()
         .map_err(|error| reqwest_error("download archive", &url, &error))?;
     stream_archive_to_file(response, &archive_path, &url, reporter).await?;
-    if let Some(expected_sha256) = download_source.sha256.as_deref() {
-        emit_progress(
-            reporter,
-            NodeRuntimeProgress::validating("verifying managed Node artifact checksum".to_owned()),
-        );
-        verify_archive_checksum(&archive_path, expected_sha256)?;
-    }
+    emit_progress(
+        reporter,
+        NodeRuntimeProgress::validating("verifying managed Node artifact checksum".to_owned()),
+    );
+    verify_archive_checksum(&archive_path, &download_source.sha256)?;
 
     emit_progress(
         reporter,
@@ -600,7 +624,7 @@ impl ManagedNodeDownloadSource {
     fn official(spec: PlatformSpec) -> Self {
         Self {
             url: spec.official_download_url(),
-            sha256: None,
+            sha256: spec.archive_sha256.to_owned(),
             source: "nodejs.org",
         }
     }
@@ -805,6 +829,26 @@ fn managed_npm_cli_path_for_layout(root: &Path, layout: ManagedNodeArchiveLayout
 
 fn managed_npx_cli_path_for_layout(root: &Path, layout: ManagedNodeArchiveLayout) -> PathBuf {
     managed_npm_package_bin_dir_for_layout(root, layout).join("npx-cli.js")
+}
+
+fn managed_node_legal_files_for_layout(layout: ManagedNodeArchiveLayout) -> [&'static str; 2] {
+    match layout {
+        ManagedNodeArchiveLayout::Windows => ["LICENSE", "node_modules/npm/LICENSE"],
+        ManagedNodeArchiveLayout::Unix => ["LICENSE", "lib/node_modules/npm/LICENSE"],
+    }
+}
+
+fn validate_managed_node_legal_files(root: &Path, layout: ManagedNodeArchiveLayout) -> Result<(), NodeRuntimeError> {
+    for relative_path in managed_node_legal_files_for_layout(layout) {
+        let path = root.join(relative_path);
+        if !path.is_file() {
+            return Err(NodeRuntimeError::managed_invalid(format!(
+                "managed Node legal file missing: {}",
+                path.display()
+            )));
+        }
+    }
+    Ok(())
 }
 
 fn default_npm_prefix(root: &Path) -> PathBuf {

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for the extension registry (test-plan EM-1..EM-4, HR-3,
 //! EQ-1..EQ-2, SP-1..SP-3 at registry level).
 //!

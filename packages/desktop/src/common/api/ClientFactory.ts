@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -78,7 +79,7 @@ export class ClientFactory {
           timeout: options.timeout,
           defaultHeaders: {
             'HTTP-Referer': 'https://winkgo.top',
-            'X-Title': 'WinkGo',
+            'X-Title': 'WINK GO',
           },
           ...(options.baseConfig as OpenAIClientConfig),
         };
@@ -129,7 +130,7 @@ export class ClientFactory {
           timeout: options.timeout,
           defaultHeaders: {
             'HTTP-Referer': 'https://winkgo.top',
-            'X-Title': 'WinkGo',
+            'X-Title': 'WINK GO',
           },
           ...(options.baseConfig as OpenAIClientConfig),
         };

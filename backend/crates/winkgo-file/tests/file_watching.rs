@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for file watching (task 7.8).
 //!
 //! Tests exercise `IFileWatchService` through `FileWatchService`, verifying

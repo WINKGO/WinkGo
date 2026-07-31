@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use super::*;
 
 fn write_file(path: &Path) {
@@ -7,24 +8,35 @@ fn write_file(path: &Path) {
     std::fs::write(path, b"").expect("write file");
 }
 
+fn write_node_legal_files(root: &Path, layout: ManagedNodeArchiveLayout) {
+    for relative_path in managed_node_legal_files_for_layout(layout) {
+        write_file(&root.join(relative_path));
+    }
+}
+
 #[tokio::test]
 async fn managed_runtime_validation_uses_real_commands() {
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().join("node-v24.11.0-test");
-    let bin = root.join("bin");
-    std::fs::create_dir_all(&bin).unwrap();
+    let layout = current_managed_node_archive_layout();
+    write_node_legal_files(&root, layout);
 
-    let node = bin.join("node");
-    std::fs::write(&node, "#!/bin/sh\necho v24.11.0\n").unwrap();
+    let node = managed_node_path_for_layout(&root, layout);
+    write_file(&node);
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
+        std::fs::write(&node, "#!/bin/sh\necho v24.11.0\n").unwrap();
         let mut perms = std::fs::metadata(&node).unwrap().permissions();
         perms.set_mode(0o755);
         std::fs::set_permissions(&node, perms).unwrap();
     }
 
-    let err = validate_managed_runtime(&root, None).await.unwrap_err();
+    let err = if cfg!(windows) {
+        runtime_from_root(&root, ResolvedNodeSource::Managed).unwrap_err()
+    } else {
+        validate_managed_runtime(&root, None).await.unwrap_err()
+    };
     assert!(err.to_string().to_ascii_lowercase().contains("npm"));
 }
 
@@ -115,6 +127,7 @@ fn managed_runtime_official_source_uses_nodejs_org() {
     let source = ManagedNodeDownloadSource::official(PlatformSpec {
         folder_suffix: "darwin-arm64",
         archive_ext: "tar.gz",
+        archive_sha256: "0be2ab2816a4fa02d1acff014a434f29f56d8d956f5af6a98b70ced6c5f4d201",
         runtime_key: "darwin-arm64",
         executable: "bin/node",
     });
@@ -124,7 +137,10 @@ fn managed_runtime_official_source_uses_nodejs_org() {
         source.url,
         "https://nodejs.org/dist/v24.11.0/node-v24.11.0-darwin-arm64.tar.gz"
     );
-    assert_eq!(source.sha256, None);
+    assert_eq!(
+        source.sha256,
+        "0be2ab2816a4fa02d1acff014a434f29f56d8d956f5af6a98b70ced6c5f4d201"
+    );
 }
 
 #[test]
@@ -138,6 +154,7 @@ fn managed_node_contract_uses_runtime_key_and_exported_root() {
     let spec = PlatformSpec {
         folder_suffix: "darwin-arm64",
         archive_ext: "tar.gz",
+        archive_sha256: "0be2ab2816a4fa02d1acff014a434f29f56d8d956f5af6a98b70ced6c5f4d201",
         runtime_key: "darwin-arm64",
         executable: "bin/node",
     };
@@ -147,6 +164,7 @@ fn managed_node_contract_uses_runtime_key_and_exported_root() {
     assert_eq!(contract.version, "24.11.0");
     assert_eq!(contract.root, "node/node-v24.11.0-darwin-arm64");
     assert_eq!(contract.executable, "bin/node");
+    assert_eq!(contract.required_files, vec!["LICENSE", "lib/node_modules/npm/LICENSE"]);
 }
 
 #[test]
@@ -163,11 +181,11 @@ fn managed_runtime_checksum_verification_detects_mismatch() {
 fn managed_runtime_injects_npm_state_under_runtime_root() {
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().join("node-v24.11.0-test");
-    let bin = root.join("bin");
-    std::fs::create_dir_all(&bin).unwrap();
-    std::fs::write(bin.join("node"), b"").unwrap();
-    std::fs::write(bin.join("npm"), b"").unwrap();
-    std::fs::write(bin.join("npx"), b"").unwrap();
+    let layout = current_managed_node_archive_layout();
+    write_file(&managed_node_path_for_layout(&root, layout));
+    write_file(&managed_wrapper_path_for_layout(&root, layout, "npm"));
+    write_file(&managed_wrapper_path_for_layout(&root, layout, "npx"));
+    write_node_legal_files(&root, layout);
 
     let runtime = runtime_from_root(&root, ResolvedNodeSource::Managed).expect("runtime");
     let env: std::collections::HashMap<_, _> = runtime
@@ -211,6 +229,7 @@ async fn bundled_runtime_validation_failure_does_not_fallback_to_remote_download
     let runtime_root = bundled_root.join("node").join("node-v24.11.0-darwin-arm64");
     let bin = runtime_root.join("bin");
     std::fs::create_dir_all(&bin).unwrap();
+    write_node_legal_files(&runtime_root, current_managed_node_archive_layout());
 
     let node = bin.join("node");
     std::fs::write(&node, "#!/bin/sh\necho v24.11.0\n").unwrap();
@@ -237,6 +256,7 @@ async fn bundled_runtime_validation_failure_does_not_fallback_to_remote_download
         PlatformSpec {
             folder_suffix: "darwin-arm64",
             archive_ext: "tar.gz",
+            archive_sha256: "0be2ab2816a4fa02d1acff014a434f29f56d8d956f5af6a98b70ced6c5f4d201",
             runtime_key: "darwin-arm64",
             executable: "bin/node",
         },
@@ -294,6 +314,7 @@ fn windows_managed_runtime_prefers_direct_cli_entrypoints_over_wrappers() {
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().join("node-v24.11.0-win-x64");
     std::fs::create_dir_all(&root).unwrap();
+    write_node_legal_files(&root, ManagedNodeArchiveLayout::Windows);
 
     let node = root.join("node.exe");
     write_file(&node);
@@ -329,6 +350,7 @@ fn windows_managed_runtime_falls_back_to_wrappers_when_direct_cli_is_missing() {
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().join("node-v24.11.0-win-x64");
     std::fs::create_dir_all(&root).unwrap();
+    write_node_legal_files(&root, ManagedNodeArchiveLayout::Windows);
 
     write_file(&root.join("node.exe"));
     write_file(&root.join("npm.cmd"));
@@ -349,6 +371,7 @@ fn unix_managed_runtime_keeps_wrapper_entrypoints_when_present() {
     let root = tmp.path().join("node-v24.11.0-darwin-arm64");
     let bin = root.join("bin");
     std::fs::create_dir_all(&bin).unwrap();
+    write_node_legal_files(&root, ManagedNodeArchiveLayout::Unix);
 
     write_file(&bin.join("node"));
     write_file(&bin.join("npm"));
@@ -384,6 +407,7 @@ fn windows_managed_runtime_fails_when_entrypoints_are_missing() {
     let tmp = tempfile::tempdir().unwrap();
     let root = tmp.path().join("node-v24.11.0-win-x64");
     std::fs::create_dir_all(&root).unwrap();
+    write_node_legal_files(&root, ManagedNodeArchiveLayout::Windows);
     write_file(&root.join("node.exe"));
 
     let error = runtime_from_root_for_layout(&root, ResolvedNodeSource::Managed, ManagedNodeArchiveLayout::Windows)

@@ -30,8 +30,8 @@ afterEach(async () => {
 });
 
 describe('resolveMeituanSkillRoot', () => {
-  it('finds the Meituan skill shipped with WINK GO resources', () => {
-    const bundled = path.join(
+  it('does not treat an absent ignored provider Skill as bundled public content', () => {
+    const isolated = path.join(
       process.cwd(),
       'resources',
       'winkgo',
@@ -40,7 +40,7 @@ describe('resolveMeituanSkillRoot', () => {
       'mtunion-product-ai-all-guide'
     );
 
-    expect(resolveMeituanSkillRoot([bundled])).toBe(bundled);
+    expect(resolveMeituanSkillRoot([isolated])).toBeNull();
   });
 
   it('uses the first bundled skill containing the executable runner', async () => {

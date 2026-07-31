@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Team MCP 通信
 
 > Team 模块对外（对 agent 进程）的"系统调用"层。Agent 通过 MCP 调工具，是它操作 team 的唯一入口。HTTP 层只做 CRUD，不管 agent 之间怎么通信。

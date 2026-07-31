@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { test, expect, type ElectronApplication, type Page, _electron as electron } from '@playwright/test';
 import fs from 'fs';
 import os from 'os';

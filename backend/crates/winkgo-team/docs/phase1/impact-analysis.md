@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Phase1 影响面分析
 
 > 每个模块的改动是否只影响 team 业务？是否对其他功能零侵入？

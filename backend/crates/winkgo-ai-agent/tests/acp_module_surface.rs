@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Compile-only smoke test for `manager::acp` public surface.
 //!
 //! During the Stage 1 refactor (splitting `manager/acp/agent.rs` into smaller

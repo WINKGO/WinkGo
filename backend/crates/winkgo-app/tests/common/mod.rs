@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Shared test helpers for winkgo-app E2E tests.
 #![allow(dead_code)]
 

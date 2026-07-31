@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! E2E tests for file operations (/api/fs/*).
 
 mod common;

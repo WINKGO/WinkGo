@@ -143,6 +143,8 @@
       "apacheLicense": "Apache-2.0-Lizenz",
       "notice": "Verteilungshinweis",
       "thirdPartyNotices": "Hinweise zu Drittanbietern",
+      "privacyPolicy": "Datenschutzerklärung",
+      "termsOfService": "Nutzungsbedingungen",
       "unavailable": "Das Rechtsdokument ist in diesem Build nicht verfügbar."
     }
   }

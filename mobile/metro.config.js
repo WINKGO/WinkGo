@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 

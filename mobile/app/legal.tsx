@@ -27,10 +27,12 @@ export default function LegalScreen() {
     []
   );
 
-  const entries: Array<{ id: LegalDocumentId; label: string }> = [
+  const entries: { id: LegalDocumentId; label: string }[] = [
     { id: 'notice', label: t('settings.legal.notice') },
     { id: 'license', label: t('settings.legal.apacheLicense') },
     { id: 'thirdPartyNotices', label: t('settings.legal.thirdPartyNotices') },
+    { id: 'privacy', label: t('settings.legal.privacyPolicy') },
+    { id: 'terms', label: t('settings.legal.termsOfService') },
   ];
 
   return (
@@ -71,10 +73,12 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   tab: {
-    flex: 1,
+    minWidth: '33.333%',
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,

@@ -1,6 +1,6 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Configuration layer: runtime Config, ProviderCompat, auth, hooks, provider-specific configs.
 
-pub mod auth;
 pub mod compact;
 pub mod compat;
 pub mod config;

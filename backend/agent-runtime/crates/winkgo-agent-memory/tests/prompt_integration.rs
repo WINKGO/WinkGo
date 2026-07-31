@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Integration tests for memory system prompt construction (TC-6).
 //
 // These are black-box tests that exercise the public API of the prompt

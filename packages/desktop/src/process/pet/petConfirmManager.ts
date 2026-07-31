@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -6,11 +7,14 @@
  */
 
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import type { IConfirmation } from '@/common/chat/chatLib';
 import { ipcBridge } from '@/common';
+import { isTrustedIpcSender, resolveTrustedDevServerUrl } from '@/common/platform/electronSecurity';
 import i18n from '@process/services/i18n';
 import { getCachedTheme, onThemeChanged } from '@process/bridge/themeBridge';
+import { registerTrustedWindowSecurity } from '@process/startup/electronSecurity';
 
 // petConfirmManager is dynamically imported → rollup places it in out/main/chunks/,
 // so __dirname is out/main/chunks/ and we need '../..' to reach out/.
@@ -154,10 +158,21 @@ function createConfirmWindow(): void {
     hasShadow: false,
     focusable: true,
     webPreferences: {
+      allowRunningInsecureContent: false,
       preload: path.join(PRELOAD_DIR, 'petConfirmPreload.js'),
       contextIsolation: true,
+      navigateOnDragDrop: false,
       nodeIntegration: false,
+      safeDialogs: true,
+      sandbox: true,
+      webSecurity: true,
+      webviewTag: false,
     },
+  });
+  registerTrustedWindowSecurity(confirmWindow, {
+    role: 'pet-confirm',
+    productionEntryFile: path.join(RENDERER_DIR, 'pet-confirm.html'),
+    devServerUrl: resolveTrustedDevServerUrl(process.env['ELECTRON_RENDERER_URL']),
   });
 
   if (process.platform === 'darwin') {
@@ -221,10 +236,10 @@ function destroyConfirmWindow(): void {
 function loadContent(): void {
   if (!confirmWindow || confirmWindow.isDestroyed()) return;
 
-  const rendererUrl = process.env['ELECTRON_RENDERER_URL'];
+  const rendererUrl = app.isPackaged ? null : resolveTrustedDevServerUrl(process.env['ELECTRON_RENDERER_URL']);
 
-  if (!app.isPackaged && rendererUrl) {
-    confirmWindow.loadURL(`${rendererUrl}/pet/pet-confirm.html`).catch((error) => {
+  if (rendererUrl) {
+    confirmWindow.loadURL(new URL('/pet/pet-confirm.html', rendererUrl).toString()).catch((error) => {
       console.error('[PetConfirm] loadURL failed:', error);
     });
   } else {
@@ -291,7 +306,8 @@ function registerIpcHandlers(): void {
   let confirmDragOffsetY = 0;
   let confirmDragTimer: ReturnType<typeof setInterval> | null = null;
 
-  ipcMain.on('pet:confirm-drag-start', () => {
+  ipcMain.on('pet:confirm-drag-start', (event) => {
+    if (!isTrustedIpcSender(event, ['pet-confirm'])) return;
     if (!confirmWindow || confirmWindow.isDestroyed()) return;
     // Clear any stale timer from a previous drag-start that missed its drag-end
     if (confirmDragTimer) {
@@ -314,7 +330,8 @@ function registerIpcHandlers(): void {
     }, 16);
   });
 
-  ipcMain.on('pet:confirm-drag-end', () => {
+  ipcMain.on('pet:confirm-drag-end', (event) => {
+    if (!isTrustedIpcSender(event, ['pet-confirm'])) return;
     if (confirmDragTimer) {
       clearInterval(confirmDragTimer);
       confirmDragTimer = null;
@@ -328,27 +345,47 @@ function registerIpcHandlers(): void {
 
   ipcMain.on(
     'pet:confirm-respond',
-    (_event, data: { conversation_id: string; msg_id: string; call_id: string; data: any }) => {
+    (event, data: { conversation_id: string; msg_id: string; call_id: string; data: unknown }) => {
+      if (
+        !isTrustedIpcSender(event, ['pet-confirm']) ||
+        !data ||
+        typeof data !== 'object' ||
+        typeof data.conversation_id !== 'string' ||
+        data.conversation_id.length > 256 ||
+        typeof data.msg_id !== 'string' ||
+        data.msg_id.length > 256 ||
+        typeof data.call_id !== 'string' ||
+        data.call_id.length > 256
+      ) {
+        return;
+      }
+
+      let serializedResponse: string;
+      try {
+        serializedResponse = JSON.stringify(data.data);
+      } catch {
+        return;
+      }
+      if (Buffer.byteLength(serializedResponse ?? '', 'utf8') > 64 * 1024) return;
+
       console.log('[PetConfirm] Received response:', JSON.stringify(data));
 
-      // Remove from local tracking
       const confirmation = Array.from(currentConfirmations.values()).find(
-        (c) => c.call_id === data.call_id && c.conversation_id === data.conversation_id
+        (c) => c.id === data.msg_id && c.call_id === data.call_id && c.conversation_id === data.conversation_id
       );
+      if (!confirmation || !confirmation.options.some((option) => isDeepStrictEqual(option.value, data.data))) return;
 
-      if (confirmation) {
-        currentConfirmations.delete(confirmation.id);
+      currentConfirmations.delete(confirmation.id);
 
-        // Announce removal on the WS channel so any renderer confirmation UI
-        // can drop the entry. NOTE: with the HTTP/WS adapter, emit() is a
-        // no-op in the main process (see httpBridge.ts wsEmitter); the
-        // authoritative remove event is broadcast by the backend itself when
-        // /confirmations/{call_id}/confirm is accepted.
-        ipcBridge.conversation.confirmation.remove.emit({
-          conversation_id: data.conversation_id,
-          id: confirmation.id,
-        });
-      }
+      // Announce removal on the WS channel so any renderer confirmation UI
+      // can drop the entry. NOTE: with the HTTP/WS adapter, emit() is a
+      // no-op in the main process (see httpBridge.ts wsEmitter); the
+      // authoritative remove event is broadcast by the backend itself when
+      // /confirmations/{call_id}/confirm is accepted.
+      ipcBridge.conversation.confirmation.remove.emit({
+        conversation_id: data.conversation_id,
+        id: confirmation.id,
+      });
 
       // Forward response to backend via HTTP (winkgo-conversation route)
       ipcBridge.conversation.confirmation.confirm

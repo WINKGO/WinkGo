@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { ipcBridge } from '@/common';
 import { mcpService } from '@/common/adapter/ipcBridge';
 import type { IMcpServer } from '@/common/config/storage';
@@ -9,7 +10,7 @@ import { Button, Checkbox, Message, Modal } from '@arco-design/web-react';
 import { Delete, Help, Lightning, Puzzle } from '@icon-park/react';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import useSWR from 'swr';
 import SkillUsedByStack, { getAssistantsUsingSkill } from './SkillUsedByStack';
 import SettingsPageWrapper from '../components/SettingsPageWrapper';
@@ -18,8 +19,6 @@ import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
 import { WinkGoSearchInput } from '@/renderer/components/base';
 import { buildSkillImportNotice, getSkillImportErrorMessage } from './skillImportMessages';
 import WinkGoSkillBrandIcon from './WinkGoSkillBrandIcon';
-import { useAuth } from '@/renderer/hooks/context/AuthContext';
-import WinkGoProFeatureCard from '@/renderer/components/winkgo/WinkGoProFeatureCard';
 
 // Skill 信息类型 / Skill info type
 interface SkillInfo {
@@ -137,8 +136,6 @@ interface SkillsHubSettingsProps {
 
 const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = true }) => {
   const { t } = useTranslation();
-  const { can } = useAuth();
-  const canUsePremiumSkills = can('skills.premium');
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
   const location = useLocation();
@@ -220,7 +217,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     // The optional WINK GO catalog must not hold the whole page behind its
     // network/file-system timeout. Populate that tab independently.
     void (async () => {
-      if (!isElectronDesktop() || !canUsePremiumSkills) {
+      if (!isElectronDesktop()) {
         setWinkGoSkillsCatalog({ available: false, skills: [] });
         return;
       }
@@ -257,7 +254,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     } finally {
       setLoading(false);
     }
-  }, [canUsePremiumSkills, t]);
+  }, [t]);
 
   useEffect(() => {
     void fetchData();
@@ -275,7 +272,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
   // skills. The main process writes only selectors and local paths; the proxy
   // reads the Runtime credential from Windows Credential Manager itself.
   useEffect(() => {
-    if (!canUsePremiumSkills || !isElectronDesktop() || loading || !winkGoSkillsCatalog.available) return;
+    if (!isElectronDesktop() || loading || !winkGoSkillsCatalog.available) return;
     const syncKey = enabledWinkGoSkillIds.join('\u0000');
     if (winkGoBridgeSyncRef.current === syncKey) return;
 
@@ -327,7 +324,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
     }, 180);
 
     return () => window.clearTimeout(timer);
-  }, [canUsePremiumSkills, enabledWinkGoSkillIds, loading, winkGoSkillsCatalog.available]);
+  }, [enabledWinkGoSkillIds, loading, winkGoSkillsCatalog.available]);
 
   // When deep-linked to a specific skill, open the tab that actually contains it
   // so the highlight/scroll below can find its rendered card.
@@ -1020,82 +1017,76 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
 
   // ======== Original WINK GO tab (metadata comes from the local source only on demand) ========
   const winkGoPane = (
-    <WinkGoProFeatureCard
-      capability='skills.premium'
-      title='WINK GO 高级技能属于 Pro'
-      description='免费版仍可使用官方本地技能和自行导入技能；Pro 可加载 WINK GO 托管技能目录、生活服务技能与同步运行时。'
-    >
-      <div data-testid='wink-go-skills-section' className='flex flex-col gap-12px'>
-        <p className='m-0 text-12px leading-relaxed text-t-tertiary'>
-          {t('common.winkGoSkills.description', {
-            defaultValue:
-              'Import only the WINK GO skills you want. Their audited local Runtime tools are loaded on demand; unselected skills are not registered with the Agent.',
-          })}
-        </p>
-        {winkGoSkillsCatalog.available && winkGoSkillsCatalog.skills.length > 0 ? (
-          <div className='flex flex-col gap-8px rounded-12px border border-border-2 bg-2 p-8px md:rounded-16px md:p-10px'>
-            {filteredWinkGoSkills.length > 0 ? (
-              filteredWinkGoSkills.map((skill) => {
-                const isImported = importedSkillNames.has(skill.id.toLowerCase());
-                return (
-                  <div
-                    key={skill.id}
-                    data-testid={`wink-go-skill-card-${normalizeTestId(skill.id)}`}
-                    className='flex flex-col gap-14px border border-transparent bg-base p-16px rd-12px transition-colors hover:border-border-1 hover:bg-fill-1 sm:flex-row sm:items-center'
-                  >
-                    <WinkGoSkillBrandIcon displayName={skill.displayName} skillId={skill.id} />
-                    <div className='min-w-0 flex-1'>
-                      <div className='flex flex-wrap items-center gap-x-8px gap-y-4px'>
-                        <h3 className='m-0 text-14px font-semibold text-t-primary/90'>{skill.displayName}</h3>
-                        <span className='rounded-999px bg-primary-1 px-8px py-2px text-11px font-medium text-primary-6'>
-                          {t('common.winkGoSkills.actionCount', {
-                            count: skill.actionCount,
-                            defaultValue: '{{count}} actions',
-                          })}
-                        </span>
-                      </div>
-                      {skill.description ? (
-                        <p className='m-0 mt-4px text-13px leading-relaxed text-t-secondary'>{skill.description}</p>
-                      ) : null}
-                      {skill.capabilityLabels.length > 0 ? (
-                        <div className='mt-8px flex flex-wrap gap-6px'>
-                          {skill.capabilityLabels.map((label) => (
-                            <span key={label} className='rounded-4px bg-fill-2 px-6px py-2px text-11px text-t-tertiary'>
-                              {label}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
+    <div data-testid='wink-go-skills-section' className='flex flex-col gap-12px'>
+      <p className='m-0 text-12px leading-relaxed text-t-tertiary'>
+        {t('common.winkGoSkills.description', {
+          defaultValue:
+            'Import only the WINK GO skills you want. Their audited local Runtime tools are loaded on demand; unselected skills are not registered with the Agent.',
+        })}
+      </p>
+      {winkGoSkillsCatalog.available && winkGoSkillsCatalog.skills.length > 0 ? (
+        <div className='flex flex-col gap-8px rounded-12px border border-border-2 bg-2 p-8px md:rounded-16px md:p-10px'>
+          {filteredWinkGoSkills.length > 0 ? (
+            filteredWinkGoSkills.map((skill) => {
+              const isImported = importedSkillNames.has(skill.id.toLowerCase());
+              return (
+                <div
+                  key={skill.id}
+                  data-testid={`wink-go-skill-card-${normalizeTestId(skill.id)}`}
+                  className='flex flex-col gap-14px border border-transparent bg-base p-16px rd-12px transition-colors hover:border-border-1 hover:bg-fill-1 sm:flex-row sm:items-center'
+                >
+                  <WinkGoSkillBrandIcon displayName={skill.displayName} skillId={skill.id} />
+                  <div className='min-w-0 flex-1'>
+                    <div className='flex flex-wrap items-center gap-x-8px gap-y-4px'>
+                      <h3 className='m-0 text-14px font-semibold text-t-primary/90'>{skill.displayName}</h3>
+                      <span className='rounded-999px bg-primary-1 px-8px py-2px text-11px font-medium text-primary-6'>
+                        {t('common.winkGoSkills.actionCount', {
+                          count: skill.actionCount,
+                          defaultValue: '{{count}} actions',
+                        })}
+                      </span>
                     </div>
-                    <Button
-                      size='small'
-                      type={isImported ? 'secondary' : 'primary'}
-                      data-testid={`btn-import-wink-go-skill-${normalizeTestId(skill.id)}`}
-                      disabled={isImported}
-                      onClick={() => void handleWinkGoSkillImport(skill)}
-                    >
-                      {isImported
-                        ? t('common.winkGoSkills.imported', { defaultValue: 'Imported' })
-                        : t('common.winkGoSkills.importSkill', { defaultValue: 'Import' })}
-                    </Button>
+                    {skill.description ? (
+                      <p className='m-0 mt-4px text-13px leading-relaxed text-t-secondary'>{skill.description}</p>
+                    ) : null}
+                    {skill.capabilityLabels.length > 0 ? (
+                      <div className='mt-8px flex flex-wrap gap-6px'>
+                        {skill.capabilityLabels.map((label) => (
+                          <span key={label} className='rounded-4px bg-fill-2 px-6px py-2px text-11px text-t-tertiary'>
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
-                );
-              })
-            ) : (
-              <div className='border border-border-2 border-dashed bg-fill-1 py-32px text-center text-13px text-t-secondary rd-12px'>
-                {t('settings.skillsHub.noSearchResults', { defaultValue: 'No matching skills.' })}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className='border border-border-2 border-dashed bg-fill-1 py-40px text-center text-13px text-t-secondary rd-12px'>
-            {t('common.winkGoSkills.unavailable', {
-              defaultValue: 'The original WINK GO skills folder is not available on this device yet.',
-            })}
-          </div>
-        )}
-      </div>
-    </WinkGoProFeatureCard>
+                  <Button
+                    size='small'
+                    type={isImported ? 'secondary' : 'primary'}
+                    data-testid={`btn-import-wink-go-skill-${normalizeTestId(skill.id)}`}
+                    disabled={isImported}
+                    onClick={() => void handleWinkGoSkillImport(skill)}
+                  >
+                    {isImported
+                      ? t('common.winkGoSkills.imported', { defaultValue: 'Imported' })
+                      : t('common.winkGoSkills.importSkill', { defaultValue: 'Import' })}
+                  </Button>
+                </div>
+              );
+            })
+          ) : (
+            <div className='border border-border-2 border-dashed bg-fill-1 py-32px text-center text-13px text-t-secondary rd-12px'>
+              {t('settings.skillsHub.noSearchResults', { defaultValue: 'No matching skills.' })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className='border border-border-2 border-dashed bg-fill-1 py-40px text-center text-13px text-t-secondary rd-12px'>
+          {t('common.winkGoSkills.unavailable', {
+            defaultValue: 'The original WINK GO skills folder is not available on this device yet.',
+          })}
+        </div>
+      )}
+    </div>
   );
 
   // ======== Official tab (official builtin list + extension + auto-injected sections) ========
@@ -1203,7 +1194,7 @@ const SkillsHubSettings: React.FC<SkillsHubSettingsProps> = ({ withWrapper = tru
           },
           {
             key: 'winkGo',
-            label: `${t('common.winkGoSkills.tab', { defaultValue: 'WINK GO' })}${canUsePremiumSkills ? '' : ' · PRO'}`,
+            label: t('common.winkGoSkills.tab', { defaultValue: 'WINK GO' }),
             count: winkGoSkillsCatalog.skills.length,
           },
         ]}

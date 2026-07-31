@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Single-instance advisory lock + per-run epoch (IC-1 defense / IC-3 naming).
 //!
 //! The lock file is a dedicated sidecar `{data_dir}/runtime/winkgo-process/

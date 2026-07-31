@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! 007 §C1 frozen seam types — the a-side vocabulary the conversation layer
 //! sends DOWN (`Command`) and the orchestration types that flow back UP
 //! (`SessionEnvelope`, `StateSnapshot`). These are the NEW symmetric

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Classify fatal agent stream events into recoverable (rate-limited) vs crash.
 //!
 //! Paired with W4-D20a `detect_crash`. Rate-limit errors are surfaced as

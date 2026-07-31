@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use serde_json::Value;
 use winkgo_api_types::{
     TeamSessionBinding, TeamToolCall, TeamToolContextResponse, TeamToolErrorCode, TeamToolErrorPayload, TeamToolRole,

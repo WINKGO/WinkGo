@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! End-to-end skill tests using real files on disk.
 //!
 //! Each test creates skill files in a temporary directory that mirrors the

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -22,7 +23,7 @@ import { isDeprecatedRuntimeAgentType } from '@/renderer/utils/model/agentTypeSu
 import InlineAgentEditor, { type CustomAgentDraft } from './InlineAgentEditor';
 import { getBoundAssistants, useAssistantsForAgents } from './BoundAssistants';
 import SettingsPageHeader from '../components/SettingsPageHeader';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { brandManagedAgentForDisplay } from '@/renderer/utils/model/winkGoBranding';
 import { useAgentLogos } from '@/renderer/utils/model/agentLogo';
 import {
@@ -30,8 +31,9 @@ import {
   getAgentAvailabilityFilterStats,
   type AgentAvailabilityFilter,
 } from './agentFilters';
+import { getBuiltinAgentSetupUrl } from './agentSetupLinks';
 
-const LOCAL_AGENT_SETUP_GUIDE_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go/wiki/ACP-Setup';
+const LOCAL_AGENT_SETUP_GUIDE_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go#agent-接入与安装';
 
 const LocalAgents: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -302,6 +304,10 @@ const LocalAgents: React.FC = () => {
               boundAssistants={getBoundAssistants(agent, assistants)}
               onTestConnection={() => void handleTestConnection(agent.id)}
               onConfigure={() => openAgentConfig(agent.id)}
+              onOpenSetup={() => {
+                const setupUrl = getBuiltinAgentSetupUrl(agent);
+                if (setupUrl) void openExternalUrl(setupUrl).catch(console.error);
+              }}
               isTesting={testingAgentId === agent.id}
             />
           ))}

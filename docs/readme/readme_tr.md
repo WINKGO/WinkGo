@@ -1,10 +1,11 @@
+<!-- Modified from AionUI by WINK GO contributors in 2026. -->
+
 # WINK GO
 
 WINK GO; ajanları, dosyaları, araçları, becerileri, zamanlanmış görevleri, WebUI erişimini ve çoklu ajan iş birliğini bir araya getiren platformlar arası bir AI Agent masaüstü çalışma alanıdır.
 
-## Sürümler
+## Açık ve ücretsiz proje
 
-- **Free 2.1.45: tam erişim.** Şu anda Pro derlemesindeki tüm özellikleri içerir.
-- **Pro: gelecek için ayrılmıştır.** Şimdilik ek özellik açmaz.
+Masaüstü istemcisinin mevcut tüm özellikleri herkese açıktır. Harici modeller, API'ler, bulut aktarımı, ses ve diğer hizmetler kendi kullanım ücretlerine tabi olabilir.
 
-[Web sitesi](https://winkgo.top) · [Depo](https://github.com/xuweihafeichangniu-lab/wink-go) · [İndirmeler](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)
+[Depo](https://github.com/xuweihafeichangniu-lab/wink-go) · [İndirmeler](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)

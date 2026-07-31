@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2026 AionUi (aionui.com)
@@ -69,7 +70,7 @@ const reduceNotificationState = (
   event: UpdateNotificationEvent
 ): UpdateNotificationState => updateNotificationReducer(current, event).state;
 
-const RELEASES_PAGE_URL = 'https://winkgo.top/';
+const RELEASES_PAGE_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go/releases';
 const STARTUP_WEBSITE_UPDATE_CHECK_DELAY_MS = 5000;
 
 const getVersionLabelFromState = (state: UpdateNotificationState): string =>

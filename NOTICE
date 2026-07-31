@@ -1,15 +1,43 @@
 WINK GO
-Copyright 2026 WINK GO (winkgo.top)
+Modifications Copyright 2026 WINK GO contributors.
 
-Portions of this product are derived from AionUi:
+This distribution contains modified portions of the following Apache-2.0
+projects:
+
+AionUI v2.1.41
 https://github.com/iOfficeAI/AionUi
+Commit: 2d8925fc67a97a20996fadcd2a0862b778b572ba
+Copyright 2025 AionUi (aionui.com)
 
-Copyright 2025-2026 AionUi (aionui.com)
+AionCore v0.1.52
+https://github.com/iOfficeAI/AionCore
+Commit: 76f5554286ba0b6d33fb74d5c2bb2b3b0b83100d
+Copyright 2025 AionUi (aionui.com)
 
-The AionUi-derived portions and WINK GO modifications are provided under
-the Apache License, Version 2.0. The complete license text is distributed
-with this product in the LICENSE file.
+aionrs v0.2.7
+https://github.com/iOfficeAI/aionrs
+Commit: 445a18e1625cc68ded3a647ee99332195fbe8508
+Copyright 2026 iOfficeAI
 
-WINK GO is an independent derivative project. The attribution above is
-provided for license compliance and does not imply sponsorship,
-endorsement, or affiliation.
+The AionCore crates were renamed from `aionui-*` to `winkgo-*`. The aionrs
+crates were renamed from `aion-*` to `winkgo-agent-*`. These names identify
+the derivative source layout and do not transfer or remove upstream
+copyright.
+
+The complete Apache License 2.0 text is distributed in LICENSE. Exact
+per-file provenance, modification notices, and hashes for formats that cannot
+safely carry comments are recorded in:
+
+docs/vendor/aionui-modification-manifest.tsv
+docs/vendor/aioncore-modification-manifest.tsv
+docs/vendor/aionrs-modification-manifest.tsv
+
+The pinned upstream path mappings and canonical Git-blob hashes used to
+verify that coverage are recorded in:
+
+docs/vendor/aionui-upstream-inventory.tsv
+docs/vendor/aioncore-upstream-inventory.tsv
+docs/vendor/aionrs-upstream-inventory.tsv
+
+WINK GO is an independent derivative project. Attribution does not imply
+sponsorship, endorsement, or affiliation with iOfficeAI or AionUi.

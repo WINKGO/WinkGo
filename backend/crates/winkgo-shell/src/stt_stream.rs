@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Transport-agnostic STT streaming session state machine.
 //!
 //! Drives one streaming transcription session: validates the client `start`

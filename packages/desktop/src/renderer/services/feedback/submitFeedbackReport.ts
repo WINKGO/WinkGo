@@ -1,8 +1,14 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { FeedbackDiagnosticsContextInput } from '@/common/types/feedbackDiagnostics';
 import { httpRequest } from '@/common/adapter/httpBridge';
 
 const SUMMARY_PREVIEW_LENGTH = 60;
 const LOG_PREFIX = '[FeedbackReport]';
+const MAX_AUTO_CONTEXT_DEPTH = 6;
+const MAX_AUTO_CONTEXT_ITEMS = 100;
+const MAX_AUTO_CONTEXT_TEXT = 4000;
+const SENSITIVE_CONTEXT_KEY =
+  /(?:password|passphrase|secret|token|authorization|cookie|api[_-]?key|phone|mobile|email|prompt|message[_-]?content|file[_-]?path|folder[_-]?path|resources[_-]?path|home[_-]?dir|environment)/i;
 type FeedbackLogLevel = 'info' | 'warn' | 'error';
 type FeedbackLogAttachmentStatus = 'collected' | 'empty' | 'failed' | 'skipped' | 'unavailable';
 type FeedbackDbDiagnosticsAttachmentStatus = 'collected' | 'empty' | 'failed' | 'skipped' | 'unavailable';
@@ -228,6 +234,34 @@ function normalizeDescription(description: string): string {
   return description.trim().replace(/\s+/g, ' ');
 }
 
+function redactAutomaticContextText(value: string): string {
+  return value
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer <redacted>')
+    .replace(/\b(?:sk|key|token|api)[-_][A-Za-z0-9_-]{10,}\b/gi, '<redacted-token>')
+    .replace(/\b(?:1[3-9]\d{9}|\+[1-9]\d{7,14})\b/g, '<redacted-phone>')
+    .replace(/[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n\s]+\\)*[^\\/:*?"<>|\r\n\s]*/g, '<local-path>')
+    .replace(/\/(?:Users|home)\/[^/\s]+(?:\/[^\s"'<>]*)?/g, '<local-path>')
+    .slice(0, MAX_AUTO_CONTEXT_TEXT);
+}
+
+function sanitizeAutomaticContext(value: unknown, key = '', depth = 0): unknown {
+  if (SENSITIVE_CONTEXT_KEY.test(key)) return '<redacted>';
+  if (depth > MAX_AUTO_CONTEXT_DEPTH) return '<truncated>';
+  if (typeof value === 'string') return redactAutomaticContextText(value);
+  if (typeof value === 'number' || typeof value === 'boolean' || value === null) return value;
+  if (Array.isArray(value)) {
+    return value.slice(0, MAX_AUTO_CONTEXT_ITEMS).map((item) => sanitizeAutomaticContext(item, '', depth + 1));
+  }
+  if (!value || typeof value !== 'object') return undefined;
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .slice(0, MAX_AUTO_CONTEXT_ITEMS)
+      .map(([entryKey, entryValue]) => [entryKey, sanitizeAutomaticContext(entryValue, entryKey, depth + 1)])
+      .filter((entry): entry is [string, unknown] => entry[1] !== undefined)
+  );
+}
+
 function buildSummary(moduleLabel: string, description: string): string {
   const summaryPreview =
     description.length > SUMMARY_PREVIEW_LENGTH
@@ -284,7 +318,7 @@ export async function submitFeedbackReport(input: SubmitFeedbackReportInput): Pr
           message: eventSummary,
           extra: {
             description: normalizedDescription,
-            ...input.extra,
+            ...(sanitizeAutomaticContext(input.extra) as FeedbackEventExtra | undefined),
           },
         },
         { attachments }

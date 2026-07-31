@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 pub use winkgo_common::constants::WINKGO_AGENT_RUNTIME_BACKEND;
 use winkgo_common::constants::{is_team_capable, supports_team_cli_fallback, supports_team_mcp};
 

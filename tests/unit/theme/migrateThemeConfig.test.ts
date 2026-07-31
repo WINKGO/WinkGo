@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -22,11 +23,11 @@ describe('migrateThemeConfig', () => {
   it('maps a preset id through unchanged', () => {
     const out = migrateThemeConfig({
       theme: 'light',
-      'css.activeThemeId': 'hello-kitty',
+      'css.activeThemeId': 'retro-windows',
       'css.themes': [],
       customCss: '',
     });
-    expect(out['theme.activeId']).toBe('hello-kitty');
+    expect(out['theme.activeId']).toBe('retro-windows');
   });
   it('uses dark toggle when no active css theme', () => {
     const out = migrateThemeConfig({ theme: 'dark', 'css.activeThemeId': '', 'css.themes': [], customCss: '' });

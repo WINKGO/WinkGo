@@ -1,5 +1,6 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 name: 🐛 Bug Report
-description: Report a bug or unexpected behavior in WinkGo
+description: Report a bug or unexpected behavior in WINK GO
 title: '[Bug]: '
 labels: ['bug']
 body:
@@ -43,8 +44,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: WinkGo Version
-      description: What version of WinkGo are you using?
+      label: WINK GO Version
+      description: What version of WINK GO are you using?
       placeholder: e.g., 1.2.2
     validations:
       required: true

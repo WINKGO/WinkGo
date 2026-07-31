@@ -1,3 +1,4 @@
+<!-- Modified from aionrs by WINK GO contributors in 2026. -->
 # Golden Body Snapshots
 
 Baseline of outbound HTTP request bodies for the two wire dialects

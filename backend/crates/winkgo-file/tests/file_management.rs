@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Integration tests for file management operations (task 7.5).
 //!
 //! Covers `copy_files_to_workspace`, `remove_entry`, `rename_entry`, and

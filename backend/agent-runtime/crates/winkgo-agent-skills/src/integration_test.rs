@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 // Integration tests for the Skills system (Phase 14)
 //
 // These are black-box tests written by the Tester role based on test-plan.md.

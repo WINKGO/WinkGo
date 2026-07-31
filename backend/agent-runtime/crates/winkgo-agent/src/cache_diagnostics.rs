@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Prompt cache break detection.
 //!
 //! Pairs request-side prompt state (hashes) with response-side cache tokens

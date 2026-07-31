@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * E2E: Workspace file operations — expand folder, search, context menu.
  *

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Workspace information shared across factory builders. The conversation
 //! domain has already decoded raw DB state into typed context before this
 //! layer sees it.

@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Provider-dispatch upstream factory for STT streaming.
 //!
 //! The route layer needs a single [`UpstreamFactory`] that works for any

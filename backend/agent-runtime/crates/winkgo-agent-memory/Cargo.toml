@@ -1,3 +1,4 @@
+# Modified from aionrs by WINK GO contributors in 2026.
 [package]
 name = "winkgo-agent-memory"
 description = "Long-term memory system for winkgo_agent: cross-session storage of user preferences, feedback, project context, and external references"

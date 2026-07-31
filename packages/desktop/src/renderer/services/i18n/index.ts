@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 

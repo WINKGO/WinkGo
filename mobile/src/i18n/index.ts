@@ -1,4 +1,5 @@
-import i18n from 'i18next';
+// Modified from AionUI by WINK GO contributors in 2026.
+import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,6 +10,7 @@ import ruRU from './locales/ru-RU.json';
 import deDE from './locales/de-DE.json';
 
 const LANGUAGE_KEY = 'winkgo_language';
+const i18n = createInstance();
 
 const resources = {
   'en-US': { translation: enUS },

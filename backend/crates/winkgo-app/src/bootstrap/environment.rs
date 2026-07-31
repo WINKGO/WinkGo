@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Bootstrap layers shared by non-MCP subcommands.
 
 use std::time::Instant;

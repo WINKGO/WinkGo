@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::{
     io::{Read, Seek},
     path::{Path, PathBuf},

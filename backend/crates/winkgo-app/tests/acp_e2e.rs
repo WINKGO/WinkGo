@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! E2E integration tests for ACP management routes.
 //!
 //! Tests cover: agents list, legacy agents/refresh removal, agents/test,

@@ -1,3 +1,4 @@
+<!-- Modified from AionCore by WINK GO contributors in 2026. -->
 # Phase1 接口契约（先冻接口再开发）
 
 > **原则**：所有模块的 Rust 签名在 Wave 1 开工前冻结；后续模块照此实现，Wave 2 串联时不改签名。

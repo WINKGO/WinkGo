@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use winkgo_api_types::AgentMetadata;
 
 pub(crate) const CODEX_CANONICAL_FULL_ACCESS_MODE: &str = "agent-full-access";

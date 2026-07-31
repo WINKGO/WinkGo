@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { describe, expect, it } from 'vitest';
 import { collectBackendInstallDiagnostics } from '@/process/startup/backendInstallDiagnostics';
 import { appendAutoUpdateDiagnosticEvent } from '@/process/services/autoUpdateDiagnostics';

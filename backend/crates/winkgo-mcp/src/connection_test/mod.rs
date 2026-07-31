@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 mod protocol;
 
 use std::collections::HashMap;

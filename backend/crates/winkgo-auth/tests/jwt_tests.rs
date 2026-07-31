@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! JWT service integration tests.
 //!
 //! Tests the full lifecycle of JWT operations: sign, verify, blacklist, rotate.

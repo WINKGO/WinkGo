@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Shared runtime state for all agent managers.
 //!
 //! Each `*AgentManager` composes a single `AgentRuntime` to hold its

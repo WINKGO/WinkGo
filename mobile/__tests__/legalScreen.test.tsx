@@ -17,6 +17,8 @@ jest.mock('expo-constants', () => ({
           notice: 'WINK GO NOTICE with AionUi attribution',
           license: 'Apache License Version 2.0',
           thirdPartyNotices: 'Third-party AionUi release notice',
+          privacy: 'WINK GO Privacy Policy baseline',
+          terms: 'WINK GO Terms of Service baseline',
         },
       },
     },
@@ -37,6 +39,8 @@ jest.mock('react-i18next', () => ({
         'settings.legal.notice': 'Distribution notice',
         'settings.legal.apacheLicense': 'Apache 2.0 License',
         'settings.legal.thirdPartyNotices': 'Third-party notices',
+        'settings.legal.privacyPolicy': 'Privacy Policy',
+        'settings.legal.termsOfService': 'Terms of Service',
         'settings.legal.unavailable': 'Unavailable',
       })[key] ?? key,
   }),
@@ -53,5 +57,11 @@ describe('LegalScreen', () => {
 
     fireEvent.press(screen.getByText('Third-party notices'));
     expect(screen.getByText('Third-party AionUi release notice')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Privacy Policy'));
+    expect(screen.getByText('WINK GO Privacy Policy baseline')).toBeTruthy();
+
+    fireEvent.press(screen.getByText('Terms of Service'));
+    expect(screen.getByText('WINK GO Terms of Service baseline')).toBeTruthy();
   });
 });

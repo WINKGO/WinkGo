@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 //! Handling of a single `Message` command in the JSON stream protocol.
 //!
 //! While the engine is running a message, the host may still send control

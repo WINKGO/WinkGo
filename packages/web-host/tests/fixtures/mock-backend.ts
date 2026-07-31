@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 

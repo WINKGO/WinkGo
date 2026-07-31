@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Deepgram live (WebSocket) upstream for STT streaming.
 //!
 //! Connects to Deepgram's realtime `/v1/listen` endpoint over WebSocket and

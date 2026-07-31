@@ -1,3 +1,4 @@
+<!-- Modified from aionrs by WINK GO contributors in 2026. -->
 # Getting Started
 
 ## Installation
@@ -30,8 +31,6 @@ subcommand runs its action and exits — it does not start the agent main flow.
 |------------|--------------|
 | `winkgo_agent config init` | Generate a default global config file |
 | `winkgo_agent config path` | Print the global config file path |
-| `winkgo_agent auth login` | Login with Anthropic account (OAuth device flow) |
-| `winkgo_agent auth logout` | Logout (remove saved OAuth credentials) |
 | `winkgo_agent session list` | List saved sessions |
 | `winkgo_agent skills path` | Print skill directory paths |
 
@@ -193,7 +192,6 @@ Precedence is `CLI > profile > project config > global config > built-in default
 2. Config file `providers.<name>.api_key`
 3. Env var `API_KEY`
 4. Env var `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` (depends on provider)
-5. OAuth credentials (via `winkgo_agent auth login`)
 
 > **Note**: `bedrock` and `vertex` providers use their own cloud credentials and do not require a traditional API key. See [Providers & Auth](providers.md).
 

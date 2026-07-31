@@ -143,6 +143,8 @@
       "apacheLicense": "Apache 2.0 License",
       "notice": "Distribution notice",
       "thirdPartyNotices": "Third-party notices",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service",
       "unavailable": "The legal document is unavailable in this build."
     }
   }

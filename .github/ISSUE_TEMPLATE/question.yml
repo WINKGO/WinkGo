@@ -1,5 +1,6 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 name: ❓ Question
-description: Ask a question about WinkGo
+description: Ask a question about WINK GO
 title: '[Question]: '
 labels: ['question']
 body:

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * @license
  * Copyright 2025 AionUi (aionui.com)
@@ -62,10 +63,11 @@ if (isWebUI || isResetPassword) {
     app.commandLine.appendSwitch('disable-software-rasterizer');
   }
 
-  // For root user, disable sandbox to prevent crash
-  // 对于 root 用户，禁用沙箱以防止崩溃
+  // Never bypass Chromium's sandbox. Headless services must run as an
+  // unprivileged account; the Linux installer creates one for this purpose.
   if (typeof process.getuid === 'function' && process.getuid() === 0) {
-    app.commandLine.appendSwitch('no-sandbox');
+    console.error('[Security] WINK GO WebUI/reset-password mode refuses to run as root.');
+    app.exit(1);
   }
 }
 

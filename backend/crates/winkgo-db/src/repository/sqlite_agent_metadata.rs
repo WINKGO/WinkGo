@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! SQLite-backed agent metadata repository.
 
 use sqlx::{Row, SqlitePool, sqlite::SqliteRow};

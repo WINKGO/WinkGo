@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { describe, expect, it, vi } from 'vitest';
 import { LEGACY_HANDOFF_COLUMNS } from '@/process/services/database/legacyHandoffContract';
 import { repairLegacyHandoffSchema } from '@/process/services/database/repairLegacyHandoffSchema';

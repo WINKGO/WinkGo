@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use std::time::Duration;
 
 use reqwest::header::{HeaderMap, HeaderValue};

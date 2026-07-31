@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "WebUI host package - spawns backend and reverse-proxies to it; serves static files (no Electron dependency)",
-  "homepage": "https://winkgo.top/",
+  "homepage": "https://github.com/xuweihafeichangniu-lab/wink-go",
   "bugs": {
     "url": "https://github.com/xuweihafeichangniu-lab/wink-go/issues"
   },
@@ -27,5 +27,6 @@
     "@types/node": "^22.10.2",
     "@types/serve-handler": "^6.1.4",
     "vitest": "^4.1.0"
-  }
+  },
+  "x-upstream-modification-notice": "Modified from AionUI by WINK GO contributors in 2026."
 }

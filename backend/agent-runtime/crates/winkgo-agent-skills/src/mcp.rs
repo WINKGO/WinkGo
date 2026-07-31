@@ -1,3 +1,4 @@
+// Modified from aionrs by WINK GO contributors in 2026.
 use std::path::PathBuf;
 
 use crate::frontmatter::{parse_frontmatter, parse_skill_fields};

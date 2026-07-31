@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Postinstall script for WinkGo
  * Handles native module installation for different environments

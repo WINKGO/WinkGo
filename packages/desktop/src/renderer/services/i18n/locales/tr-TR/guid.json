@@ -14,14 +14,32 @@
     "searchPlaceholder": "Proje ara…",
     "noProject": "Proje Yok"
   },
+  "knowledgeCanvas": {
+    "analysisFailed": "WINK GO AI analizi başarısız oldu. Daha sonra tekrar deneyin.",
+    "backToChat": "Sohbete dön",
+    "frameTitle": "WINK GO Bilgi Tuvali",
+    "loading": "Bilgi Tuvali açılıyor…",
+    "open": "Bilgi Tuvali'ni aç",
+    "pageLabel": "WINK GO Bilgi Tuvali",
+    "reload": "Bilgi Tuvali'ni yeniden yükle",
+    "statusAnalyzing": "WINK GO AI analiz ediyor",
+    "statusReady": "Yerel tuval · AI kullanılabilir",
+    "statusUnavailable": "Deneysel · Pakete dahil değil",
+    "subtitle": "Web sayfalarını, belgeleri ve fikirleri düzenlenebilir bilgi yapılarına dönüştürün",
+    "title": "Bilgi Tuvali",
+    "unavailableDescription": "Herkese açık sürüm tam tuval çalışma zamanını içermez. Kaynak, lisans ve yayın belgeleri incelemeyi geçene kadar devre dışı kalacaktır.",
+    "unavailableTitle": "Bilgi Tuvali hâlâ deneysel"
+  },
   "installerCenter": {
     "entry": "Yazılım Kurulum Merkezi",
     "title": "WINK GO Kurulum Merkezi",
-    "subtitle": "Codex, Claude Code ve Antigravity için tek tıkla kurulum paketleri",
-    "windows": "Windows yükleyicileri",
-    "macos": "macOS yükleyicileri",
-    "environmentSetup": "{{platform}} için hızlı kurulum",
-    "downloadFailed": "İndirme bağlantısı açılamadı",
+    "subtitle": "Codex, Claude Code ve Antigravity resmi kurulum sayfalarını açın",
+    "windows": "Windows kurulum rehberi",
+    "macos": "macOS kurulum rehberi",
+    "environmentSetup": "Resmi {{platform}} kurulum rehberini görüntüle",
+    "openOfficialPage": "Resmi kurulum sayfasını aç",
+    "thirdPartyDisclaimer": "Codex, Claude Code ve Antigravity üçüncü taraf ürünleridir. WINK GO bunları barındırmaz, desteklemez veya kullanılabilirliklerini ya da uyumluluklarını garanti etmez; sağlayıcı koşulları geçerlidir.",
+    "downloadFailed": "Resmi kurulum sayfası açılamadı",
     "recommended": "Önerilen"
   }
 }

@@ -1,3 +1,4 @@
+; Modified from AionUI by WINK GO contributors in 2026.
 !ifndef WINKGO_INSTALLER_ERRORS_SENTRY_NSH
 !define WINKGO_INSTALLER_ERRORS_SENTRY_NSH
 

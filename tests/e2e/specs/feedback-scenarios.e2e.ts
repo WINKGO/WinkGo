@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Feedback button scenarios — walks each place in the product where the
  * "一键反馈" pill appears, verifies the pill shows up, clicks it, and
