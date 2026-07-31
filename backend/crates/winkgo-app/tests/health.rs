@@ -139,7 +139,7 @@ async fn health_check_has_security_headers() {
 
 #[tokio::test]
 async fn office_proxy_routes_allow_same_origin_framing() {
-    // Regression for xuweihafeichangniu-lab/wink-go#3177: the global security headers
+    // Regression for WINKGO/wink-go#3177: the global security headers
     // middleware must not overwrite the office preview proxies' framing
     // policy with DENY, or the preview iframe is blanked in browsers.
     let app = build_app().await;

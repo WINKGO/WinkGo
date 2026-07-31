@@ -8,6 +8,18 @@ const FORBIDDEN_MANAGED_CLI_PATH =
   /(?:^|\/)(?:cli\/(?:claude|codex)(?:\/|$)|node_modules\/@(?:anthropic-ai\/claude-code|openai\/codex)(?:[-/]|$)|claude(?:\.exe)?$|codex(?:\.exe)?$|codex-code-mode-host(?:\.exe)?$|codex-command-runner(?:\.exe)?$|codex-windows-sandbox-setup(?:\.exe)?$|codex-path(?:\/|$)|codex-resources(?:\/|$))/i;
 const ORIGINAL_PDF_TOOLKIT_MARKERS = [
   {
+    id: 'pdf-compatibility-skill-path',
+    value: ['pdf', '/SKILL.md'].join(''),
+  },
+  {
+    id: 'pdf-compatibility-skill-name',
+    value: ['name: pdf', '\n'].join(''),
+  },
+  {
+    id: 'pdf-compatibility-source-path',
+    value: ['pdf', '/SOURCE.md'].join(''),
+  },
+  {
     id: 'pdf-toolkit-skill-path',
     value: ['pdf-toolkit', '/SKILL.md'].join(''),
   },
@@ -22,12 +34,24 @@ const ORIGINAL_PDF_TOOLKIT_MARKERS = [
 ];
 const RESTRICTED_LEGACY_PDF_SKILL_MARKERS = [
   {
-    id: 'restricted-pdf-skill-path',
-    value: ['pdf', '/SKILL.md'].join(''),
-  },
-  {
     id: 'restricted-pdf-license-path',
     value: ['pdf', '/LICENSE.txt'].join(''),
+  },
+  {
+    id: 'restricted-pdf-reference-path',
+    value: ['pdf', '/reference.md'].join(''),
+  },
+  {
+    id: 'restricted-pdf-forms-path',
+    value: ['pdf', '/forms.md'].join(''),
+  },
+  {
+    id: 'restricted-pdf-scripts-path',
+    value: ['pdf', '/scripts/'].join(''),
+  },
+  {
+    id: 'restricted-pdf-license-text',
+    value: ['No Extraction, Copying, or ', 'Distribution of Licensed Materials'].join(''),
   },
 ];
 
@@ -148,7 +172,7 @@ function findRestrictedLegacyPdfSkillMarkersInFile(filePath) {
 
 function isRestrictedLegacyPdfSkillPath(relativePath) {
   const normalized = relativePath.replace(/\\/g, '/');
-  return /(?:^|\/)builtin-skills\/pdf(?:\/|$)/i.test(normalized);
+  return /(?:^|\/)builtin-skills\/pdf\/(?:LICENSE\.txt|reference\.md|forms\.md|scripts(?:\/|$))/i.test(normalized);
 }
 
 function findRestrictedLegacyPdfSkillPaths(rootDir) {
@@ -225,7 +249,7 @@ function assertCorePdfSkillCompliance(binaryPath) {
   const result = inspectCorePdfSkillCompliance(binaryPath);
   if (result.restricted.length > 0) {
     throw new Error(
-      `WINK GO Core contains the removed restricted Anthropic PDF Skill (${result.restricted.join(', ')}): ${binaryPath}`
+      `WINK GO Core contains redistribution-restricted legacy PDF material (${result.restricted.join(', ')}): ${binaryPath}`
     );
   }
   if (result.missing.length > 0) {
@@ -576,15 +600,6 @@ function verifyCorePdfSkillCompliance(baseDir, runtimeKey, electronPlatformName,
     }
   }
 
-  for (const legacyPath of findRestrictedLegacyPdfSkillPaths(baseDir)) {
-    const bundledLegacyPath = bundledPath(runtimeKey, ...legacyPath.split('/'));
-    failures.push({
-      component: 'winkgo_core-bundle',
-      reason: 'restricted_legacy_pdf_skill_path',
-      path: bundledLegacyPath,
-    });
-    missing.push(`${bundledLegacyPath}<restricted_legacy_pdf_skill_path>`);
-  }
 }
 
 function requireContractFile(baseDir, runtimeKey, cli, root, relativePath, checked, missing, failures) {

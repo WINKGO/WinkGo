@@ -25,7 +25,7 @@ describe('installer catalog', () => {
       'antigravity.google',
     ]);
     expect(INSTALLER_CATALOG.every((installer) => !/\.(?:exe|dmg)(?:$|[?#])/i.test(installer.downloadUrl))).toBe(true);
-    expect(INSTALLER_CATALOG.some((installer) => installer.downloadUrl.includes('xuweihafeichangniu-lab'))).toBe(false);
+    expect(INSTALLER_CATALOG.some((installer) => installer.downloadUrl.includes('WINKGO'))).toBe(false);
   });
 
   it.each(['http://github.com/example/installer.exe', 'https://github.com/example/installer.exe', 'not-a-url'])(

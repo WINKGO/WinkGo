@@ -7,7 +7,7 @@
 import type { UpdateReleaseInfo } from '@/common/update/updateTypes';
 import semver from 'semver';
 
-export const WINKGO_OFFICIAL_SITE_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go/releases';
+export const WINKGO_OFFICIAL_SITE_URL = 'https://github.com/WINKGO/wink-go/releases';
 const BUILD_EDITION =
   String(process.env.WINKGO_EDITION || 'free')
     .trim()
@@ -49,8 +49,8 @@ const normalizeOfficialUrl = (value: unknown): string => {
 
   try {
     const parsed = new URL(text);
-    const winkGoRepositoryPath = '/xuweihafeichangniu-lab/winkgo';
-    const normalizedPath = parsed.pathname.replace(/\/+$/, '');
+    const winkGoRepositoryPath = '/winkgo/wink-go';
+    const normalizedPath = parsed.pathname.replace(/\/+$/, '').toLowerCase();
     const isWinkGoReleasePage =
       parsed.protocol === 'https:' &&
       parsed.hostname === 'github.com' &&

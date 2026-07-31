@@ -8,4 +8,4 @@ WINK GO é um espaço de trabalho desktop multiplataforma para agentes de IA, re
 
 Todos os recursos atuais do cliente desktop estão disponíveis para todos. Modelos, APIs, retransmissão em nuvem, voz e outros serviços externos podem ter custos próprios.
 
-[Repositório](https://github.com/xuweihafeichangniu-lab/wink-go) · [Downloads](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)
+[Repositório](https://github.com/WINKGO/wink-go) · [Downloads](https://github.com/WINKGO/wink-go/releases) · [README](../../readme.md)

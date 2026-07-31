@@ -120,7 +120,7 @@ const AddModelModal = ModalHOC<{ data?: IProvider; model?: string; onSubmit: (mo
                 }}
                 value={models}
                 allowCreate
-                placeholder={t('settings.addModelPlaceholder')}
+                placeholder={t('settings.addModelPlaceholder', '输入模型名称并按 Enter')}
               />
             </div>
           )}

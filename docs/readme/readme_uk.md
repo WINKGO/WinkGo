@@ -8,4 +8,4 @@ WINK GO — кросплатформний настільний робочий �
 
 Усі поточні функції настільного клієнта доступні кожному користувачеві. Зовнішні моделі, API, хмарна ретрансляція, голосові та інші сервіси можуть оплачуватися окремо.
 
-[Репозиторій](https://github.com/xuweihafeichangniu-lab/wink-go) · [Завантаження](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)
+[Репозиторій](https://github.com/WINKGO/wink-go) · [Завантаження](https://github.com/WINKGO/wink-go/releases) · [README](../../readme.md)

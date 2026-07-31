@@ -125,6 +125,6 @@ description: 'WINK GO WebUI configuration expert: Helps users configure WINK GO 
 
 ## 参考资源
 
-- [WINK GO Wiki - Remote Internet Access Guide](https://github.com/xuweihafeichangniu-lab/wink-go/wiki/Remote-Internet-Access-Guide)
-- [WINK GO Wiki - WebUI Configuration Guide](https://github.com/xuweihafeichangniu-lab/wink-go/wiki/WebUI-Configuration-Guide)
+- [WINK GO Wiki - Remote Internet Access Guide](https://github.com/WINKGO/wink-go/wiki/Remote-Internet-Access-Guide)
+- [WINK GO Wiki - WebUI Configuration Guide](https://github.com/WINKGO/wink-go/wiki/WebUI-Configuration-Guide)
 - [Tailscale 官方文档](https://tailscale.com/kb/)

@@ -6,13 +6,13 @@
   "description": "WINK GO mobile companion application",
   "x-upstream-modification-notice": "Modified from AionUI by WINK GO contributors in 2026.",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/xuweihafeichangniu-lab/wink-go",
+  "homepage": "https://github.com/WINKGO/wink-go",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xuweihafeichangniu-lab/wink-go.git"
+    "url": "git+https://github.com/WINKGO/wink-go.git"
   },
   "bugs": {
-    "url": "https://github.com/xuweihafeichangniu-lab/wink-go/issues"
+    "url": "https://github.com/WINKGO/wink-go/issues"
   },
   "scripts": {
     "start": "expo start",

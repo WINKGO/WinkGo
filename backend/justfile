@@ -19,7 +19,7 @@ setup:
     git config core.hooksPath .githooks
     @echo "Git hooks enabled"
 
-# Run cargo with optional local winkgo_agent SDK patches.
+# Run cargo against the integrated backend and agent-runtime workspaces.
 _cargo *ARGS:
     @{{cargo_script}} {{ARGS}}
 
@@ -83,7 +83,7 @@ push *ARGS: migration-check lint-fix fmt _auto-commit-fixes test
 _auto-commit-fixes:
     @{{auto_commit_script}}
 
-# Update winkgo_agent dependency (e.g. just update-winkgo_agent or just update-winkgo_agent v0.1.19)
+# Compatibility task: the agent runtime is now vendored under backend/agent-runtime.
 update-winkgo_agent *TAG:
     @{{update_winkgo_agent_script}} {{TAG}}
 

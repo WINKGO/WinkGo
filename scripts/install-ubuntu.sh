@@ -16,7 +16,7 @@
 # WINKGO_* 環境變數仍可能沿用 WinkGo/winkgo 名稱，以兼容既有安裝。
 #
 # 用法：
-#   curl -fsSL https://raw.githubusercontent.com/xuweihafeichangniu-lab/winkgo/main/scripts/install-ubuntu.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/WINKGO/wink-go/main/scripts/install-ubuntu.sh | bash
 #   # 或指定版本：
 #   WINKGO_VERSION=2.2.0 bash install-ubuntu.sh
 #   # 僅安裝桌面版（跳過 headless 設定）：
@@ -97,10 +97,10 @@ resolve_version() {
         info "正在查詢最新版本..."
         # 透過 GitHub API 取得 latest release tag
         if command -v curl &>/dev/null; then
-            VERSION=$(curl -fsSL "https://api.github.com/repos/xuweihafeichangniu-lab/winkgo/releases/latest" \
+            VERSION=$(curl -fsSL "https://api.github.com/repos/WINKGO/wink-go/releases/latest" \
                 | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')
         elif command -v wget &>/dev/null; then
-            VERSION=$(wget -qO- "https://api.github.com/repos/xuweihafeichangniu-lab/winkgo/releases/latest" \
+            VERSION=$(wget -qO- "https://api.github.com/repos/WINKGO/wink-go/releases/latest" \
                 | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')
         else
             die "需要 curl 或 wget 來下載，請先安裝: sudo apt-get install -y curl"
@@ -113,7 +113,7 @@ resolve_version() {
     fi
 
     DEB_FILENAME="WINK-GO-Free-${VERSION}-linux-${RELEASE_ARCH}.deb"
-    DOWNLOAD_URL="https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/v${VERSION}/${DEB_FILENAME}"
+    DOWNLOAD_URL="https://github.com/WINKGO/wink-go/releases/download/v${VERSION}/${DEB_FILENAME}"
 }
 
 # ─── 下載 .deb 套件 ──────────────────────────────────────────────────────────
@@ -327,7 +327,7 @@ create_systemd_service() {
     $SUDO tee "$service_path" > /dev/null << 'SERVICE_EOF'
 [Unit]
 Description=WINK GO AI Agent Desktop App (WebUI Mode)
-Documentation=https://github.com/xuweihafeichangniu-lab/wink-go
+Documentation=https://github.com/WINKGO/wink-go
 After=network-online.target
 Wants=network-online.target
 
@@ -433,8 +433,8 @@ print_summary() {
         echo ""
     fi
 
-    echo -e "  ${BOLD}📖 文件:${NC}  https://github.com/xuweihafeichangniu-lab/wink-go"
-    echo -e "  ${BOLD}🐛 回報:${NC}  https://github.com/xuweihafeichangniu-lab/wink-go/issues"
+    echo -e "  ${BOLD}📖 文件:${NC}  https://github.com/WINKGO/wink-go"
+    echo -e "  ${BOLD}🐛 回報:${NC}  https://github.com/WINKGO/wink-go/issues"
     echo ""
 
     if [[ "${MODE}" == "headless" ]]; then

@@ -167,21 +167,18 @@ describe('release packaging configuration', () => {
     expect(macBlock).toContain('    - zip');
   });
 
-  it('excludes and rejects the unreviewed Knowledge Canvas runtime', () => {
+  it('ships the original Knowledge Canvas and WINK GO skill inventories', () => {
     const builderConfig = readProjectFile('packages/desktop/electron-builder.yml');
     const viteConfig = readProjectFile('packages/desktop/electron.vite.config.ts');
 
-    expect(builderConfig).toContain("'!public/knowledge-canvas/**'");
-    expect(builderConfig).toContain("'!knowledge-canvas/**'");
-    expect(builderConfig).toContain("'!provider-skills/**'");
-    expect(builderConfig).toContain("'!skills/**'");
-    expect(viteConfig).toContain('winkgo-reject-unreviewed-knowledge-canvas');
-    expect(viteConfig).toContain('public/knowledge-canvas/index.html');
-    expect(viteConfig).toContain('resources/winkgo/provider-skills');
-    expect(viteConfig).toContain('out/main/static/winkgo/skills');
-    expect(viteConfig).toContain('out/renderer/winkgo/skills');
-    expect(viteConfig).toContain('Refusing to build');
-    expect(readProjectFile('scripts/audit-release-privacy.cjs')).toContain('restricted-bundled-skills-path');
+    expect(builderConfig).toContain('- public/**/*');
+    expect(builderConfig).not.toContain("'!public/knowledge-canvas/**'");
+    expect(builderConfig).not.toContain("'!knowledge-canvas/**'");
+    expect(builderConfig).not.toContain("'!provider-skills/**'");
+    expect(builderConfig).not.toContain("'!skills/**'");
+    expect(viteConfig).not.toContain('winkgo-reject-unreviewed-knowledge-canvas');
+    expect(readProjectFile('public/knowledge-canvas/index.html').length).toBeGreaterThan(100_000);
+    expect(readProjectFile('scripts/audit-release-privacy.cjs')).not.toContain('restricted-bundled-skills-path');
   });
 
   it('ships canonical legal documents in every public distribution channel', () => {
@@ -244,7 +241,7 @@ describe('release packaging configuration', () => {
         repository?: { url?: string };
       };
       expect(packageJson.license, packagePath).toBe('Apache-2.0');
-      expect(packageJson.repository?.url, packagePath).toContain('github.com/xuweihafeichangniu-lab/wink-go.git');
+      expect(packageJson.repository?.url, packagePath).toContain('github.com/WINKGO/wink-go.git');
     }
 
     expect(readProjectFile('backend/Cargo.toml')).toContain('license = "Apache-2.0"');

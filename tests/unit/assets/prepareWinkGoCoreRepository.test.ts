@@ -23,12 +23,12 @@ const {
 describe('WINK GO Core repository resolution', () => {
   it('defaults every release download to the clean WINK GO repository', () => {
     expect(resolveGitHubRepository({})).toEqual({
-      owner: 'xuweihafeichangniu-lab',
+      owner: 'WINKGO',
       repo: 'wink-go',
-      repository: 'xuweihafeichangniu-lab/wink-go',
+      repository: 'WINKGO/wink-go',
     });
     expect(getDownloadUrl('winkgo_core-v2.2.0.zip', 'v2.2.0', {})).toBe(
-      'https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/v2.2.0/winkgo_core-v2.2.0.zip'
+      'https://github.com/WINKGO/wink-go/releases/download/v2.2.0/winkgo_core-v2.2.0.zip'
     );
   });
 
@@ -45,7 +45,7 @@ describe('WINK GO Core repository resolution', () => {
   });
 
   it('fails closed for the retired repository and malformed repository values', () => {
-    expect(() => resolveGitHubRepository({ GITHUB_REPOSITORY: 'xuweihafeichangniu-lab/wink' })).toThrow(
+    expect(() => resolveGitHubRepository({ GITHUB_REPOSITORY: 'WINKGO/wink' })).toThrow(
       'Refusing to prepare release resources from retired repository'
     );
     expect(() => resolveGitHubRepository({ GITHUB_REPOSITORY: 'https://github.com/example/repo' })).toThrow(

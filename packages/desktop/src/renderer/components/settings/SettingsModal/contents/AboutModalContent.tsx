@@ -18,8 +18,8 @@ import privacyPolicyText from '../../../../../../../../PRIVACY.md?raw';
 import termsOfServiceText from '../../../../../../../../TERMS.md?raw';
 import thirdPartyNoticesText from '../../../../../../../../THIRD_PARTY_NOTICES.md?raw';
 
-const WINK_GO_PROJECT_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go';
-const WINK_GO_PROJECT_LABEL = 'github.com/xuweihafeichangniu-lab/wink-go';
+const WINK_GO_PROJECT_URL = 'https://github.com/WINKGO/wink-go';
+const WINK_GO_PROJECT_LABEL = 'github.com/WINKGO/wink-go';
 const APACHE_LICENSE_URL = 'https://www.apache.org/licenses/LICENSE-2.0';
 
 declare const __APP_VERSION__: string;

@@ -139,7 +139,7 @@ const QuickActionButtons: React.FC<QuickActionButtonsProps> = ({ onOpenLink, ina
             style={quickActionStyle(hoveredQuickAction === 'website')}
             onMouseEnter={() => setHoveredQuickAction('website')}
             onMouseLeave={() => setHoveredQuickAction(null)}
-            onClick={() => onOpenLink('https://github.com/xuweihafeichangniu-lab/wink-go')}
+            onClick={() => onOpenLink('https://github.com/WINKGO/wink-go')}
             aria-label={`WINK GO ${t('common.website')}`}
             title={`WINK GO ${t('common.website')}`}
           >

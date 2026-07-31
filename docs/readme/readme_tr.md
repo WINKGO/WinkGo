@@ -8,4 +8,4 @@ WINK GO; ajanları, dosyaları, araçları, becerileri, zamanlanmış görevleri
 
 Masaüstü istemcisinin mevcut tüm özellikleri herkese açıktır. Harici modeller, API'ler, bulut aktarımı, ses ve diğer hizmetler kendi kullanım ücretlerine tabi olabilir.
 
-[Depo](https://github.com/xuweihafeichangniu-lab/wink-go) · [İndirmeler](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)
+[Depo](https://github.com/WINKGO/wink-go) · [İndirmeler](https://github.com/WINKGO/wink-go/releases) · [README](../../readme.md)

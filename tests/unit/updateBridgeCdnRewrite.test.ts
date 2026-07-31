@@ -73,7 +73,7 @@ const makeWinkGoManifest = (version = '1.9.22') => ({
   productName: 'WINK GO',
   notes: 'release notes',
   generatedAt: '2026-04-29T00:00:00Z',
-  officialSite: 'https://github.com/xuweihafeichangniu-lab/wink-go/releases',
+  officialSite: 'https://github.com/WINKGO/wink-go/releases',
 });
 
 const getCheckHandler = async () => {
@@ -125,7 +125,7 @@ describe('updateBridge official WINK GO manifest', () => {
 
     try {
       const handler = await getCheckHandler();
-      const result = await handler({ repo: 'xuweihafeichangniu-lab/winkgo' });
+      const result = await handler({ repo: 'WINKGO/wink-go' });
 
       expect(result.success).toBe(true);
       expect(result.data?.currentVersion).toBe('1.0.0');
@@ -135,7 +135,7 @@ describe('updateBridge official WINK GO manifest', () => {
         version: '1.9.22',
         name: 'WINK GO',
         body: 'release notes',
-        htmlUrl: 'https://github.com/xuweihafeichangniu-lab/wink-go/releases',
+        htmlUrl: 'https://github.com/WINKGO/wink-go/releases',
         assets: [],
       });
       expect(fetchMock).toHaveBeenCalledWith(
@@ -158,7 +158,7 @@ describe('updateBridge official WINK GO manifest', () => {
 
     try {
       const handler = await getCheckHandler();
-      const result = await handler({ repo: 'xuweihafeichangniu-lab/winkgo' });
+      const result = await handler({ repo: 'WINKGO/wink-go' });
       expect(result.success).toBe(true);
       expect(result.data?.latest?.version).toBe('1.9.22');
       expect(result.data?.latest?.tagName).toBe('v1.9.22');

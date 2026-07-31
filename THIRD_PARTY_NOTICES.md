@@ -63,6 +63,33 @@ commit `e04dee2af5a0822db867edd67fcf29c9e02739fc`.
 The applicable complete license, upstream NOTICE, pinned source, and WINK GO
 modification notes are retained beside each redistributed skill.
 
+## Moltbook skill
+
+The bundled Moltbook integration is the snapshot recorded in the pinned
+AionCore `v0.1.52` inventory and identifies its author as `moltbook`, homepage
+as <https://www.moltbook.com>, and license as MIT. The official Moltbook
+`skill.json` endpoint was rechecked on 2026-07-31 and also reported the MIT
+license.
+
+- Copyright: Copyright (c) moltbook
+- License: MIT
+
+The complete MIT notice and source record are retained in
+`backend/crates/winkgo-app/assets/builtin-skills/moltbook/`. Moltbook is an
+independent service; inclusion does not imply sponsorship or affiliation.
+
+## WINK GO Knowledge Canvas
+
+The bundled single-file Knowledge Canvas is built from the independently
+developed `wink-go-canvans` project version `0.1.2`, preserved in WINK GO's
+read-only historical project archive. It is not sourced from AionUI or
+AionCore.
+
+Its runtime dependency closure includes React Flow, React, Lucide, QRCode,
+Zustand, and their transitive dependencies. The exact package inventory,
+complete license texts, source hashes, and React Flow attribution record are
+distributed under `public/knowledge-canvas/`.
+
 ## Anthropic skill-creator
 
 The bundled `skill-creator` material is based on Anthropic's skills repository

@@ -8,6 +8,9 @@ const {
 } = require('../../../packages/shared-scripts/src/verify-bundled-winkgo-core-resources');
 
 const COMPLIANT_PDF_TOOLKIT_CORE = [
+  'pdf/SKILL.md',
+  'name: pdf\n',
+  'pdf/SOURCE.md',
   'pdf-toolkit/SKILL.md',
   'name: pdf-toolkit',
   'This original skill is distributed under the Apache License 2.0.',
@@ -111,9 +114,24 @@ describe('verifyBundledWinkGoCoreResources', () => {
     expect(result.failures).toEqual([]);
   });
 
-  it('rejects a Core that embeds the removed restricted PDF Skill', () => {
+  it('allows the compliant PDF compatibility skill alongside the required toolkit', () => {
     const binaryPath = join(resourcesDir, 'bundled-winkgo-core', 'win32-x64', 'winkgo_core.exe');
-    writeFile(binaryPath, [COMPLIANT_PDF_TOOLKIT_CORE, 'pdf/SKILL.md', 'pdf/LICENSE.txt'].join('\0'));
+    writeFile(binaryPath, [COMPLIANT_PDF_TOOLKIT_CORE, 'pdf/LICENSE'].join('\0'));
+
+    const result = verifyBundledWinkGoCoreResources({
+      resourcesDir,
+      electronPlatformName: 'win32',
+      targetArch: 'x64',
+    });
+
+    expect(result.failures).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ reason: 'restricted_legacy_pdf_skill' })])
+    );
+  });
+
+  it('rejects a Core that embeds the legacy redistribution-restricted PDF files', () => {
+    const binaryPath = join(resourcesDir, 'bundled-winkgo-core', 'win32-x64', 'winkgo_core.exe');
+    writeFile(binaryPath, [COMPLIANT_PDF_TOOLKIT_CORE, 'pdf/LICENSE.txt'].join('\0'));
 
     const result = verifyBundledWinkGoCoreResources({
       resourcesDir,
@@ -127,7 +145,6 @@ describe('verifyBundledWinkGoCoreResources', () => {
         reason: 'restricted_legacy_pdf_skill',
       })
     );
-    expect(result.missing).toEqual(expect.arrayContaining([expect.stringContaining('<restricted_legacy_pdf_skill:')]));
   });
 
   it('rejects a Core that does not embed the original pdf-toolkit', () => {
@@ -148,7 +165,7 @@ describe('verifyBundledWinkGoCoreResources', () => {
     );
   });
 
-  it('rejects the removed builtin-skills/pdf directory in a prepared bundle', () => {
+  it('allows the compliant builtin-skills/pdf directory in a prepared bundle', () => {
     writeFile(join(managedResourcesDir, 'builtin-skills', 'pdf', 'SKILL.md'), 'legacy PDF skill');
 
     const result = verifyBundledWinkGoCoreResources({
@@ -157,11 +174,8 @@ describe('verifyBundledWinkGoCoreResources', () => {
       targetArch: 'x64',
     });
 
-    expect(result.failures).toContainEqual(
-      expect.objectContaining({
-        component: 'winkgo_core-bundle',
-        reason: 'restricted_legacy_pdf_skill_path',
-      })
+    expect(result.failures).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ reason: 'restricted_legacy_pdf_skill_path' })])
     );
   });
 

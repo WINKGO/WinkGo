@@ -144,14 +144,6 @@ async fn materialize_embedded_builtin_skills_unlocked(
     tokio::fs::create_dir_all(&staging).await?;
 
     write_dir_recursive(corpus, &staging).await?;
-    let prohibited_embedded_path = staging.join("pdf");
-    if prohibited_embedded_path.exists() {
-        return Err(ExtensionError::Io(std::io::Error::other(format!(
-            "embedded builtin skills contain the removed restricted PDF path: {}",
-            prohibited_embedded_path.display()
-        ))));
-    }
-
     let version_path = staging.join(VERSION_FILE);
     tokio::fs::write(&version_path, binary_version).await?;
 
@@ -224,20 +216,30 @@ async fn materialize_embedded_builtin_skills_unlocked(
     Ok(())
 }
 
-/// Remove the exact legacy cache location used by the formerly bundled,
-/// redistribution-restricted PDF skill. This path is never used by the new
-/// `pdf-toolkit` skill. Failure is fatal so startup cannot silently expose the
-/// legacy tree after an upgrade.
+const RESTRICTED_LEGACY_PDF_MARKERS: &[&str] = &["LICENSE.txt", "reference.md", "forms.md", "scripts"];
+
+async fn restricted_legacy_pdf_dir_exists(pdf_dir: &Path) -> Result<bool, ExtensionError> {
+    for marker in RESTRICTED_LEGACY_PDF_MARKERS {
+        match tokio::fs::symlink_metadata(pdf_dir.join(marker)).await {
+            Ok(_) => return Ok(true),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+    }
+    Ok(false)
+}
+
+/// Detect only the old redistribution-restricted PDF tree. A modern WINK GO
+/// `pdf` compatibility skill is valid and must not be removed merely because
+/// it uses the same public catalog name.
 async fn restricted_legacy_pdf_cache_exists(data_dir: &Path) -> Result<bool, ExtensionError> {
     for parent in [
         data_dir.join(crate::constants::BUILTIN_SKILLS_DIR_NAME),
         data_dir.join(OLD_DIR_NAME),
         data_dir.join(STAGING_DIR_NAME),
     ] {
-        match tokio::fs::symlink_metadata(parent.join("pdf")).await {
-            Ok(_) => return Ok(true),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(error) => return Err(error.into()),
+        if restricted_legacy_pdf_dir_exists(&parent.join("pdf")).await? {
+            return Ok(true);
         }
     }
     Ok(false)
@@ -251,12 +253,10 @@ async fn remove_restricted_legacy_pdf_cache(data_dir: &Path) -> Result<bool, Ext
         data_dir.join(STAGING_DIR_NAME),
     ] {
         let legacy_path = parent.join("pdf");
-        let metadata = match tokio::fs::symlink_metadata(&legacy_path).await {
-            Ok(metadata) => metadata,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
-            Err(error) => return Err(error.into()),
-        };
-
+        if !restricted_legacy_pdf_dir_exists(&legacy_path).await? {
+            continue;
+        }
+        let metadata = tokio::fs::symlink_metadata(&legacy_path).await?;
         let operation = if metadata.is_dir() && !metadata.file_type().is_symlink() {
             retry_startup_file_op("remove restricted legacy PDF skill directory", &legacy_path, || {
                 tokio::fs::remove_dir_all(&legacy_path)
@@ -278,10 +278,7 @@ async fn remove_restricted_legacy_pdf_cache(data_dir: &Path) -> Result<bool, Ext
             ))
         })?;
         removed = true;
-        info!(
-            path = %legacy_path.display(),
-            "removed restricted legacy PDF skill cache during startup migration"
-        );
+        info!(path = %legacy_path.display(), "removed restricted legacy PDF skill cache during startup migration");
     }
     Ok(removed)
 }

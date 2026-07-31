@@ -25,8 +25,12 @@ const {
   verifyBundledWinkGoCoreResources,
 } = require('./verify-bundled-winkgo-core-resources');
 
-const DEFAULT_GITHUB_REPOSITORY = 'xuweihafeichangniu-lab/wink-go';
-const RETIRED_GITHUB_REPOSITORY = 'xuweihafeichangniu-lab/wink';
+const DEFAULT_GITHUB_REPOSITORY = 'WINKGO/wink-go';
+const RETIRED_GITHUB_REPOSITORIES = new Set([
+  'winkgo/wink',
+  'xuweihafeichangniu-lab/wink',
+  'xuweihafeichangniu-lab/wink-go',
+]);
 
 const ACTIONS_ARTIFACT_TARGETS = {
   'darwin-arm64': {
@@ -124,8 +128,8 @@ function resolveGitHubRepository(env = process.env) {
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
     throw new Error(`Invalid WINK GO GitHub repository: ${repository || '(empty)'}`);
   }
-  if (repository.toLowerCase() === RETIRED_GITHUB_REPOSITORY) {
-    throw new Error(`Refusing to prepare release resources from retired repository ${RETIRED_GITHUB_REPOSITORY}`);
+  if (RETIRED_GITHUB_REPOSITORIES.has(repository.toLowerCase())) {
+    throw new Error(`Refusing to prepare release resources from retired repository ${repository}`);
   }
   const [owner, repo] = repository.split('/');
   return { owner, repo, repository };

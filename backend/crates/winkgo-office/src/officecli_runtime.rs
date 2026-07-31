@@ -181,8 +181,8 @@ mod tests {
 
         assert!(unix_text.contains("iOfficeAI/OfficeCLI/e04dee2af5a0822db867edd67fcf29c9e02739fc/install.sh"));
         assert!(windows_text.contains("iOfficeAI/OfficeCLI/e04dee2af5a0822db867edd67fcf29c9e02739fc/install.ps1"));
-        assert!(!unix_text.contains("xuweihafeichangniu-lab"));
-        assert!(!windows_text.contains("xuweihafeichangniu-lab"));
+        assert!(!unix_text.contains("WINKGO"));
+        assert!(!windows_text.contains("WINKGO"));
         assert!(unix_text.contains(OFFICECLI_INSTALL_SH_SHA256));
         assert!(windows_text.contains(OFFICECLI_INSTALL_PS1_SHA256));
         assert!(!windows_text.contains("iex"));

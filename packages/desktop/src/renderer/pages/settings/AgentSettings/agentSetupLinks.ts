@@ -7,7 +7,7 @@
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
 
 export const BUILTIN_AGENT_SETUP_LINKS = {
-  winkgo_agent: 'https://github.com/xuweihafeichangniu-lab/wink-go#readme',
+  winkgo_agent: 'https://github.com/WINKGO/wink-go#readme',
   claude: 'https://code.claude.com/docs/en/setup',
   codex: 'https://learn.chatgpt.com/docs/codex/cli',
   gemini: 'https://github.com/google-gemini/gemini-cli',
@@ -24,7 +24,7 @@ export const BUILTIN_AGENT_SETUP_LINKS = {
   cursor: 'https://cursor.com/download',
   kiro: 'https://kiro.dev/downloads/',
   hermes: 'https://github.com/NousResearch/hermes-agent',
-  snow: 'https://github.com/xuweihafeichangniu-lab/wink-go/blob/main/docs/agents/snow.md',
+  snow: 'https://github.com/WINKGO/wink-go/blob/main/docs/agents/snow.md',
   openclaw: 'https://docs.openclaw.ai/install',
   pi: 'https://github.com/agentclientprotocol/registry/blob/main/pi-acp/agent.json',
   autohand: 'https://github.com/agentclientprotocol/registry/blob/main/autohand/agent.json',

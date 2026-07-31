@@ -4,7 +4,7 @@ use winkgo_api_types::{GitHubReleaseAsset, UpdateCheckRequest, UpdateCheckResult
 
 use crate::error::SystemError;
 
-const DEFAULT_REPO: &str = "xuweihafeichangniu-lab/winkgo";
+const DEFAULT_REPO: &str = "WINKGO/wink-go";
 const GITHUB_API_BASE: &str = "https://api.github.com";
 
 /// Service that checks GitHub Releases for available updates.

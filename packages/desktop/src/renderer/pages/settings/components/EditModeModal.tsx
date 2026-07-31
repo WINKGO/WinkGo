@@ -383,6 +383,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
                   void modelListState.mutate();
                 }}
                 options={isFullUrl ? [] : modelListState.data?.models || []}
+                placeholder={t('settings.modelNamePlaceholder', '输入模型名称并按 Enter')}
               />
             </Form.Item>
           </Form>

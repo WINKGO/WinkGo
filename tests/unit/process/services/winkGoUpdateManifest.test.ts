@@ -17,7 +17,7 @@ describe('WINK GO official update manifest', () => {
       version: '2.1.41',
       productName: 'WINK GO',
       generatedAt: '2026-07-26T02:00:00.000Z',
-      officialSite: 'https://github.com/xuweihafeichangniu-lab/wink-go/releases',
+      officialSite: 'https://github.com/WINKGO/wink-go/releases',
       notes: '新增知识画布。',
       windows: {
         version: '2.1.41',
@@ -49,7 +49,7 @@ describe('WINK GO official update manifest', () => {
       officialSite: 'https://example.com/fake-update',
     });
     expect(release.htmlUrl).toBe(WINKGO_OFFICIAL_SITE_URL);
-    expect(WINKGO_OFFICIAL_SITE_URL).toBe('https://github.com/xuweihafeichangniu-lab/wink-go/releases');
+    expect(WINKGO_OFFICIAL_SITE_URL).toBe('https://github.com/WINKGO/wink-go/releases');
     expect(WINKGO_UPDATE_MANIFEST_URL).toBe('https://winkgo.top/winkgo-free-update.json');
   });
 });

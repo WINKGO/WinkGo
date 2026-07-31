@@ -19,6 +19,7 @@ const themePresetsRoot = resolve(
 const backendLogoRoot = resolve(projectRoot, 'backend/crates/winkgo-assets/assets/logos');
 const rendererChannelLogoRoot = resolve(projectRoot, 'packages/desktop/src/renderer/assets/channel-logos');
 const rendererProductLogoRoot = resolve(projectRoot, 'packages/desktop/src/renderer/assets/product-logos');
+const knowledgeCanvasRoot = resolve(projectRoot, 'public/knowledge-canvas');
 
 function readProjectFile(path: string): string {
   return readFileSync(resolve(projectRoot, path), 'utf8');
@@ -32,12 +33,39 @@ function listFilesRecursively(directory: string): string[] {
 }
 
 describe('third-party distribution compliance', () => {
-  it('does not ship the removed Moltbook integration', () => {
-    expect(existsSync(resolve(builtinSkillsRoot, 'moltbook'))).toBe(false);
-    expect(existsSync(resolve(builtinAssistantsRoot, 'avatars/moltbook.jpg'))).toBe(false);
+  it('ships Knowledge Canvas source provenance and its complete runtime license closure', () => {
+    const source = readFileSync(resolve(knowledgeCanvasRoot, 'SOURCE.md'), 'utf8');
+    const licenses = readFileSync(resolve(knowledgeCanvasRoot, 'THIRD_PARTY_LICENSES.txt'), 'utf8');
+    const inventory = JSON.parse(
+      readFileSync(resolve(knowledgeCanvasRoot, 'THIRD_PARTY_DEPENDENCIES.json'), 'utf8')
+    ) as { packages: Array<{ name: string; version: string; licenseTextHashes: string[] }> };
+
+    expect(source).toContain('wink-go-canvans');
+    expect(source).toContain('not derived from AionUI or AionCore');
+    expect(source).toContain('2b450f6639f206f5a0de4a55f5de8b7e08e217db9b757e764666115386244c40');
+    expect(source).toContain('React Flow attribution link');
+    expect(licenses).toContain('Copyright (c) 2019-2025 webkid GmbH');
+    expect(inventory.packages.length).toBeGreaterThan(50);
+    expect(inventory.packages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: '@xyflow/react', version: '12.11.2' }),
+        expect.objectContaining({ name: 'react', version: '19.2.7' }),
+        expect.objectContaining({ name: 'lucide-react', version: '1.25.0' }),
+      ])
+    );
+    expect(inventory.packages.every((entry) => entry.licenseTextHashes.length > 0)).toBe(true);
+  });
+
+  it('ships the restored Moltbook integration with its MIT notice', () => {
+    expect(existsSync(resolve(builtinSkillsRoot, 'moltbook'))).toBe(true);
+    expect(readFileSync(resolve(builtinSkillsRoot, 'moltbook/LICENSE'), 'utf8')).toContain('MIT License');
+    expect(readFileSync(resolve(builtinSkillsRoot, 'moltbook/SOURCE.md'), 'utf8')).toContain(
+      '76f5554286ba0b6d33fb74d5c2bb2b3b0b83100d'
+    );
+    expect(existsSync(resolve(builtinAssistantsRoot, 'avatars/moltbook.jpg'))).toBe(true);
 
     for (const locale of ['en-US', 'ru-RU', 'zh-CN']) {
-      expect(existsSync(resolve(builtinAssistantsRoot, `rules/moltbook.${locale}.md`))).toBe(false);
+      expect(existsSync(resolve(builtinAssistantsRoot, `rules/moltbook.${locale}.md`))).toBe(true);
     }
 
     const assistants = JSON.parse(readFileSync(resolve(builtinAssistantsRoot, 'assistants.json'), 'utf8')) as {
@@ -49,14 +77,14 @@ describe('third-party distribution compliance', () => {
         enabled_skills?: string[];
       }>;
     };
-    expect(assistants.assistants.some((assistant) => assistant.id === 'moltbook')).toBe(false);
-    expect(assistants.assistants.some((assistant) => assistant.enabled_skills?.includes('moltbook'))).toBe(false);
+    expect(assistants.assistants.some((assistant) => assistant.id === 'moltbook')).toBe(true);
+    expect(assistants.assistants.some((assistant) => assistant.enabled_skills?.includes('moltbook'))).toBe(true);
 
     const migrationSource = readProjectFile('packages/desktop/src/process/utils/migrateAssistants.ts');
     expect(migrationSource).not.toContain("'moltbook'");
   });
 
-  it('keeps each visible builtin assistant avatar while removed integrations stay absent', () => {
+  it('keeps each visible builtin assistant avatar', () => {
     const assistants = JSON.parse(readFileSync(resolve(builtinAssistantsRoot, 'assistants.json'), 'utf8')) as {
       assistants: Array<{
         id: string;

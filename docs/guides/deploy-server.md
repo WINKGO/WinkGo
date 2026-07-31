@@ -23,7 +23,7 @@ Deploy WINK GO WebUI on headless Linux servers — cloud VMs, Kubernetes Pods, a
 
 - Linux x86_64 (Ubuntu 20.04+ / Debian 11+ recommended)
 - At least 2GB RAM
-- WINK GO `.deb` package from [Releases](https://github.com/xuweihafeichangniu-lab/wink-go/releases)
+- WINK GO `.deb` package from [Releases](https://github.com/WINKGO/wink-go/releases)
 
 ---
 
@@ -34,7 +34,7 @@ Deploy WINK GO WebUI on headless Linux servers — cloud VMs, Kubernetes Pods, a
 ```bash
 # Replace this value with the version shown on the WINK GO Releases page.
 VERSION=2.2.0
-wget "https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-x64.deb"
+wget "https://github.com/WINKGO/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-x64.deb"
 
 # Install
 sudo dpkg -i "WINK-GO-Free-${VERSION}-linux-x64.deb"
@@ -329,7 +329,7 @@ For Gemini API calls, configure the proxy inside WINK GO WebUI:
 
 - Linux x86_64（推荐 Ubuntu 20.04+ / Debian 11+）
 - 至少 2GB 内存
-- WINK GO `.deb` 安装包（[下载地址](https://github.com/xuweihafeichangniu-lab/wink-go/releases)）
+- WINK GO `.deb` 安装包（[下载地址](https://github.com/WINKGO/wink-go/releases)）
 
 ## 安装
 
@@ -338,7 +338,7 @@ For Gemini API calls, configure the proxy inside WINK GO WebUI:
 ```bash
 # 将版本号替换为 WINK GO Releases 页面显示的版本
 VERSION=2.2.0
-wget "https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-x64.deb"
+wget "https://github.com/WINKGO/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-x64.deb"
 
 # 安装
 sudo dpkg -i "WINK-GO-Free-${VERSION}-linux-x64.deb"

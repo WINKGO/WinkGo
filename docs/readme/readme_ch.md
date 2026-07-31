@@ -12,4 +12,4 @@ WINK GO 当前作为开放、免费、公益性质的项目发布，桌面客户
 - [功能全景与产品路线图](../guides/product-overview.zh-CN.md)
 - [文档中心](../README.md)
 
-[项目主页](https://github.com/xuweihafeichangniu-lab/wink-go) · [下载](https://github.com/xuweihafeichangniu-lab/wink-go/releases)
+[项目主页](https://github.com/WINKGO/wink-go) · [下载](https://github.com/WINKGO/wink-go/releases)

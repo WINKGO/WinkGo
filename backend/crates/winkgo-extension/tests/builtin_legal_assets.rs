@@ -21,13 +21,21 @@ fn collect_officecli_skill_dirs(dir: &Dir<'_>, result: &mut Vec<PathBuf>) {
 }
 
 #[test]
-fn embedded_builtin_corpus_excludes_removed_risky_skill() {
+fn embedded_moltbook_skill_retains_mit_notice_and_provenance() {
     let corpus = builtin_skills_corpus();
+    let license = corpus
+        .get_file("moltbook/LICENSE")
+        .expect("embedded Moltbook MIT LICENSE");
+    let source = corpus
+        .get_file("moltbook/SOURCE.md")
+        .expect("embedded Moltbook SOURCE.md");
+    let license = std::str::from_utf8(license.contents()).expect("UTF-8 Moltbook LICENSE");
+    let source = std::str::from_utf8(source.contents()).expect("UTF-8 Moltbook SOURCE.md");
 
-    assert!(
-        corpus.get_dir("moltbook").is_none(),
-        "removed Moltbook skill must not be embedded"
-    );
+    assert!(license.contains("MIT License"));
+    assert!(license.contains("Copyright (c) moltbook"));
+    assert!(source.contains("76f5554286ba0b6d33fb74d5c2bb2b3b0b83100d"));
+    assert!(source.contains("https://www.moltbook.com"));
 }
 
 #[test]
@@ -84,18 +92,27 @@ fn embedded_skill_creator_retains_anthropic_license_and_provenance() {
 }
 
 #[test]
-fn embedded_original_pdf_toolkit_is_apache_licensed_and_legacy_pdf_is_absent() {
+fn embedded_pdf_alias_and_toolkit_are_apache_licensed_and_legacy_files_are_absent() {
     let corpus = builtin_skills_corpus();
 
     assert!(
-        corpus.get_dir("pdf").is_none(),
-        "removed legacy pdf skill must not be embedded"
+        corpus.get_dir("pdf").is_some(),
+        "user-facing pdf compatibility skill must be embedded"
     );
     assert!(
         corpus.get_dir("pdf-toolkit").is_some(),
         "independently written pdf-toolkit skill must be embedded"
     );
 
+    let alias_skill = corpus
+        .get_file("pdf/SKILL.md")
+        .expect("embedded pdf compatibility SKILL.md");
+    let alias_license = corpus
+        .get_file("pdf/LICENSE")
+        .expect("embedded pdf compatibility LICENSE");
+    let alias_source = corpus
+        .get_file("pdf/SOURCE.md")
+        .expect("embedded pdf compatibility SOURCE.md");
     let skill = corpus
         .get_file("pdf-toolkit/SKILL.md")
         .expect("embedded pdf-toolkit SKILL.md");
@@ -105,11 +122,18 @@ fn embedded_original_pdf_toolkit_is_apache_licensed_and_legacy_pdf_is_absent() {
     let source = corpus
         .get_file("pdf-toolkit/SOURCE.md")
         .expect("embedded pdf-toolkit SOURCE.md");
+    let alias_skill = std::str::from_utf8(alias_skill.contents()).expect("UTF-8 pdf compatibility SKILL.md");
+    let alias_license = std::str::from_utf8(alias_license.contents()).expect("UTF-8 pdf compatibility LICENSE");
+    let alias_source = std::str::from_utf8(alias_source.contents()).expect("UTF-8 pdf compatibility SOURCE.md");
     let skill = std::str::from_utf8(skill.contents()).expect("UTF-8 pdf-toolkit SKILL.md");
     let license = std::str::from_utf8(license.contents()).expect("UTF-8 pdf-toolkit LICENSE");
     let source = std::str::from_utf8(source.contents()).expect("UTF-8 pdf-toolkit SOURCE.md");
-    let normalized_skill = skill.to_ascii_lowercase();
+    let normalized_skill = format!("{alias_skill}\n{skill}").to_ascii_lowercase();
 
+    assert!(alias_skill.contains("name: pdf"));
+    assert!(alias_skill.contains("compatibility entry"));
+    assert!(alias_license.contains("Apache License"));
+    assert!(alias_source.contains("No text, code, prompts, scripts, or assets"));
     assert!(skill.contains("name: pdf-toolkit"));
     assert!(skill.contains("Apache License 2.0"));
     assert!(skill.contains("SPDX-License-Identifier: Apache-2.0"));

@@ -37,8 +37,8 @@ const PROJECTS = [
     upstreamEntries: 1181,
     currentRoot: 'backend',
     manifest: 'docs/vendor/aioncore-modification-manifest.tsv',
-    rows: 694,
-    inline: 674,
+    rows: 701,
+    inline: 681,
     manifestOnly: 20,
   },
   {

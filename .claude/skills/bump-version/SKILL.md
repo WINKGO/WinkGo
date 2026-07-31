@@ -50,7 +50,7 @@ Display: "Bumping WinkGo: {current} → {target}"
 **Skip entirely if `--skip-core` is set.**
 
 ```bash
-gh release view --repo xuweihafeichangniu-lab/wink-go --json tagName,body
+gh release view --repo WINKGO/wink-go --json tagName,body
 ```
 
 - If `--core <version>` provided → use that tag instead of latest
@@ -62,7 +62,7 @@ gh release view --repo xuweihafeichangniu-lab/wink-go --json tagName,body
 **Skip if `--skip-core`.**
 
 ```bash
-gh release view <tag> --repo xuweihafeichangniu-lab/wink-go --json assets --jq '.assets[].name'
+gh release view <tag> --repo WINKGO/wink-go --json assets --jq '.assets[].name'
 ```
 
 Verify all 7 expected assets exist:
@@ -121,7 +121,7 @@ Prepend the new entry in this format:
 ```markdown
 # Changelog
 
-## [{target}](https://github.com/xuweihafeichangniu-lab/wink-go/compare/v{previous}...v{target}) ({date YYYY-MM-DD})
+## [{target}](https://github.com/WINKGO/wink-go/compare/v{previous}...v{target}) ({date YYYY-MM-DD})
 
 ### Desktop
 
@@ -133,7 +133,7 @@ Prepend the new entry in this format:
 
 - **thinking:** add streaming indicator (#3015)
 
-### Core ([{core tag}](https://github.com/xuweihafeichangniu-lab/wink-go/releases/tag/{core tag}))
+### Core ([{core tag}](https://github.com/WINKGO/wink-go/releases/tag/{core tag}))
 
 #### Bug Fixes
 

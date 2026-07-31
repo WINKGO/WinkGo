@@ -7,7 +7,7 @@
 
 WINK GO — AI Agent Workspace
 
-[项目主页](https://github.com/xuweihafeichangniu-lab/wink-go) · [下载](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [功能全景](docs/guides/product-overview.zh-CN.md) · [隐私政策](PRIVACY.md) · [服务条款](TERMS.md) · [开发文档](docs/README.md) · [问题反馈](https://github.com/xuweihafeichangniu-lab/wink-go/issues)
+[项目主页](https://github.com/WINKGO/wink-go) · [下载](https://github.com/WINKGO/wink-go/releases) · [功能全景](docs/guides/product-overview.zh-CN.md) · [隐私政策](PRIVACY.md) · [服务条款](TERMS.md) · [开发文档](docs/README.md) · [问题反馈](https://github.com/WINKGO/wink-go/issues)
 
 </div>
 
@@ -130,7 +130,7 @@ flowchart LR
 
 ## 安装与使用
 
-前往 [GitHub Releases](https://github.com/xuweihafeichangniu-lab/wink-go/releases) 获取当前公开安装包。构建流水线支持：
+前往 [GitHub Releases](https://github.com/WINKGO/wink-go/releases) 获取当前公开安装包。构建流水线支持：
 
 - Windows：NSIS 安装包
 - macOS：DMG / ZIP
@@ -153,7 +153,7 @@ WebUI 默认服务端口为 `25808`。局域网访问需要操作系统防火墙
 
 5. **持续接入更多智能体** — 适配更多 ACP 与自定义智能体，并扩展 MCP、Skills 和设备生态。
 
-路线图表示产品方向，不构成版本日期或功能交付承诺。进展会在 [Releases](https://github.com/xuweihafeichangniu-lab/wink-go/releases) 中持续更新。
+路线图表示产品方向，不构成版本日期或功能交付承诺。进展会在 [Releases](https://github.com/WINKGO/wink-go/releases) 中持续更新。
 
 ## 本地开发
 
@@ -168,7 +168,7 @@ WebUI 默认服务端口为 `25808`。局域网访问需要操作系统防火墙
 ### 启动
 
 ```bash
-git clone https://github.com/xuweihafeichangniu-lab/wink-go.git
+git clone https://github.com/WINKGO/wink-go.git
 cd winkgo
 bun install
 cargo install --manifest-path backend/crates/winkgo-app/Cargo.toml --locked

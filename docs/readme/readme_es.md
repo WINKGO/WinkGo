@@ -8,4 +8,4 @@ WINK GO es un espacio de trabajo de escritorio multiplataforma para agentes de I
 
 Todas las funciones actuales del cliente de escritorio están disponibles para todos. Los modelos, las API, el relé en la nube, la voz y otros servicios externos pueden tener costes propios.
 
-[Repositorio](https://github.com/xuweihafeichangniu-lab/wink-go) · [Descargas](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)
+[Repositorio](https://github.com/WINKGO/wink-go) · [Descargas](https://github.com/WINKGO/wink-go/releases) · [README](../../readme.md)

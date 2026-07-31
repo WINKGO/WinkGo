@@ -48,15 +48,15 @@ describe('AboutModalContent', () => {
   it('shows WINK GO branding, version, and a link to the legal documents', () => {
     const { container } = render(<AboutModalContent />);
 
-    expect(screen.getByText('WINK GO')).toBeInTheDocument();
-    expect(screen.getByText('github.com/xuweihafeichangniu-lab/wink-go')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'https://github.com/xuweihafeichangniu-lab/wink-go' })).toHaveAttribute(
+    expect(screen.getByAltText('WINK GO')).toBeInTheDocument();
+    expect(screen.getByText('github.com/WINKGO/wink-go')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'https://github.com/WINKGO/wink-go' })).toHaveAttribute(
       'href',
-      'https://github.com/xuweihafeichangniu-lab/wink-go'
+      'https://github.com/WINKGO/wink-go'
     );
-    expect(screen.getByRole('link', { name: 'https://github.com/xuweihafeichangniu-lab/wink-go' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'https://github.com/WINKGO/wink-go' })).toHaveAttribute(
       'aria-label',
-      'https://github.com/xuweihafeichangniu-lab/wink-go'
+      'https://github.com/WINKGO/wink-go'
     );
     expect(screen.getByText('WINK GO is released under Apache License 2.0.')).toBeInTheDocument();
     expect(screen.getByText('Version 2.2.0')).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('AboutModalContent', () => {
       'href',
       'https://www.apache.org/licenses/LICENSE-2.0'
     );
-    expect(container.querySelectorAll('img')).toHaveLength(0);
+    expect(container.querySelectorAll('img')).toHaveLength(1);
     expect(container.querySelectorAll('a')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Legal information' })).toBeInTheDocument();
   });
@@ -97,9 +97,9 @@ describe('AboutModalContent', () => {
   it('opens the WINK GO project page externally', () => {
     render(<AboutModalContent />);
 
-    fireEvent.click(screen.getByRole('link', { name: 'https://github.com/xuweihafeichangniu-lab/wink-go' }));
+    fireEvent.click(screen.getByRole('link', { name: 'https://github.com/WINKGO/wink-go' }));
 
-    expect(openExternalUrlMock).toHaveBeenCalledWith('https://github.com/xuweihafeichangniu-lab/wink-go');
+    expect(openExternalUrlMock).toHaveBeenCalledWith('https://github.com/WINKGO/wink-go');
   });
 
   it('opens the Apache-2.0 license externally', () => {

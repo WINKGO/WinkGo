@@ -1,21 +1,21 @@
 {
   "$comment": "Issue module → area label → owner mapping. Single source of truth for .github/workflows/issue-triage.yml. The 'module' key must exactly match the dropdown option text in .github/ISSUE_TEMPLATE/bug_report.yml and question.yml. Edit owners here — no workflow change needed.",
   "modules": [
-    { "module": "Agent Detection & Connection", "label": "area/agent-detection", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Assistants & Presets", "label": "area/assistant", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Models & Authentication", "label": "area/model-auth", "owner": "xuweihafeichangniu-lab" },
-    { "module": "MCP & Tools", "label": "area/mcp", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Skills & Plugins", "label": "area/skills", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Channel Integrations", "label": "area/channel", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Conversation & Sessions", "label": "area/conversation", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Search & History", "label": "area/history", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Project, Files & Preview", "label": "area/workspace", "owner": "xuweihafeichangniu-lab" },
-    { "module": "WebUI & Remote Access", "label": "area/webui", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Scheduled Tasks", "label": "area/cron", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Team Collaboration", "label": "area/team", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Interface, Display & Desktop Pet", "label": "area/display", "owner": "xuweihafeichangniu-lab" },
-    { "module": "System Settings", "label": "area/settings", "owner": "xuweihafeichangniu-lab" },
-    { "module": "Other", "label": "area/other", "owner": "xuweihafeichangniu-lab" }
+    { "module": "Agent Detection & Connection", "label": "area/agent-detection", "owner": "WINKGO" },
+    { "module": "Assistants & Presets", "label": "area/assistant", "owner": "WINKGO" },
+    { "module": "Models & Authentication", "label": "area/model-auth", "owner": "WINKGO" },
+    { "module": "MCP & Tools", "label": "area/mcp", "owner": "WINKGO" },
+    { "module": "Skills & Plugins", "label": "area/skills", "owner": "WINKGO" },
+    { "module": "Channel Integrations", "label": "area/channel", "owner": "WINKGO" },
+    { "module": "Conversation & Sessions", "label": "area/conversation", "owner": "WINKGO" },
+    { "module": "Search & History", "label": "area/history", "owner": "WINKGO" },
+    { "module": "Project, Files & Preview", "label": "area/workspace", "owner": "WINKGO" },
+    { "module": "WebUI & Remote Access", "label": "area/webui", "owner": "WINKGO" },
+    { "module": "Scheduled Tasks", "label": "area/cron", "owner": "WINKGO" },
+    { "module": "Team Collaboration", "label": "area/team", "owner": "WINKGO" },
+    { "module": "Interface, Display & Desktop Pet", "label": "area/display", "owner": "WINKGO" },
+    { "module": "System Settings", "label": "area/settings", "owner": "WINKGO" },
+    { "module": "Other", "label": "area/other", "owner": "WINKGO" }
   ],
-  "fallback": { "label": "needs-triage", "owner": "xuweihafeichangniu-lab" }
+  "fallback": { "label": "needs-triage", "owner": "WINKGO" }
 }

@@ -101,23 +101,39 @@ async fn gate_triggers_when_version_mismatches() {
 }
 
 #[tokio::test]
-async fn gate_replaces_matching_version_tree_when_removed_pdf_directory_is_present() {
+async fn gate_preserves_matching_version_tree_when_compliant_pdf_directory_is_present() {
     let tmp = TempDir::new().unwrap();
     let target = tmp.path().join("builtin-skills");
     std::fs::create_dir_all(target.join("pdf")).unwrap();
     std::fs::write(target.join(".version"), "1.2.3").unwrap();
-    std::fs::write(target.join("sentinel"), "must-be-replaced").unwrap();
-    std::fs::write(target.join("pdf").join("SKILL.md"), "legacy fixture").unwrap();
+    std::fs::write(target.join("sentinel"), "must-be-preserved").unwrap();
+    std::fs::write(target.join("pdf").join("SKILL.md"), "WINK GO compatibility fixture").unwrap();
 
     let wrote = materialize_if_needed(tmp.path(), &FIXTURE_CORPUS, "1.2.3")
         .await
         .unwrap();
 
-    assert!(wrote, "a removed legacy PDF path must bypass the version gate");
-    assert!(!target.join("pdf").exists());
+    assert!(!wrote, "a matching version should keep the compliant PDF skill tree");
+    assert!(target.join("pdf").exists());
+    assert!(target.join("sentinel").exists());
+}
+
+#[tokio::test]
+async fn gate_replaces_matching_version_tree_when_restricted_pdf_marker_is_present() {
+    let tmp = TempDir::new().unwrap();
+    let target = tmp.path().join("builtin-skills");
+    std::fs::create_dir_all(target.join("pdf")).unwrap();
+    std::fs::write(target.join(".version"), "1.2.3").unwrap();
+    std::fs::write(target.join("sentinel"), "must-be-replaced").unwrap();
+    std::fs::write(target.join("pdf").join("LICENSE.txt"), "restricted legacy marker").unwrap();
+
+    let wrote = materialize_if_needed(tmp.path(), &FIXTURE_CORPUS, "1.2.3")
+        .await
+        .unwrap();
+
+    assert!(wrote, "a restricted legacy marker must force a clean refresh");
     assert!(!target.join("sentinel").exists());
-    assert!(target.join("example-skill").join("SKILL.md").is_file());
-    assert!(!tmp.path().join(".builtin-skills.old").join("pdf").exists());
+    assert!(!target.join("pdf").exists(), "fixture corpus has no PDF skill");
 }
 
 #[tokio::test]
@@ -185,7 +201,7 @@ async fn gate_fails_closed_when_removed_pdf_cache_was_found_and_refresh_fails() 
     let target = tmp.path().join("builtin-skills");
     std::fs::create_dir_all(target.join("pdf")).unwrap();
     std::fs::write(target.join(".version"), "0.0.0").unwrap();
-    std::fs::write(target.join("pdf").join("SKILL.md"), "legacy fixture").unwrap();
+    std::fs::write(target.join("pdf").join("LICENSE.txt"), "restricted legacy marker").unwrap();
     std::fs::write(tmp.path().join(".builtin-skills.tmp"), "blocks staging").unwrap();
 
     let result = materialize_if_needed(tmp.path(), &FIXTURE_CORPUS, "1.2.3").await;

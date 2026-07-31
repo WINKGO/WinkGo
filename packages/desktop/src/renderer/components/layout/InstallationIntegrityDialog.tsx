@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { submitFeedbackReport } from '@/renderer/services/feedback/submitFeedbackReport';
 
-const WINKGO_DOWNLOAD_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go/releases';
+const WINKGO_DOWNLOAD_URL = 'https://github.com/WINKGO/wink-go/releases';
 const INSTALLATION_INTEGRITY_REPORT_FLUSH_TIMEOUT_MS = 2000;
 
 type InstallationIntegrityDialogKind =

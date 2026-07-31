@@ -30,6 +30,14 @@ pub const BUILTIN_SKILLS_ENV_VAR: &str = "WINKGO_BUILTIN_SKILLS_PATH";
 const MAX_SKILL_IMPORT_FILE_BYTES: u64 = 50 * 1024 * 1024;
 const MAX_SKILL_IMPORT_TOTAL_BYTES: u64 = 200 * 1024 * 1024;
 const IMPORT_STAGING_PREFIX: &str = ".import-staging-";
+// Keep the independently authored toolkit embedded for compatibility and
+// fallback workflows, but preserve the 2.1.45 official catalog count. The
+// public `pdf` assistant skill remains the user-facing PDF entry.
+const HIDDEN_BUILTIN_SKILLS: &[&str] = &["pdf-toolkit"];
+
+fn is_hidden_builtin_skill(name: &str) -> bool {
+    HIDDEN_BUILTIN_SKILLS.contains(&name)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SkillImportLimits {
@@ -349,7 +357,7 @@ async fn list_builtin_skills_from_disk(dir: &Path) -> Vec<SkillListItem> {
     // Top-level opt-in skills (siblings of auto-inject/).
     if let Ok(top) = scan_skill_dirs(dir).await {
         for s in top {
-            if s.name == BUILTIN_AUTO_SKILLS_SUBDIR {
+            if s.name == BUILTIN_AUTO_SKILLS_SUBDIR || is_hidden_builtin_skill(&s.name) {
                 continue;
             }
             // Use the on-disk directory name (basename of scanned path)
@@ -1569,6 +1577,12 @@ async fn list_skills_from_repo(
 ) -> Result<Vec<SkillListItem>, ExtensionError> {
     let mut items = Vec::new();
     for row in repo.list().await? {
+        // Older builds may already have synchronized compatibility-only
+        // built-ins into the database. Filter those stale rows at read time
+        // as well as skipping them during future catalog synchronization.
+        if row.source == "builtin" && is_hidden_builtin_skill(&row.name) {
+            continue;
+        }
         let description = row.description.clone().unwrap_or_default();
         items.push(skill_row_to_list_item(paths, row, description));
     }
@@ -1592,7 +1606,7 @@ pub async fn sync_skill_catalog_into_repo(
 async fn sync_builtin_skills_into_repo(paths: &SkillPaths, repo: &dyn ISkillRepository) -> Result<(), ExtensionError> {
     if let Ok(skills) = scan_skill_dirs(&paths.builtin_skills_dir).await {
         for skill in skills {
-            if skill.name == BUILTIN_AUTO_SKILLS_SUBDIR {
+            if skill.name == BUILTIN_AUTO_SKILLS_SUBDIR || is_hidden_builtin_skill(&skill.name) {
                 continue;
             }
             sync_managed_skill_into_repo(repo, &skill, "builtin").await?;
@@ -2832,6 +2846,29 @@ mod tests {
 
         assert!(!skills.iter().any(|skill| skill.name == "existing-disk-skill"));
         assert!(repo.find_by_name("existing-disk-skill").await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn list_available_skills_with_repo_hides_stale_compatibility_builtin_rows() {
+        let tmp = TempDir::new().unwrap();
+        let paths = make_test_paths(tmp.path());
+        let repo = make_test_skill_repo().await;
+        let skill_path = paths.builtin_skills_dir.join("pdf-toolkit");
+
+        repo.upsert(UpsertSkillParams {
+            name: "pdf-toolkit",
+            description: Some("Compatibility-only PDF toolkit"),
+            path: &skill_path.to_string_lossy(),
+            source: "builtin",
+            enabled: true,
+        })
+        .await
+        .unwrap();
+
+        let skills = list_available_skills_with_repo(&paths, &repo).await.unwrap();
+
+        assert!(!skills.iter().any(|skill| skill.name == "pdf-toolkit"));
+        assert!(repo.find_by_name("pdf-toolkit").await.unwrap().is_some());
     }
 
     #[tokio::test]

@@ -218,7 +218,7 @@ sudo systemctl status winkgo-webui.service
 >
 > **Original Tutorial**: [Running WINK GO WebUI on Android via Termux + Proot Ubuntu](https://gist.github.com/Manamama/b4f903c279b5e73bdad4c2c0a58d5ddd)
 >
-> **Related Issues**: [#217 - Android Support Discussion](https://github.com/xuweihafeichangniu-lab/wink-go/issues/217)
+> **Related Issues**: [#217 - Android Support Discussion](https://github.com/WINKGO/wink-go/issues/217)
 
 ### Prerequisites
 
@@ -281,9 +281,9 @@ apt install -y \
 
 ```bash
 # Download the ARM64 .deb package.
-# Check latest version at: https://github.com/xuweihafeichangniu-lab/wink-go/releases
+# Check latest version at: https://github.com/WINKGO/wink-go/releases
 VERSION=2.2.0
-wget "https://github.com/xuweihafeichangniu-lab/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-arm64.deb"
+wget "https://github.com/WINKGO/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-arm64.deb"
 
 # Install the package
 apt install -y "./WINK-GO-Free-${VERSION}-linux-arm64.deb"
@@ -412,7 +412,7 @@ proot-distro login ubuntu -- bash -c "WinkGo --no-sandbox --webui --remote"
 If you encounter issues or have suggestions for improving Android support:
 
 1. Check the [original community guide](https://gist.github.com/Manamama/b4f903c279b5e73bdad4c2c0a58d5ddd)
-2. Report issues at [GitHub Issues #217](https://github.com/xuweihafeichangniu-lab/wink-go/issues/217)
+2. Report issues at [GitHub Issues #217](https://github.com/WINKGO/wink-go/issues/217)
 3. Share your experience to help other Android users!
 
 ---
@@ -672,7 +672,7 @@ npm run resetpass -- username
 - [Main README](../../readme.md)
 - [中文说明](../readme/readme_ch.md)
 - [日本語ドキュメント](../readme/readme_jp.md)
-- [GitHub Issues](https://github.com/xuweihafeichangniu-lab/wink-go/issues)
+- [GitHub Issues](https://github.com/WINKGO/wink-go/issues)
 
 ---
 
@@ -681,8 +681,8 @@ npm run resetpass -- username
 If you encounter any issues:
 
 1. Check the [Troubleshooting](#troubleshooting) section
-2. Search [existing issues](https://github.com/xuweihafeichangniu-lab/wink-go/issues)
-3. Create a [new issue](https://github.com/xuweihafeichangniu-lab/wink-go/issues/new) with:
+2. Search [existing issues](https://github.com/WINKGO/wink-go/issues)
+3. Create a [new issue](https://github.com/WINKGO/wink-go/issues/new) with:
    - Your OS and version
    - WINK GO version
    - Steps to reproduce

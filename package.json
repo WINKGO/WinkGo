@@ -15,9 +15,9 @@
     "multi-agent",
     "rust"
   ],
-  "homepage": "https://github.com/xuweihafeichangniu-lab/wink-go",
+  "homepage": "https://github.com/WINKGO/wink-go",
   "bugs": {
-    "url": "https://github.com/xuweihafeichangniu-lab/wink-go/issues"
+    "url": "https://github.com/WINKGO/wink-go/issues"
   },
   "license": "Apache-2.0",
   "author": {
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xuweihafeichangniu-lab/wink-go.git"
+    "url": "git+https://github.com/WINKGO/wink-go.git"
   },
   "workspaces": [
     "packages/*"

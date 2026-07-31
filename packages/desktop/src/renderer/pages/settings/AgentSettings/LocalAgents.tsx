@@ -33,7 +33,7 @@ import {
 } from './agentFilters';
 import { getBuiltinAgentSetupUrl } from './agentSetupLinks';
 
-const LOCAL_AGENT_SETUP_GUIDE_URL = 'https://github.com/xuweihafeichangniu-lab/wink-go#agent-接入与安装';
+const LOCAL_AGENT_SETUP_GUIDE_URL = 'https://github.com/WINKGO/wink-go#agent-接入与安装';
 
 const LocalAgents: React.FC = () => {
   const { t, i18n } = useTranslation();

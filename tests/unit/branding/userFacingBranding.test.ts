@@ -32,15 +32,19 @@ const allowedLegacyPaths = [
 ];
 
 const withoutAllowedLegacyPaths = (content: string): string =>
-  allowedLegacyPaths.reduce((result, legacyPath) => result.replaceAll(legacyPath, '<legacy-path>'), content);
+  allowedLegacyPaths
+    .reduce((result, legacyPath) => result.replaceAll(legacyPath, '<legacy-path>'), content)
+    // These short source-provenance comments are required by the upstream
+    // attribution policy and are not user-facing product branding.
+    .replace(/(?:<!--\s*|#\s*)Modified from Aion(?:UI|Core) by WINK GO contributors in 2026\.?\s*(?:-->)?/gi, '<source-provenance>');
 
 describe('user-facing WINK GO branding', () => {
-  it('keeps bundled assistant and selected skill prose free of the legacy product name', () => {
+  it('keeps bundled assistant and selected skill prose free of the retired upstream product name', () => {
     const files = bundledAssistantAndSkillEntries.flatMap(filesUnder).filter((file) => /\.(?:json|md)$/i.test(file));
 
     for (const file of files) {
       const visibleContent = withoutAllowedLegacyPaths(fs.readFileSync(file, 'utf8'));
-      expect(visibleContent, path.relative(repositoryRoot, file)).not.toMatch(/\bWinkGo\b|WINK GO|WinkGoCore/);
+      expect(visibleContent, path.relative(repositoryRoot, file)).not.toMatch(/\bAionUI\b|\baionui\b|AionCore/);
     }
   });
 
@@ -83,7 +87,9 @@ describe('user-facing WINK GO branding', () => {
     ];
 
     for (const file of templates) {
-      expect(read(file), file).not.toMatch(/\bWinkGo\b|WINK GO/);
+      const content = read(file);
+      expect(content, file).toContain('WINK GO');
+      expect(withoutAllowedLegacyPaths(content), file).not.toMatch(/\bAionUI\b|\baionui\b|AionCore/);
     }
   });
 

@@ -49,7 +49,7 @@
 
 **"查看配置指南"链接**：
 
-- 点击通过 `openExternalUrl` 在系统浏览器中打开 `https://github.com/xuweihafeichangniu-lab/wink-go/wiki/Remote-Agent-Guide-Chinese`
+- 点击通过 `openExternalUrl` 在系统浏览器中打开 `https://github.com/WINKGO/wink-go/wiki/Remote-Agent-Guide-Chinese`
 - 说明横幅和弹窗内的警告 banner 中均有此链接
 
 **异常情况**：

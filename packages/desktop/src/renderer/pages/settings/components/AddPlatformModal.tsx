@@ -724,6 +724,7 @@ const AddPlatformModal = ModalHOC<{
                 )
               }
               options={isFullUrl ? [] : modelListState.data?.models || []}
+              placeholder={t('settings.modelNamePlaceholder', '输入模型名称并按 Enter')}
             />
           </Form.Item>
 

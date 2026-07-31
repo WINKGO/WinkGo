@@ -89,12 +89,15 @@ const contentRules = [
     pattern: /\bAIONUI_[A-Z0-9_]+\b/,
   },
   {
-    id: 'personal-github-account',
-    // The owner account now hosts WINK GO's official public repositories.
-    // Block unapproved/legacy repository URLs without rejecting the canonical
-    // product, core, or agent links that are intentionally shipped.
+    id: 'retired-winkgo-github-account',
+    pattern: /\b(?:https?:\/\/)?(?:api\.)?github\.com\/(?:repos\/)?xuweihafeichangniu-lab(?:[/?#\s"'`]|$)/i,
+  },
+  {
+    id: 'unexpected-winkgo-github-repository',
+    // WINKGO/wink-go is the only public product repository used by release
+    // artifacts. Block accidental links to private or retired organization repos.
     pattern:
-      /\b(?:https?:\/\/)?(?:api\.)?github\.com\/(?:repos\/)?xuweihafeichangniu-lab\/(?!(?:wink-go|winkgo|winkgocore|winkgo_agent)(?:\.git)?(?:[/?#\s"'`]|$))[a-z0-9_.-]+/i,
+      /\b(?:https?:\/\/)?(?:api\.)?github\.com\/(?:repos\/)?WINKGO\/(?!(?:wink-go)(?:\.git)?(?=[/?#\s"'`]|$))[a-z0-9_.-]+(?=[/?#\s"'`]|$)/i,
   },
   {
     id: 'developer-windows-profile',
@@ -163,10 +166,6 @@ const stageRoots = [
 const stageUiRoots = stageRoots.filter((root) => root !== 'resources/bundled-winkgo-core');
 
 const packedRoots = ['out/win-unpacked/resources', 'out/mac', 'out/linux-unpacked'];
-const restrictedKnowledgeCanvasDigests = new Set([
-  '7C7E135D617D49F980783E987BBB0D601E57C411FEEB5DD2FD4BE62EEDCC2D43',
-  '88A27B438B29C25D64179BBA6BC21CEAEB242B7AA52F5BC4D8A0F86F1D2692C1',
-]);
 
 const legacyRuntimeRuleIds = new Set([
   'legacy-bundled-aioncore',
@@ -180,7 +179,6 @@ const verifiedUpstreamInventoryDigests = new Map([
   ['docs/vendor/aioncore-upstream-inventory.tsv', '77756f9dda2f3694351abe7c0a39a9a968f8fadde77fe28b71fde469f3d225cd'],
   ['docs/vendor/aionrs-upstream-inventory.tsv', '1642312db6a3e7623b46edee63d429ada8b1c479367eac9ec991037562d44b07'],
 ]);
-const inventoryPdfPathRuleIds = new Set(['restricted-pdf-skill-path', 'restricted-pdf-license-path']);
 
 function isVerifiedUpstreamInventory(filePath) {
   const relative = path.relative(projectRoot, filePath).replace(/\\/g, '/');
@@ -195,10 +193,6 @@ function isVerifiedUpstreamInventory(filePath) {
     text.includes('# Commit: ') &&
     text.includes('type\tupstream_path\tcurrent_path\tupstream_sha256')
   );
-}
-
-function shouldSkipRestrictedPdfInventoryRule(filePath, ruleId) {
-  return inventoryPdfPathRuleIds.has(ruleId) && isVerifiedUpstreamInventory(filePath);
 }
 
 function isLegalAttributionFile(filePath) {
@@ -266,11 +260,6 @@ function legacyRuntimePathViolation(filePath, baseRoot = projectRoot) {
   return '';
 }
 
-function restrictedLegacyPdfSkillPathViolation(filePath, baseRoot = projectRoot) {
-  const relative = path.relative(baseRoot, filePath);
-  return isRestrictedLegacyPdfSkillPath(relative) ? 'restricted-legacy-pdf-skill-path' : '';
-}
-
 function forbiddenManagedExternalCliPathViolation(filePath, baseRoot = projectRoot) {
   const relative = path.relative(baseRoot, filePath).replace(/\\/g, '/').toLowerCase();
   if (!/(^|\/)managed-resources\//.test(relative)) return '';
@@ -287,45 +276,14 @@ function forbiddenManagedExternalCliPathViolation(filePath, baseRoot = projectRo
   return '';
 }
 
-function restrictedKnowledgeCanvasPathViolation(filePath, baseRoot = projectRoot) {
-  const relative = path.relative(baseRoot, filePath).replace(/\\/g, '/');
-  return /(^|\/)knowledge-canvas\/index\.html$/i.test(relative) ? 'restricted-knowledge-canvas-path' : '';
-}
-
-function restrictedProviderSkillsPathViolation(filePath, baseRoot = projectRoot) {
-  const relative = path.relative(baseRoot, filePath).replace(/\\/g, '/');
-  return /(^|\/)(?:resources\/)?winkgo\/provider-skills(?:\/|$)/i.test(relative)
-    ? 'restricted-provider-skills-path'
-    : '';
-}
-
-function restrictedBundledSkillsPathViolation(filePath, baseRoot = projectRoot, auditMode = mode) {
-  const relative = path.relative(baseRoot, filePath).replace(/\\/g, '/');
-  if (!/(^|\/)winkgo\/skills(?:\/|$)/i.test(relative)) return '';
-
-  // The source inventory is deliberately retained for item-by-item review.
-  // Only generated or packaged copies are forbidden.
-  if ((auditMode === 'source' || auditMode === 'stage') && /^resources\/winkgo\/skills(?:\/|$)/i.test(relative)) {
-    return '';
-  }
-  return 'restricted-bundled-skills-path';
-}
-
 function physicalPathViolation(filePath, baseRoot = projectRoot, auditMode = mode) {
   const legacyRuntimeViolation = legacyRuntimePathViolation(filePath, baseRoot);
   if (legacyRuntimeViolation) return legacyRuntimeViolation;
-  const restrictedPdfViolation = restrictedLegacyPdfSkillPathViolation(filePath, baseRoot);
-  if (restrictedPdfViolation) return restrictedPdfViolation;
+  const relative = path.relative(baseRoot, filePath).replace(/\\/g, '/');
+  if (isRestrictedLegacyPdfSkillPath(relative)) return 'restricted-legacy-pdf-skill-path';
   const managedCliViolation = forbiddenManagedExternalCliPathViolation(filePath, baseRoot);
   if (managedCliViolation) return managedCliViolation;
-  const knowledgeCanvasViolation = restrictedKnowledgeCanvasPathViolation(filePath, baseRoot);
-  if (knowledgeCanvasViolation) return knowledgeCanvasViolation;
-  const providerSkillsViolation = restrictedProviderSkillsPathViolation(filePath, baseRoot);
-  if (providerSkillsViolation) return providerSkillsViolation;
-  const bundledSkillsViolation = restrictedBundledSkillsPathViolation(filePath, baseRoot, auditMode);
-  if (bundledSkillsViolation) return bundledSkillsViolation;
 
-  const relative = path.relative(baseRoot, filePath);
   const parts = relative.toLowerCase().split(/[\\/]/);
   const basename = path.basename(relative).toLowerCase();
   if (forbiddenFileNames.has(basename)) return `private-state-file:${basename}`;
@@ -378,10 +336,11 @@ function scanFileContentWithRules(filePath, rules) {
 }
 
 function scanFileContent(filePath) {
+  const findings = scanFileContentWithRules(filePath, contentRules);
   const restrictedPdfFindings = findRestrictedLegacyPdfSkillMarkersInFile(filePath).filter(
-    (ruleId) => !shouldSkipRestrictedPdfInventoryRule(filePath, ruleId)
+    (ruleId) => !(isVerifiedUpstreamInventory(filePath) && ruleId.startsWith('restricted-pdf-'))
   );
-  return [...new Set([...scanFileContentWithRules(filePath, contentRules), ...restrictedPdfFindings])];
+  return [...new Set([...findings, ...restrictedPdfFindings])];
 }
 
 function listSourceFiles(sourceRoot = projectRoot) {
@@ -436,7 +395,7 @@ function auditSource() {
       violations.push({ filePath, rule });
     }
     for (const rule of findRestrictedLegacyPdfSkillMarkersInFile(filePath)) {
-      if (shouldSkipRestrictedPdfInventoryRule(filePath, rule)) continue;
+      if (isVerifiedUpstreamInventory(filePath)) continue;
       violations.push({ filePath, rule });
     }
   }
@@ -489,14 +448,6 @@ function scanAsarArchive(filePath, baseRoot = projectRoot) {
     }
 
     const rawContent = asar.extractFile(filePath, memberName);
-    const memberDigest = crypto.createHash('sha256').update(rawContent).digest('hex').toUpperCase();
-    if (restrictedKnowledgeCanvasDigests.has(memberDigest)) {
-      violations.push({
-        filePath,
-        rule: 'restricted-knowledge-canvas-sha256',
-        label: `${memberLabel} (${memberDigest})`,
-      });
-    }
     const content = rawContent.toString('latin1').replace(/\0/g, '');
     for (const rule of contentRules) {
       if (rule.pattern.test(content) && !isAllowedArchiveFinding(memberName, rule.id)) {
@@ -504,7 +455,9 @@ function scanAsarArchive(filePath, baseRoot = projectRoot) {
       }
     }
     for (const rule of findRestrictedLegacyPdfSkillMarkersInBuffer(rawContent)) {
-      violations.push({ filePath, rule, label: memberLabel });
+      if (rule) {
+        violations.push({ filePath, rule, label: memberLabel });
+      }
     }
   }
   return violations;
@@ -531,16 +484,15 @@ function auditAbsoluteRoots(roots, baseRoot = projectRoot) {
       violations.push(...scanAsarArchive(filePath, baseRoot));
       continue;
     }
-    const fileDigest = sha256(filePath);
-    if (restrictedKnowledgeCanvasDigests.has(fileDigest)) {
-      violations.push({
-        filePath,
-        rule: 'restricted-knowledge-canvas-sha256',
-        label: `${path.relative(baseRoot, filePath)} (${fileDigest})`,
-      });
-    }
     if (isBundledWinkGoCoreBinary(filePath)) {
       const compliance = inspectCorePdfSkillCompliance(filePath);
+      if (compliance.restricted.length > 0) {
+        violations.push({
+          filePath,
+          rule: 'restricted-legacy-pdf-skill',
+          label: `${path.relative(baseRoot, filePath)} (${compliance.restricted.join(', ')})`,
+        });
+      }
       if (compliance.missing.length > 0) {
         violations.push({
           filePath,
@@ -682,7 +634,7 @@ function runSelfTest() {
       [
         'user phone: 13800138000',
         'path=C:\\Users\\ReleaseEngineer\\Desktop',
-        'download=https://github.com/xuweihafeichangniu-lab/private/releases',
+        'download=https://github.com/WINKGO/private/releases',
         'device_id=63f7ac91-89e8-4b3c-88f3-87ef85916d55',
       ].join('\n')
     );
@@ -690,7 +642,7 @@ function runSelfTest() {
     const expected = [
       'mainland-phone-number',
       'developer-windows-profile',
-      'personal-github-account',
+      'unexpected-winkgo-github-repository',
       'device-identity',
     ];
     if (expected.some((rule) => !findings.includes(rule))) {
@@ -708,35 +660,21 @@ function runSelfTest() {
     if (forbiddenManagedExternalCliPathViolation(forbiddenCli, root) !== 'forbidden-bundled-external-cli') {
       throw new Error('privacy audit self-test did not block a managed external CLI path');
     }
-    const restrictedCanvas = path.join(root, 'public', 'knowledge-canvas', 'index.html');
-    if (restrictedKnowledgeCanvasPathViolation(restrictedCanvas, root) !== 'restricted-knowledge-canvas-path') {
-      throw new Error('privacy audit self-test did not block the restricted Knowledge Canvas path');
-    }
-    const restrictedProviderSkill = path.join(root, 'resources', 'winkgo', 'provider-skills', 'vendor-skill');
-    if (restrictedProviderSkillsPathViolation(restrictedProviderSkill, root) !== 'restricted-provider-skills-path') {
-      throw new Error('privacy audit self-test did not block provider skill assets');
-    }
-    const restrictedBundledSkill = path.join(root, 'packed', 'resources', 'winkgo', 'skills', 'browser-control');
-    if (
-      restrictedBundledSkillsPathViolation(restrictedBundledSkill, root, 'source') !== 'restricted-bundled-skills-path'
-    ) {
-      throw new Error('privacy audit self-test did not block bundled skill assets');
-    }
-    const retainedSourceSkill = path.join(root, 'resources', 'winkgo', 'skills', 'browser-control');
-    if (physicalPathViolation(retainedSourceSkill, root, 'source') !== '') {
-      throw new Error('privacy audit self-test did not preserve the review-only source skill inventory');
-    }
     const sourceManagedCli = path.join(root, 'resources', 'managed-resources', 'cli', 'claude', 'claude.exe');
     if (physicalPathViolation(sourceManagedCli, root, 'source') !== 'forbidden-bundled-external-cli') {
       throw new Error('privacy audit source self-test did not block a managed external CLI');
     }
     const sourceKnowledgeCanvas = path.join(root, 'public', 'knowledge-canvas', 'index.html');
-    if (physicalPathViolation(sourceKnowledgeCanvas, root, 'source') !== 'restricted-knowledge-canvas-path') {
-      throw new Error('privacy audit source self-test did not block Knowledge Canvas');
+    if (physicalPathViolation(sourceKnowledgeCanvas, root, 'source') !== '') {
+      throw new Error('privacy audit source self-test rejected the restored Knowledge Canvas');
     }
     const sourceProviderSkill = path.join(root, 'resources', 'winkgo', 'provider-skills', 'vendor-skill');
-    if (physicalPathViolation(sourceProviderSkill, root, 'source') !== 'restricted-provider-skills-path') {
-      throw new Error('privacy audit source self-test did not block provider skills');
+    if (physicalPathViolation(sourceProviderSkill, root, 'source') !== '') {
+      throw new Error('privacy audit source self-test rejected an allowed WINK GO provider skill');
+    }
+    const legacyPdfPath = path.join(root, 'backend', 'assets', 'builtin-skills', 'pdf', 'LICENSE.txt');
+    if (physicalPathViolation(legacyPdfPath, root, 'source') !== 'restricted-legacy-pdf-skill-path') {
+      throw new Error('privacy audit self-test did not block the legacy PDF license path');
     }
     const inventoryRoot = path.join(root, 'source-inventory');
     fs.mkdirSync(inventoryRoot);

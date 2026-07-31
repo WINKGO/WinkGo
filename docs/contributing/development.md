@@ -32,7 +32,7 @@ The desktop development server resolves `winkgo-core` from the `PATH` inherited 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/xuweihafeichangniu-lab/wink-go.git
+git clone https://github.com/WINKGO/wink-go.git
 cd winkgo
 bun install
 ```

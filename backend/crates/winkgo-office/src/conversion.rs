@@ -245,7 +245,7 @@ async fn resolve_officecli(configured_path: &Option<String>) -> Result<String, O
     }
 
     Err(OfficeError::ToolNotFound(
-        "officecli not installed. Install xuweihafeichangniu-lab/OfficeCli to enable PPT -> JSON conversion".into(),
+        "officecli not installed. Install iOfficeAI/OfficeCLI to enable PPT -> JSON conversion".into(),
     ))
 }
 

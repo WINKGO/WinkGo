@@ -8,4 +8,4 @@ WINK GO は、エージェント、ファイル、ツール、スキル、スケ
 
 デスクトップクライアントの現在の機能は、すべてのユーザーに開放されています。外部のモデル、API、クラウド中継、音声サービスなどには、各サービスの利用料金が発生する場合があります。
 
-[リポジトリ](https://github.com/xuweihafeichangniu-lab/wink-go) · [ダウンロード](https://github.com/xuweihafeichangniu-lab/wink-go/releases) · [README](../../readme.md)
+[リポジトリ](https://github.com/WINKGO/wink-go) · [ダウンロード](https://github.com/WINKGO/wink-go/releases) · [README](../../readme.md)

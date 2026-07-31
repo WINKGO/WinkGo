@@ -68,14 +68,14 @@ describe('final release privacy audit', () => {
     }
   });
 
-  it('detects personal release accounts, developer paths, sessions, and device identities', () => {
+  it('detects unexpected release repositories, developer paths, sessions, and device identities', () => {
     const root = mkdtempSync(join(tmpdir(), 'winkgo-privacy-rules-'));
     try {
       const fixture = join(root, 'payload.txt');
       writeFileSync(
         fixture,
         [
-          'https://github.com/xuweihafeichangniu-lab/private',
+          'https://github.com/WINKGO/private',
           'C:\\Users\\ReleaseEngineer\\Desktop',
           'session_token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkZXYifQ.signature123',
           'device_id=63f7ac91-89e8-4b3c-88f3-87ef85916d55',
@@ -84,7 +84,7 @@ describe('final release privacy audit', () => {
 
       const findings = audit.scanFileContent(fixture);
 
-      expect(findings).toContain('personal-github-account');
+      expect(findings).toContain('unexpected-winkgo-github-repository');
       expect(findings).toContain('developer-windows-profile');
       expect(findings).toContain('login-session-token');
       expect(findings).toContain('device-identity');
@@ -112,43 +112,40 @@ describe('final release privacy audit', () => {
     }
   });
 
-  it('blocks the removed legacy PDF paths without retaining its restricted prose', () => {
-    const root = mkdtempSync(join(tmpdir(), 'winkgo-restricted-pdf-skill-'));
+  it('allows the compliant PDF compatibility skill alongside the independently authored toolkit', () => {
+    const root = mkdtempSync(join(tmpdir(), 'winkgo-pdf-skill-'));
     try {
-      const legacyFixture = join(root, 'legacy-core.bin');
-      writeFileSync(legacyFixture, ['pdf/SKILL.md', 'pdf/LICENSE.txt'].join('\0'));
-      expect(audit.scanFileContent(legacyFixture)).toEqual(
-        expect.arrayContaining(['restricted-pdf-skill-path', 'restricted-pdf-license-path'])
-      );
-
-      const originalFixture = join(root, 'original-core.bin');
+      const compliantFixture = join(root, 'compliant-core.bin');
       writeFileSync(
-        originalFixture,
+        compliantFixture,
         [
+          'pdf/SKILL.md',
+          'name: pdf\n',
+          'pdf/SOURCE.md',
           'pdf-toolkit/SKILL.md',
           'name: pdf-toolkit',
           'This original skill is distributed under the Apache License 2.0.',
         ].join('\0')
       );
-      expect(audit.scanFileContent(originalFixture)).not.toEqual(
-        expect.arrayContaining(['restricted-pdf-skill-path', 'restricted-pdf-license-path'])
+      expect(audit.scanFileContent(compliantFixture)).not.toEqual(
+        expect.arrayContaining(['restricted-pdf-license-path', 'restricted-pdf-scripts-path'])
       );
+
+      const legacyFixture = join(root, 'legacy-core.bin');
+      writeFileSync(legacyFixture, ['pdf/SKILL.md', 'pdf/LICENSE.txt'].join('\0'));
+      expect(audit.scanFileContent(legacyFixture)).toContain('restricted-pdf-license-path');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  it('only exempts PDF path evidence in the exact hash-pinned upstream inventory', () => {
+  it('continues to exempt retired runtime names only in the exact hash-pinned inventory', () => {
     const canonicalInventory = resolve(__dirname, '../../docs/vendor/aioncore-upstream-inventory.tsv');
-    expect(audit.scanFileContent(canonicalInventory)).not.toEqual(
-      expect.arrayContaining(['restricted-pdf-skill-path', 'restricted-pdf-license-path'])
-    );
-
     const root = mkdtempSync(join(tmpdir(), 'winkgo-unverified-inventory-'));
     try {
       const copiedInventory = join(root, 'aioncore-upstream-inventory.tsv');
       writeFileSync(copiedInventory, readFileSync(canonicalInventory, 'utf8'));
-      expect(audit.scanFileContent(copiedInventory)).toEqual(
+      expect(audit.scanFileContent(copiedInventory)).not.toEqual(
         expect.arrayContaining(['restricted-pdf-skill-path', 'restricted-pdf-license-path'])
       );
     } finally {
@@ -182,8 +179,9 @@ describe('final release privacy audit', () => {
       expect(
         audit.physicalPathViolation(join(root, 'node_modules', '@aionui', 'web-host', 'index.js'), root)
       ).toContain('legacy-aionui-web-host-path');
+      expect(audit.physicalPathViolation(join(root, 'backend', 'assets', 'builtin-skills', 'pdf', 'SKILL.md'), root)).toBe('');
       expect(
-        audit.physicalPathViolation(join(root, 'backend', 'assets', 'builtin-skills', 'pdf', 'SKILL.md'), root)
+        audit.physicalPathViolation(join(root, 'backend', 'assets', 'builtin-skills', 'pdf', 'LICENSE.txt'), root)
       ).toBe('restricted-legacy-pdf-skill-path');
       expect(
         audit.physicalPathViolation(join(root, 'backend', 'assets', 'builtin-skills', 'pdf-toolkit', 'SKILL.md'), root)
@@ -193,7 +191,7 @@ describe('final release privacy audit', () => {
     }
   });
 
-  it('applies quarantine paths in source mode while retaining the review-only skill inventory', () => {
+  it('allows WINK GO-owned UI and skill assets while blocking managed external CLIs', () => {
     const root = mkdtempSync(join(tmpdir(), 'winkgo-source-path-policy-'));
 
     try {
@@ -204,22 +202,14 @@ describe('final release privacy audit', () => {
           'source'
         )
       ).toBe('forbidden-bundled-external-cli');
-      expect(audit.physicalPathViolation(join(root, 'public', 'knowledge-canvas', 'index.html'), root, 'source')).toBe(
-        'restricted-knowledge-canvas-path'
-      );
-      expect(
-        audit.physicalPathViolation(join(root, 'resources', 'winkgo', 'provider-skills', 'vendor'), root, 'source')
-      ).toBe('restricted-provider-skills-path');
+      expect(audit.physicalPathViolation(join(root, 'public', 'knowledge-canvas', 'index.html'), root, 'source')).toBe('');
+      expect(audit.physicalPathViolation(join(root, 'resources', 'winkgo', 'provider-skills', 'vendor'), root, 'source')).toBe('');
       expect(
         audit.physicalPathViolation(join(root, 'resources', 'winkgo', 'skills', 'browser-control'), root, 'source')
       ).toBe('');
       expect(
-        audit.physicalPathViolation(
-          join(root, 'packed', 'resources', 'winkgo', 'skills', 'browser-control'),
-          root,
-          'source'
-        )
-      ).toBe('restricted-bundled-skills-path');
+        audit.physicalPathViolation(join(root, 'packed', 'resources', 'winkgo', 'skills', 'browser-control'), root, 'source')
+      ).toBe('');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -267,7 +257,7 @@ describe('final release privacy audit', () => {
     }
   });
 
-  it('allows the official WINK GO repositories but blocks the legacy repository path', () => {
+  it('allows only the official WINK GO repository and blocks retired account links', () => {
     const root = mkdtempSync(join(tmpdir(), 'winkgo-official-repositories-'));
     const fixture = join(root, 'payload.txt');
 
@@ -275,15 +265,19 @@ describe('final release privacy audit', () => {
       writeFileSync(
         fixture,
         [
-          'https://github.com/xuweihafeichangniu-lab/wink-go',
-          'https://github.com/xuweihafeichangniu-lab/WinkGoCore',
-          'https://github.com/xuweihafeichangniu-lab/winkgo_agent',
+          'https://github.com/WINKGO/wink-go',
+          'https://api.github.com/repos/WINKGO/wink-go/releases/latest',
         ].join('\n')
       );
-      expect(audit.scanFileContent(fixture)).not.toContain('personal-github-account');
+      expect(audit.scanFileContent(fixture)).not.toEqual(
+        expect.arrayContaining(['retired-winkgo-github-account', 'unexpected-winkgo-github-repository'])
+      );
 
-      writeFileSync(fixture, 'https://github.com/xuweihafeichangniu-lab/wink/wiki/ACP-Setup');
-      expect(audit.scanFileContent(fixture)).toContain('personal-github-account');
+      writeFileSync(fixture, 'https://github.com/WINKGO/wink/wiki/ACP-Setup');
+      expect(audit.scanFileContent(fixture)).toContain('unexpected-winkgo-github-repository');
+
+      writeFileSync(fixture, 'https://github.com/xuweihafeichangniu-lab/wink-go');
+      expect(audit.scanFileContent(fixture)).toContain('retired-winkgo-github-account');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

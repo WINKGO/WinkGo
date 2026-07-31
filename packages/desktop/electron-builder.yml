@@ -20,9 +20,6 @@ files:
   - out/renderer/**/*
   # Static resources — use explicit directory inclusion to prevent resource loss
   - public/**/*
-  # The experimental Knowledge Canvas runtime is intentionally isolated until
-  # its source and redistribution rights can be independently verified.
-  - '!public/knowledge-canvas/**'
   - package.json
   # Native modules and their runtime dependencies
   - node_modules/better-sqlite3/**/*
@@ -113,9 +110,6 @@ files:
 extraResources:
   - from: public
     to: .
-    filter:
-      - '**/*'
-      - '!knowledge-canvas/**'
   - from: resources/app.png
     to: app.png
   # License and attribution documents must remain readable outside app.asar
@@ -154,10 +148,6 @@ extraResources:
     to: winkgo
     filter:
       - '**/*'
-      - '!provider-skills/**'
-      # Built-in Skills remain in source for item-by-item review, but are not
-      # distributed until each one has an explicit rights and safety approval.
-      - '!skills/**'
       - '!**/__pycache__/**'
       - '!**/*.pyc'
   # Native OLE drop target adapted from Wry 0.55.1 for WINK GO.

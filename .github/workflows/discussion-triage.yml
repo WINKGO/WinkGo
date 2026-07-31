@@ -24,10 +24,10 @@ jobs:
             // Announcements are intentionally excluded.
             const CATEGORY_OWNERS = {
               'announcements': null,
-              'q-a': 'xuweihafeichangniu-lab',
-              'ideas': 'xuweihafeichangniu-lab',
+              'q-a': 'WINKGO',
+              'ideas': 'WINKGO',
             };
-            const FALLBACK_OWNER = 'xuweihafeichangniu-lab';
+            const FALLBACK_OWNER = 'WINKGO';
 
             const discussion = context.payload.discussion;
             const slug = discussion.category?.slug ?? '';

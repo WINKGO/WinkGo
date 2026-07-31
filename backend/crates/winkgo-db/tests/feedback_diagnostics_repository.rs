@@ -602,7 +602,7 @@ async fn insert_feedback_fixture(db: &winkgo_db::Database) {
 
 async fn insert_mcp_feedback_fixture(db: &winkgo_db::Database) {
     let original_json = json!({
-        "command": "npx @sentry/mcp-server@latest --access-token=raw-token-for-diagnostics --organization-slug=xuweihafeichangniu-lab",
+        "command": "npx @sentry/mcp-server@latest --access-token=raw-token-for-diagnostics --organization-slug=WINKGO",
         "args": ["raw-config-mcp", "--header=Authorization: Bearer raw-bearer-for-diagnostics"],
         "env": {
             "MCP_API_KEY": "raw-api-key-for-diagnostics",
@@ -747,7 +747,7 @@ async fn mcp_tools_profile_preserves_original_json_shape_with_redacted_credentia
     insert_mcp_feedback_fixture(&db).await;
     let repo = SqliteFeedbackDiagnosticsRepository::new(db.pool().clone());
     let raw_original_json = json!({
-        "command": "npx @sentry/mcp-server@latest --access-token=raw-token-for-diagnostics --organization-slug=xuweihafeichangniu-lab",
+        "command": "npx @sentry/mcp-server@latest --access-token=raw-token-for-diagnostics --organization-slug=WINKGO",
         "args": ["raw-config-mcp", "--header=Authorization: Bearer raw-bearer-for-diagnostics"],
         "env": {
             "MCP_API_KEY": "raw-api-key-for-diagnostics",
@@ -781,7 +781,7 @@ async fn mcp_tools_profile_preserves_original_json_shape_with_redacted_credentia
     let parsed: serde_json::Value = serde_json::from_str(original_json).unwrap();
     assert_eq!(
         parsed["command"],
-        "npx @sentry/mcp-server@latest --access-token=<redacted> --organization-slug=xuweihafeichangniu-lab"
+        "npx @sentry/mcp-server@latest --access-token=<redacted> --organization-slug=WINKGO"
     );
     assert_eq!(
         parsed["args"],

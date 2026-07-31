@@ -21,8 +21,8 @@ const HUB_DIR = path.join(PROJECT_ROOT, 'resources', 'hub');
 
 const DEFAULT_TAG = 'dist-latest';
 const BASE_URLS = [
-  `https://raw.githubusercontent.com/xuweihafeichangniu-lab/winkgo/${process.env.WINKGO_HUB_TAG || DEFAULT_TAG}/`,
-  `https://cdn.jsdelivr.net/gh/xuweihafeichangniu-lab/winkgo@${process.env.WINKGO_HUB_TAG || DEFAULT_TAG}/`,
+  `https://raw.githubusercontent.com/WINKGO/wink-go/${process.env.WINKGO_HUB_TAG || DEFAULT_TAG}/`,
+  `https://cdn.jsdelivr.net/gh/WINKGO/wink-go@${process.env.WINKGO_HUB_TAG || DEFAULT_TAG}/`,
 ];
 
 // ---------------------------------------------------------------------------
@@ -112,7 +112,36 @@ async function prepareHubResources() {
   // Step 1: Download index.json
   const indexPath = path.join(HUB_DIR, 'index.json');
   console.log('[hub] Downloading index.json...');
-  const indexUrl = await downloadFile('index.json', indexPath);
+  let indexUrl;
+  try {
+    indexUrl = await downloadFile('index.json', indexPath);
+  } catch (error) {
+    // The Hub is an optional remote extension catalog. A temporary mirror/tag
+    // outage must not make the desktop installer unusable or reintroduce any
+    // legacy third-party catalog data. Keep a valid empty index so the
+    // packaged runtime can report an empty Hub and continue normally.
+    console.warn(`[hub] index.json unavailable; continuing with an empty local Hub: ${error.message}`);
+    const fallbackIndex = {
+      schema_version: 1,
+      extensions: [],
+    };
+    fs.writeFileSync(indexPath, JSON.stringify(fallbackIndex, null, 2) + '\n');
+    fs.writeFileSync(
+      path.join(HUB_DIR, 'manifest.json'),
+      JSON.stringify(
+        {
+          tag,
+          generatedAt: new Date().toISOString(),
+          indexUrl: null,
+          offlineFallback: true,
+          extensions: [],
+        },
+        null,
+        2
+      ) + '\n'
+    );
+    return { skipped: false, count: 0, total: 0, offlineFallback: true };
+  }
   console.log(`[hub] index.json downloaded from ${indexUrl}`);
 
   // Step 2: Parse index and download all extension zips
