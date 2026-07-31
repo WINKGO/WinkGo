@@ -17,6 +17,18 @@ function writeJson(filePath: string, value: unknown) {
 }
 
 describe('Windows bundled winkgo_core install verifier', () => {
+  it('checks the canonical Windows backend binary name', () => {
+    expect(script).toContain("Join-Path $baseDir 'winkgo_core.exe'");
+    expect(script).not.toContain("Join-Path $baseDir 'winkgo-core.exe'");
+
+    const queryLockers = readFileSync('resources/windows/support/query-lockers.ps1', 'utf8');
+    const processControl = readFileSync('resources/windows/installer-process-control.nsh', 'utf8');
+    expect(queryLockers).toContain('win32-x64\\winkgo_core.exe');
+    expect(processControl).toContain('win32-x64\\winkgo_core.exe');
+    expect(queryLockers).not.toContain('win32-x64\\winkgo-core.exe');
+    expect(processControl).not.toContain('win32-x64\\winkgo-core.exe');
+  });
+
   it('reads managed resources manifest instead of deriving Codex platform paths', () => {
     expect(script).toContain("Join-Path $managedRoot 'manifest.json'");
     expect(script).toContain('schemaVersion');
@@ -40,6 +52,58 @@ describe('Windows bundled winkgo_core install verifier', () => {
   });
 
   const runOnWindows = process.platform === 'win32' ? it : it.skip;
+
+  runOnWindows('accepts a complete bundle with the canonical binary name', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'winkgo-install-verify-'));
+    const installDir = join(tmp, 'install');
+    const managedRoot = join(installDir, 'resources', 'bundled-winkgo-core', 'win32-x64', 'managed-resources');
+    const logPath = join(tmp, 'verify.log');
+
+    try {
+      writeFile(join(installDir, 'resources', 'bundled-winkgo-core', 'win32-x64', 'winkgo_core.exe'), 'x');
+      writeJson(join(installDir, 'resources', 'bundled-winkgo-core', 'win32-x64', 'manifest.json'), {
+        platform: 'win32',
+        arch: 'x64',
+      });
+      writeFile(join(managedRoot, 'node', 'node-v24.11.0-win-x64', 'node.exe'), 'x');
+      writeFile(join(managedRoot, 'node', 'node-v24.11.0-win-x64', 'LICENSE'), 'node license');
+      writeFile(join(managedRoot, 'node', 'node-v24.11.0-win-x64', 'node_modules', 'npm', 'LICENSE'), 'npm license');
+      writeJson(join(managedRoot, 'manifest.json'), {
+        schemaVersion: 2,
+        runtimeKey: 'win32-x64',
+        node: {
+          version: '24.11.0',
+          root: 'node/node-v24.11.0-win-x64',
+          executable: 'node.exe',
+          requiredFiles: ['LICENSE', 'node_modules/npm/LICENSE'],
+        },
+        clis: [],
+      });
+
+      const result = spawnSync(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          scriptPath,
+          '-InstallDir',
+          installDir,
+          '-RuntimeKey',
+          'win32-x64',
+          '-LogPath',
+          logPath,
+        ],
+        { encoding: 'utf8' }
+      );
+
+      expect(result.status).toBe(0);
+      expect(readFileSync(logPath, 'utf8')).toContain('result=ok runtime=win32-x64');
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
 
   runOnWindows('rejects any managed Codex CLI install directory', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'winkgo-install-verify-'));

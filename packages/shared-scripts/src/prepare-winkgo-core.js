@@ -573,7 +573,7 @@ function prepareWinkGoCore(options) {
         version: tag || `actions-run-${actionsRunId}` || 'local-bundle',
         generatedAt: new Date().toISOString(),
         sourceType: 'local-bundle',
-        source: { path: resolvedLocalBundleDir },
+        source: { kind: 'local-bundle' },
         files: [binaryName, 'managed-resources/'],
       };
       writeJson(path.join(targetDir, 'manifest.json'), manifest);
@@ -611,7 +611,7 @@ function prepareWinkGoCore(options) {
       if (fs.existsSync(resolvedLocalBinary) && fs.statSync(resolvedLocalBinary).isFile()) {
         sourcePath = resolvedLocalBinary;
         sourceType = 'local-binary';
-        sourceDetail = { path: resolvedLocalBinary };
+        sourceDetail = { kind: 'local-binary' };
         console.log(`  Using local WINK GO Core binary: ${resolvedLocalBinary}`);
       } else {
         console.warn(`  Local WINK GO Core binary not found: ${resolvedLocalBinary}`);
@@ -625,10 +625,7 @@ function prepareWinkGoCore(options) {
     if (localBuild) {
       sourcePath = localBuild.binaryPath;
       sourceType = 'local-source';
-      sourceDetail = {
-        manifest: path.join(projectRoot, 'backend', 'Cargo.toml'),
-        targetDir: localBuild.cargoTargetDir,
-      };
+      sourceDetail = { manifest: 'backend/Cargo.toml' };
     }
   }
 

@@ -389,7 +389,7 @@ function Test-BundledResourcesOnce {
     return $failures
   }
 
-  Test-NonEmptyFile $failures 'winkgo-core' '' (Join-Path $baseDir 'winkgo-core.exe') $true $baseDir | Out-Null
+  Test-NonEmptyFile $failures 'winkgo-core' '' (Join-Path $baseDir 'winkgo_core.exe') $true $baseDir | Out-Null
 
   $bundleManifestPath = Join-Path $baseDir 'manifest.json'
   if (Test-NonEmptyFile $failures 'winkgo-core-manifest' '' $bundleManifestPath $false $baseDir) {

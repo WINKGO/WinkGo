@@ -85,7 +85,7 @@ try {
       'Uninstall WinkGo.exe',
       'resources\app.asar',
       'resources\app-update.yml',
-      'resources\bundled-winkgo-core\win32-x64\winkgo-core.exe'
+      'resources\bundled-winkgo-core\win32-x64\winkgo_core.exe'
     )
     $known = @(
       $knownRelative |
