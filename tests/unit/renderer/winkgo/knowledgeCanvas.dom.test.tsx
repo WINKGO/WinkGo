@@ -47,12 +47,12 @@ describe('KnowledgeCanvasPage', () => {
     );
   });
 
-  it('fails closed when the reviewed canvas runtime is not part of the public build', () => {
+  it('enables the bundled canvas in the public build', () => {
     render(<KnowledgeCanvasPage />);
 
-    expect(isKnowledgeCanvasBundleEnabled()).toBe(false);
-    expect(screen.getByText('guid.knowledgeCanvas.unavailableTitle')).toBeTruthy();
-    expect(screen.queryByTitle('guid.knowledgeCanvas.frameTitle')).toBeNull();
+    expect(isKnowledgeCanvasBundleEnabled()).toBe(true);
+    expect(screen.queryByText('guid.knowledgeCanvas.unavailableTitle')).toBeNull();
+    expect(screen.getByTitle('guid.knowledgeCanvas.frameTitle')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'guid.knowledgeCanvas.backToChat' }));
     expect(mocks.navigate).toHaveBeenCalledWith('/guid');

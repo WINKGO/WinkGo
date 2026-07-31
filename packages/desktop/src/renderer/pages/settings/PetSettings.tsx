@@ -35,7 +35,40 @@ const PetSettings: React.FC = () => {
     setSize(configService.get('pet.size') ?? 280);
     setDnd(configService.get('pet.dnd') ?? false);
     setConfirmEnabled(configService.get('pet.confirmEnabled') ?? true);
-  }, []);
+
+    if (!isDesktop) return undefined;
+
+    let cancelled = false;
+    void Promise.all([
+      systemSettings.getPetEnabled.invoke(),
+      systemSettings.getPetSize.invoke(),
+      systemSettings.getPetDnd.invoke(),
+      systemSettings.getPetConfirmEnabled.invoke(),
+    ])
+      .then(([nextEnabled, nextSize, nextDnd, nextConfirmEnabled]) => {
+        if (cancelled) return;
+        setEnabled(nextEnabled);
+        setSize(nextSize);
+        setDnd(nextDnd);
+        setConfirmEnabled(nextConfirmEnabled);
+        configService.setLocal('pet.enabled', nextEnabled);
+        configService.setLocal('pet.size', nextSize);
+        configService.setLocal('pet.dnd', nextDnd);
+        configService.setLocal('pet.confirmEnabled', nextConfirmEnabled);
+
+        // Re-show an enabled pet if its transparent window was hidden or lost.
+        if (nextEnabled) {
+          void systemSettings.setPetEnabled.invoke({ enabled: true });
+        }
+      })
+      .catch((error) => {
+        console.error('[PetSettings] Failed to synchronize desktop pet settings:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isDesktop]);
 
   const handleEnabledChange = useCallback((checked: boolean) => {
     setEnabled(checked);

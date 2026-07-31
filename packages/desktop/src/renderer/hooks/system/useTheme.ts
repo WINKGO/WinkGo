@@ -20,15 +20,19 @@ import { useCallback, useEffect, useState } from 'react';
 const APPEARANCE_CACHE_KEY = '__winkgo_theme';
 
 function getPersistedActiveId(): string {
-  return SYSTEM_THEME_ID;
+  const activeId = (configService.get('theme.activeId') as string | undefined) ?? SYSTEM_THEME_ID;
+  if (activeId === SYSTEM_THEME_ID) return activeId;
+
+  const userThemes = (configService.get('theme.userThemes') as Theme[] | undefined) ?? [];
+  return userThemes.some((theme) => theme.id === activeId) ? activeId : SYSTEM_THEME_ID;
 }
 
 async function initActiveTheme(): Promise<Theme> {
   try {
     await configService.whenReady();
     const activeId = getPersistedActiveId();
-    if (configService.get('theme.activeId') !== SYSTEM_THEME_ID) {
-      await configService.set('theme.activeId', SYSTEM_THEME_ID);
+    if (configService.get('theme.activeId') !== activeId) {
+      await configService.set('theme.activeId', activeId);
     }
     const userThemes = (configService.get('theme.userThemes') as Theme[]) ?? [];
     const resolved = resolveActiveTheme(activeId, [...BUILTIN_THEMES, ...userThemes], getSystemPrefersDark());
@@ -75,7 +79,7 @@ const useTheme = (): [Theme | null, (activeId: string) => Promise<void>, string 
       applyTheme(t);
       if (mounted) {
         setActive((prev) => (prev?.id === t.id ? prev : t));
-        setActiveId(SYSTEM_THEME_ID);
+        setActiveId(getPersistedActiveId());
       }
       try {
         localStorage.setItem(APPEARANCE_CACHE_KEY, t.appearance);
@@ -91,9 +95,14 @@ const useTheme = (): [Theme | null, (activeId: string) => Promise<void>, string 
     };
   }, []);
 
-  const select = useCallback(async (_activeId: string) => {
-    await setActiveTheme(SYSTEM_THEME_ID);
-    setActiveId(SYSTEM_THEME_ID);
+  const select = useCallback(async (requestedActiveId: string) => {
+    const userThemes = (configService.get('theme.userThemes') as Theme[] | undefined) ?? [];
+    const activeId =
+      requestedActiveId === SYSTEM_THEME_ID || userThemes.some((theme) => theme.id === requestedActiveId)
+        ? requestedActiveId
+        : SYSTEM_THEME_ID;
+    await setActiveTheme(activeId);
+    setActiveId(activeId);
   }, []);
 
   return [active, select, activeId];

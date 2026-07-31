@@ -318,10 +318,16 @@ class FileServiceClass {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      // In Electron environment, dragged files have additional path property
+      // Electron 32+ no longer exposes File.path. Resolve the OS path through
+      // webUtils in the preload bridge, while retaining the legacy fallback.
       const electronFile = file as File & { path?: string };
-
-      let file_path = electronFile.path || '';
+      let file_path = '';
+      try {
+        file_path = window.electronAPI?.getPathForFile?.(file) || electronFile.path || '';
+      } catch (error) {
+        console.warn('[FileService] Failed to resolve dropped file path:', error);
+        file_path = electronFile.path || '';
+      }
 
       // If no valid path (WebUI or some dragged files may not have paths), upload via HTTP multipart
       if (!file_path) {

@@ -18,8 +18,7 @@ import privacyPolicyText from '../../../../../../../../PRIVACY.md?raw';
 import termsOfServiceText from '../../../../../../../../TERMS.md?raw';
 import thirdPartyNoticesText from '../../../../../../../../THIRD_PARTY_NOTICES.md?raw';
 
-const WINK_GO_PROJECT_URL = 'https://github.com/WINKGO/wink-go';
-const WINK_GO_PROJECT_LABEL = 'github.com/WINKGO/wink-go';
+const WINK_GO_PROJECT_URL = 'https://winkgo.top/';
 const APACHE_LICENSE_URL = 'https://www.apache.org/licenses/LICENSE-2.0';
 
 declare const __APP_VERSION__: string;
@@ -37,7 +36,7 @@ const AboutModalContent: React.FC = () => {
 
   return (
     <div
-      className='relative flex min-h-full w-full box-border items-center justify-center overflow-x-hidden overflow-y-auto bg-2 px-24px py-20px'
+      className='relative flex min-h-full w-full box-border justify-center overflow-x-hidden overflow-y-auto bg-2 px-24px py-16px'
       style={{ minHeight: 'calc(100vh - 42px)' }}
     >
       <div
@@ -54,32 +53,34 @@ const AboutModalContent: React.FC = () => {
         }}
       />
 
-      <div className='relative flex w-full max-w-760px flex-col items-center'>
-        <a
-          href={WINK_GO_PROJECT_URL}
-          aria-label={WINK_GO_PROJECT_URL}
-          onClick={(event) => openExternalLink(event, WINK_GO_PROJECT_URL)}
-          className='group relative flex h-300px w-full max-w-420px flex-col items-center justify-center no-underline outline-none focus-visible:ring-2 focus-visible:ring-[rgba(17,17,17,0.32)]'
-        >
-          <span
-            aria-hidden='true'
-            className='absolute h-220px w-220px rounded-full bg-[rgba(255,255,255,0.66)] blur-28px transition-transform duration-500 group-hover:scale-110'
-          />
-          <img
-            src={winkGoLogo}
-            alt='WINK GO'
-            className='relative h-230px w-230px object-contain transition-transform duration-500 group-hover:-translate-y-4px group-hover:scale-102'
-            style={{ filter: 'drop-shadow(0 18px 38px rgba(17, 17, 17, 0.16))' }}
-          />
-          <span className='relative -mt-4px flex items-center rounded-full border border-border-2 bg-[rgba(255,255,255,0.92)] px-20px py-9px text-13px font-600 text-t-primary shadow-[0_10px_24px_rgba(17,17,17,0.1)] transition-transform duration-300 group-hover:-translate-y-2px md:text-15px'>
-            {WINK_GO_PROJECT_LABEL}
-          </span>
-        </a>
+      <div className='relative flex min-h-[calc(100vh-74px)] w-full max-w-760px flex-col items-center'>
+        <div className='flex w-full flex-1 flex-col items-center justify-center pb-24px'>
+          <a
+            href={WINK_GO_PROJECT_URL}
+            aria-label={WINK_GO_PROJECT_URL}
+            onClick={(event) => openExternalLink(event, WINK_GO_PROJECT_URL)}
+            className='group relative flex w-full max-w-420px flex-col items-center justify-center no-underline outline-none focus-visible:ring-2 focus-visible:ring-[rgba(17,17,17,0.32)]'
+          >
+            <span
+              aria-hidden='true'
+              className='absolute h-220px w-220px rounded-full bg-[rgba(255,255,255,0.66)] blur-28px transition-transform duration-500 group-hover:scale-110'
+            />
+            <img
+              src={winkGoLogo}
+              alt='WINK GO'
+              className='relative h-230px w-230px object-contain transition-transform duration-500 group-hover:-translate-y-4px group-hover:scale-102'
+              style={{ filter: 'drop-shadow(0 18px 38px rgba(17, 17, 17, 0.16))' }}
+            />
+            <span className='relative mt-4px text-14px font-600 text-t-primary transition-colors group-hover:text-[rgb(var(--primary-6))] md:text-15px'>
+              {WINK_GO_PROJECT_URL}
+            </span>
+          </a>
+        </div>
 
         <section
           data-testid='about-attribution'
           aria-label={t('settings.legal.title')}
-          className='mb-8px flex w-full max-w-680px flex-col items-center gap-8px rounded-14px border border-border-2 bg-[rgba(255,255,255,0.82)] px-20px py-14px text-center text-12px leading-18px text-t-secondary shadow-[0_12px_30px_rgba(17,17,17,0.08)] backdrop-blur-12px'
+          className='mt-auto flex w-full max-w-680px flex-col items-center gap-7px pb-4px text-center text-12px leading-18px text-t-secondary'
         >
           <div className='font-600 text-t-primary'>
             {t('common.version')} {__APP_VERSION__}

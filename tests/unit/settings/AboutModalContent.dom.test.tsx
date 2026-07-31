@@ -36,7 +36,7 @@ import AboutModalContent from '@/renderer/components/settings/SettingsModal/cont
 
 describe('AboutModalContent', () => {
   beforeEach(() => {
-    vi.stubGlobal('__APP_VERSION__', '2.2.0');
+    vi.stubGlobal('__APP_VERSION__', '2.2.1');
   });
 
   afterEach(() => {
@@ -49,18 +49,17 @@ describe('AboutModalContent', () => {
     const { container } = render(<AboutModalContent />);
 
     expect(screen.getByAltText('WINK GO')).toBeInTheDocument();
-    expect(screen.getByText('github.com/WINKGO/wink-go')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'https://github.com/WINKGO/wink-go' })).toHaveAttribute(
-      'href',
-      'https://github.com/WINKGO/wink-go'
-    );
-    expect(screen.getByRole('link', { name: 'https://github.com/WINKGO/wink-go' })).toHaveAttribute(
+    expect(screen.getByText('https://winkgo.top/')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'https://winkgo.top/' })).toHaveAttribute('href', 'https://winkgo.top/');
+    expect(screen.getByRole('link', { name: 'https://winkgo.top/' })).toHaveAttribute(
       'aria-label',
-      'https://github.com/WINKGO/wink-go'
+      'https://winkgo.top/'
     );
     expect(screen.getByText('WINK GO is released under Apache License 2.0.')).toBeInTheDocument();
-    expect(screen.getByText('Version 2.2.0')).toBeInTheDocument();
+    expect(screen.getByText('Version 2.2.1')).toBeInTheDocument();
     expect(screen.getByTestId('about-attribution')).toHaveClass('text-12px');
+    expect(screen.getByTestId('about-attribution')).not.toHaveClass('border');
+    expect(screen.getByTestId('about-attribution')).not.toHaveClass('rounded-14px');
     expect(screen.getByTestId('about-attribution')).not.toHaveClass('opacity-20');
     expect(screen.getByRole('link', { name: 'Apache-2.0' })).toHaveAttribute(
       'href',
@@ -97,9 +96,9 @@ describe('AboutModalContent', () => {
   it('opens the WINK GO project page externally', () => {
     render(<AboutModalContent />);
 
-    fireEvent.click(screen.getByRole('link', { name: 'https://github.com/WINKGO/wink-go' }));
+    fireEvent.click(screen.getByRole('link', { name: 'https://winkgo.top/' }));
 
-    expect(openExternalUrlMock).toHaveBeenCalledWith('https://github.com/WINKGO/wink-go');
+    expect(openExternalUrlMock).toHaveBeenCalledWith('https://winkgo.top/');
   });
 
   it('opens the Apache-2.0 license externally', () => {

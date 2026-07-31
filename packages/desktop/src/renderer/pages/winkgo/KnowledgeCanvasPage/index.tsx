@@ -22,8 +22,7 @@ import {
 const CANVAS_ASSET_PATH = './knowledge-canvas/index.html';
 const CANVAS_ASSET_VERSION = '20260726-ai-bridge-1';
 
-export const isKnowledgeCanvasBundleEnabled = () =>
-  import.meta.env.DEV && import.meta.env.VITE_WINKGO_ENABLE_KNOWLEDGE_CANVAS === '1';
+export const isKnowledgeCanvasBundleEnabled = () => import.meta.env.VITE_WINKGO_ENABLE_KNOWLEDGE_CANVAS !== '0';
 
 export const resolveKnowledgeCanvasUrl = (pageHref: string) => {
   const url = new URL(CANVAS_ASSET_PATH, pageHref);

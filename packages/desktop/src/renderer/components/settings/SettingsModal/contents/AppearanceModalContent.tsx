@@ -62,7 +62,6 @@ const AppearanceModalContent: React.FC = () => {
         <div className='space-y-16px'>
           {/* 主题画廊 / Theme Gallery */}
           <div className='px-16px md:px-24px lg:px-28px py-14px md:py-16px bg-2 rd-16px'>
-            <div className='text-14px text-t-primary leading-22px mb-12px'>{t('settings.theme')}</div>
             <CssThemeSettings />
           </div>
 

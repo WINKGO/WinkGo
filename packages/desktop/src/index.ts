@@ -656,7 +656,7 @@ const handleAppReady = async (): Promise<void> => {
   const mark = (label: string) => console.log(`[WinkGo:ready] ${label} +${Math.round(performance.now() - t0)}ms`);
   mark('start');
 
-  if (!app.isPackaged) {
+  if (!app.isPackaged && process.env.WINKGO_DISABLE_DEVTOOLS !== '1' && process.env.WINKGO_E2E_TEST !== '1') {
     try {
       const { default: installExtension, REACT_DEVELOPER_TOOLS } = await import('electron-devtools-installer');
       await installExtension(REACT_DEVELOPER_TOOLS);
@@ -904,8 +904,12 @@ const handleAppReady = async (): Promise<void> => {
     setTimeout(() => {
       void (async () => {
         try {
-          const petEnabled = await ProcessConfig.get('pet.enabled');
-          if (petEnabled === true) {
+          const savedPetEnabled = await ProcessConfig.get('pet.enabled');
+          const petEnabled = savedPetEnabled ?? true;
+          if (savedPetEnabled === undefined) {
+            await ProcessConfig.set('pet.enabled', true);
+          }
+          if (petEnabled) {
             // Read pet sub-settings before creating the pet so flags are honored
             // on the first createPetWindow() call (which is sync).
             const confirmEnabled = (await ProcessConfig.get('pet.confirmEnabled')) ?? true;

@@ -66,7 +66,7 @@ export function initSystemSettingsBridge(): void {
   // Desktop pet settings
   ipcBridge.systemSettings.getPetEnabled.provider(async () => {
     const value = await ProcessConfig.get('pet.enabled');
-    return value ?? false;
+    return value ?? true;
   });
 
   ipcBridge.systemSettings.setPetEnabled.provider(async ({ enabled }) => {

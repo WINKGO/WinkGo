@@ -2,6 +2,14 @@
 
 # Changelog
 
+## 2.2.1 (2026-07-31)
+
+- Restored the bundled Knowledge Canvas in production builds.
+- Restored desktop pet startup and synchronized its settings with the main process.
+- Added custom theme creation while keeping Follow System as the only built-in theme option.
+- Fixed Windows desktop file and image drag-and-drop in chat on current Electron versions.
+- Refined the About page around `https://winkgo.top/` and moved legal information to the bottom.
+
 ## 2.2.0 (2026-07-30)
 
 This is the first public release under the **WINK GO** name. WINK GO is an

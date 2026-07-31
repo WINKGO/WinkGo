@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router';
 
@@ -32,6 +32,10 @@ vi.mock('@/common/config/configService', () => ({
 
 vi.mock('@/common/adapter/ipcBridge', () => ({
   systemSettings: {
+    getPetEnabled: { invoke: vi.fn().mockResolvedValue(true) },
+    getPetSize: { invoke: vi.fn().mockResolvedValue(280) },
+    getPetDnd: { invoke: vi.fn().mockResolvedValue(false) },
+    getPetConfirmEnabled: { invoke: vi.fn().mockResolvedValue(true) },
     setPetEnabled: { invoke: vi.fn().mockResolvedValue(undefined) },
     setPetSize: { invoke: vi.fn().mockResolvedValue(undefined) },
     setPetDnd: { invoke: vi.fn().mockResolvedValue(undefined) },
@@ -52,5 +56,16 @@ describe('PetSettings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'pet.butlerSetup' }));
 
     expect(talkToButler).toHaveBeenCalledWith({ prompt: 'pet.butlerSetupPrompt' });
+  });
+
+  it('re-shows an enabled desktop pet when the settings page opens', async () => {
+    render(
+      <MemoryRouter>
+        <PetSettings />
+      </MemoryRouter>
+    );
+
+    const { systemSettings } = await import('@/common/adapter/ipcBridge');
+    await waitFor(() => expect(systemSettings.setPetEnabled.invoke).toHaveBeenCalledWith({ enabled: true }));
   });
 });

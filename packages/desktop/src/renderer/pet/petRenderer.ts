@@ -1,17 +1,15 @@
 const LOAD_TIMEOUT = 3000;
 const FADE_MS = 150;
 const PET_STATES_BASE_PATH = '../pet-states';
-let currentObject: HTMLObjectElement | null = document.getElementById('pet') as HTMLObjectElement;
+let currentObject: HTMLImageElement | null = document.getElementById('pet') as HTMLImageElement;
 
 function getStateAssetPath(state: string): string {
   return `${PET_STATES_BASE_PATH}/${state}.svg`;
 }
 
-function setupTransitions(_target: HTMLObjectElement | null): void {
-  // Intentionally empty: eye tracking now writes SVG `transform` attributes on
-  // the .idle-pupil / .idle-track wrappers (see onEyeMove below), which are
-  // not affected by CSS `transition` — that property only animates CSS
-  // transforms. Smoothing comes from the tick rate, not from CSS transitions.
+function setupTransitions(target: HTMLImageElement | null): void {
+  if (!target) return;
+  target.style.transformOrigin = '50% 55%';
 }
 
 /**
@@ -21,16 +19,19 @@ function setupTransitions(_target: HTMLObjectElement | null): void {
  * and keep showing the previous state.
  */
 function loadSvg(svgPath: string): void {
-  const newObj = document.createElement('object');
-  newObj.type = 'image/svg+xml';
+  // Chromium blocks SVG documents loaded through <object> in the packaged,
+  // sandboxed file:// renderer. An image keeps the animated SVG visible in
+  // both development and packaged builds without weakening web security.
+  const newObj = document.createElement('img');
   newObj.id = 'pet';
+  newObj.alt = '';
   newObj.style.position = 'absolute';
   newObj.style.inset = '0';
   newObj.style.width = '100%';
   newObj.style.height = '100%';
   newObj.style.opacity = '0';
   newObj.style.transition = `opacity ${FADE_MS}ms ease-out`;
-  newObj.data = svgPath;
+  newObj.src = svgPath;
 
   let loaded = false;
   const timeout = setTimeout(() => {
@@ -88,22 +89,7 @@ window.petAPI.onStateChange((state: string) => {
 
 window.petAPI.onEyeMove(({ eyeDx, eyeDy, bodyDx, bodyRotate }) => {
   if (!currentObject) return;
-  const doc = currentObject.contentDocument;
-  if (!doc) return;
-
-  // Target the dedicated wrapper groups (.idle-pupil and .idle-track) rather
-  // than the animated .idle-eye / .idle-body. Those already have CSS keyframes
-  // running — writing style.transform to them gets overwritten every frame, so
-  // tracking becomes invisible. The wrappers have no animation of their own,
-  // so their SVG transform attributes stick. Using setAttribute (not style)
-  // because SVG transform attributes and CSS transforms are separate channels
-  // in SVG — the attribute stacks on top of the descendant's CSS animation
-  // without overwriting it.
-  const pupil = doc.querySelector('.idle-pupil') as SVGGElement | null;
-  const track = doc.querySelector('.idle-track') as SVGGElement | null;
-
-  if (pupil) pupil.setAttribute('transform', `translate(${eyeDx} ${eyeDy})`);
-  // rotate(angle cx cy) — rotation center is pinned to (11,12) in SVG units,
-  // which is the head center for the idle pose.
-  if (track) track.setAttribute('transform', `translate(${bodyDx} 0) rotate(${bodyRotate} 11 12)`);
+  const horizontal = bodyDx + eyeDx * 0.2;
+  const vertical = eyeDy * 0.12;
+  currentObject.style.transform = `translate(${horizontal}px, ${vertical}px) rotate(${bodyRotate}deg)`;
 });

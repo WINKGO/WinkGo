@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; base-uri 'none'; script-src 'self'; style-src 'unsafe-inline'; object-src 'self'; img-src 'self' data:"
+      content="default-src 'none'; base-uri 'none'; script-src 'self'; style-src 'unsafe-inline'; object-src 'none'; img-src 'self' data:"
     />
     <style>
       * {
@@ -31,7 +31,7 @@
     </style>
   </head>
   <body>
-    <object id="pet" type="image/svg+xml" data="../pet-states/idle.svg"></object>
+    <img id="pet" src="../pet-states/idle.svg" alt="" />
     <script type="module" src="./petRenderer.ts"></script>
   </body>
 </html>

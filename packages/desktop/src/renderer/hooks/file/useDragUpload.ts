@@ -30,6 +30,7 @@ export const useDragUpload = ({ supportedExts = [], onFilesAdded, conversation_i
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      e.dataTransfer.dropEffect = 'copy';
 
       if (!isFileDragging) {
         setIsFileDragging(true);
@@ -71,7 +72,7 @@ export const useDragUpload = ({ supportedExts = [], onFilesAdded, conversation_i
       if (!onFilesAdded) return;
 
       try {
-        const droppedFiles = e.nativeEvent.dataTransfer!.files;
+        const droppedFiles = e.dataTransfer.files;
 
         // 第一步：先校验文件类型，筛选出支持的文件
         const validFiles: File[] = [];
