@@ -2,6 +2,13 @@
 
 # Changelog
 
+## 2.2.7 (2026-08-02)
+
+- Controlled Soda Music from Dynamic Island without foregrounding the player, clicking its window, or flashing a console.
+- Prevented album artwork from a previous song or music application from appearing while the next verified cover is loading.
+- Kept Dynamic Island stable during desktop file and image drags, then opened the collection destination directly after a drop.
+- Stabilized Windows release tests against short-lived output-directory locks from scanners and build subprocesses.
+
 ## 2.2.6 (2026-08-01)
 
 - Filtered Windows media sessions by the selected Dynamic Island platform for system media, NetEase Cloud Music, QQ Music, Kugou, Spotify, Apple Music, EchoMusic, and LX Music.
