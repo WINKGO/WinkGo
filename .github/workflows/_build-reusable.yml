@@ -661,6 +661,8 @@ jobs:
             out/*.deb
             out/WINK-GO-Free-*-mac-*.zip
             out/*.yml
+            out/winkgo-free-update.json
+            out/*.sha256.txt
           if-no-files-found: warn
           retention-days: 7
 

@@ -1,109 +1,66 @@
 # Modified from AionUI by WINK GO contributors in 2026.
 name: Distribute Release Assets
 
-# Triggered after a GitHub Release is officially published.
-# Mirrors installer assets to the configured distribution endpoint for external download.
-#
-# Why `published` (not `released`)?
-#   - `released` is supposed to fire when a non-prerelease release is published,
-#     but GitHub sometimes only emits `published` (not `released`) when a pre-existing
-#     draft is publicly released, causing the workflow to be silently skipped.
-#   - `published` reliably fires on every draft → public transition, including
-#     prereleases. The `if` guard on the job filters out prereleases explicitly.
-#
-# All credentials / identifiers are read from repository secrets:
-#   - AWS_REGION
-#   - AWS_ROLE_ARN
-#   - AWS_S3_BUCKET
-# Do NOT hardcode these values in this file.
-
 on:
   release:
     types: [published]
-  # Manual trigger for smoke testing or for retrying a missed release:
-  # pick any existing release tag to re-run the distribution against.
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag to redistribute (e.g. v1.9.21)'
+        description: 'Existing stable release tag (for example v2.2.6)'
         required: true
         type: string
+      verify_only:
+        description: 'Validate GitHub assets, restricted SSH, and the current public files without publishing'
+        required: true
+        default: true
+        type: boolean
 
 permissions:
-  id-token: write # required for OIDC token
   contents: read
-
-env:
-  # Must match the Free generic-provider URL embedded in the packaged app.
-  S3_RELEASE_PREFIX: releases/free
 
 jobs:
   distribute:
-    name: Distribute release assets
+    name: Distribute Free release to winkgo.top
     runs-on: ubuntu-latest
-    # Skip prereleases: manual dispatch always runs, automatic event runs only when not a prerelease.
     if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
     steps:
-      - name: Extract version from tag
+      - name: Check out release validation code
+        uses: actions/checkout@v6
+
+      - name: Resolve stable release version
         id: version
         env:
           EVENT_TAG: ${{ github.event.release.tag_name }}
-          INPUT_TAG: ${{ github.event.inputs.tag }}
+          INPUT_TAG: ${{ inputs.tag }}
+        shell: bash
         run: |
+          set -euo pipefail
           TAG="${EVENT_TAG:-$INPUT_TAG}"
-          if [ -z "$TAG" ]; then
-            echo "::error::No tag provided (event did not supply one)."
-            exit 1
-          fi
           VERSION="${TAG#v}"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Tag: $TAG / Version: $VERSION"
-
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Guard against same-version overwrite
-        env:
-          S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -euo pipefail
-
-          PREFIX="${S3_RELEASE_PREFIX}/${VERSION}/"
-          DEST="s3://${S3_BUCKET}/${PREFIX}"
-          COUNT=$(aws s3api list-objects-v2 \
-            --bucket "$S3_BUCKET" \
-            --prefix "$PREFIX" \
-            --no-paginate \
-            --query 'KeyCount' \
-            --output text)
-          if [ "$COUNT" -gt 0 ]; then
-            echo "::error::Version directory already contains $COUNT file(s). Refusing to overwrite."
-            echo "::error::Same-version re-publish is not allowed (downstream caches would serve stale files). Release a new version instead."
-            aws s3 ls "$DEST"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Only stable vMAJOR.MINOR.PATCH tags can be distributed: $TAG"
             exit 1
           fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Download release assets from GitHub
+      - name: Download the complete Free release bundle
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
         run: |
           set -euo pipefail
-
           mkdir -p dist
-          gh release download "${{ steps.version.outputs.tag }}" \
+          gh release download "$TAG" \
             --repo "${{ github.repository }}" \
             --dir dist \
-            --pattern "*.dmg" \
-            --pattern "*.exe" \
-            --pattern "*.msi" \
-            --pattern "*.deb" \
-            --pattern "*.zip" \
-            --pattern "latest*.yml" \
+            --pattern "WINK-GO-Free-Setup-${VERSION}-x64.exe" \
+            --pattern "WINK-GO-Free-Setup-${VERSION}-x64.exe.sha256.txt" \
+            --pattern "latest.yml" \
+            --pattern "winkgo-free-update.json" \
             --pattern "LICENSE" \
             --pattern "NOTICE" \
             --pattern "THIRD_PARTY_NOTICES.md" \
@@ -111,129 +68,128 @@ jobs:
             --pattern "THIRD_PARTY_LICENSES.txt" \
             --pattern "PRIVACY.md" \
             --pattern "TERMS.md"
-          echo "Downloaded files:"
-          ls -la dist
 
-      - name: Validate updater metadata
-        id: metadata
+      - name: Validate bytes and metadata before upload
         env:
           VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: node scripts/security/nginx-release-receiver.cjs validate "$VERSION" dist
+
+      - name: Build the receiver whitelist archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
         run: |
           set -euo pipefail
-
-          desktop_assets=()
-          while IFS= read -r asset; do
-            desktop_assets+=("$asset")
-          done < <(find dist -maxdepth 1 -type f \( \
-            -name "*.dmg" -o \
-            -name "*.exe" -o \
-            -name "*.msi" -o \
-            -name "*.deb" -o \
-            -name "*.zip" \
-          \) | sort)
-
-          if [ "${#desktop_assets[@]}" -eq 0 ]; then
-            echo "::error::No desktop release assets were downloaded."
-            exit 1
-          fi
-
-          for asset in "${desktop_assets[@]}"; do
-            asset_name=$(basename "$asset")
-            case "$asset_name" in
-              WINK-GO-Pro-*)
-                echo "::error::Refusing to publish a Pro desktop asset to ${S3_RELEASE_PREFIX}: $asset_name"
-                exit 1
-                ;;
-              WINK-GO-Free-*) ;;
-              *)
-                echo "::error::Refusing to publish non-Free desktop asset to ${S3_RELEASE_PREFIX}: $asset_name"
-                exit 1
-                ;;
-            esac
-          done
-
-          metadata_files=(
-            dist/latest.yml
-            dist/latest-win-arm64.yml
-            dist/latest-mac.yml
-            dist/latest-arm64-mac.yml
-            dist/latest-linux.yml
-            dist/latest-linux-arm64.yml
+          INSTALLER="WINK-GO-Free-Setup-${VERSION}-x64.exe"
+          BUNDLE_FILES=(
+            "$INSTALLER"
+            "${INSTALLER}.sha256.txt"
+            latest.yml
+            winkgo-free-update.json
+            LICENSE
+            NOTICE
+            THIRD_PARTY_NOTICES.md
+            THIRD_PARTY_DEPENDENCIES.json
+            THIRD_PARTY_LICENSES.txt
+            PRIVACY.md
+            TERMS.md
           )
+          tar -C dist -czf release-bundle.tar.gz "${BUNDLE_FILES[@]}"
 
-          for file in "${metadata_files[@]}"; do
-            if [ ! -f "$file" ]; then
-              echo "::error::Missing updater metadata file: $file."
-              exit 1
-            fi
-
-            metadata_version=$(grep -E "^version:" "$file" | head -n 1 | sed -E "s/^version:[[:space:]]*['\"]?([^'\"]+).*/\1/")
-            if [ "$metadata_version" != "$VERSION" ]; then
-              echo "::error::$file version is $metadata_version, expected $VERSION."
-              exit 1
-            fi
-
-            metadata_refs=$(grep -E '^[[:space:]]*(-[[:space:]]+)?url:|^path:' "$file" || true)
-            if [ -z "$metadata_refs" ]; then
-              echo "::error::$file does not reference a desktop asset."
-              exit 1
-            fi
-            if printf '%s\n' "$metadata_refs" | grep -Ev 'WINK-GO-Free-[0-9]' >/dev/null; then
-              echo "::error::Refusing metadata with a non-Free asset reference: $file"
-              printf '%s\n' "$metadata_refs"
+      - name: Configure restricted release SSH
+        env:
+          SSH_HOST: ${{ vars.WINKGO_RELEASE_HOST }}
+          SSH_USER: ${{ vars.WINKGO_RELEASE_USER }}
+          SSH_PORT: ${{ vars.WINKGO_RELEASE_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.WINKGO_RELEASE_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.WINKGO_RELEASE_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for value in SSH_HOST SSH_USER SSH_PORT SSH_PRIVATE_KEY SSH_KNOWN_HOSTS; do
+            if [ -z "${!value:-}" ]; then
+              echo "::error::Missing release SSH configuration: $value"
               exit 1
             fi
           done
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/winkgo_release"
+          chmod 600 "$HOME/.ssh/winkgo_release"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/winkgo_release_known_hosts"
+          chmod 600 "$HOME/.ssh/winkgo_release_known_hosts"
+          cat > "$HOME/.ssh/config" <<EOF
+          Host winkgo-release
+            HostName $SSH_HOST
+            User $SSH_USER
+            Port $SSH_PORT
+            IdentityFile $HOME/.ssh/winkgo_release
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+            UserKnownHostsFile $HOME/.ssh/winkgo_release_known_hosts
+          EOF
+          chmod 600 "$HOME/.ssh/config"
 
-          {
-            echo "files<<EOF"
-            for file in "${metadata_files[@]}"; do
-              basename "$file"
-            done
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Upload assets
-        env:
-          S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-          VERSION: ${{ steps.version.outputs.version }}
+      - name: Probe restricted receiver
+        shell: bash
         run: |
           set -euo pipefail
+          RESPONSE="$(ssh winkgo-release probe)"
+          test "$RESPONSE" = "WINKGO_RELEASE_RECEIVER_READY 1"
 
-          aws s3 cp dist/ "s3://${S3_BUCKET}/${S3_RELEASE_PREFIX}/${VERSION}/" \
-            --recursive
-          echo "Uploaded release ${VERSION}"
-
-      - name: Upload updater metadata
-        env:
-          S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-        run: |
-          set -euo pipefail
-
-          aws s3 cp dist/ "s3://${S3_BUCKET}/${S3_RELEASE_PREFIX}/" \
-            --recursive \
-            --exclude "*" \
-            --include "latest*.yml" \
-            --content-type "text/yaml" \
-            --cache-control "public, max-age=60"
-          echo "Uploaded updater metadata"
-
-      - name: Summary
+      - name: Publish atomically to the domestic server
+        if: github.event_name != 'workflow_dispatch' || inputs.verify_only == false
         env:
           VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat release-bundle.tar.gz | ssh winkgo-release "publish $VERSION"
+
+      - name: Verify public updater and installer bytes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          INSTALLER="WINK-GO-Free-Setup-${VERSION}-x64.exe"
+          CACHE_BUSTER="workflow=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p public-check
+          curl --fail --silent --show-error --location \
+            "https://winkgo.top/releases/free/${VERSION}/${INSTALLER}?${CACHE_BUSTER}" \
+            --output "public-check/$INSTALLER"
+          curl --fail --silent --show-error --location \
+            "https://winkgo.top/releases/free/${INSTALLER}.sha256.txt?${CACHE_BUSTER}" \
+            --output "public-check/${INSTALLER}.sha256.txt"
+          curl --fail --silent --show-error --location \
+            "https://winkgo.top/releases/free/latest.yml?${CACHE_BUSTER}" \
+            --output public-check/latest.yml
+          curl --fail --silent --show-error --location \
+            "https://winkgo.top/winkgo-free-update.json?${CACHE_BUSTER}" \
+            --output public-check/winkgo-free-update.json
+          cp dist/LICENSE dist/NOTICE dist/THIRD_PARTY_NOTICES.md \
+            dist/THIRD_PARTY_DEPENDENCIES.json dist/THIRD_PARTY_LICENSES.txt \
+            dist/PRIVACY.md dist/TERMS.md public-check/
+          node scripts/security/nginx-release-receiver.cjs validate "$VERSION" public-check
+          curl --fail --silent --show-error --location \
+            "https://winkgo.top/?${CACHE_BUSTER}" --output public-index.html
+          grep -F "https://winkgo.top/releases/free/${VERSION}/${INSTALLER}" public-index.html
+          grep -F "https://github.com/WINKGO/WinkGo/releases/download/v${VERSION}/${INSTALLER}" public-index.html
+
+      - name: Distribution summary
+        env:
           TAG: ${{ steps.version.outputs.tag }}
-          FILES: ${{ steps.metadata.outputs.files }}
+          VERSION: ${{ steps.version.outputs.version }}
+          VERIFY_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_only }}
+        shell: bash
         run: |
           {
-            echo "### Release assets distributed"
+            echo "### WINK GO domestic distribution"
             echo ""
-            echo "- Tag: \`${TAG}\`"
-            echo "- Version: \`${VERSION}\`"
-            echo "- Asset prefix: \`${S3_RELEASE_PREFIX}/${VERSION}/\`"
-            echo "- Metadata prefix: \`${S3_RELEASE_PREFIX}/\`"
-            echo ""
-            echo "Uploaded metadata:"
-            while IFS= read -r file; do
-              [ -n "$file" ] && echo "- \`${S3_RELEASE_PREFIX}/$file\`"
-            done <<< "$FILES"
-          } >> $GITHUB_STEP_SUMMARY
+            echo "- Tag: \`$TAG\`"
+            echo "- Version: \`$VERSION\`"
+            echo "- Verify only: \`$VERIFY_ONLY\`"
+            echo "- Public feed: \`https://winkgo.top/releases/free/latest.yml\`"
+            echo "- Website manifest: \`https://winkgo.top/winkgo-free-update.json\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -73,6 +73,19 @@ for file in "${DISTRIBUTABLES[@]}"; do
   cp -f "$file" "$OUTPUT_DIR/"
 done
 
+# The public website updater consumes the Windows x64 manifest and its exact
+# installer checksum. Keep these files from the x64 job only so arm64 cannot
+# nondeterministically overwrite the canonical feed.
+WIN_X64_WEBSITE_MANIFEST=$(find "$ARTIFACTS_DIR" -type f -path "*/windows-build-x64/*" -name "winkgo-free-update.json" | sort | head -n 1 || true)
+WIN_X64_INSTALLER_CHECKSUM=$(find "$ARTIFACTS_DIR" -type f -path "*/windows-build-x64/*" -name "WINK-GO-Free-Setup-*-x64.exe.sha256.txt" | sort | head -n 1 || true)
+
+if [ -z "$WIN_X64_WEBSITE_MANIFEST" ] || [ -z "$WIN_X64_INSTALLER_CHECKSUM" ]; then
+  echo "::error::Missing Windows x64 website update manifest or installer checksum."
+  exit 1
+fi
+cp -f "$WIN_X64_WEBSITE_MANIFEST" "$OUTPUT_DIR/winkgo-free-update.json"
+cp -f "$WIN_X64_INSTALLER_CHECKSUM" "$OUTPUT_DIR/"
+
 # ---------------------------------------------------------------------------
 # 1b) Copy web-cli tarballs (+ sha256 checksums)
 # ---------------------------------------------------------------------------

@@ -304,12 +304,29 @@ describe('release packaging configuration', () => {
   it('distributes updater metadata to the Free feed embedded in packaged apps', () => {
     const freeConfig = readProjectFile('packages/desktop/electron-builder.free.yml');
     const distributionWorkflow = readProjectFile('.github/workflows/release-distribute.yml');
+    const reusableBuildWorkflow = readProjectFile('.github/workflows/_build-reusable.yml');
+    const releaseWorkflow = readProjectFile('.github/workflows/build-and-release.yml');
+    const prepareScript = readProjectFile('scripts/prepare-release-assets.sh');
+    const websiteManifestGenerator = readProjectFile('scripts/generate-winkgo-update-manifest.js');
 
     expect(freeConfig).toContain('url: https://winkgo.top/releases/free');
-    expect(distributionWorkflow).toContain('S3_RELEASE_PREFIX: releases/free');
-    expect(distributionWorkflow).toContain('WINK-GO-Free-*');
-    expect(distributionWorkflow).toContain('Refusing to publish non-Free desktop asset');
-    expect(distributionWorkflow).toContain('Refusing metadata with a non-Free asset reference');
+    expect(distributionWorkflow).toContain('WINKGO_RELEASE_SSH_PRIVATE_KEY');
+    expect(distributionWorkflow).toContain('WINKGO_RELEASE_SSH_KNOWN_HOSTS');
+    expect(distributionWorkflow).toContain('scripts/security/nginx-release-receiver.cjs validate');
+    expect(distributionWorkflow).toContain('publish $VERSION');
+    expect(distributionWorkflow).toContain('verify_only');
+    expect(distributionWorkflow).not.toContain('AWS_');
+    expect(distributionWorkflow).not.toContain('aws s3');
+    expect(reusableBuildWorkflow).toContain('out/winkgo-free-update.json');
+    expect(reusableBuildWorkflow).toContain('out/*.sha256.txt');
+    expect(prepareScript).toContain('winkgo-free-update.json');
+    expect(prepareScript).toContain('WINK-GO-Free-Setup-*-x64.exe.sha256.txt');
+    expect(releaseWorkflow).toContain('release-assets/winkgo-free-update.json');
+    expect(releaseWorkflow).toContain('release-assets/WINK-GO-Free-Setup-*-x64.exe.sha256.txt');
+    expect(websiteManifestGenerator).toContain('https://winkgo.top/releases/free/${version}/${installerName}');
+    expect(websiteManifestGenerator).toContain(
+      'https://github.com/WINKGO/WinkGo/releases/download/v${version}/${installerName}'
+    );
   });
 
   it('retries mac prepackaged builds with both dmg and zip targets', () => {

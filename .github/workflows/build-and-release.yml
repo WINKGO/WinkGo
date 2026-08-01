@@ -62,17 +62,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Setup Rust for complete third-party license verification
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Fetch locked Cargo dependency metadata
-        run: |
-          cargo fetch --locked --manifest-path backend/Cargo.toml
-          cargo fetch --locked --manifest-path backend/agent-runtime/Cargo.toml
-          cargo fetch --locked --manifest-path packages/desktop/native/winkgo-native-drop/Cargo.toml
-
-      - name: Verify complete third-party dependency license inventory
-        run: bun run licenses:check
+      - name: Verify locked third-party dependency license inventory
+        run: bun run licenses:check:locks
 
       - name: Run postinstall
         run: bun run postinstall || true
@@ -346,6 +337,8 @@ jobs:
             release-assets/**/*.yml
             release-assets/**/*.tar.gz
             release-assets/**/*.sha256
+            release-assets/WINK-GO-Free-Setup-*-x64.exe.sha256.txt
+            release-assets/winkgo-free-update.json
             release-assets/install-web.sh
             release-assets/LICENSE
             release-assets/NOTICE

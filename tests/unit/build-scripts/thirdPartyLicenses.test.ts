@@ -67,9 +67,12 @@ describe('third-party dependency license artifacts', () => {
     expect(afterPack).toContain('verifyNoRuntimeSharpLibvips(resourcesDir)');
     expect(afterPack).toContain("entry.name === 'app.asar'");
 
-    expect(readFileSync(resolve(projectRoot, '.github/workflows/build-and-release.yml'), 'utf8')).toContain(
-      'bun run licenses:check'
+    const buildAndReleaseWorkflow = readFileSync(
+      resolve(projectRoot, '.github/workflows/build-and-release.yml'),
+      'utf8'
     );
+    expect(buildAndReleaseWorkflow).toContain('bun run licenses:check:locks');
+    expect(buildAndReleaseWorkflow).not.toMatch(/^\s*run:\s*bun run licenses:check\s*$/m);
     expect(readFileSync(resolve(projectRoot, '.github/workflows/_build-reusable.yml'), 'utf8')).toContain(
       '--check-locks'
     );

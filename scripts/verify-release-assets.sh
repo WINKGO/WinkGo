@@ -132,6 +132,21 @@ else
   echo "PASS: install-web.sh exists"
 fi
 
+if [ "$ERRORS" -eq 0 ]; then
+  NODE_RUNTIME=node
+  if ! command -v "$NODE_RUNTIME" >/dev/null 2>&1 && command -v bun >/dev/null 2>&1; then
+    NODE_RUNTIME=bun
+  elif ! command -v "$NODE_RUNTIME" >/dev/null 2>&1 && command -v node.exe >/dev/null 2>&1; then
+    NODE_RUNTIME=node.exe
+  fi
+  if "$NODE_RUNTIME" scripts/security/nginx-release-receiver.cjs validate "$VERSION" "$OUTPUT_DIR"; then
+    echo "PASS: Windows website updater bytes and metadata are consistent"
+  else
+    echo "FAIL: Windows website updater bytes or metadata are inconsistent"
+    ERRORS=$((ERRORS + 1))
+  fi
+fi
+
 echo ""
 if [ "$ERRORS" -gt 0 ]; then
   echo "FAILED: $ERRORS errors found"
