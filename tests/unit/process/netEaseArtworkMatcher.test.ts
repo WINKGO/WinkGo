@@ -55,4 +55,34 @@ describe('findNetEaseArtworkUrl', () => {
       ])
     ).toBe('');
   });
+
+  it('upgrades NetEase album artwork from its trusted HTTP CDN to HTTPS', () => {
+    expect(
+      findNetEaseArtworkUrl({ title: '华语流行金曲2024', artist: 'Vansdaddy' }, [
+        {
+          jsonStr: JSON.stringify({
+            name: '华语流行金曲2024',
+            artists: [{ name: 'Vansdaddy' }, { name: '黄格雷' }],
+            album: {
+              picUrl: 'http://p3.music.126.net/xAjp85Ag-jSknxUuZKHKLg==/109951170201062473.jpg',
+            },
+          }),
+        },
+      ])
+    ).toBe('https://p3.music.126.net/xAjp85Ag-jSknxUuZKHKLg==/109951170201062473.jpg?param=160y160');
+  });
+
+  it('does not upgrade an untrusted HTTP artwork host', () => {
+    expect(
+      findNetEaseArtworkUrl({ title: 'Runway', artist: 'ROJO.' }, [
+        {
+          jsonStr: JSON.stringify({
+            name: 'Runway',
+            artists: [{ name: 'ROJO.' }],
+            album: { picUrl: 'http://example.com/cover.jpg' },
+          }),
+        },
+      ])
+    ).toBe('');
+  });
 });

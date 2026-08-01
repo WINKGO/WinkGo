@@ -676,6 +676,8 @@ export type WinkGoFormatConversionProgress = {
 
 export type WinkGoMediaControlAction = 'play_pause' | 'play' | 'pause' | 'next' | 'previous';
 
+export type WinkGoMediaTarget = 'system' | 'netease' | 'spotify' | 'apple' | 'qqmusic' | 'kugou' | 'echo' | 'lx-music';
+
 export type WinkGoMediaSnapshot = {
   appId: string;
   title: string;
@@ -981,9 +983,10 @@ export const winkGoFormat = {
 };
 
 export const winkGoWindows = {
-  configure: bridge.buildProvider<WinkGoWindowsRuntimeState, { mediaEnabled: boolean; notificationEnabled: boolean }>(
-    'winkgo-windows.configure'
-  ),
+  configure: bridge.buildProvider<
+    WinkGoWindowsRuntimeState,
+    { mediaEnabled: boolean; mediaTarget?: WinkGoMediaTarget; notificationEnabled: boolean }
+  >('winkgo-windows.configure'),
   getState: bridge.buildProvider<WinkGoWindowsRuntimeState, void>('winkgo-windows.get-state'),
   controlMedia: bridge.buildProvider<{ controlled: boolean }, { action: WinkGoMediaControlAction }>(
     'winkgo-windows.control-media'

@@ -629,6 +629,7 @@ function Limit-Text {
 }
 
 $script:mediaEnabled = $false
+$script:mediaTarget = 'system'
 $script:notificationEnabled = $false
 $script:mediaManager = $null
 $script:lastMediaJson = ''
@@ -713,11 +714,44 @@ function Test-DedicatedMusicApp {
     '咪咕',
     'qianqian',
     '千千',
+    'echomusic',
+    'echo music',
     '洛雪'
   )
 
   foreach ($marker in $musicAppMarkers) {
     if ($normalizedAppId.Contains($marker)) {
+      return $true
+    }
+  }
+  return $false
+}
+
+function Test-MediaTargetMatch {
+  param(
+    [string] $AppId,
+    [string] $Target
+  )
+
+  $normalizedTarget = if ([string]::IsNullOrWhiteSpace($Target)) { 'system' } else { $Target.ToLowerInvariant() }
+  if ($normalizedTarget -eq 'system') {
+    return $true
+  }
+  $normalizedAppId = $AppId.ToLowerInvariant()
+  $targetMarkers = @{
+    netease = @('cloudmusic', 'netease', 'music.163', 'com.netease', '网易云')
+    spotify = @('spotify')
+    apple = @('applemusic', 'apple music', 'itunes', 'appleinc.applemusic')
+    qqmusic = @('qqmusic', 'qq music', 'tencent.qqmusic', 'com.tencent.qqmusic', 'qq音乐')
+    kugou = @('kugou', '酷狗')
+    echo = @('echomusic', 'echo music')
+    'lx-music' = @('lx-music', 'lxmusic', 'lx music', '洛雪')
+  }
+  if (-not $targetMarkers.ContainsKey($normalizedTarget)) {
+    return $true
+  }
+  foreach ($marker in @($targetMarkers[$normalizedTarget])) {
+    if ($normalizedAppId.Contains([string]$marker)) {
       return $true
     }
   }
@@ -745,7 +779,8 @@ function Test-AnyDedicatedMusicProcessRunning {
     'MIGUMUSIC',
     'MiguMusic',
     'TTPlayer',
-    'QianQianMusic'
+    'QianQianMusic',
+    'EchoMusic'
   )) {
     if ($null -ne (Get-Process -Name $processName -ErrorAction SilentlyContinue | Select-Object -First 1)) {
       return $true
@@ -780,6 +815,9 @@ function Get-BestMediaSession {
   foreach ($session in $sessions) {
     $score = 0
     $appId = [string]$session.SourceAppUserModelId
+    if (-not (Test-MediaTargetMatch $appId $script:mediaTarget)) {
+      continue
+    }
     $reportedPlaying = $false
     $isPlaying = $false
     $isPaused = $false
@@ -946,6 +984,7 @@ function Get-MediaProcessCandidates {
     @{ markers = @('winamp'); processes = @('winamp') },
     @{ markers = @('migu', '咪咕'); processes = @('MIGUMUSIC', 'MiguMusic') },
     @{ markers = @('qianqian', '千千'); processes = @('TTPlayer', 'QianQianMusic') },
+    @{ markers = @('echomusic', 'echo music'); processes = @('EchoMusic') },
     @{ markers = @('com.bilibili', 'bilibili', '哔哩哔哩'); processes = @('bilibili', 'bilibiliPC') },
     @{ markers = @('qqlive', '腾讯视频'); processes = @('QQLive') },
     @{ markers = @('msedge'); processes = @('msedge') },
@@ -2394,8 +2433,27 @@ function Handle-BridgeCommand {
     switch ([string]$Command.type) {
       'configure' {
         $wasNotificationEnabled = $script:notificationEnabled
+        $nextMediaTarget = [string]$Command.mediaTarget
+        if ([string]::IsNullOrWhiteSpace($nextMediaTarget)) {
+          $nextMediaTarget = 'system'
+        }
+        $mediaTargetChanged = $nextMediaTarget -ne $script:mediaTarget
+        $script:mediaTarget = $nextMediaTarget
         $script:mediaEnabled = [bool]$Command.mediaEnabled
         $script:notificationEnabled = [bool]$Command.notificationEnabled
+        if ($mediaTargetChanged) {
+          $hadMedia = $null -ne $script:latestMedia
+          $script:lastMediaJson = ''
+          $script:lastTrackKey = ''
+          $script:lastCoverUrl = ''
+          $script:nextCoverRetryAt = [DateTime]::UtcNow
+          $script:latestMedia = $null
+          $script:activeMediaSession = $null
+          $script:mediaManager = $null
+          if ($hadMedia) {
+            Write-BridgeEvent @{ type = 'media-snapshot'; data = $null }
+          }
+        }
         if ($script:mediaEnabled) {
           $script:nextPlaybackPollAt = [DateTime]::UtcNow
           $script:nextMediaPollAt = [DateTime]::UtcNow

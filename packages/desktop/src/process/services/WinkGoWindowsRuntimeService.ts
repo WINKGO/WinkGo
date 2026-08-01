@@ -8,6 +8,7 @@ import type {
   WinkGoCapturedNotification,
   WinkGoMediaControlAction,
   WinkGoMediaSnapshot,
+  WinkGoMediaTarget,
   WinkGoNotificationAccess,
   WinkGoWindowsRuntimeState,
 } from '@/common/adapter/ipcBridge';
@@ -17,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 import { resolveNetEaseArtworkUrl } from './NetEaseArtworkService';
+import { resolveQqMusicArtworkDataUrl } from './QqMusicArtworkService';
 
 type RuntimeCommandResult = {
   type: 'command-result';
@@ -91,6 +93,7 @@ export class WinkGoWindowsRuntimeService {
 
   async configure(options: {
     mediaEnabled: boolean;
+    mediaTarget?: WinkGoMediaTarget;
     notificationEnabled: boolean;
   }): Promise<WinkGoWindowsRuntimeState> {
     if (process.platform !== 'win32') {
@@ -115,6 +118,7 @@ export class WinkGoWindowsRuntimeService {
     const state = await this.request<WinkGoWindowsRuntimeState>({
       type: 'configure',
       ...options,
+      mediaTarget: options.mediaTarget ?? 'system',
     });
     this.state = state;
     if (options.mediaEnabled || options.notificationEnabled) {
@@ -339,19 +343,13 @@ export class WinkGoWindowsRuntimeService {
       this.state = { ...this.state, media: event.data };
       this.callbacks.onMedia(event.data);
       if (event.data && !event.data.coverUrl) {
-        const coverUrl = resolveNetEaseArtworkUrl(event.data);
-        const currentMedia = this.state.media;
-        if (
-          coverUrl &&
-          currentMedia &&
-          currentMedia.appId === event.data.appId &&
-          currentMedia.title === event.data.title &&
-          currentMedia.artist === event.data.artist &&
-          !currentMedia.coverUrl
-        ) {
-          const enriched = { ...currentMedia, coverUrl };
-          this.state = { ...this.state, media: enriched };
-          this.callbacks.onMedia(enriched);
+        const snapshot = event.data;
+        const localCoverUrl = resolveNetEaseArtworkUrl(snapshot);
+        if (localCoverUrl) this.publishArtworkIfCurrent(snapshot, localCoverUrl);
+        else {
+          void resolveQqMusicArtworkDataUrl(snapshot).then((coverUrl) => {
+            if (coverUrl) this.publishArtworkIfCurrent(snapshot, coverUrl);
+          });
         }
       }
       return;
@@ -364,6 +362,23 @@ export class WinkGoWindowsRuntimeService {
     if (event.type === 'runtime-warning' && isRecord(event)) {
       console.warn(`[WinkGoWindowsRuntime:${event.scope}]`, event.message);
     }
+  }
+
+  private publishArtworkIfCurrent(source: WinkGoMediaSnapshot, coverUrl: string): void {
+    const currentMedia = this.state.media;
+    if (
+      !currentMedia ||
+      currentMedia.appId !== source.appId ||
+      currentMedia.title !== source.title ||
+      currentMedia.artist !== source.artist ||
+      currentMedia.coverUrl
+    ) {
+      return;
+    }
+
+    const enriched = { ...currentMedia, coverUrl, updatedAt: Date.now() };
+    this.state = { ...this.state, media: enriched };
+    this.callbacks.onMedia(enriched);
   }
 
   private scheduleStop(): void {

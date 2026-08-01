@@ -19,6 +19,8 @@ const NOTIFICATION_CARD_DURATION_MS = 7_200;
 const MAX_NOTIFICATION_QUEUE_SIZE = 12;
 const MEDIA_CONTROL_OPTIMISTIC_WINDOW_MS = 1_600;
 const MEDIA_TRACK_REFRESH_DELAYS_MS = [160, 240, 400, 700, 1_000] as const;
+const MEDIA_ARTWORK_TRANSITION_GRACE_MS = 1_800;
+const MEDIA_ARTWORK_CACHE_LIMIT = 64;
 
 type OptimisticPlaybackState = {
   expectedPlaying: boolean;
@@ -123,12 +125,23 @@ export const useIslandWindowsRuntime = ({
   const [privacyMode, setPrivacyModeState] = useState(readPrivacyPreference);
   const optimisticPlaybackRef = useRef<OptimisticPlaybackState | null>(null);
   const mediaRefreshGenerationRef = useRef(0);
+  const currentMediaRef = useRef<WinkGoMediaSnapshot | null>(null);
+  const mediaArtworkCacheRef = useRef(new Map<string, string>());
+  const reconcileMediaSnapshotRef = useRef<(snapshot: WinkGoMediaSnapshot | null) => void>(() => {});
 
   useEffect(() => {
     let disposed = false;
     let notificationTimer: number | undefined;
+    let artworkGraceTimer: number | undefined;
+    let latestRawMedia: WinkGoMediaSnapshot | null = null;
     let activeNotification: WinkGoCapturedNotification | null = null;
     const notificationQueue: WinkGoCapturedNotification[] = [];
+
+    const clearArtworkGraceTimer = () => {
+      if (artworkGraceTimer === undefined) return;
+      window.clearTimeout(artworkGraceTimer);
+      artworkGraceTimer = undefined;
+    };
 
     const showNextNotification = () => {
       if (disposed || activeNotification || notificationQueue.length === 0) return;
@@ -143,7 +156,51 @@ export const useIslandWindowsRuntime = ({
 
     const reconcileMediaSnapshot = (snapshot: WinkGoMediaSnapshot | null) => {
       if (disposed) return;
-      const nextMedia = mediaEnabled && matchesMediaTarget(snapshot, mediaTarget) ? snapshot : null;
+      let nextMedia = mediaEnabled && matchesMediaTarget(snapshot, mediaTarget) ? snapshot : null;
+      const currentMedia = currentMediaRef.current;
+      if (nextMedia && currentMedia && nextMedia.updatedAt < currentMedia.updatedAt) return;
+      if (nextMedia) {
+        const trackKey = mediaTrackKey(nextMedia);
+        if (nextMedia.coverUrl) {
+          const artworkCache = mediaArtworkCacheRef.current;
+          artworkCache.delete(trackKey);
+          artworkCache.set(trackKey, nextMedia.coverUrl);
+          if (artworkCache.size > MEDIA_ARTWORK_CACHE_LIMIT) {
+            const oldestKey = artworkCache.keys().next().value;
+            if (oldestKey) artworkCache.delete(oldestKey);
+          }
+        } else {
+          const cachedCoverUrl = mediaArtworkCacheRef.current.get(trackKey);
+          if (cachedCoverUrl) nextMedia = { ...nextMedia, coverUrl: cachedCoverUrl };
+        }
+      }
+      latestRawMedia = nextMedia;
+      if (
+        nextMedia &&
+        !nextMedia.coverUrl &&
+        currentMedia?.coverUrl &&
+        mediaTrackKey(nextMedia) === mediaTrackKey(currentMedia)
+      ) {
+        nextMedia = { ...nextMedia, coverUrl: currentMedia.coverUrl };
+      } else if (
+        nextMedia &&
+        !nextMedia.coverUrl &&
+        currentMedia?.coverUrl &&
+        nextMedia.appId.toLocaleLowerCase() === currentMedia.appId.toLocaleLowerCase()
+      ) {
+        const pendingTrackKey = mediaTrackKey(nextMedia);
+        nextMedia = { ...nextMedia, coverUrl: currentMedia.coverUrl };
+        clearArtworkGraceTimer();
+        artworkGraceTimer = window.setTimeout(() => {
+          artworkGraceTimer = undefined;
+          if (disposed || !latestRawMedia || latestRawMedia.coverUrl) return;
+          if (mediaTrackKey(latestRawMedia) !== pendingTrackKey) return;
+          currentMediaRef.current = latestRawMedia;
+          setMedia(latestRawMedia);
+        }, MEDIA_ARTWORK_TRANSITION_GRACE_MS);
+      } else if (!nextMedia || nextMedia.coverUrl) {
+        clearArtworkGraceTimer();
+      }
       const optimistic = optimisticPlaybackRef.current;
       if (
         nextMedia &&
@@ -152,10 +209,12 @@ export const useIslandWindowsRuntime = ({
         Date.now() < optimistic.expiresAt &&
         nextMedia.isPlaying !== optimistic.expectedPlaying
       ) {
-        setMedia({
+        const optimisticMedia = {
           ...nextMedia,
           isPlaying: optimistic.expectedPlaying,
-        });
+        };
+        currentMediaRef.current = optimisticMedia;
+        setMedia(optimisticMedia);
         return;
       }
       if (
@@ -167,8 +226,10 @@ export const useIslandWindowsRuntime = ({
       ) {
         optimisticPlaybackRef.current = null;
       }
+      currentMediaRef.current = nextMedia;
       setMedia(nextMedia);
     };
+    reconcileMediaSnapshotRef.current = reconcileMediaSnapshot;
 
     const unsubscribeMedia = ipcBridge.winkGoWindows.mediaChanged.on(reconcileMediaSnapshot);
     const unsubscribeNotifications = ipcBridge.winkGoWindows.notificationReceived.on((nextNotification) => {
@@ -190,6 +251,7 @@ export const useIslandWindowsRuntime = ({
       void ipcBridge.winkGoWindows.configure
         .invoke({
           mediaEnabled,
+          mediaTarget,
           notificationEnabled,
         })
         .then((state) => {
@@ -207,6 +269,10 @@ export const useIslandWindowsRuntime = ({
     return () => {
       disposed = true;
       if (notificationTimer) window.clearTimeout(notificationTimer);
+      clearArtworkGraceTimer();
+      if (reconcileMediaSnapshotRef.current === reconcileMediaSnapshot) {
+        reconcileMediaSnapshotRef.current = () => {};
+      }
       document.removeEventListener('visibilitychange', configureForVisibility);
       unsubscribeMedia();
       unsubscribeNotifications();
@@ -237,16 +303,19 @@ export const useIslandWindowsRuntime = ({
           expiresAt: Date.now() + MEDIA_CONTROL_OPTIMISTIC_WINDOW_MS,
           trackKey: mediaTrackKey(previousMedia),
         };
-        setMedia({
+        const optimisticMedia = {
           ...previousMedia,
           isPlaying: expectedPlaying,
           updatedAt: Date.now(),
-        });
+        };
+        currentMediaRef.current = optimisticMedia;
+        setMedia(optimisticMedia);
       }
       try {
         const result = await ipcBridge.winkGoWindows.controlMedia.invoke({ action });
         if (!result.controlled && previousMedia && expectedPlaying !== null) {
           optimisticPlaybackRef.current = null;
+          currentMediaRef.current = previousMedia;
           setMedia(previousMedia);
         }
         if (result.controlled && previousMedia && (action === 'next' || action === 'previous')) {
@@ -261,7 +330,7 @@ export const useIslandWindowsRuntime = ({
                 const nextMedia = mediaEnabled && matchesMediaTarget(state.media, mediaTarget) ? state.media : null;
                 if (nextMedia && mediaTrackKey(nextMedia) !== previousTrackKey) {
                   optimisticPlaybackRef.current = null;
-                  setMedia(nextMedia);
+                  reconcileMediaSnapshotRef.current(state.media);
                   return;
                 }
                 // Several Windows players interpret the first Previous command
@@ -286,6 +355,7 @@ export const useIslandWindowsRuntime = ({
       } catch (error) {
         if (previousMedia && expectedPlaying !== null) {
           optimisticPlaybackRef.current = null;
+          currentMediaRef.current = previousMedia;
           setMedia(previousMedia);
         }
         console.warn('[WINK GO island] Media control failed:', error);
@@ -302,6 +372,7 @@ export const useIslandWindowsRuntime = ({
       if (result.status === 'Allowed') {
         void ipcBridge.winkGoWindows.configure.invoke({
           mediaEnabled,
+          mediaTarget,
           notificationEnabled,
         });
       }
@@ -311,7 +382,7 @@ export const useIslandWindowsRuntime = ({
       setNotificationAccess('Unavailable');
       return 'Unavailable';
     }
-  }, [mediaEnabled, notificationEnabled]);
+  }, [mediaEnabled, mediaTarget, notificationEnabled]);
 
   const setPrivacyMode = useCallback((enabled: boolean) => {
     setPrivacyModeState(enabled);
