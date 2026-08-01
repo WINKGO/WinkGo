@@ -24,6 +24,24 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = resolve(__dirname, '../../..');
 
+function moveOutDirectory(outDir: string, backupOutDir: string): void {
+  const retrySignal = new Int32Array(new SharedArrayBuffer(4));
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      renameSync(outDir, backupOutDir);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if ((code !== 'EPERM' && code !== 'EACCES') || attempt >= 50) throw error;
+
+      // Windows Defender and short-lived build subprocesses can retain an out/
+      // handle briefly after the previous case exits. Wait for that transient
+      // handle instead of making the full release gate fail nondeterministically.
+      Atomics.wait(retrySignal, 0, 0, 100);
+    }
+  }
+}
+
 function restoreOutDirectory(outDir: string, backupOutDir: string, movedExistingOut: boolean): void {
   rmSync(outDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   if (!movedExistingOut) return;
@@ -93,7 +111,7 @@ childProcess.execSync = function mockedExecSync(command) {
     let movedExistingOut = false;
     try {
       if (existsSync(outDir)) {
-        renameSync(outDir, backupOutDir);
+        moveOutDirectory(outDir, backupOutDir);
         movedExistingOut = true;
       }
       mkdirSync(resolve(outDir, 'main'), { recursive: true });
@@ -172,7 +190,7 @@ childProcess.execSync = function mockedExecSync(command) {
     let movedExistingOut = false;
     try {
       if (existsSync(outDir)) {
-        renameSync(outDir, backupOutDir);
+        moveOutDirectory(outDir, backupOutDir);
         movedExistingOut = true;
       }
 
@@ -219,7 +237,7 @@ childProcess.execSync = function mockedExecSync() {
     let movedExistingOut = false;
     try {
       if (existsSync(outDir)) {
-        renameSync(outDir, backupOutDir);
+        moveOutDirectory(outDir, backupOutDir);
         movedExistingOut = true;
       }
       mkdirSync(resolve(outDir, 'main'), { recursive: true });
@@ -565,7 +583,7 @@ childProcess.spawnSync = function mockedSpawnSync() {
     let movedExistingOut = false;
     try {
       if (existsSync(outDir)) {
-        renameSync(outDir, backupOutDir);
+        moveOutDirectory(outDir, backupOutDir);
         movedExistingOut = true;
       }
 
