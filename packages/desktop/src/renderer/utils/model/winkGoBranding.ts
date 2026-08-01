@@ -145,6 +145,7 @@ export type IslandDynamicIdentity = {
   key: string;
   label: string;
   source: string;
+  fallbackSource: string;
   kind: 'brand' | 'media-cover' | 'media-app' | 'notification-app' | 'activity-app';
 };
 
@@ -207,18 +208,11 @@ const winkGoIslandIdentity = (key = 'winkgo'): IslandDynamicIdentity => ({
   key,
   label: WINK_GO_DISPLAY_NAME,
   source: winkGoLogo,
+  fallbackSource: winkGoLogo,
   kind: 'brand',
 });
 
 export const resolveNotificationIdentity = (notification: WinkGoCapturedNotification): IslandDynamicIdentity => {
-  if (notification.iconUrl) {
-    return {
-      key: `notification:${notification.id}`,
-      label: notification.appName || WINK_GO_DISPLAY_NAME,
-      source: notification.iconUrl,
-      kind: 'notification-app',
-    };
-  }
   const rule = resolveIslandIdentityRule(
     `${notification.appName} ${notification.appUserModelId}`,
     NOTIFICATION_IDENTITY_RULES
@@ -228,24 +222,38 @@ export const resolveNotificationIdentity = (notification: WinkGoCapturedNotifica
       key: `notification:${notification.id}:winkgo`,
       label: notification.appName || WINK_GO_DISPLAY_NAME,
       source: winkGoLogo,
-      kind: 'notification-app',
+      fallbackSource: winkGoLogo,
+      kind: 'brand',
     };
   }
   return {
     key: `notification:${notification.id}:${rule.label}`,
     label: rule.label,
     source: rule.source,
+    fallbackSource: winkGoLogo,
     kind: 'notification-app',
   };
 };
 
 export const resolveMediaIdentity = (media: WinkGoMediaSnapshot): IslandDynamicIdentity => {
+  const rule = resolveIslandIdentityRule(`${media.appId} ${media.title} ${media.albumTitle}`, MEDIA_IDENTITY_RULES);
+  const appFallback = rule?.source ?? genericMusicLogo;
   if (media.coverUrl) {
     return {
       key: `media:${media.appId}:${media.title}:${media.artist}`,
       label: media.title,
       source: media.coverUrl,
+      fallbackSource: appFallback,
       kind: 'media-cover',
+    };
+  }
+  if (rule) {
+    return {
+      key: `media:${media.appId}:${rule.label}`,
+      label: rule.label,
+      source: rule.source,
+      fallbackSource: rule.source,
+      kind: 'media-app',
     };
   }
   if (media.appIconUrl) {
@@ -253,27 +261,23 @@ export const resolveMediaIdentity = (media: WinkGoMediaSnapshot): IslandDynamicI
       key: `media:${media.appId}:application-icon`,
       label: media.appId || media.title,
       source: media.appIconUrl,
-      kind: 'media-app',
-    };
-  }
-  const rule = resolveIslandIdentityRule(`${media.appId} ${media.title} ${media.albumTitle}`, MEDIA_IDENTITY_RULES);
-  if (!rule) {
-    return {
-      key: `media:${media.appId}:generic-music`,
-      label: media.appId || media.title,
-      source: genericMusicLogo,
+      fallbackSource: genericMusicLogo,
       kind: 'media-app',
     };
   }
   return {
-    key: `media:${media.appId}:${rule.label}`,
-    label: rule.label,
-    source: rule.source,
+    key: `media:${media.appId}:generic-music`,
+    label: media.appId || media.title,
+    source: genericMusicLogo,
+    fallbackSource: genericMusicLogo,
     kind: 'media-app',
   };
 };
 
 export const resolveActivityIdentity = (activity: IslandActivity): IslandDynamicIdentity => {
+  if (activity.kind === 'agent' || activity.status === 'success' || activity.status === 'error') {
+    return winkGoIslandIdentity(`activity:${activity.id}:winkgo`);
+  }
   const searchable = `${activity.source} ${activity.title} ${activity.kind}`;
   const notificationRule = resolveIslandIdentityRule(searchable, NOTIFICATION_IDENTITY_RULES);
   if (notificationRule) {
@@ -281,6 +285,7 @@ export const resolveActivityIdentity = (activity: IslandActivity): IslandDynamic
       key: `activity:${activity.id}:${notificationRule.label}`,
       label: notificationRule.label,
       source: notificationRule.source,
+      fallbackSource: winkGoLogo,
       kind: 'activity-app',
     };
   }
@@ -290,6 +295,7 @@ export const resolveActivityIdentity = (activity: IslandActivity): IslandDynamic
       key: `activity:${activity.id}:${mediaRule.label}`,
       label: mediaRule.label,
       source: mediaRule.source,
+      fallbackSource: winkGoLogo,
       kind: 'activity-app',
     };
   }
@@ -299,6 +305,7 @@ export const resolveActivityIdentity = (activity: IslandActivity): IslandDynamic
       key: `activity:${activity.id}:codex`,
       label: 'Codex',
       source: codexLogo,
+      fallbackSource: winkGoLogo,
       kind: 'activity-app',
     };
   }
@@ -307,6 +314,7 @@ export const resolveActivityIdentity = (activity: IslandActivity): IslandDynamic
       key: `activity:${activity.id}:claude`,
       label: 'Claude',
       source: claudeLogo,
+      fallbackSource: winkGoLogo,
       kind: 'activity-app',
     };
   }
@@ -314,7 +322,8 @@ export const resolveActivityIdentity = (activity: IslandActivity): IslandDynamic
     key: `activity:${activity.id}:winkgo`,
     label: activity.source || WINK_GO_DISPLAY_NAME,
     source: winkGoLogo,
-    kind: 'activity-app',
+    fallbackSource: winkGoLogo,
+    kind: 'brand',
   };
 };
 

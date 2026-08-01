@@ -136,7 +136,6 @@
   height: 100%;
   align-items: center;
   justify-content: center;
-  animation: titlebar-dynamic-island-identity-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .titlebar-dynamic-island__identity img {
@@ -144,6 +143,47 @@
   width: 21px;
   height: 21px;
   object-fit: contain;
+}
+
+.titlebar-dynamic-island__stable-image {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  height: 100%;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.titlebar-dynamic-island__stable-image > img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  box-sizing: border-box;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+.titlebar-dynamic-island__stable-image-fallback {
+  z-index: 1;
+}
+
+.titlebar-dynamic-island__stable-image-primary {
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+.titlebar-dynamic-island__stable-image-primary[data-loaded='true'] {
+  opacity: 1;
+}
+
+.titlebar-dynamic-island__stable-image > img[data-winkgo-brand='true'] {
+  padding: 12%;
+  object-fit: contain !important;
 }
 
 .titlebar-dynamic-island__brand--media-cover {
@@ -356,6 +396,11 @@
   width: 27px;
   height: 27px;
   object-fit: contain;
+}
+
+.titlebar-dynamic-island__panel-identity {
+  width: 27px;
+  height: 27px;
 }
 
 .titlebar-dynamic-island__panel-header > span:nth-child(2) {
@@ -599,12 +644,14 @@
   background: rgba(7, 193, 96, 0.055);
 }
 
-.titlebar-dynamic-island__notification-card > img {
+.titlebar-dynamic-island__notification-card > img,
+.titlebar-dynamic-island__notification-identity {
   width: 40px;
   height: 40px;
+  border-radius: 10px;
 }
 
-.titlebar-dynamic-island__notification-card > span {
+.titlebar-dynamic-island__notification-card > span:not(.titlebar-dynamic-island__notification-identity) {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -1276,18 +1323,6 @@
   50% {
     opacity: 1;
     transform: scaleY(1.65);
-  }
-}
-
-@keyframes titlebar-dynamic-island-identity-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.72) rotate(-10deg);
-  }
-
-  100% {
-    opacity: 1;
-    transform: scale(1) rotate(0);
   }
 }
 

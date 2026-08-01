@@ -2,6 +2,14 @@
 
 # Changelog
 
+## 2.2.4 (2026-08-01)
+
+- Made Dynamic Island identities stable while Windows notifications, task completions, and media artwork are loading or changing.
+- Ensured completed and failed local tasks consistently show the WINK GO logo instead of an empty Windows application icon.
+- Preferred verified bundled application logos for supported notification and music apps, with album-art and WINK GO fallbacks that remain visible during image loading.
+- Rejected transparent and solid-color native Windows icons before they reach the renderer.
+- Added an official mainland China high-speed download channel on `winkgo.top`, with GitHub retained as the backup mirror.
+
 ## 2.2.3 (2026-08-01)
 
 - Fixed Dynamic Island clipping when the application UI scale is above 100% by keeping the fixed-size island renderer at native zoom across initial load, reloads, and later global zoom changes.

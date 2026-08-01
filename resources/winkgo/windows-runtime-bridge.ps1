@@ -982,6 +982,43 @@ function Get-MediaProcessCandidates {
   return @($candidates)
 }
 
+function Test-WinkGoBitmapHasVisibleContent {
+  param([System.Drawing.Bitmap] $Bitmap)
+
+  if ($null -eq $Bitmap -or $Bitmap.Width -le 0 -or $Bitmap.Height -le 0) {
+    return $false
+  }
+
+  $stepX = [Math]::Max(1, [int][Math]::Floor($Bitmap.Width / 16.0))
+  $stepY = [Math]::Max(1, [int][Math]::Floor($Bitmap.Height / 16.0))
+  $sampleCount = 0
+  $visibleCount = 0
+  $minimumLuma = 255.0
+  $maximumLuma = 0.0
+  for ($y = 0; $y -lt $Bitmap.Height; $y += $stepY) {
+    for ($x = 0; $x -lt $Bitmap.Width; $x += $stepX) {
+      $pixel = $Bitmap.GetPixel($x, $y)
+      $sampleCount += 1
+      if ($pixel.A -lt 24) {
+        continue
+      }
+      $visibleCount += 1
+      $luma = (0.2126 * $pixel.R) + (0.7152 * $pixel.G) + (0.0722 * $pixel.B)
+      $minimumLuma = [Math]::Min($minimumLuma, $luma)
+      $maximumLuma = [Math]::Max($maximumLuma, $luma)
+    }
+  }
+
+  if ($sampleCount -le 0 -or $visibleCount -lt 2) {
+    return $false
+  }
+  $visibleCoverage = $visibleCount / [double]$sampleCount
+  if ($visibleCoverage -lt 0.98) {
+    return $true
+  }
+  return ($maximumLuma - $minimumLuma) -ge 8.0
+}
+
 function Read-ProcessIconDataUrl {
   param([string[]] $ProcessNames)
 
@@ -1001,6 +1038,9 @@ function Read-ProcessIconDataUrl {
           continue
         }
         $bitmap = $icon.ToBitmap()
+        if (-not (Test-WinkGoBitmapHasVisibleContent $bitmap)) {
+          continue
+        }
         $memory = [System.IO.MemoryStream]::new()
         $bitmap.Save($memory, [System.Drawing.Imaging.ImageFormat]::Png)
         $bytes = $memory.ToArray()
@@ -1607,6 +1647,9 @@ function Read-NotificationAppIconDataUrl {
 
   $reader = $null
   $stream = $null
+  $memory = $null
+  $image = $null
+  $bitmap = $null
   try {
     if ($null -eq $AppInfo -or $null -eq $AppInfo.DisplayInfo) {
       return ''
@@ -1631,6 +1674,12 @@ function Read-NotificationAppIconDataUrl {
     }
     $bytes = [byte[]]::new([int]$loaded)
     $reader.ReadBytes($bytes)
+    $memory = [System.IO.MemoryStream]::new($bytes, $false)
+    $image = [System.Drawing.Image]::FromStream($memory)
+    $bitmap = [System.Drawing.Bitmap]::new($image)
+    if (-not (Test-WinkGoBitmapHasVisibleContent $bitmap)) {
+      return ''
+    }
     $contentType = [string]$stream.ContentType
     if ([string]::IsNullOrWhiteSpace($contentType)) {
       $contentType = 'image/png'
@@ -1639,6 +1688,9 @@ function Read-NotificationAppIconDataUrl {
   } catch {
     return ''
   } finally {
+    if ($null -ne $bitmap) { $bitmap.Dispose() }
+    if ($null -ne $image) { $image.Dispose() }
+    if ($null -ne $memory) { $memory.Dispose() }
     Close-WinRtResource $reader
     Close-WinRtResource $stream
   }

@@ -747,6 +747,29 @@ describe('TitlebarDynamicIsland', () => {
     expect(screen.getAllByText('QQ · Alice').length).toBeGreaterThan(0);
   });
 
+  it('keeps the WINK GO mark visible for an unknown application notification', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    act(() => {
+      mocks.notificationHandler?.({
+        id: 'chatgpt-1',
+        appName: 'ChatGPT',
+        title: '任务已完成',
+        body: '',
+        appUserModelId: 'OpenAI.ChatGPT',
+        iconUrl: 'data:image/png;base64,blank-windows-icon',
+        createdAt: Date.now(),
+      });
+    });
+
+    const island = screen.getByTestId('titlebar-dynamic-island');
+    expect(island).toHaveAttribute('data-identity-kind', 'brand');
+    expect(island).toHaveAttribute('data-identity-label', 'ChatGPT');
+    expect(island.querySelector('.titlebar-dynamic-island__identity img')).toHaveAttribute('data-winkgo-brand', 'true');
+    expect(island.querySelector('img[src="data:image/png;base64,blank-windows-icon"]')).toBeNull();
+  });
+
   it('shows queued application notifications one at a time', () => {
     vi.useFakeTimers();
     try {

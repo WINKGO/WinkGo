@@ -39,6 +39,7 @@ import {
   resolveIslandDynamicIdentity,
   resolveMediaIdentity,
   resolveNotificationIdentity,
+  type IslandDynamicIdentity,
 } from '@renderer/utils/model/winkGoBranding';
 import { playWinkGoInteractionSound } from '@renderer/utils/winkgo/islandFilePreferences';
 import type { IslandActivity, IslandActivityStatus } from './islandActivity';
@@ -68,7 +69,45 @@ const applyWinkGoImageFallback = (event: React.SyntheticEvent<HTMLImageElement>)
   const image = event.currentTarget;
   if (image.dataset.winkgoFallbackApplied === 'true') return;
   image.dataset.winkgoFallbackApplied = 'true';
+  image.dataset.winkgoBrand = 'true';
   image.src = winkGoWordmark;
+};
+
+const StableIslandIdentityImage: React.FC<{
+  identity: IslandDynamicIdentity;
+  className?: string;
+}> = ({ identity, className = '' }) => {
+  const [loadedSource, setLoadedSource] = useState<string | null>(null);
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const showPrimary = identity.source !== identity.fallbackSource && failedSource !== identity.source;
+
+  return (
+    <span
+      className={`titlebar-dynamic-island__stable-image ${className}`.trim()}
+      data-primary-loaded={showPrimary && loadedSource === identity.source ? 'true' : 'false'}
+    >
+      {showPrimary && (
+        <img
+          className='titlebar-dynamic-island__stable-image-primary'
+          src={identity.source}
+          alt=''
+          draggable={false}
+          data-loaded={loadedSource === identity.source ? 'true' : 'false'}
+          data-winkgo-brand={identity.source === winkGoWordmark ? 'true' : 'false'}
+          onLoad={() => setLoadedSource(identity.source)}
+          onError={() => setFailedSource(identity.source)}
+        />
+      )}
+      <img
+        className='titlebar-dynamic-island__stable-image-fallback'
+        src={identity.fallbackSource}
+        alt=''
+        draggable={false}
+        data-winkgo-brand={identity.fallbackSource === winkGoWordmark ? 'true' : 'false'}
+        onError={applyWinkGoImageFallback}
+      />
+    </span>
+  );
 };
 
 const IslandLoopText: React.FC<{ text: string }> = ({ text }) => {
@@ -1157,9 +1196,7 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
           }`}
           aria-hidden='true'
         >
-          <span className='titlebar-dynamic-island__identity' key={dynamicIdentity.key}>
-            <img src={dynamicIdentity.source} alt='' draggable={false} onError={applyWinkGoImageFallback} />
-          </span>
+          <StableIslandIdentityImage identity={dynamicIdentity} className='titlebar-dynamic-island__identity' />
         </span>
         <IslandLoopText text={visibleSummary} />
         <span className='titlebar-dynamic-island__pulse' aria-hidden='true'>
@@ -1242,7 +1279,10 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
                 <Music theme='outline' size='19' fill='currentColor' />
               ) : panel === 'notification' ? (
                 notificationIdentity ? (
-                  <img src={notificationIdentity.source} alt='' draggable={false} onError={applyWinkGoImageFallback} />
+                  <StableIslandIdentityImage
+                    identity={notificationIdentity}
+                    className='titlebar-dynamic-island__panel-identity'
+                  />
                 ) : (
                   <Message theme='outline' size='19' fill='currentColor' />
                 )
@@ -1286,12 +1326,11 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
                       }${windowsRuntime.media.isPlaying ? ' titlebar-dynamic-island__media-cover--playing' : ''}`}
                       aria-hidden='true'
                     >
-                      <img
-                        src={mediaIdentity?.source || winkGoWordmark}
-                        alt=''
-                        draggable={false}
-                        onError={applyWinkGoImageFallback}
-                      />
+                      {mediaIdentity ? (
+                        <StableIslandIdentityImage identity={mediaIdentity} />
+                      ) : (
+                        <img src={winkGoWordmark} alt='' draggable={false} />
+                      )}
                     </span>
                     <span>
                       <strong>{windowsRuntime.media.title}</strong>
@@ -1357,12 +1396,14 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
             <div className='titlebar-dynamic-island__notification-panel'>
               {windowsRuntime.notification ? (
                 <article className='titlebar-dynamic-island__notification-card'>
-                  <img
-                    src={notificationIdentity?.source || winkGoWordmark}
-                    alt=''
-                    draggable={false}
-                    onError={applyWinkGoImageFallback}
-                  />
+                  {notificationIdentity ? (
+                    <StableIslandIdentityImage
+                      identity={notificationIdentity}
+                      className='titlebar-dynamic-island__notification-identity'
+                    />
+                  ) : (
+                    <img src={winkGoWordmark} alt='' draggable={false} />
+                  )}
                   <span>
                     <small>{windowsRuntime.notification.appName}</small>
                     <strong>{windowsRuntime.notification.title}</strong>

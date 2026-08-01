@@ -14,6 +14,7 @@ import {
   brandLegacyTextForDisplay,
   brandManagedAgentForDisplay,
   WINK_GO_BRAND_ICON,
+  resolveActivityIdentity,
   resolveIslandDynamicIdentity,
   resolveMediaIdentity,
   resolveNotificationIdentity,
@@ -167,6 +168,7 @@ describe('WINK GO visible branding', () => {
 
     expect(identity.kind).toBe('media-cover');
     expect(identity.source).toBe('data:image/png;base64,album-cover');
+    expect(identity.fallbackSource).toBeTruthy();
   });
 
   it('falls back to the matching media application logo when album artwork is unavailable', () => {
@@ -227,7 +229,7 @@ describe('WINK GO visible branding', () => {
     expect(identity.source).toBeTruthy();
   });
 
-  it('uses the Windows media application icon when a player does not publish album artwork', () => {
+  it('prefers the stable bundled player logo over a Windows executable icon', () => {
     const identity = resolveMediaIdentity({
       appId: '汽水音乐',
       title: '樱花草',
@@ -243,7 +245,9 @@ describe('WINK GO visible branding', () => {
     });
 
     expect(identity.kind).toBe('media-app');
-    expect(identity.source).toBe('data:image/png;base64,soda-executable-icon');
+    expect(identity.label).toBe('汽水音乐');
+    expect(identity.source).not.toBe('data:image/png;base64,soda-executable-icon');
+    expect(identity.fallbackSource).toBe(identity.source);
   });
 
   it('keeps an unknown Windows media player visible when neither artwork nor an application icon is available', () => {
@@ -266,7 +270,7 @@ describe('WINK GO visible branding', () => {
     expect(identity.label).toBe('FutureMusicPlayer.exe');
   });
 
-  it('uses the exact Windows notification icon before bundled application fallbacks', () => {
+  it('prefers the stable bundled notification logo over an unverified Windows icon', () => {
     const identity = resolveNotificationIdentity({
       id: 'mail-1',
       appName: 'Outlook',
@@ -277,8 +281,40 @@ describe('WINK GO visible branding', () => {
       createdAt: 1,
     });
 
-    expect(identity.label).toBe('Outlook');
-    expect(identity.source).toBe('data:image/png;base64,windows-app-icon');
+    expect(identity.label).toBe('邮件');
+    expect(identity.source).not.toBe('data:image/png;base64,windows-app-icon');
+    expect(identity.fallbackSource).toBe(WINK_GO_BRAND_ICON);
+  });
+
+  it('uses the WINK GO logo for unknown local notification applications', () => {
+    const identity = resolveNotificationIdentity({
+      id: 'chatgpt-1',
+      appName: 'ChatGPT',
+      title: '任务已完成',
+      body: '',
+      appUserModelId: 'OpenAI.ChatGPT',
+      iconUrl: 'data:image/png;base64,blank-windows-icon',
+      createdAt: 1,
+    });
+
+    expect(identity.kind).toBe('brand');
+    expect(identity.source).toBe(WINK_GO_BRAND_ICON);
+    expect(identity.fallbackSource).toBe(WINK_GO_BRAND_ICON);
+  });
+
+  it('uses the WINK GO logo for completed local agent tasks', () => {
+    const identity = resolveActivityIdentity({
+      id: 'turn-1',
+      source: 'ChatGPT',
+      kind: 'agent',
+      status: 'success',
+      title: '任务已完成',
+      timestamp: 1,
+    });
+
+    expect(identity.kind).toBe('brand');
+    expect(identity.source).toBe(WINK_GO_BRAND_ICON);
+    expect(identity.fallbackSource).toBe(WINK_GO_BRAND_ICON);
   });
 
   it('lets a new app notification temporarily take priority over playing media and tool activity', () => {
