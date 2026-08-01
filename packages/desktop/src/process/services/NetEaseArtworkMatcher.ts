@@ -39,7 +39,16 @@ const readArtworkUrl = (track: Record<string, unknown>): string => {
         ? (track.al as Record<string, unknown>)
         : undefined;
   const value = album?.picUrl ?? album?.coverUrl ?? album?.cover ?? track.coverUrl;
-  return typeof value === 'string' && /^https:\/\//i.test(value.trim()) ? value.trim() : '';
+  if (typeof value !== 'string') return '';
+  const candidate = value.trim();
+  try {
+    const url = new URL(candidate);
+    const trustedNetEaseHost = url.hostname === 'music.126.net' || url.hostname.endsWith('.music.126.net');
+    if (url.protocol === 'http:' && trustedNetEaseHost) url.protocol = 'https:';
+    return url.protocol === 'https:' ? url.toString() : '';
+  } catch {
+    return '';
+  }
 };
 
 const parseTrack = (row: NetEaseHistoryRow): Record<string, unknown> | null => {

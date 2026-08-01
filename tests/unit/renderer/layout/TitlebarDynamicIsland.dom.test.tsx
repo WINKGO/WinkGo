@@ -195,6 +195,19 @@ const activeJob: ICronJob = {
   },
 };
 
+const createEchoMediaSnapshot = (title: string, coverUrl: string, updatedAt: number): WinkGoMediaSnapshot => ({
+  appId: 'EchoMusic.exe',
+  title,
+  artist: 'Artist',
+  albumTitle: '',
+  isPlaying: true,
+  canPlayPause: true,
+  canGoNext: true,
+  canGoPrevious: true,
+  coverUrl,
+  updatedAt,
+});
+
 describe('TitlebarDynamicIsland', () => {
   it('expands a floating window to the real panel bottom without exceeding the desktop limit', () => {
     expect(calculateFloatingIslandHeight(115, 178.2)).toBe(187);
@@ -435,6 +448,45 @@ describe('TitlebarDynamicIsland', () => {
     await waitFor(() => expect(mocks.controlMedia).toHaveBeenCalledWith({ action: 'play_pause' }));
   });
 
+  it.each([
+    ['system', 'MediaPlayer.exe'],
+    ['netease', 'cloudmusic.exe'],
+    ['qqmusic', 'QQMusic.exe'],
+    ['kugou', 'KuGou.exe'],
+    ['spotify', 'Spotify.exe'],
+    ['apple', 'AppleMusic.exe'],
+    ['echo', 'EchoMusic.exe'],
+    ['lx-music', 'lx-music-desktop.exe'],
+  ])('passes the selected %s platform to Windows and accepts its matching media session', async (target, appId) => {
+    localStorage.setItem('winkgo_target_player', target);
+    render(<TitlebarDynamicIsland />);
+
+    await waitFor(() => {
+      expect(mocks.configureWindowsRuntime).toHaveBeenCalledWith({
+        mediaEnabled: true,
+        mediaTarget: target,
+        notificationEnabled: true,
+      });
+    });
+
+    act(() => {
+      mocks.mediaHandler?.({
+        appId,
+        title: 'Selected player track',
+        artist: 'Artist',
+        albumTitle: '',
+        isPlaying: true,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: 'data:image/png;base64,selected-player-cover',
+        updatedAt: Date.now(),
+      });
+    });
+
+    expect(screen.getByRole('button', { name: 'Selected player track · Artist' })).toBeTruthy();
+  });
+
   it('switches the play button to pause immediately without waiting for Windows media feedback', async () => {
     render(<TitlebarDynamicIsland />);
     await screen.findByText('WINK GO is ready');
@@ -485,6 +537,212 @@ describe('TitlebarDynamicIsland', () => {
     expect(island.querySelector('.titlebar-dynamic-island__brand--playing img')).toHaveAttribute(
       'src',
       'data:image/png;base64,current-album'
+    );
+  });
+
+  it.each([
+    ['system media', 'MediaPlayer.exe'],
+    ['NetEase Cloud Music', 'cloudmusic.exe'],
+    ['QQ Music', 'QQMusic.exe'],
+    ['Kugou Music', 'KuGou.exe'],
+    ['Spotify', 'Spotify.exe'],
+    ['Apple Music', 'AppleMusic.exe'],
+    ['EchoMusic', 'EchoMusic.exe'],
+    ['LX Music', 'lx-music-desktop.exe'],
+  ])('keeps the last verified artwork when %s temporarily reports an empty cover', async (_label, appId) => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    const firstSnapshot: WinkGoMediaSnapshot = {
+      appId,
+      title: 'Stable track',
+      artist: 'Stable artist',
+      albumTitle: 'Stable album',
+      isPlaying: true,
+      canPlayPause: true,
+      canGoNext: true,
+      canGoPrevious: true,
+      coverUrl: 'data:image/png;base64,verified-cover',
+      updatedAt: Date.now(),
+    };
+
+    act(() => {
+      mocks.mediaHandler?.(firstSnapshot);
+      mocks.mediaHandler?.({
+        ...firstSnapshot,
+        coverUrl: '',
+        updatedAt: firstSnapshot.updatedAt + 1,
+      });
+    });
+
+    const island = screen.getByTestId('titlebar-dynamic-island');
+    expect(island).toHaveAttribute('data-identity-kind', 'media-cover');
+    expect(island.querySelector('.titlebar-dynamic-island__brand--media-cover img')).toHaveAttribute(
+      'src',
+      'data:image/png;base64,verified-cover'
+    );
+  });
+
+  it('keeps the previous verified artwork visible until the next track artwork is ready', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    const updatedAt = Date.now();
+    act(() => {
+      mocks.mediaHandler?.({
+        appId: 'QQMusic.exe',
+        title: 'First track',
+        artist: 'First artist',
+        albumTitle: '',
+        isPlaying: true,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: 'data:image/png;base64,first-verified-cover',
+        updatedAt,
+      });
+      mocks.mediaHandler?.({
+        appId: 'QQMusic.exe',
+        title: 'Second track',
+        artist: 'Second artist',
+        albumTitle: '',
+        isPlaying: true,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: '',
+        updatedAt: updatedAt + 1,
+      });
+    });
+
+    const island = screen.getByTestId('titlebar-dynamic-island');
+    expect(screen.getByRole('button', { name: 'WINK GO Second track · Second artist' })).toBeTruthy();
+    expect(island.querySelector('.titlebar-dynamic-island__brand--media-cover img')).toHaveAttribute(
+      'src',
+      'data:image/png;base64,first-verified-cover'
+    );
+
+    act(() => {
+      mocks.mediaHandler?.({
+        appId: 'QQMusic.exe',
+        title: 'Second track',
+        artist: 'Second artist',
+        albumTitle: '',
+        isPlaying: true,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: 'data:image/png;base64,second-verified-cover',
+        updatedAt: updatedAt + 2,
+      });
+    });
+
+    expect(island.querySelector('.titlebar-dynamic-island__brand--media-cover img')).toHaveAttribute(
+      'src',
+      'data:image/png;base64,second-verified-cover'
+    );
+  });
+
+  it('falls back to the player logo when a new track never publishes artwork', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+    vi.useFakeTimers();
+
+    try {
+      const updatedAt = Date.now();
+      act(() => {
+        mocks.mediaHandler?.({
+          appId: 'KuGou.exe',
+          title: 'Covered track',
+          artist: 'Artist',
+          albumTitle: '',
+          isPlaying: true,
+          canPlayPause: true,
+          canGoNext: true,
+          canGoPrevious: true,
+          coverUrl: 'data:image/png;base64,kugou-cover',
+          updatedAt,
+        });
+        mocks.mediaHandler?.({
+          appId: 'KuGou.exe',
+          title: 'Track without artwork',
+          artist: 'Artist',
+          albumTitle: '',
+          isPlaying: true,
+          canPlayPause: true,
+          canGoNext: true,
+          canGoPrevious: true,
+          coverUrl: '',
+          updatedAt: updatedAt + 1,
+        });
+      });
+
+      expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-identity-kind', 'media-cover');
+
+      act(() => {
+        vi.advanceTimersByTime(2_000);
+      });
+
+      expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-identity-kind', 'media-app');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ignores an older artwork snapshot that arrives after the current track', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    act(() => {
+      mocks.mediaHandler?.({
+        appId: 'Spotify.exe',
+        title: 'Current track',
+        artist: 'Current artist',
+        albumTitle: '',
+        isPlaying: true,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: 'data:image/png;base64,current-track-cover',
+        updatedAt: 2_000,
+      });
+      mocks.mediaHandler?.({
+        appId: 'Spotify.exe',
+        title: 'Previous track',
+        artist: 'Previous artist',
+        albumTitle: '',
+        isPlaying: true,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: 'data:image/png;base64,late-previous-cover',
+        updatedAt: 1_999,
+      });
+    });
+
+    const island = screen.getByTestId('titlebar-dynamic-island');
+    expect(screen.getByRole('button', { name: 'WINK GO Current track · Current artist' })).toBeTruthy();
+    expect(island.querySelector('.titlebar-dynamic-island__brand--media-cover img')).toHaveAttribute(
+      'src',
+      'data:image/png;base64,current-track-cover'
+    );
+  });
+
+  it('restores the verified artwork when a previously played track returns without a cover', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    act(() => {
+      mocks.mediaHandler?.(createEchoMediaSnapshot('Track A', 'data:image/png;base64,track-a-cover', 1_000));
+      mocks.mediaHandler?.(createEchoMediaSnapshot('Track B', 'data:image/png;base64,track-b-cover', 2_000));
+      mocks.mediaHandler?.(createEchoMediaSnapshot('Track A', '', 3_000));
+    });
+
+    const island = screen.getByTestId('titlebar-dynamic-island');
+    expect(screen.getByRole('button', { name: 'WINK GO Track A · Artist' })).toBeTruthy();
+    expect(island.querySelector('.titlebar-dynamic-island__brand--media-cover img')).toHaveAttribute(
+      'src',
+      'data:image/png;base64,track-a-cover'
     );
   });
 
@@ -664,6 +922,54 @@ describe('TitlebarDynamicIsland', () => {
     await screen.findByText('第二首');
     expect(screen.getByText('歌手乙 · 网易云音乐')).toBeTruthy();
     expect(mocks.getWindowsRuntimeState).toHaveBeenCalled();
+  });
+
+  it('keeps verified artwork when the post-skip state returns new metadata before its cover', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    const updatedAt = Date.now();
+    act(() => {
+      mocks.mediaHandler?.({
+        appId: 'cloudmusic.exe',
+        title: 'First track',
+        artist: 'First artist',
+        albumTitle: '',
+        isPlaying: true,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: 'data:image/png;base64,first-track-cover',
+        updatedAt,
+      });
+    });
+    mocks.getWindowsRuntimeState.mockResolvedValue({
+      available: true,
+      mediaEnabled: true,
+      notificationEnabled: true,
+      notificationAccess: 'Allowed',
+      media: {
+        appId: 'cloudmusic.exe',
+        title: 'Second track',
+        artist: 'Second artist',
+        albumTitle: '',
+        isPlaying: true,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: '',
+        updatedAt: updatedAt + 1,
+      },
+      notification: null,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'WINK GO First track · First artist' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.nextTrack' }));
+
+    await screen.findByText('Second track');
+    expect(
+      screen.getByTestId('titlebar-dynamic-island').querySelector('.titlebar-dynamic-island__media-cover--artwork img')
+    ).toHaveAttribute('src', 'data:image/png;base64,first-track-cover');
   });
 
   it('retries previous once when the player only restarts the current track', async () => {

@@ -4,6 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { WinkGoMediaTarget } from '@/common/adapter/ipcBridge';
+
+export type { WinkGoMediaTarget } from '@/common/adapter/ipcBridge';
+
 export const WINK_GO_ISLAND_PREFERENCES_KEY = 'winkgo.island-files.preferences.v1';
 export const WINK_GO_ISLAND_PREFERENCES_EVENT = 'winkgo:island-files-preferences-changed';
 export const WINK_GO_ORGANIZER_SETTINGS_EVENT = 'winkgo:organizer-settings-changed';
@@ -18,8 +22,6 @@ export const WINK_GO_ORGANIZER_STORAGE_KEYS = {
 } as const;
 
 export type WinkGoIslandTheme = 'black' | 'white';
-export type WinkGoMediaTarget = 'system' | 'netease' | 'spotify' | 'apple' | 'qqmusic' | 'kugou' | 'echo' | 'lx-music';
-
 export type WinkGoIslandFilePreferences = {
   activityEnabled: boolean;
   autoHideFullscreen: boolean;
