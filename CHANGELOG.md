@@ -2,6 +2,13 @@
 
 # Changelog
 
+## 2.2.6 (2026-08-01)
+
+- Filtered Windows media sessions by the selected Dynamic Island platform for system media, NetEase Cloud Music, QQ Music, Kugou, Spotify, Apple Music, EchoMusic, and LX Music.
+- Preserved verified artwork through temporary metadata gaps, rejected stale artwork, and restored cached covers when tracks return.
+- Restored NetEase artwork from its local playback library by safely upgrading trusted NetEase image hosts to HTTPS.
+- Added exact QQ Music artwork matching and kept the corresponding player icon visible whenever a platform does not expose album artwork.
+
 ## 2.2.5 (2026-08-01)
 
 - Enabled WINK GO cloud device relay by default for new installations and migrated version 2.2.4 configurations.
