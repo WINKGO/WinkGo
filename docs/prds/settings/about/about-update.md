@@ -383,12 +383,12 @@
 
 **链接列表**：
 
-| 序号 | 标题     | 行为               | 目标                                                           |
-| ---- | -------- | ------------------ | -------------------------------------------------------------- |
+| 序号 | 标题     | 行为               | 目标                                         |
+| ---- | -------- | ------------------ | -------------------------------------------- |
 | 1    | 帮助文档 | 打开外部链接       | `https://github.com/WINKGO/wink-go/wiki`     |
 | 2    | 更新日志 | 打开外部链接       | `https://github.com/WINKGO/wink-go/releases` |
 | 3    | 意见反馈 | 打开外部链接       | `https://github.com/WINKGO/wink-go/issues`   |
-| 4    | 问题报告 | **打开应用内弹窗** | FeedbackReportModal（见 F-ABOUT-11）                           |
+| 4    | 问题报告 | **打开应用内弹窗** | FeedbackReportModal（见 F-ABOUT-11）         |
 | 5    | 联系我们 | 打开外部链接       | `https://github.com/WINKGO/wink-go/issues`   |
 | 6    | 项目主页 | 打开外部链接       | `https://github.com/WINKGO/wink-go`          |
 

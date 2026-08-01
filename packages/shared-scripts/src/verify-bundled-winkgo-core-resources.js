@@ -599,7 +599,6 @@ function verifyCorePdfSkillCompliance(baseDir, runtimeKey, electronPlatformName,
       missing.push(`${relativePath}<missing_original_pdf_toolkit:${compliance.missing.join('+')}>`);
     }
   }
-
 }
 
 function requireContractFile(baseDir, runtimeKey, cli, root, relativePath, checked, missing, failures) {

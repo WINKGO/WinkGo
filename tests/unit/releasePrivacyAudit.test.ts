@@ -179,7 +179,9 @@ describe('final release privacy audit', () => {
       expect(
         audit.physicalPathViolation(join(root, 'node_modules', '@aionui', 'web-host', 'index.js'), root)
       ).toContain('legacy-aionui-web-host-path');
-      expect(audit.physicalPathViolation(join(root, 'backend', 'assets', 'builtin-skills', 'pdf', 'SKILL.md'), root)).toBe('');
+      expect(
+        audit.physicalPathViolation(join(root, 'backend', 'assets', 'builtin-skills', 'pdf', 'SKILL.md'), root)
+      ).toBe('');
       expect(
         audit.physicalPathViolation(join(root, 'backend', 'assets', 'builtin-skills', 'pdf', 'LICENSE.txt'), root)
       ).toBe('restricted-legacy-pdf-skill-path');
@@ -202,13 +204,21 @@ describe('final release privacy audit', () => {
           'source'
         )
       ).toBe('forbidden-bundled-external-cli');
-      expect(audit.physicalPathViolation(join(root, 'public', 'knowledge-canvas', 'index.html'), root, 'source')).toBe('');
-      expect(audit.physicalPathViolation(join(root, 'resources', 'winkgo', 'provider-skills', 'vendor'), root, 'source')).toBe('');
+      expect(audit.physicalPathViolation(join(root, 'public', 'knowledge-canvas', 'index.html'), root, 'source')).toBe(
+        ''
+      );
+      expect(
+        audit.physicalPathViolation(join(root, 'resources', 'winkgo', 'provider-skills', 'vendor'), root, 'source')
+      ).toBe('');
       expect(
         audit.physicalPathViolation(join(root, 'resources', 'winkgo', 'skills', 'browser-control'), root, 'source')
       ).toBe('');
       expect(
-        audit.physicalPathViolation(join(root, 'packed', 'resources', 'winkgo', 'skills', 'browser-control'), root, 'source')
+        audit.physicalPathViolation(
+          join(root, 'packed', 'resources', 'winkgo', 'skills', 'browser-control'),
+          root,
+          'source'
+        )
       ).toBe('');
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -264,10 +274,7 @@ describe('final release privacy audit', () => {
     try {
       writeFileSync(
         fixture,
-        [
-          'https://github.com/WINKGO/wink-go',
-          'https://api.github.com/repos/WINKGO/wink-go/releases/latest',
-        ].join('\n')
+        ['https://github.com/WINKGO/wink-go', 'https://api.github.com/repos/WINKGO/wink-go/releases/latest'].join('\n')
       );
       expect(audit.scanFileContent(fixture)).not.toEqual(
         expect.arrayContaining(['retired-winkgo-github-account', 'unexpected-winkgo-github-repository'])
@@ -325,9 +332,7 @@ describe('final release privacy audit', () => {
         root
       )
     ).toBe(true);
-    expect(audit.isExcludedBundledCoreBuildInput(join(bundle, 'managed-resources', 'manifest.json'), root)).toBe(
-      false
-    );
+    expect(audit.isExcludedBundledCoreBuildInput(join(bundle, 'managed-resources', 'manifest.json'), root)).toBe(false);
     expect(
       audit.isExcludedBundledCoreBuildInput(
         join(bundle, 'managed-resources', 'node', 'node-v24', 'node_modules', 'npm', 'LICENSE'),

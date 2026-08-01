@@ -321,7 +321,7 @@ Bridge 端逐字段映射到 DB 列名（仅更新 `updates` 中不为 `undefine
 | ----------------------------- | ------------------------------------------------------------------------ |
 | `minProtocol` / `maxProtocol` | `3` / `4`（同时兼容 v3 与 v4 Gateway，2026.5.12 起 Gateway 默认要求 v4） |
 | `client.id`                   | `'gateway-client'`                                                       |
-| `client.displayName`          | `'WinkGo'`（为兼容既有 Gateway 保留的协议值；公开产品名为 WINK GO）    |
+| `client.displayName`          | `'WinkGo'`（为兼容既有 Gateway 保留的协议值；公开产品名为 WINK GO）      |
 | `client.mode`                 | `'backend'`                                                              |
 | `caps`                        | `['tool-events']`（必须声明以接收 tool call 事件）                       |
 | `role`                        | `'operator'`                                                             |

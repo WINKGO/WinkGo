@@ -74,15 +74,7 @@ const HASH_COMMENT_BASENAMES = new Set([
   'Makefile',
   'justfile',
 ]);
-const MANIFEST_ONLY_EXTENSIONS = new Set([
-  '.json',
-  '.lock',
-  '.ndjson',
-  '.sql',
-  '.svg',
-  '.txt',
-  '.webmanifest',
-]);
+const MANIFEST_ONLY_EXTENSIONS = new Set(['.json', '.lock', '.ndjson', '.sql', '.svg', '.txt', '.webmanifest']);
 
 function sha256File(filePath, type = 'binary') {
   const bytes = fs.readFileSync(filePath);

@@ -6,14 +6,7 @@ const path = require('path');
 
 const PROJECT_ROOT = path.resolve(__dirname, '../..');
 const OUTPUT_ROOT = path.join(PROJECT_ROOT, 'public', 'knowledge-canvas');
-const DIRECT_RUNTIME_DEPENDENCIES = [
-  '@xyflow/react',
-  'lucide-react',
-  'qrcode',
-  'react',
-  'react-dom',
-  'zustand',
-];
+const DIRECT_RUNTIME_DEPENDENCIES = ['@xyflow/react', 'lucide-react', 'qrcode', 'react', 'react-dom', 'zustand'];
 const LICENSE_FILE = /^(?:licen[cs]e|copying|notice)(?:[._-].*)?$/i;
 
 function fail(message) {
@@ -26,7 +19,12 @@ function sha256(content) {
 }
 
 function normalizeText(content) {
-  return content.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').trim() + '\n';
+  return (
+    content
+      .replace(/^\uFEFF/, '')
+      .replace(/\r\n?/g, '\n')
+      .trim() + '\n'
+  );
 }
 
 function readJson(filePath) {
@@ -95,17 +93,12 @@ for (const packageId of [...visited].sort()) {
     name: manifest.name,
     version: manifest.version,
     license: manifest.license || null,
-    repository:
-      typeof manifest.repository === 'string'
-        ? manifest.repository
-        : manifest.repository?.url || null,
+    repository: typeof manifest.repository === 'string' ? manifest.repository : manifest.repository?.url || null,
     licenseTextHashes: [...new Set(hashes)].sort(),
   });
 }
 
-inventory.sort((left, right) =>
-  `${left.name}@${left.version}`.localeCompare(`${right.name}@${right.version}`)
-);
+inventory.sort((left, right) => `${left.name}@${left.version}`.localeCompare(`${right.name}@${right.version}`));
 const archive = [
   'WINK GO KNOWLEDGE CANVAS THIRD-PARTY LICENSE ARCHIVE',
   '',

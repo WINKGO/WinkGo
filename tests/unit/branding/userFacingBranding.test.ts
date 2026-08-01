@@ -36,7 +36,10 @@ const withoutAllowedLegacyPaths = (content: string): string =>
     .reduce((result, legacyPath) => result.replaceAll(legacyPath, '<legacy-path>'), content)
     // These short source-provenance comments are required by the upstream
     // attribution policy and are not user-facing product branding.
-    .replace(/(?:<!--\s*|#\s*)Modified from Aion(?:UI|Core) by WINK GO contributors in 2026\.?\s*(?:-->)?/gi, '<source-provenance>');
+    .replace(
+      /(?:<!--\s*|#\s*)Modified from Aion(?:UI|Core) by WINK GO contributors in 2026\.?\s*(?:-->)?/gi,
+      '<source-provenance>'
+    );
 
 describe('user-facing WINK GO branding', () => {
   it('keeps bundled assistant and selected skill prose free of the retired upstream product name', () => {

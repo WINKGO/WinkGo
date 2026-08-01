@@ -295,9 +295,7 @@ describe('LocalAgents', () => {
 
     fireEvent.click(screen.getByText('settings.agentManagement.localAgentsSetupLink'));
 
-    expect(openExternalUrl).toHaveBeenCalledWith(
-      'https://github.com/WINKGO/wink-go#agent-接入与安装'
-    );
+    expect(openExternalUrl).toHaveBeenCalledWith('https://github.com/WINKGO/wink-go#agent-接入与安装');
   });
 
   it('opens the matching official setup page from each Agent info control', () => {
