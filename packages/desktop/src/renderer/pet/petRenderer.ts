@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 const LOAD_TIMEOUT = 3000;
 const FADE_MS = 150;
 const PET_STATES_BASE_PATH = '../pet-states';
