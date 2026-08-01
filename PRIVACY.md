@@ -33,6 +33,8 @@ WINK GO 采用本地优先设计。工作区文件、许多设置、对话和工
 
 当前正式打包的终端用户版本默认不启用自动崩溃、会话、追踪、截图或性能遥测。发送到反馈服务的报告须由用户主动提交；未打包的本地开发环境可由开发者通过显式环境变量开启诊断遥测，这不属于终端用户版本的默认行为。
 
+用户登录 WINK GO 账号后，云端设备转发默认开启，用于签发一次性设备绑定码并维持用户所选的远程设备连接。该设置会连接 `wss://winkgo.top/desktop`，用户可随时在 MCP 配置页关闭；关闭后桌面端不再建立该中转连接。
+
 ### 4. 使用目的
 
 我们仅为以下目的处理必要信息：创建和验证账号；保持用户选择的会话；绑定、识别和撤销设备；路由小程序与桌面端任务；提供用户主动调用的模型或第三方服务；处理反馈和安全事件；防止欺诈、攻击与跨账号访问；履行法律义务。
@@ -93,6 +95,8 @@ Data required for a selected function leaves the device when the user signs in o
 - **Security and operational records:** limited logs needed to prevent abuse, troubleshoot failures, maintain account sessions, bind devices, and keep a selected relay connection operating. The product may use connection keep-alives or session validation; we do not claim that it has “no heartbeat” or stores only a username and sign-in count.
 
 The current packaged end-user build does not enable automatic crash, session, tracing, screenshot, or performance telemetry by default. A report sent to the feedback service must be initiated by the user. In an unpackaged local development environment, a developer can explicitly enable diagnostic telemetry through an environment variable; that is not the end-user build default.
+
+After a user signs in to a WINK GO account, cloud device relay is enabled by default to issue one-time device pairing codes and maintain the remote-device connection selected by the user. This setting connects to `wss://winkgo.top/desktop`; users can turn it off at any time in MCP settings, after which the desktop no longer establishes that relay connection.
 
 ### 4. Purposes
 

@@ -47,22 +47,23 @@ describe('privacy controls', () => {
     }
   });
 
-  it('keeps the optional cloud relay off until a user explicitly enables it', () => {
+  it('defaults the cloud relay on while preserving a current-schema opt-out', () => {
     const relayService = readProjectFile('packages/desktop/src/process/services/WinkGoXiaozhiService.ts');
     const authBridge = readProjectFile('packages/desktop/src/process/bridge/winkgo/authBridge.ts');
     const relaySettings = readProjectFile(
       'packages/desktop/src/renderer/pages/settings/ToolsSettings/XiaozhiMcpConnection.tsx'
     );
 
-    expect(relayService).toMatch(/const defaultConfig[\s\S]*?relayEnabled:\s*false/);
-    expect(relayService).toContain('const CURRENT_CONFIG_SCHEMA_VERSION = 5');
+    expect(relayService).toMatch(/const defaultConfig[\s\S]*?relayEnabled:\s*true/);
+    expect(relayService).toContain('const CURRENT_CONFIG_SCHEMA_VERSION = 6');
     expect(relayService).toContain('const CURRENT_RELAY_CONSENT_VERSION = 1');
-    expect(relayService).toContain('relayEnabled: hasCurrentRelayConsent && raw.relayEnabled === true');
+    expect(relayService).toContain("typeof raw.relayEnabled === 'boolean'");
+    expect(relayService).toContain('relayEnabled: hasCurrentRelayPreference ? raw.relayEnabled === true : true');
     expect(relayService).toContain(
       'config.relayConsentVersion = request.relayEnabled ? CURRENT_RELAY_CONSENT_VERSION : 0'
     );
-    expect(authBridge).not.toContain('startWinkGoRemoteGateway');
-    expect(relaySettings).toMatch(/const DEFAULT_CONFIG[\s\S]*?relayEnabled:\s*false/);
+    expect(authBridge).toContain('startWinkGoRemoteGateway');
+    expect(relaySettings).toMatch(/const DEFAULT_CONFIG[\s\S]*?relayEnabled:\s*true/);
     expect(relaySettings).toContain("data-testid='xiaozhi-relay-disclosure'");
 
     const localesRoot = resolve(projectRoot, 'packages/desktop/src/renderer/services/i18n/locales');

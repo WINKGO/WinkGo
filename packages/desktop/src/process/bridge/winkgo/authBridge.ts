@@ -6,7 +6,7 @@
 
 import { ipcBridge } from '@/common';
 import { winkGoCloudAuthService } from '@process/services/WinkGoCloudAuthService';
-import { clearWinkGoRemoteAuthorization } from '@process/services/WinkGoXiaozhiService';
+import { clearWinkGoRemoteAuthorization, startWinkGoRemoteGateway } from '@process/services/WinkGoXiaozhiService';
 
 export const authenticateAndSyncRemoteGateway = async (
   authenticate: () => Promise<ipcBridge.WinkGoAuthResult>
@@ -21,9 +21,10 @@ export const authenticateAndSyncRemoteGateway = async (
     return result;
   }
 
-  // Authentication never opts a user into the optional cloud relay.
-  // The gateway is started only after the user explicitly enables and saves
-  // the relay setting (or on a later startup when that saved opt-in exists).
+  // The saved setting remains authoritative. New and migrated installations
+  // default to relay enabled, while users who turn it off in the current
+  // schema remain opted out.
+  await startWinkGoRemoteGateway().catch((): undefined => undefined);
   return result;
 };
 

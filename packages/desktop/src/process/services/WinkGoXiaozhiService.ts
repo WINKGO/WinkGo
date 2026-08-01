@@ -37,7 +37,7 @@ const LOCAL_TIMEOUT_MS = 1_800;
 const REMOTE_TIMEOUT_MS = 10_000;
 const FIREWALL_RUNTIME_RULE = 'WINK GO Runtime';
 const FIREWALL_BRIDGE_RULE = 'WINK GO Voice Bridge';
-const CURRENT_CONFIG_SCHEMA_VERSION = 5;
+const CURRENT_CONFIG_SCHEMA_VERSION = 6;
 const CURRENT_RELAY_CONSENT_VERSION = 1;
 const remoteGateway = new WinkGoRemoteGatewayService({
   enabled: false,
@@ -61,14 +61,14 @@ const bounded = (value: unknown, max: number): string =>
 
 const defaultConfig = (): WinkGoXiaozhiConfig => ({
   schemaVersion: CURRENT_CONFIG_SCHEMA_VERSION,
-  relayConsentVersion: 0,
+  relayConsentVersion: CURRENT_RELAY_CONSENT_VERSION,
   runtimeApi: DEFAULT_RUNTIME_API,
   lanIp: detectWinkGoLanIp() || '127.0.0.1',
   bridgePort: DEFAULT_BRIDGE_PORT,
   relayUrl: DEFAULT_RELAY_URL,
   desktopId: '',
   bindingCode: '',
-  relayEnabled: false,
+  relayEnabled: true,
   hardwareEnabled: true,
   mobileEnabled: false,
   hardwareEndpoint: XIAOZHI_MCP_BASE,
@@ -96,12 +96,11 @@ const mergeConfig = (value: unknown): WinkGoXiaozhiConfig => {
   const defaults = defaultConfig();
   if (!value || typeof value !== 'object') return defaults;
   const raw = value as Partial<WinkGoXiaozhiConfig>;
-  const hasCurrentRelayConsent =
-    Number(raw.schemaVersion) >= CURRENT_CONFIG_SCHEMA_VERSION &&
-    raw.relayConsentVersion === CURRENT_RELAY_CONSENT_VERSION;
+  const hasCurrentRelayPreference =
+    Number(raw.schemaVersion) >= CURRENT_CONFIG_SCHEMA_VERSION && typeof raw.relayEnabled === 'boolean';
   return {
     schemaVersion: CURRENT_CONFIG_SCHEMA_VERSION,
-    relayConsentVersion: hasCurrentRelayConsent ? CURRENT_RELAY_CONSENT_VERSION : 0,
+    relayConsentVersion: hasCurrentRelayPreference && raw.relayEnabled === false ? 0 : CURRENT_RELAY_CONSENT_VERSION,
     runtimeApi: bounded(raw.runtimeApi, 300) || defaults.runtimeApi,
     lanIp: bounded(raw.lanIp, 64) || defaults.lanIp,
     bridgePort:
@@ -111,7 +110,7 @@ const mergeConfig = (value: unknown): WinkGoXiaozhiConfig => {
     relayUrl: bounded(raw.relayUrl, 500) || defaults.relayUrl,
     desktopId: bounded(raw.desktopId, 120),
     bindingCode: bounded(raw.bindingCode, 120),
-    relayEnabled: hasCurrentRelayConsent && raw.relayEnabled === true,
+    relayEnabled: hasCurrentRelayPreference ? raw.relayEnabled === true : true,
     hardwareEnabled: typeof raw.hardwareEnabled === 'boolean' ? raw.hardwareEnabled : defaults.hardwareEnabled,
     mobileEnabled: typeof raw.mobileEnabled === 'boolean' ? raw.mobileEnabled : defaults.mobileEnabled,
     hardwareEndpoint: bounded(raw.hardwareEndpoint, 500) || defaults.hardwareEndpoint,

@@ -183,7 +183,7 @@ describe('XiaozhiMcpConnection', () => {
     expect(mocks.startRuntime).not.toHaveBeenCalled();
   });
 
-  it('shows the cloud-relay disclosure before the user can opt in', async () => {
+  it('shows the cloud-relay disclosure and preserves an explicit opt-out', async () => {
     const disabledSnapshot = {
       ...snapshot,
       config: { ...snapshot.config, relayEnabled: false },
@@ -202,7 +202,7 @@ describe('XiaozhiMcpConnection', () => {
     expect(disclosure).toHaveTextContent('启用云端设备中转前请确认');
     expect(disclosure).toHaveTextContent('wss://winkgo.top/desktop');
     expect(disclosure).toHaveTextContent('你可以随时关闭');
-    expect(screen.getByRole('switch', { name: '启用云端设备中转' })).not.toBeChecked();
+    await waitFor(() => expect(screen.getByRole('switch', { name: '启用云端设备中转' })).not.toBeChecked());
   });
 
   it('shows cloud mode as healthy when the optional LAN bridge is closed', async () => {

@@ -39,15 +39,15 @@ type FormState = Pick<
 };
 
 const DEFAULT_CONFIG: WinkGoXiaozhiConfig = {
-  schemaVersion: 5,
-  relayConsentVersion: 0,
+  schemaVersion: 6,
+  relayConsentVersion: 1,
   runtimeApi: 'http://127.0.0.1:8121',
   lanIp: '127.0.0.1',
   bridgePort: 8776,
   relayUrl: 'wss://winkgo.top/desktop',
   desktopId: '',
   bindingCode: '',
-  relayEnabled: false,
+  relayEnabled: true,
   hardwareEnabled: true,
   mobileEnabled: false,
   hardwareEndpoint: 'wss://api.xiaozhi.me/mcp/',
