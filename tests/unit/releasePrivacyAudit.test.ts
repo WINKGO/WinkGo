@@ -274,13 +274,17 @@ describe('final release privacy audit', () => {
     try {
       writeFileSync(
         fixture,
-        ['https://github.com/WINKGO/wink-go', 'https://api.github.com/repos/WINKGO/wink-go/releases/latest'].join('\n')
+        [
+          'https://github.com/WINKGO/WinkGo',
+          'https://api.github.com/repos/WINKGO/WinkGo/releases/latest',
+          'https://github.com/WINKGO/wink-go',
+        ].join('\n')
       );
       expect(audit.scanFileContent(fixture)).not.toEqual(
         expect.arrayContaining(['retired-winkgo-github-account', 'unexpected-winkgo-github-repository'])
       );
 
-      writeFileSync(fixture, 'https://github.com/WINKGO/wink/wiki/ACP-Setup');
+      writeFileSync(fixture, 'https://github.com/WINKGO/winkgo-skills');
       expect(audit.scanFileContent(fixture)).toContain('unexpected-winkgo-github-repository');
 
       writeFileSync(fixture, 'https://github.com/xuweihafeichangniu-lab/wink-go');

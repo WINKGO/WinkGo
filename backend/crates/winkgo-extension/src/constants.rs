@@ -93,7 +93,7 @@ pub const SKILLS_MARKET_NAME: &str = "winkgo-skills";
 /// `ExternalPathsManager`, it serves as an identifier for the skills market
 /// source. Filesystem scanning functions like `detect_and_count_external_skills`
 /// will silently skip it since the path does not exist on disk.
-pub const SKILLS_MARKET_PATH: &str = "https://github.com/WinkGo/winkgo-skills";
+pub const SKILLS_MARKET_PATH: &str = "https://github.com/WINKGO/WinkGo";
 
 /// Common skill directory names to detect on the filesystem.
 ///

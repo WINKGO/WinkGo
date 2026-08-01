@@ -481,17 +481,18 @@ jobs:
           }
 
           Write-Host "Using installer: $($installer.FullName)"
-          Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -NoNewWindow
+          $installDir = Join-Path $env:RUNNER_TEMP "winkgo-smoke-install"
+          if (Test-Path -LiteralPath $installDir) {
+            Remove-Item -LiteralPath $installDir -Recurse -Force
+          }
+          $installProcess = Start-Process -FilePath $installer.FullName -ArgumentList @('/S', "/D=$installDir") -Wait -NoNewWindow -PassThru
+          if ($installProcess.ExitCode -ne 0) {
+            throw "Silent installer exited with code $($installProcess.ExitCode)"
+          }
 
-          $candidates = @(
-            "$env:LOCALAPPDATA\\Programs\\WINK GO\\WINK-GO.exe",
-            "$env:ProgramFiles\\WINK GO\\WINK-GO.exe",
-            "$env:ProgramFiles(x86)\\WINK GO\\WINK-GO.exe"
-          )
-
-          $installedExe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $installedExe) {
-            throw "Silent install finished but app executable not found in expected locations"
+          $installedExe = Join-Path $installDir 'WINK-GO.exe'
+          if (-not (Test-Path -LiteralPath $installedExe)) {
+            throw "Silent install finished but app executable was not found at $installedExe"
           }
 
           Write-Host "Installed executable: $installedExe"
