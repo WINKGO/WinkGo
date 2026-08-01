@@ -178,6 +178,9 @@ describe('restricted nginx release receiver', () => {
         sizeBytes: statSync(join(bundleDirectory, installerName)).size,
       });
       expect(existsSync(join(releasesRoot, version, installerName))).toBe(true);
+      if (process.platform !== 'win32') {
+        expect(statSync(join(releasesRoot, version)).mode & 0o777).toBe(0o755);
+      }
       expect(readFileSync(join(releasesRoot, 'latest.yml'), 'utf8')).toContain(`version: ${version}`);
       expect(JSON.parse(readFileSync(join(siteRoot, 'winkgo-free-update.json'), 'utf8')).version).toBe(version);
       expect(readFileSync(siteIndexPath, 'utf8')).toContain(`/releases/free/${version}/${installerName}`);

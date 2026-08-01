@@ -218,6 +218,7 @@ function publishBundle({ bundleDirectory, releasesRoot, siteIndexPath, version }
 
   fs.mkdirSync(releasesRoot, { recursive: true, mode: 0o755 });
   fs.cpSync(bundleDirectory, stagingDirectory, { errorOnExist: true, recursive: true });
+  fs.chmodSync(stagingDirectory, 0o755);
   validateBundle(stagingDirectory, version);
 
   try {

@@ -224,18 +224,40 @@ jobs:
           set -euo pipefail
 
           if [[ "${{ matrix.platform }}" == "linux-x64" ]]; then
-            echo "SENTRY_UPLOAD_SOURCE_MAPS=true" >> "$GITHUB_ENV"
-            echo "Sentry source maps will be uploaded by linux-x64"
+            missing=0
+            for name in SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT; do
+              if [ -z "${!name:-}" ]; then
+                missing=1
+              fi
+            done
+
+            if [ "$missing" -eq 0 ]; then
+              echo "SENTRY_UPLOAD_SOURCE_MAPS=true" >> "$GITHUB_ENV"
+              echo "Sentry source maps will be uploaded by linux-x64"
+            else
+              echo "SENTRY_UPLOAD_SOURCE_MAPS=false" >> "$GITHUB_ENV"
+              echo "::warning title=Sentry upload disabled::Sentry secrets are incomplete; continuing without source map upload"
+            fi
           else
             echo "SENTRY_UPLOAD_SOURCE_MAPS=false" >> "$GITHUB_ENV"
             echo "Sentry source map upload skipped for ${{ matrix.platform }}"
           fi
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
       - name: Validate Sentry source map upload configuration
         if: matrix.platform == 'linux-x64'
         shell: bash
         run: |
           set -euo pipefail
+
+          if [ "${SENTRY_UPLOAD_SOURCE_MAPS:-false}" != "true" ]; then
+            echo "Sentry source map upload is disabled; no credentials are required"
+            exit 0
+          fi
+
           missing=0
 
           for name in SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT SENTRY_RELEASE; do
