@@ -2,6 +2,11 @@
 
 # Changelog
 
+## 2.2.8 (2026-08-02)
+
+- Restored Windows startup for existing installations whose migration history was recorded with Windows line endings.
+- Kept genuine migration changes blocked while safely recognizing SQL files that differ only by LF or CRLF line endings.
+
 ## 2.2.7 (2026-08-02)
 
 - Controlled Soda Music from Dynamic Island without foregrounding the player, clicking its window, or flashing a console.
