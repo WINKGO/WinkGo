@@ -165,7 +165,18 @@ const stageRoots = [
 ];
 const stageUiRoots = stageRoots.filter((root) => root !== 'resources/bundled-winkgo-core');
 
-const packedRoots = ['out/win-unpacked/resources', 'out/mac', 'out/linux-unpacked'];
+const packedRoots = [
+  'out/win-unpacked/resources',
+  'out/mac',
+  'out/mac-arm64',
+  'out/mac-x64',
+  'out/mac-universal',
+  'out/linux-unpacked',
+];
+
+function getAuditRoots(auditMode) {
+  return auditMode === 'packed' ? packedRoots : auditMode === 'stage-ui' ? stageUiRoots : stageRoots;
+}
 
 const legacyRuntimeRuleIds = new Set([
   'legacy-bundled-aioncore',
@@ -739,14 +750,14 @@ function main() {
     return printResult(mode, auditSource());
   }
 
-  const roots = mode === 'packed' ? packedRoots : mode === 'stage-ui' ? stageUiRoots : stageRoots;
-  return printResult(mode, audit(roots));
+  return printResult(mode, audit(getAuditRoots(mode)));
 }
 
 module.exports = {
   auditFinalExe,
   compareInstallerAsar,
   findNestedAppArchive,
+  getAuditRoots,
   isExcludedBundledCoreBuildInput,
   listSourceFiles,
   physicalPathViolation,
