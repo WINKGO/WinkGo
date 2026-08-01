@@ -627,19 +627,42 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
     if (!floating || !preferences.organizerEnabled) return undefined;
     const subscribe = window.electronAPI?.onNativeFileDrop;
     if (!subscribe) return undefined;
-    return subscribe((event) => {
+    let leaveTimer: number | undefined;
+    const cancelPendingLeave = () => {
+      if (leaveTimer === undefined) return;
+      window.clearTimeout(leaveTimer);
+      leaveTimer = undefined;
+    };
+    const unsubscribe = subscribe((event) => {
       if (event.kind === 'enter') {
+        cancelPendingLeave();
+        void window.electronAPI?.desktopIsland?.setFileDragActive?.(true);
         setIsFileDragActive(true);
         if (nativeDropPanelRef.current !== 'format') setPanel('drop');
         return;
       }
-      if (event.kind === 'over') return;
+      if (event.kind === 'over') {
+        cancelPendingLeave();
+        void window.electronAPI?.desktopIsland?.setFileDragActive?.(true);
+        setIsFileDragActive(true);
+        return;
+      }
       if (event.kind === 'leave') {
-        setIsFileDragActive(false);
-        setPanel((current) => (current === 'drop' ? null : current));
+        cancelPendingLeave();
+        // Transparent frameless windows can emit a short leave/over pair while
+        // their drop panel grows. Delay the collapse so that resize noise does
+        // not make the island bounce under the cursor.
+        leaveTimer = window.setTimeout(() => {
+          leaveTimer = undefined;
+          void window.electronAPI?.desktopIsland?.setFileDragActive?.(false);
+          setIsFileDragActive(false);
+          setPanel((current) => (current === 'drop' ? null : current));
+        }, 140);
         return;
       }
 
+      cancelPendingLeave();
+      void window.electronAPI?.desktopIsland?.setFileDragActive?.(false);
       setIsFileDragActive(false);
       const paths = event.paths.filter(Boolean).slice(0, 64);
       if (paths.length === 0) {
@@ -664,6 +687,10 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
         if (accepted) setPanel('destination');
       });
     });
+    return () => {
+      cancelPendingLeave();
+      unsubscribe();
+    };
   }, [floating, preferences.organizerEnabled]);
   const timer = useIslandFocusTimer(
     useCallback(() => {
@@ -1080,6 +1107,7 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
     if (!hasDroppedFileContent(event.dataTransfer)) return;
     event.preventDefault();
     event.stopPropagation();
+    void window.electronAPI?.desktopIsland?.setFileDragActive?.(true);
     setIsFileDragActive(true);
     if (panel === 'format') return;
     setPanel('drop');
@@ -1090,12 +1118,14 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
     if (!hasDroppedFileContent(event.dataTransfer)) return;
     event.preventDefault();
     event.stopPropagation();
+    void window.electronAPI?.desktopIsland?.setFileDragActive?.(true);
     event.dataTransfer.dropEffect = 'move';
   };
 
   const handleFileDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
     const nextTarget = event.relatedTarget;
     if (nextTarget instanceof Node && containerRef.current?.contains(nextTarget)) return;
+    void window.electronAPI?.desktopIsland?.setFileDragActive?.(false);
     setIsFileDragActive(false);
     setPanel((current) => (current === 'drop' ? null : current));
   };
@@ -1104,6 +1134,7 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
     if (!preferences.organizerEnabled) return;
     event.preventDefault();
     event.stopPropagation();
+    void window.electronAPI?.desktopIsland?.setFileDragActive?.(false);
     setIsFileDragActive(false);
     const paths = await resolveDroppedPaths(event.dataTransfer);
     if (paths.length === 0) {
