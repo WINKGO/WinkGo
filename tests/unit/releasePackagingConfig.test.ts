@@ -97,6 +97,16 @@ describe('release packaging configuration', () => {
     );
   });
 
+  it('smoke-installs the Windows PR build into a deterministic temporary directory', () => {
+    const workflow = readProjectFile('.github/workflows/pr-checks.yml');
+
+    expect(workflow).toContain('$installDir = Join-Path $env:RUNNER_TEMP "winkgo-smoke-install"');
+    expect(workflow).toContain('-ArgumentList @(\'/S\', "/D=$installDir") -Wait -NoNewWindow -PassThru');
+    expect(workflow).toContain('if ($installProcess.ExitCode -ne 0)');
+    expect(workflow).toContain("$installedExe = Join-Path $installDir 'WINK-GO.exe'");
+    expect(workflow).not.toContain('$env:LOCALAPPDATA\\\\Programs\\\\WINK GO\\\\WINK-GO.exe');
+  });
+
   it('runs main push quality checks and restricts releases to stable v tags', () => {
     const workflow = readProjectFile('.github/workflows/build-and-release.yml');
     const releaseStart = workflow.indexOf('\n  release:');

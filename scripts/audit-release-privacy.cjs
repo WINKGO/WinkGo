@@ -94,10 +94,10 @@ const contentRules = [
   },
   {
     id: 'unexpected-winkgo-github-repository',
-    // WINKGO/wink-go is the only public product repository used by release
-    // artifacts. Block accidental links to private or retired organization repos.
+    // WINKGO/WinkGo is canonical. Keep the historical wink-go alias valid for
+    // already-published metadata while blocking private or retired repositories.
     pattern:
-      /\b(?:https?:\/\/)?(?:api\.)?github\.com\/(?:repos\/)?WINKGO\/(?!(?:wink-go)(?:\.git)?(?=[/?#\s"'`]|$))[a-z0-9_.-]+(?=[/?#\s"'`]|$)/i,
+      /\b(?:https?:\/\/)?(?:api\.)?github\.com\/(?:repos\/)?WINKGO\/(?!(?:winkgo|wink-go)(?:\.git)?(?=[/?#\s"'`]|$))[a-z0-9_.-]+(?=[/?#\s"'`]|$)/i,
   },
   {
     id: 'developer-windows-profile',
