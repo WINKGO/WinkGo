@@ -12,6 +12,7 @@ import { initMainAdapterWithWindow } from '@/common/adapter/main';
 import { isTrustedIpcSender, resolveTrustedDevServerUrl } from '@/common/platform/electronSecurity';
 import { registerTrustedWindowSecurity } from '@process/startup/electronSecurity';
 import { fixZoomForWindow } from '@process/utils/zoom';
+import { shouldReleaseIslandSurfaceBeforeResize } from './desktopIslandResizePolicy';
 
 const ISLAND_TOP_MARGIN = 10;
 const COLLAPSED_WIDTH = 250;
@@ -56,6 +57,7 @@ let displayListenersRegistered = false;
 let preferredIslandPosition: { centerX: number; y: number } | null = null;
 let suppressPositionTrackingUntil = 0;
 let nativeDropPoller: NodeJS.Timeout | null = null;
+let nativeFileDragActive = false;
 
 type NativeDropEvent =
   | { kind: 'enter'; names: string[]; position: [number, number] }
@@ -118,6 +120,8 @@ const installNativeDropTarget = (targetWindow: BrowserWindow): void => {
         fastPollingUntil = Date.now() + 1_500;
       }
       for (const event of events) {
+        if (event.kind === 'enter' || event.kind === 'over') nativeFileDragActive = true;
+        if (event.kind === 'leave' || event.kind === 'drop') nativeFileDragActive = false;
         islandWindow.webContents.send('winkgo-native-file-drop:event', event);
       }
     } catch (error) {
@@ -257,7 +261,7 @@ const resizeIsland = ({ width, height }: DesktopIslandSize): void => {
   // file shelf then looks like a single header strip). Releasing the surface
   // before applying the new bounds is the same reliable workaround already
   // used by the desktop-pet window.
-  if (process.platform === 'win32') {
+  if (shouldReleaseIslandSurfaceBeforeResize(process.platform, nativeFileDragActive)) {
     const wasVisible = islandWindow.isVisible();
     if (wasVisible) islandWindow.hide();
     suppressPositionTrackingUntil = Date.now() + 250;
@@ -315,6 +319,19 @@ const registerHandlers = (): void => {
       return false;
     }
     resizeIsland(size);
+    return true;
+  });
+  ipcMain.handle('winkgo-desktop-island:set-file-drag-active', (event, active: boolean) => {
+    if (
+      !isTrustedIpcSender(event, ['island']) ||
+      typeof active !== 'boolean' ||
+      !islandWindow ||
+      islandWindow.isDestroyed() ||
+      event.sender.id !== islandWindow.webContents.id
+    ) {
+      return false;
+    }
+    nativeFileDragActive = active;
     return true;
   });
   ipcMain.handle('winkgo-desktop-island:ready', (event) => {
@@ -457,6 +474,7 @@ export const createDesktopIslandWindow = (options: DesktopIslandWindowOptions): 
       nativeDropPoller = null;
     }
     preferredIslandPosition = null;
+    nativeFileDragActive = false;
     islandWindow = null;
   });
 
@@ -471,6 +489,7 @@ export const destroyDesktopIslandWindow = (): void => {
     islandWindow.destroy();
   }
   preferredIslandPosition = null;
+  nativeFileDragActive = false;
   islandWindow = null;
 };
 

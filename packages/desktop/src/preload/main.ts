@@ -79,6 +79,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('winkgo-desktop-island:apply-settings', settings),
     navigateMain: (route: string) => ipcRenderer.invoke('winkgo-desktop-island:navigate-main', route),
     ready: () => ipcRenderer.invoke('winkgo-desktop-island:ready'),
+    setFileDragActive: (active: boolean) => ipcRenderer.invoke('winkgo-desktop-island:set-file-drag-active', active),
     setSize: (size: { height: number; width: number }) => ipcRenderer.invoke('winkgo-desktop-island:set-size', size),
   },
 });

@@ -50,6 +50,17 @@ const mocks = vi.hoisted(() => ({
   getWindowsRuntimeState: vi.fn(),
   controlMedia: vi.fn(),
   requestNotificationAccess: vi.fn(),
+  setFileDragActive: vi.fn(),
+  setIslandSize: vi.fn(),
+  nativeDropHandler: undefined as
+    | ((
+        event:
+          | { kind: 'enter'; names: string[]; position: [number, number] }
+          | { kind: 'over'; position: [number, number] }
+          | { kind: 'leave' }
+          | { kind: 'drop'; paths: string[]; position: [number, number] }
+      ) => void)
+    | undefined,
   mediaHandler: undefined as ((snapshot: WinkGoMediaSnapshot | null) => void) | undefined,
   notificationHandler: undefined as ((notification: WinkGoCapturedNotification) => void) | undefined,
   xiaozhiHandler: undefined as ((snapshot: WinkGoXiaozhiSnapshot) => void) | undefined,
@@ -241,6 +252,9 @@ describe('TitlebarDynamicIsland', () => {
     mocks.getWindowsRuntimeState.mockReset();
     mocks.controlMedia.mockReset();
     mocks.requestNotificationAccess.mockReset();
+    mocks.setFileDragActive.mockReset();
+    mocks.setIslandSize.mockReset();
+    mocks.nativeDropHandler = undefined;
     mocks.mediaHandler = undefined;
     mocks.notificationHandler = undefined;
     mocks.listJobs.mockResolvedValue([]);
@@ -271,6 +285,23 @@ describe('TitlebarDynamicIsland', () => {
     });
     mocks.controlMedia.mockResolvedValue({ controlled: true });
     mocks.requestNotificationAccess.mockResolvedValue({ status: 'Allowed' });
+    mocks.setFileDragActive.mockResolvedValue(true);
+    mocks.setIslandSize.mockResolvedValue(true);
+    Object.assign(window.electronAPI || {}, {
+      desktopIsland: {
+        applySettings: vi.fn(() => Promise.resolve(true)),
+        navigateMain: vi.fn(() => Promise.resolve(true)),
+        ready: vi.fn(() => Promise.resolve(true)),
+        setFileDragActive: mocks.setFileDragActive,
+        setSize: mocks.setIslandSize,
+      },
+      onNativeFileDrop: (handler: NonNullable<typeof mocks.nativeDropHandler>) => {
+        mocks.nativeDropHandler = handler;
+        return () => {
+          if (mocks.nativeDropHandler === handler) mocks.nativeDropHandler = undefined;
+        };
+      },
+    });
     localStorage.clear();
   });
 
@@ -296,6 +327,65 @@ describe('TitlebarDynamicIsland', () => {
     expect(screen.queryByText('WINK GO')).toBeNull();
     expect(document.querySelector('.titlebar-dynamic-island__brand img')).toBeTruthy();
     expect(screen.queryByText('WINK GO is ready')).toBeNull();
+  });
+
+  it('opens file collection in place for a native drag and stages the dropped paths directly', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    act(() => {
+      mocks.nativeDropHandler?.({ kind: 'enter', names: ['客户方案.png'], position: [120, 18] });
+    });
+
+    const island = screen.getByTestId('titlebar-dynamic-island');
+    await waitFor(() => expect(island).toHaveAttribute('data-panel', 'drop'));
+    expect(mocks.setFileDragActive).toHaveBeenLastCalledWith(true);
+    await waitFor(() => expect(mocks.setIslandSize).toHaveBeenCalledWith({ width: 500, height: 108 }));
+
+    act(() => {
+      mocks.nativeDropHandler?.({ kind: 'over', position: [124, 22] });
+      mocks.nativeDropHandler?.({ kind: 'drop', paths: ['C:\\Desktop\\客户方案.png'], position: [124, 22] });
+    });
+
+    await waitFor(() => expect(island).toHaveAttribute('data-panel', 'destination'));
+    expect(mocks.setFileDragActive).toHaveBeenLastCalledWith(false);
+  });
+
+  it('collapses a native file hover that genuinely leaves without dropping', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    act(() => {
+      mocks.nativeDropHandler?.({ kind: 'enter', names: ['notes.txt'], position: [100, 18] });
+    });
+    await waitFor(() => expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-panel', 'drop'));
+
+    act(() => {
+      mocks.nativeDropHandler?.({ kind: 'leave' });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-panel', 'none'));
+    expect(mocks.setFileDragActive).toHaveBeenLastCalledWith(false);
+  });
+
+  it('ignores a transient native leave followed by another drag-over during window expansion', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    act(() => {
+      mocks.nativeDropHandler?.({ kind: 'enter', names: ['photo.png'], position: [110, 18] });
+    });
+    const island = screen.getByTestId('titlebar-dynamic-island');
+    await waitFor(() => expect(island).toHaveAttribute('data-panel', 'drop'));
+    mocks.setFileDragActive.mockClear();
+
+    act(() => {
+      mocks.nativeDropHandler?.({ kind: 'leave' });
+      mocks.nativeDropHandler?.({ kind: 'over', position: [114, 20] });
+    });
+
+    expect(island).toHaveAttribute('data-panel', 'drop');
+    expect(mocks.setFileDragActive).not.toHaveBeenCalledWith(false);
   });
 
   it('reflects enabled scheduled tasks without starting another runtime', async () => {
@@ -583,7 +673,7 @@ describe('TitlebarDynamicIsland', () => {
     );
   });
 
-  it('keeps the previous verified artwork visible until the next track artwork is ready', async () => {
+  it('clears the previous track artwork immediately while the next track artwork is loading', async () => {
     render(<TitlebarDynamicIsland floating />);
     await screen.findByText('is ready');
 
@@ -617,10 +707,8 @@ describe('TitlebarDynamicIsland', () => {
 
     const island = screen.getByTestId('titlebar-dynamic-island');
     expect(screen.getByRole('button', { name: 'WINK GO Second track · Second artist' })).toBeTruthy();
-    expect(island.querySelector('.titlebar-dynamic-island__brand--media-cover img')).toHaveAttribute(
-      'src',
-      'data:image/png;base64,first-verified-cover'
-    );
+    expect(island).toHaveAttribute('data-identity-kind', 'media-app');
+    expect(island.querySelector('img[src="data:image/png;base64,first-verified-cover"]')).toBeNull();
 
     act(() => {
       mocks.mediaHandler?.({
@@ -643,50 +731,55 @@ describe('TitlebarDynamicIsland', () => {
     );
   });
 
-  it('falls back to the player logo when a new track never publishes artwork', async () => {
+  it('falls back to the player logo immediately when a new track has no verified artwork', async () => {
     render(<TitlebarDynamicIsland floating />);
     await screen.findByText('is ready');
-    vi.useFakeTimers();
-
-    try {
-      const updatedAt = Date.now();
-      act(() => {
-        mocks.mediaHandler?.({
-          appId: 'KuGou.exe',
-          title: 'Covered track',
-          artist: 'Artist',
-          albumTitle: '',
-          isPlaying: true,
-          canPlayPause: true,
-          canGoNext: true,
-          canGoPrevious: true,
-          coverUrl: 'data:image/png;base64,kugou-cover',
-          updatedAt,
-        });
-        mocks.mediaHandler?.({
-          appId: 'KuGou.exe',
-          title: 'Track without artwork',
-          artist: 'Artist',
-          albumTitle: '',
-          isPlaying: true,
-          canPlayPause: true,
-          canGoNext: true,
-          canGoPrevious: true,
-          coverUrl: '',
-          updatedAt: updatedAt + 1,
-        });
+    const updatedAt = Date.now();
+    act(() => {
+      mocks.mediaHandler?.({
+        appId: 'KuGou.exe',
+        title: 'Covered track',
+        artist: 'Artist',
+        albumTitle: '',
+        isPlaying: true,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: 'data:image/png;base64,kugou-cover',
+        updatedAt,
       });
-
-      expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-identity-kind', 'media-cover');
-
-      act(() => {
-        vi.advanceTimersByTime(2_000);
+      mocks.mediaHandler?.({
+        appId: 'KuGou.exe',
+        title: 'Track without artwork',
+        artist: 'Artist',
+        albumTitle: '',
+        isPlaying: true,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: '',
+        updatedAt: updatedAt + 1,
       });
+    });
 
-      expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-identity-kind', 'media-app');
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-identity-kind', 'media-app');
+  });
+
+  it('never carries artwork across music applications while the new player cover is loading', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    act(() => {
+      mocks.mediaHandler?.(createEchoMediaSnapshot('Echo track', 'data:image/png;base64,echo-cover', 1_000));
+      mocks.mediaHandler?.({
+        ...createEchoMediaSnapshot('Spotify track', '', 2_000),
+        appId: 'Spotify.exe',
+      });
+    });
+
+    const island = screen.getByTestId('titlebar-dynamic-island');
+    expect(island).toHaveAttribute('data-identity-kind', 'media-app');
+    expect(island.querySelector('img[src="data:image/png;base64,echo-cover"]')).toBeNull();
   });
 
   it('ignores an older artwork snapshot that arrives after the current track', async () => {
@@ -924,7 +1017,7 @@ describe('TitlebarDynamicIsland', () => {
     expect(mocks.getWindowsRuntimeState).toHaveBeenCalled();
   });
 
-  it('keeps verified artwork when the post-skip state returns new metadata before its cover', async () => {
+  it('does not reuse the previous artwork when the post-skip state has new metadata', async () => {
     render(<TitlebarDynamicIsland floating />);
     await screen.findByText('is ready');
 
@@ -967,9 +1060,9 @@ describe('TitlebarDynamicIsland', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.nextTrack' }));
 
     await screen.findByText('Second track');
-    expect(
-      screen.getByTestId('titlebar-dynamic-island').querySelector('.titlebar-dynamic-island__media-cover--artwork img')
-    ).toHaveAttribute('src', 'data:image/png;base64,first-track-cover');
+    const island = screen.getByTestId('titlebar-dynamic-island');
+    expect(island).toHaveAttribute('data-identity-kind', 'media-app');
+    expect(island.querySelector('img[src="data:image/png;base64,first-track-cover"]')).toBeNull();
   });
 
   it('retries previous once when the player only restarts the current track', async () => {

@@ -33,6 +33,7 @@ export interface ElectronBridgeAPI {
     applySettings: (settings: { autoHideFullscreen: boolean; opacity: number; visible: boolean }) => Promise<boolean>;
     navigateMain: (route: string) => Promise<boolean>;
     ready: () => Promise<boolean>;
+    setFileDragActive: (active: boolean) => Promise<boolean>;
     setSize: (size: { height: number; width: number }) => Promise<boolean>;
   };
 }
