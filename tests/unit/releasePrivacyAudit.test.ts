@@ -276,6 +276,9 @@ describe('final release privacy audit', () => {
         fixture,
         [
           'https://github.com/WINKGO/WinkGo',
+          // Rust linkers may place another printable constant immediately after
+          // a URL. The trailing slash must keep the repository boundary clear.
+          'https://github.com/WINKGO/WinkGo/winkgo-skillscrates',
           'https://api.github.com/repos/WINKGO/WinkGo/releases/latest',
           'https://github.com/WINKGO/wink-go',
         ].join('\n')
