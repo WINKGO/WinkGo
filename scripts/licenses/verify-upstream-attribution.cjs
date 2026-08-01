@@ -5,6 +5,7 @@
  */
 
 const crypto = require('node:crypto');
+const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { commentStyle } = require('./apply-upstream-attribution.cjs');
@@ -52,8 +53,8 @@ const PROJECTS = [
     upstreamEntries: 413,
     currentRoot: 'backend/agent-runtime',
     manifest: 'docs/vendor/aionrs-modification-manifest.tsv',
-    rows: 386,
-    inline: 383,
+    rows: 385,
+    inline: 382,
     manifestOnly: 3,
   },
 ];
@@ -114,7 +115,30 @@ function resolveRepositoryPath(repoRoot, repositoryPath) {
   return absolute;
 }
 
-function verifyManifestRows(repoRoot, project, rows) {
+function listGitVisibleFiles(repoRoot) {
+  try {
+    return new Set(
+      execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+      })
+        .split('\0')
+        .filter(Boolean)
+        .map((entry) => entry.replaceAll('\\', '/'))
+    );
+  } catch {
+    return null;
+  }
+}
+
+function repositoryFileExists(repoRoot, repositoryPath, gitVisibleFiles = null) {
+  const normalized = path.posix.normalize(repositoryPath.replaceAll('\\', '/'));
+  if (gitVisibleFiles && !gitVisibleFiles.has(normalized)) return false;
+  const absolute = resolveRepositoryPath(repoRoot, normalized);
+  return fs.existsSync(absolute) && fs.statSync(absolute).isFile();
+}
+
+function verifyManifestRows(repoRoot, project, rows, gitVisibleFiles = null) {
   invariant(rows.length === project.rows, `${project.name} manifest row count changed`);
   const seenUpstream = new Set();
   const seenCurrent = new Set();
@@ -137,7 +161,7 @@ function verifyManifestRows(repoRoot, project, rows) {
     seenCurrent.add(row.current_path);
 
     const absolute = resolveRepositoryPath(repoRoot, row.current_path);
-    invariant(fs.existsSync(absolute) && fs.statSync(absolute).isFile(), `Missing ${row.current_path}`);
+    invariant(repositoryFileExists(repoRoot, row.current_path, gitVisibleFiles), `Missing ${row.current_path}`);
     if (row.disposition === 'inline') {
       inline += 1;
       invariant(row.type === 'text', `Binary file marked inline: ${row.current_path}`);
@@ -164,7 +188,7 @@ function verifyManifestRows(repoRoot, project, rows) {
   invariant(manifestOnly === project.manifestOnly, `${project.name} manifest-only count changed`);
 }
 
-function verifyInventoryCoverage(repoRoot, project, inventoryRows, manifestRows) {
+function verifyInventoryCoverage(repoRoot, project, inventoryRows, manifestRows, gitVisibleFiles = null) {
   invariant(inventoryRows.length === project.upstreamEntries, `${project.name} upstream inventory row count changed`);
   const inventoryByUpstream = new Map();
   const inventoryCurrentPaths = new Set();
@@ -200,7 +224,7 @@ function verifyInventoryCoverage(repoRoot, project, inventoryRows, manifestRows)
     const repositoryPath = path.posix.join(project.currentRoot, inventory.current_path);
     const absolute = resolveRepositoryPath(repoRoot, repositoryPath);
     const manifest = manifestByUpstream.get(inventory.upstream_path);
-    if (!fs.existsSync(absolute)) {
+    if (!repositoryFileExists(repoRoot, repositoryPath, gitVisibleFiles)) {
       invariant(!manifest, `Deleted upstream file remains in manifest: ${inventory.upstream_path}`);
       continue;
     }
@@ -216,6 +240,7 @@ function verifyInventoryCoverage(repoRoot, project, inventoryRows, manifestRows)
 }
 
 function verifyRepository(repoRoot = REPO_ROOT) {
+  const gitVisibleFiles = listGitVisibleFiles(repoRoot);
   for (const project of PROJECTS) {
     const inventoryPath = resolveRepositoryPath(repoRoot, project.inventory);
     invariant(
@@ -245,8 +270,8 @@ function verifyRepository(repoRoot = REPO_ROOT) {
     ]) {
       invariant(metadataText.includes(expected), `Missing manifest metadata: ${expected}`);
     }
-    verifyInventoryCoverage(repoRoot, project, inventoryRows, rows);
-    verifyManifestRows(repoRoot, project, rows);
+    verifyInventoryCoverage(repoRoot, project, inventoryRows, rows, gitVisibleFiles);
+    verifyManifestRows(repoRoot, project, rows, gitVisibleFiles);
   }
 
   const licenses = [
