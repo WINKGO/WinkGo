@@ -19,7 +19,6 @@ const NOTIFICATION_CARD_DURATION_MS = 7_200;
 const MAX_NOTIFICATION_QUEUE_SIZE = 12;
 const MEDIA_CONTROL_OPTIMISTIC_WINDOW_MS = 1_600;
 const MEDIA_TRACK_REFRESH_DELAYS_MS = [160, 240, 400, 700, 1_000] as const;
-const MEDIA_ARTWORK_TRANSITION_GRACE_MS = 1_800;
 const MEDIA_ARTWORK_CACHE_LIMIT = 64;
 
 type OptimisticPlaybackState = {
@@ -132,16 +131,8 @@ export const useIslandWindowsRuntime = ({
   useEffect(() => {
     let disposed = false;
     let notificationTimer: number | undefined;
-    let artworkGraceTimer: number | undefined;
-    let latestRawMedia: WinkGoMediaSnapshot | null = null;
     let activeNotification: WinkGoCapturedNotification | null = null;
     const notificationQueue: WinkGoCapturedNotification[] = [];
-
-    const clearArtworkGraceTimer = () => {
-      if (artworkGraceTimer === undefined) return;
-      window.clearTimeout(artworkGraceTimer);
-      artworkGraceTimer = undefined;
-    };
 
     const showNextNotification = () => {
       if (disposed || activeNotification || notificationQueue.length === 0) return;
@@ -174,7 +165,6 @@ export const useIslandWindowsRuntime = ({
           if (cachedCoverUrl) nextMedia = { ...nextMedia, coverUrl: cachedCoverUrl };
         }
       }
-      latestRawMedia = nextMedia;
       if (
         nextMedia &&
         !nextMedia.coverUrl &&
@@ -182,24 +172,6 @@ export const useIslandWindowsRuntime = ({
         mediaTrackKey(nextMedia) === mediaTrackKey(currentMedia)
       ) {
         nextMedia = { ...nextMedia, coverUrl: currentMedia.coverUrl };
-      } else if (
-        nextMedia &&
-        !nextMedia.coverUrl &&
-        currentMedia?.coverUrl &&
-        nextMedia.appId.toLocaleLowerCase() === currentMedia.appId.toLocaleLowerCase()
-      ) {
-        const pendingTrackKey = mediaTrackKey(nextMedia);
-        nextMedia = { ...nextMedia, coverUrl: currentMedia.coverUrl };
-        clearArtworkGraceTimer();
-        artworkGraceTimer = window.setTimeout(() => {
-          artworkGraceTimer = undefined;
-          if (disposed || !latestRawMedia || latestRawMedia.coverUrl) return;
-          if (mediaTrackKey(latestRawMedia) !== pendingTrackKey) return;
-          currentMediaRef.current = latestRawMedia;
-          setMedia(latestRawMedia);
-        }, MEDIA_ARTWORK_TRANSITION_GRACE_MS);
-      } else if (!nextMedia || nextMedia.coverUrl) {
-        clearArtworkGraceTimer();
       }
       const optimistic = optimisticPlaybackRef.current;
       if (
@@ -269,7 +241,6 @@ export const useIslandWindowsRuntime = ({
     return () => {
       disposed = true;
       if (notificationTimer) window.clearTimeout(notificationTimer);
-      clearArtworkGraceTimer();
       if (reconcileMediaSnapshotRef.current === reconcileMediaSnapshot) {
         reconcileMediaSnapshotRef.current = () => {};
       }

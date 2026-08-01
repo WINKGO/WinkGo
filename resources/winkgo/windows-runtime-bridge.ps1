@@ -132,12 +132,6 @@ public static class WinkGoWindowCaptureNative {
     public int Bottom;
   }
 
-  [StructLayout(LayoutKind.Sequential)]
-  public struct Point {
-    public int X;
-    public int Y;
-  }
-
   [DllImport("user32.dll")]
   [return: MarshalAs(UnmanagedType.Bool)]
   public static extern bool GetWindowRect(IntPtr window, out Rect rect);
@@ -149,33 +143,15 @@ public static class WinkGoWindowCaptureNative {
   [DllImport("user32.dll")]
   public static extern IntPtr GetForegroundWindow();
 
-  [DllImport("user32.dll")]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  private static extern bool SetForegroundWindow(IntPtr window);
+  private const uint WM_APPCOMMAND = 0x0319;
 
-  [DllImport("user32.dll")]
+  [DllImport("user32.dll", SetLastError = true)]
   [return: MarshalAs(UnmanagedType.Bool)]
-  private static extern bool BringWindowToTop(IntPtr window);
-
-  [DllImport("user32.dll")]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  private static extern bool ShowWindowAsync(IntPtr window, int command);
-
-  [DllImport("user32.dll")]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  private static extern bool GetCursorPos(out Point point);
-
-  [DllImport("user32.dll")]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  private static extern bool SetCursorPos(int x, int y);
-
-  [DllImport("user32.dll")]
-  private static extern void mouse_event(
-    uint flags,
-    uint x,
-    uint y,
-    uint data,
-    UIntPtr extraInfo
+  private static extern bool PostMessage(
+    IntPtr window,
+    uint message,
+    IntPtr wParam,
+    IntPtr lParam
   );
 
   [DllImport("user32.dll")]
@@ -227,58 +203,23 @@ public static class WinkGoWindowCaptureNative {
     return ids;
   }
 
-  public static bool ClickSodaTransport(string action) {
+  public static bool SendSodaTransport(string action) {
     var window = FindLargestWindow(SodaProcessIds());
     if (window == IntPtr.Zero) return false;
-    Rect rect;
-    if (!GetWindowRect(window, out rect)) return false;
-    var width = rect.Right - rect.Left;
-    var height = rect.Bottom - rect.Top;
-    if (width < 640 || height < 420) return false;
-
-    var previousForeground = GetForegroundWindow();
-    Point previousCursor;
-    GetCursorPos(out previousCursor);
-    try {
-      ShowWindowAsync(window, 9);
-      BringWindowToTop(window);
-      SetForegroundWindow(window);
-      // Chromium music clients can ignore a click that arrives in the same
-      // scheduler slice as the foreground change. Give the real transport bar
-      // enough time to become interactive before pressing it.
-      Thread.Sleep(110);
-
-      var scaleX = Math.Max(0.75, Math.Min(2.0, width / 1100.0));
-      var scaleY = Math.Max(0.75, Math.Min(2.0, height / 720.0));
-      var xOffset = 0.0;
-      switch ((action ?? string.Empty).ToLowerInvariant()) {
-        case "play_pause":
-        case "play":
-        case "pause":
-          break;
-        case "next":
-          xOffset = 87.0 * scaleX;
-          break;
-        case "previous":
-          xOffset = -87.0 * scaleX;
-          break;
-        default:
-          return false;
-      }
-
-      var x = rect.Left + (int)Math.Round(width * 0.5 + xOffset);
-      var y = rect.Top + height - (int)Math.Round(44.0 * scaleY);
-      SetCursorPos(x, y);
-      mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
-      mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
-      Thread.Sleep(140);
-      return true;
-    } finally {
-      SetCursorPos(previousCursor.X, previousCursor.Y);
-      if (previousForeground != IntPtr.Zero && previousForeground != window) {
-        SetForegroundWindow(previousForeground);
-      }
+    int command;
+    switch ((action ?? string.Empty).ToLowerInvariant()) {
+      case "play_pause": command = 14; break;
+      case "play": command = 46; break;
+      case "pause": command = 47; break;
+      case "next": command = 11; break;
+      case "previous": command = 12; break;
+      default: return false;
     }
+
+    // WM_APPCOMMAND reaches Soda's existing Chromium window without restoring,
+    // focusing, or clicking it. This keeps desktop-island controls invisible to
+    // the user's foreground workflow and avoids a transient console/player flash.
+    return PostMessage(window, WM_APPCOMMAND, window, new IntPtr(command << 16));
   }
 }
 
@@ -314,11 +255,9 @@ public static class WinkGoMediaKeyNative {
   }
 
   public static bool SendSoda(string action) {
-    // Soda Music 3.x does not expose an SMTC session and ignores the generic
-    // Windows media keys. Its visible transport controls are stable across
-    // window sizes, so click the real button and restore the user's foreground
-    // window/cursor immediately afterwards.
-    return WinkGoWindowCaptureNative.ClickSodaTransport(action);
+    // Prefer a targeted background command. If the player has not created a
+    // window yet, the global media key remains silent and never launches it.
+    return WinkGoWindowCaptureNative.SendSodaTransport(action) || Send(action);
   }
 }
 
