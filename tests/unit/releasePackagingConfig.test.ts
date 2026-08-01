@@ -322,7 +322,7 @@ describe('release packaging configuration', () => {
     const script = readProjectFile('scripts/build-with-builder.js');
 
     expect(script).toContain('verifyWindowsExecutableIcon');
-    expect(script).toContain('verify-windows-executable-icon.ps1');
+    expect(script).toContain('verify-windows-executable-icon.js');
     expect(script).not.toContain('Retrying local build with win.signAndEditExecutable=false');
     expect(script).not.toContain('`${builderCommand} --config.win.signAndEditExecutable=false`');
   });

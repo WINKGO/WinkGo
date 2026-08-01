@@ -27,27 +27,12 @@ const DMG_RETRY_MAX = 3;
 const DMG_RETRY_DELAY_SEC = 30;
 
 function verifyWindowsExecutableIcon(executablePath) {
-  const scriptPath = path.resolve(__dirname, 'verify-windows-executable-icon.ps1');
+  const scriptPath = path.resolve(__dirname, 'verify-windows-executable-icon.js');
   const iconPath = path.resolve(__dirname, '../resources/app.ico');
-  const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
-  const powershellPath = path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-  const result = spawnSync(
-    powershellPath,
-    [
-      '-NoLogo',
-      '-NoProfile',
-      '-NonInteractive',
-      '-ExecutionPolicy',
-      'Bypass',
-      '-File',
-      scriptPath,
-      '-ExecutablePath',
-      executablePath,
-      '-IconPath',
-      iconPath,
-    ],
-    { stdio: 'inherit', env: process.env }
-  );
+  const result = spawnSync(process.execPath, [scriptPath, executablePath, iconPath], {
+    stdio: 'inherit',
+    env: process.env,
+  });
   if (result.status !== 0) {
     throw new Error('Windows executable icon verification failed. Refusing to publish an unbranded installer.');
   }

@@ -11,6 +11,7 @@ import * as path from 'path';
 import { initMainAdapterWithWindow } from '@/common/adapter/main';
 import { isTrustedIpcSender, resolveTrustedDevServerUrl } from '@/common/platform/electronSecurity';
 import { registerTrustedWindowSecurity } from '@process/startup/electronSecurity';
+import { fixZoomForWindow } from '@process/utils/zoom';
 
 const ISLAND_TOP_MARGIN = 10;
 const COLLAPSED_WIDTH = 250;
@@ -411,7 +412,7 @@ export const createDesktopIslandWindow = (options: DesktopIslandWindowOptions): 
   islandWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: !autoHideFullscreen });
   islandWindow.setOpacity(islandOpacity / 100);
   islandWindow.setMenuBarVisibility(false);
-  islandWindow.webContents.setZoomFactor(1);
+  fixZoomForWindow(islandWindow, 1);
   initMainAdapterWithWindow(islandWindow);
   islandWindow.webContents.on('did-finish-load', () => {
     if (!islandWindow || islandWindow.isDestroyed()) return;

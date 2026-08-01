@@ -20,6 +20,7 @@ const UI_SCALE_MAX = 1.3;
 export const UI_SCALE_STEP = 0.05;
 
 let currentZoomFactor = UI_SCALE_DEFAULT;
+const fixedWindowZoomFactors = new WeakMap<BrowserWindow, number>();
 
 export type ZoomShortcutAction = 'zoomIn' | 'zoomOut' | 'resetZoom';
 
@@ -42,13 +43,25 @@ export const initializeZoomFactor = (factor: number | undefined): number => {
 
 // 在新建窗口时应用最近一次缩放值 / Apply stored zoom to a newly created window
 export const applyZoomToWindow = (win: BrowserWindow): void => {
-  win.webContents.setZoomFactor(currentZoomFactor);
+  win.webContents.setZoomFactor(fixedWindowZoomFactors.get(win) ?? currentZoomFactor);
+};
+
+// Utility windows such as the desktop Dynamic Island have fixed pixel shells.
+// Letting the app-wide UI zoom reach them enlarges the renderer while the native
+// BrowserWindow bounds stay unchanged, which clips the bottom and right edges.
+export const fixZoomForWindow = (win: BrowserWindow, factor = 1): void => {
+  const fixedFactor = clampZoomFactor(factor);
+  fixedWindowZoomFactors.set(win, fixedFactor);
+  win.webContents.setZoomFactor(fixedFactor);
+  win.webContents.on('did-finish-load', () => {
+    if (!win.isDestroyed()) win.webContents.setZoomFactor(fixedWindowZoomFactors.get(win) ?? fixedFactor);
+  });
 };
 
 // 将缩放同步到所有窗口，保持多窗口一致 / Sync zoom factor across all BrowserWindows
 const updateAllWindowsZoom = (factor: number): void => {
   for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.setZoomFactor(factor);
+    win.webContents.setZoomFactor(fixedWindowZoomFactors.get(win) ?? factor);
   }
 };
 

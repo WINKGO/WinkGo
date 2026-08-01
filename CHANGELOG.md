@@ -2,6 +2,10 @@
 
 # Changelog
 
+## 2.2.3 (2026-08-01)
+
+- Fixed Dynamic Island clipping when the application UI scale is above 100% by keeping the fixed-size island renderer at native zoom across initial load, reloads, and later global zoom changes.
+
 ## 2.2.2 (2026-08-01)
 
 - Fixed truncated Dynamic Island media, focus timer, file shelf, category, and format-conversion panels by sizing the floating window from its rendered content.
