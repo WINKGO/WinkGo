@@ -12,6 +12,7 @@ type PrivacyViolation = {
 
 type PrivacyAuditModule = {
   compareInstallerAsar: (installerAsar: string, packedAsar: string) => PrivacyViolation | null;
+  getAuditRoots: (mode: string) => string[];
   isExcludedBundledCoreBuildInput: (filePath: string, baseRoot?: string) => boolean;
   listSourceFiles: (sourceRoot?: string) => string[];
   physicalPathViolation: (filePath: string, baseRoot?: string, mode?: string) => string;
@@ -22,6 +23,12 @@ const require = createRequire(import.meta.url);
 const audit = require(resolve(__dirname, '../../scripts/audit-release-privacy.cjs')) as PrivacyAuditModule;
 
 describe('final release privacy audit', () => {
+  it('scans every Electron macOS unpacked output directory', () => {
+    expect(audit.getAuditRoots('packed')).toEqual(
+      expect.arrayContaining(['out/mac', 'out/mac-arm64', 'out/mac-x64', 'out/mac-universal'])
+    );
+  });
+
   it('blocks when the final installer ASAR differs from win-unpacked', () => {
     const root = mkdtempSync(join(tmpdir(), 'winkgo-asar-mismatch-'));
     try {
