@@ -1,11 +1,12 @@
 // Modified from AionCore by WINK GO contributors in 2026.
+use std::borrow::Cow;
 use std::fs::OpenOptions;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
 
 use fs2::FileExt;
-use sqlx::migrate::Migrator;
+use sqlx::migrate::{Migration, MigrationType, Migrator};
 use sqlx::pool::PoolOptions;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode};
 use sqlx::{Sqlite, SqlitePool};
@@ -375,7 +376,7 @@ async fn run_migrations_staged(pool: &SqlitePool) -> Result<(), DatabaseInitErro
     result
 }
 
-/// Run sqlx migrations with one retry on `_sqlx_migrations` UNIQUE conflict.
+/// Run sqlx migrations with one safe compatibility retry.
 ///
 /// The advisory file lock above already serialises well-behaved processes,
 /// but a UNIQUE conflict can still leak through when:
@@ -386,6 +387,14 @@ async fn run_migrations_staged(pool: &SqlitePool) -> Result<(), DatabaseInitErro
 /// rolled back, so re-running `sqlx::migrate!().run` is safe: the second
 /// pass sees the row that the winner committed, checksum matches (same
 /// shipped binary), and the migration is treated as already applied.
+///
+/// Some early Windows development builds embedded CRLF migration files while
+/// GitHub release builds embedded the exact same SQL with LF line endings.
+/// sqlx hashes raw bytes, so an existing database can otherwise be rejected as
+/// "previously applied but modified" even though the SQL is identical. On a
+/// version mismatch we align recorded checksums only when the old and current
+/// hashes are the LF/CRLF variants of the current embedded SQL. Any actual SQL
+/// change still fails closed.
 async fn run_migrations_with_retry(conn: &mut sqlx::SqliteConnection) -> Result<(), DbError> {
     match DB_MIGRATOR.run(&mut *conn).await {
         Ok(()) => Ok(()),
@@ -393,10 +402,17 @@ async fn run_migrations_with_retry(conn: &mut sqlx::SqliteConnection) -> Result<
             warn!("Concurrent migrator detected (UNIQUE conflict on _sqlx_migrations); retrying");
             DB_MIGRATOR.run(&mut *conn).await.map_err(DbError::Migration)
         }
-        Err(sqlx::migrate::MigrateError::VersionMismatch(version))
-            if version == MCP_SCHEMA_RECONCILIATION_MIGRATION_VERSION =>
-        {
-            if align_reconciled_mcp_migration_checksum(&mut *conn).await? {
+        Err(sqlx::migrate::MigrateError::VersionMismatch(version)) => {
+            let aligned_versions = align_line_ending_only_migration_checksums(&mut *conn).await?;
+            if !aligned_versions.is_empty() {
+                warn!(
+                    versions = ?aligned_versions,
+                    "Aligned LF/CRLF-only migration checksums; retrying"
+                );
+                DB_MIGRATOR.run(&mut *conn).await.map_err(DbError::Migration)
+            } else if version == MCP_SCHEMA_RECONCILIATION_MIGRATION_VERSION
+                && align_reconciled_mcp_migration_checksum(&mut *conn).await?
+            {
                 warn!(
                     "Aligned checksum for reconciled MCP migration {}; retrying",
                     MCP_SCHEMA_RECONCILIATION_MIGRATION_VERSION
@@ -410,6 +426,74 @@ async fn run_migrations_with_retry(conn: &mut sqlx::SqliteConnection) -> Result<
         }
         Err(e) => Err(DbError::Migration(e)),
     }
+}
+
+fn migration_line_ending_checksums(sql: &str) -> (Vec<u8>, Vec<u8>) {
+    let lf_sql = sql.replace("\r\n", "\n").replace('\r', "\n");
+    let crlf_sql = lf_sql.replace('\n', "\r\n");
+    (
+        Migration::new(
+            0,
+            Cow::Borrowed("LF compatibility checksum"),
+            MigrationType::Simple,
+            Cow::Owned(lf_sql),
+            false,
+        )
+        .checksum
+        .into_owned(),
+        Migration::new(
+            0,
+            Cow::Borrowed("CRLF compatibility checksum"),
+            MigrationType::Simple,
+            Cow::Owned(crlf_sql),
+            false,
+        )
+        .checksum
+        .into_owned(),
+    )
+}
+
+async fn align_line_ending_only_migration_checksums(conn: &mut sqlx::SqliteConnection) -> Result<Vec<i64>, DbError> {
+    let mut aligned_versions = Vec::new();
+
+    for migration in DB_MIGRATOR.iter() {
+        let recorded_checksum: Option<Vec<u8>> =
+            sqlx::query_scalar("SELECT checksum FROM _sqlx_migrations WHERE version = ? AND success = TRUE")
+                .bind(migration.version)
+                .fetch_optional(&mut *conn)
+                .await
+                .map_err(DbError::Query)?;
+        let Some(recorded_checksum) = recorded_checksum else {
+            continue;
+        };
+        if recorded_checksum.as_slice() == migration.checksum.as_ref() {
+            continue;
+        }
+
+        let (lf_checksum, crlf_checksum) = migration_line_ending_checksums(&migration.sql);
+        let current_checksum = migration.checksum.as_ref();
+        let is_line_ending_only_mismatch = (current_checksum == lf_checksum.as_slice()
+            && recorded_checksum == crlf_checksum)
+            || (current_checksum == crlf_checksum.as_slice() && recorded_checksum == lf_checksum);
+        if !is_line_ending_only_mismatch {
+            continue;
+        }
+
+        let updated = sqlx::query(
+            "UPDATE _sqlx_migrations SET checksum = ? WHERE version = ? AND checksum = ? AND success = TRUE",
+        )
+        .bind(&*migration.checksum)
+        .bind(migration.version)
+        .bind(&recorded_checksum)
+        .execute(&mut *conn)
+        .await
+        .map_err(DbError::Query)?;
+        if updated.rows_affected() == 1 {
+            aligned_versions.push(migration.version);
+        }
+    }
+
+    Ok(aligned_versions)
 }
 
 /// Detect the specific "another process inserted this version first" error.
@@ -774,6 +858,58 @@ mod tests {
         .unwrap();
 
         assert_eq!(fk_table, "conversations");
+    }
+
+    #[tokio::test]
+    async fn migration_accepts_line_ending_only_checksum_differences() {
+        let db = init_database_memory().await.unwrap();
+        let pool = db.pool();
+
+        for migration in DB_MIGRATOR.iter() {
+            let (lf_checksum, crlf_checksum) = migration_line_ending_checksums(&migration.sql);
+            let alternate_checksum = if migration.checksum.as_ref() == lf_checksum.as_slice() {
+                crlf_checksum
+            } else {
+                lf_checksum
+            };
+            sqlx::query("UPDATE _sqlx_migrations SET checksum = ? WHERE version = ?")
+                .bind(alternate_checksum)
+                .bind(migration.version)
+                .execute(pool)
+                .await
+                .unwrap();
+        }
+
+        let mut conn = pool.acquire().await.unwrap();
+        run_migrations_with_retry(&mut conn).await.unwrap();
+
+        for migration in DB_MIGRATOR.iter() {
+            let recorded_checksum: Vec<u8> =
+                sqlx::query_scalar("SELECT checksum FROM _sqlx_migrations WHERE version = ?")
+                    .bind(migration.version)
+                    .fetch_one(&mut *conn)
+                    .await
+                    .unwrap();
+            assert_eq!(recorded_checksum.as_slice(), migration.checksum.as_ref());
+        }
+    }
+
+    #[tokio::test]
+    async fn migration_rejects_genuine_checksum_differences() {
+        let db = init_database_memory().await.unwrap();
+        let pool = db.pool();
+        sqlx::query("UPDATE _sqlx_migrations SET checksum = ? WHERE version = 1")
+            .bind(vec![0_u8; 48])
+            .execute(pool)
+            .await
+            .unwrap();
+
+        let mut conn = pool.acquire().await.unwrap();
+        let err = run_migrations_with_retry(&mut conn).await.unwrap_err();
+        assert!(matches!(
+            err,
+            DbError::Migration(sqlx::migrate::MigrateError::VersionMismatch(1))
+        ));
     }
 
     #[test]
