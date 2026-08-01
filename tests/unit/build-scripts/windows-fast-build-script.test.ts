@@ -28,7 +28,7 @@ describe('Windows fast build scripts', () => {
 
   it('removes stale WINK GO installers before auditing a new Windows build', () => {
     expect(buildScript).toContain(
-      'const winkGoInstallerFileRe = /^WINK GO(?:-Pro)?-Setup-.+-(?:x64|arm64|ia32)\\.exe$/i;'
+      'const winkGoInstallerFileRe = /^WINK-GO-(?:Free|Pro)-Setup-.+-(?:x64|arm64|ia32)\\.exe$/i;'
     );
     expect(buildScript).toContain('winArtifactFileRe.test(entry.name) || winkGoInstallerFileRe.test(entry.name)');
   });

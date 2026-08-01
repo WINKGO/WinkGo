@@ -132,6 +132,12 @@ const floatingWindowSizes: Record<Exclude<IslandPanel, null> | 'collapsed', { he
   toast: { width: 460, height: 44 },
 };
 
+export const calculateFloatingIslandHeight = (
+  plannedHeight: number,
+  panelBottom: number,
+  maximumHeight = 500
+): number => Math.min(maximumHeight, Math.max(plannedHeight, Math.ceil(panelBottom + 8)));
+
 type IslandToast = {
   id: string;
   source: string;
@@ -696,31 +702,36 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
       panel === 'toast' && activeToast ? { width: toastDisplayText.length > 16 ? 460 : 300, height: 44 } : basePlanned;
     void bridge.setSize(planned);
 
-    // The original WidgetIsland uses fixed-size shells for these two panels.
-    // Do not add the generic popover safety margin or the Electron window
-    // becomes 8 px taller than the original 320×115 / 380×104 layout.
-    if (
-      panel === 'media' ||
-      panel === 'timer' ||
-      panel === 'files' ||
-      panel === 'category' ||
-      panel === 'destination' ||
-      panel === 'drop' ||
-      panel === 'format' ||
-      panel === 'toast'
-    )
-      return undefined;
+    if (!panel || panel === 'toast') return undefined;
 
-    let frame = window.requestAnimationFrame(() => {
+    let frame = 0;
+    let setupFrame = 0;
+    let observer: ResizeObserver | undefined;
+    const measure = () => {
+      window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
         const panelElement = containerRef.current?.querySelector<HTMLElement>('.titlebar-dynamic-island__panel');
         if (!panelElement) return;
         const panelBounds = panelElement.getBoundingClientRect();
-        const measuredHeight = Math.min(500, Math.max(planned.height, Math.ceil(panelBounds.bottom + 8)));
+        const measuredHeight = calculateFloatingIslandHeight(planned.height, panelBounds.bottom);
         void bridge.setSize({ width: planned.width, height: measuredHeight });
       });
+    };
+
+    setupFrame = window.requestAnimationFrame(() => {
+      const panelElement = containerRef.current?.querySelector<HTMLElement>('.titlebar-dynamic-island__panel');
+      measure();
+      if (panelElement && typeof ResizeObserver !== 'undefined') {
+        observer = new ResizeObserver(measure);
+        observer.observe(panelElement);
+      }
     });
-    return () => window.cancelAnimationFrame(frame);
+
+    return () => {
+      window.cancelAnimationFrame(setupFrame);
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
   }, [activeToast, floating, panel]);
 
   useEffect(() => {

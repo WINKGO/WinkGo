@@ -2,6 +2,12 @@
 
 # Changelog
 
+## 2.2.2 (2026-08-01)
+
+- Fixed truncated Dynamic Island media, focus timer, file shelf, category, and format-conversion panels by sizing the floating window from its rendered content.
+- Restored NetEase Cloud Music album artwork by matching missing system artwork against the local read-only playback library.
+- Prevented official Windows builds from silently falling back to Electron's default executable icon and added a mandatory WINK GO icon verification gate.
+
 ## 2.2.1 (2026-07-31)
 
 - Restored the bundled Knowledge Canvas in production builds.

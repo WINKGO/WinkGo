@@ -26,6 +26,33 @@ const crypto = require('crypto');
 const DMG_RETRY_MAX = 3;
 const DMG_RETRY_DELAY_SEC = 30;
 
+function verifyWindowsExecutableIcon(executablePath) {
+  const scriptPath = path.resolve(__dirname, 'verify-windows-executable-icon.ps1');
+  const iconPath = path.resolve(__dirname, '../resources/app.ico');
+  const systemRoot = process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows';
+  const powershellPath = path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  const result = spawnSync(
+    powershellPath,
+    [
+      '-NoLogo',
+      '-NoProfile',
+      '-NonInteractive',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-File',
+      scriptPath,
+      '-ExecutablePath',
+      executablePath,
+      '-IconPath',
+      iconPath,
+    ],
+    { stdio: 'inherit', env: process.env }
+  );
+  if (result.status !== 0) {
+    throw new Error('Windows executable icon verification failed. Refusing to publish an unbranded installer.');
+  }
+}
+
 // Incremental build: hash of source files to detect changes
 const INCREMENTAL_CACHE_FILE = 'out/.build-hash';
 const VITE_EDITION_MARKER_FILE = 'out/.winkgo-vite-build.json';
@@ -1034,12 +1061,10 @@ try {
   try {
     buildWithDmgRetry(builderCommand, targetArch, builderConfigPath);
   } catch (error) {
-    const winExePath = path.join(outDir, 'win-unpacked', 'WINK-GO.exe');
     const firstError = formatExecError(error);
-    const canRetryWithoutExecutableEdit =
-      process.platform === 'win32' && isWindowsBuild && process.env.CI !== 'true' && fs.existsSync(winExePath);
+    const canRetryWindowsBuild = process.platform === 'win32' && isWindowsBuild && process.env.CI !== 'true';
 
-    if (!canRetryWithoutExecutableEdit) {
+    if (!canRetryWindowsBuild) {
       throw error;
     }
 
@@ -1054,18 +1079,17 @@ try {
           .join('\n')
       );
     }
-    console.log('   Retrying local build with win.signAndEditExecutable=false...');
-    console.log('   This fallback is intended for transient rcedit / file-lock failures on developer machines.');
+    console.log('   Retrying the complete branded build once after releasing possible file locks...');
     killWindowsProcesses(['WINK-GO.exe', 'WinkGo.exe', 'electron.exe']);
     cleanupWindowsPackOutput();
 
     try {
-      buildWithDmgRetry(`${builderCommand} --config.win.signAndEditExecutable=false`, targetArch, builderConfigPath);
+      buildWithDmgRetry(builderCommand, targetArch, builderConfigPath);
     } catch (retryError) {
       const retryFailure = formatExecError(retryError);
       throw new Error(
         [
-          'Windows local retry with win.signAndEditExecutable=false also failed.',
+          'Windows branded build retry also failed.',
           'First failure:',
           firstError || String(error),
           'Retry failure:',
@@ -1073,6 +1097,10 @@ try {
         ].join('\n')
       );
     }
+  }
+
+  if (isWindowsBuild) {
+    verifyWindowsExecutableIcon(path.join(outDir, 'win-unpacked', 'WINK-GO.exe'));
   }
 
   // Privacy gate 2/3: inspect electron-builder's unpacked application payload.

@@ -16,6 +16,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import { resolveNetEaseArtworkUrl } from './NetEaseArtworkService';
 
 type RuntimeCommandResult = {
   type: 'command-result';
@@ -337,6 +338,22 @@ export class WinkGoWindowsRuntimeService {
     if (event.type === 'media-snapshot') {
       this.state = { ...this.state, media: event.data };
       this.callbacks.onMedia(event.data);
+      if (event.data && !event.data.coverUrl) {
+        const coverUrl = resolveNetEaseArtworkUrl(event.data);
+        const currentMedia = this.state.media;
+        if (
+          coverUrl &&
+          currentMedia &&
+          currentMedia.appId === event.data.appId &&
+          currentMedia.title === event.data.title &&
+          currentMedia.artist === event.data.artist &&
+          !currentMedia.coverUrl
+        ) {
+          const enriched = { ...currentMedia, coverUrl };
+          this.state = { ...this.state, media: enriched };
+          this.callbacks.onMedia(enriched);
+        }
+      }
       return;
     }
     if (event.type === 'notification') {

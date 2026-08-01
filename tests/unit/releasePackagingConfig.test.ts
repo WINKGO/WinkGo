@@ -318,6 +318,15 @@ describe('release packaging configuration', () => {
     expect(script).toMatch(/--mac\s+dmg\s+zip\s+--\$\{targetArch\}\s+--prepackaged/);
   });
 
+  it('refuses to publish a Windows executable without the WINK GO icon', () => {
+    const script = readProjectFile('scripts/build-with-builder.js');
+
+    expect(script).toContain('verifyWindowsExecutableIcon');
+    expect(script).toContain('verify-windows-executable-icon.ps1');
+    expect(script).not.toContain('Retrying local build with win.signAndEditExecutable=false');
+    expect(script).not.toContain('`${builderCommand} --config.win.signAndEditExecutable=false`');
+  });
+
   it('does not let a generic notarization log line bypass the packed release audit', () => {
     const workflow = readProjectFile('.github/workflows/_build-reusable.yml');
 

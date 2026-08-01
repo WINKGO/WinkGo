@@ -170,7 +170,9 @@ vi.mock('@/common', () => ({
   },
 }));
 
-import TitlebarDynamicIsland from '@renderer/components/layout/Titlebar/TitlebarDynamicIsland';
+import TitlebarDynamicIsland, {
+  calculateFloatingIslandHeight,
+} from '@renderer/components/layout/Titlebar/TitlebarDynamicIsland';
 
 const activeJob: ICronJob = {
   id: 'job-1',
@@ -194,6 +196,12 @@ const activeJob: ICronJob = {
 };
 
 describe('TitlebarDynamicIsland', () => {
+  it('expands a floating window to the real panel bottom without exceeding the desktop limit', () => {
+    expect(calculateFloatingIslandHeight(115, 178.2)).toBe(187);
+    expect(calculateFloatingIslandHeight(190, 120)).toBe(190);
+    expect(calculateFloatingIslandHeight(190, 800)).toBe(500);
+  });
+
   beforeEach(() => {
     mocks.navigate.mockClear();
     mocks.listJobs.mockReset();
