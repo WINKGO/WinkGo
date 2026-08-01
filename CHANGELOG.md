@@ -2,6 +2,13 @@
 
 # Changelog
 
+## 2.2.5 (2026-08-01)
+
+- Enabled WINK GO cloud device relay by default for new installations and migrated version 2.2.4 configurations.
+- Started relay authorization and connection automatically after successful account login or registration.
+- Preserved an explicit relay opt-out after the configuration has migrated to the current schema.
+- Verified production signed desktop enrollment and short-lived 10-digit one-time pairing-code generation.
+
 ## 2.2.4 (2026-08-01)
 
 - Made Dynamic Island identities stable while Windows notifications, task completions, and media artwork are loading or changing.
