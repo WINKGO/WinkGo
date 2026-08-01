@@ -87,6 +87,9 @@ done
 mkdir -p "$out"
 cat > "$out/winkgo_core" <<'SH'
 #!/usr/bin/env bash
+# pdf/SKILL.md
+# name: pdf
+# pdf/SOURCE.md
 # pdf-toolkit/SKILL.md
 # name: pdf-toolkit
 # This original skill is distributed under the Apache License 2.0.
@@ -190,6 +193,9 @@ describe('prepare-winkgo-core GitHub Actions artifact resolver', () => {
       localBinary,
       [
         '#!/usr/bin/env bash',
+        '# pdf/SKILL.md',
+        '# name: pdf',
+        '# pdf/SOURCE.md',
         '# pdf-toolkit/SKILL.md',
         '# name: pdf-toolkit',
         '# This original skill is distributed under the Apache License 2.0.',

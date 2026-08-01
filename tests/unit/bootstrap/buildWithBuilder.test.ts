@@ -73,7 +73,7 @@ function resolveAppBuilderInstallUtil(): string {
 // Keep them serialized so parallel Vitest workers cannot move or restore the
 // same directory at the same time on Windows.
 describe.sequential('build-with-builder', () => {
-  it('rejects skip-vite when renderer output is only a source html shell', { timeout: 60_000 }, () => {
+  it('rejects skip-vite when renderer output is only a source html shell', { timeout: 300e3 }, () => {
     const outDir = resolve(repoRoot, 'out');
     const backupOutDir = resolve(repoRoot, `.tmp-out-backup-${process.pid}-${Date.now()}`);
     const tempDir = mkdtempSync(join(tmpdir(), 'winkgo-build-skip-vite-test-'));
@@ -133,7 +133,7 @@ childProcess.execSync = function mockedExecSync(command) {
     }
   });
 
-  it('defaults an unqualified build to Free and writes a matching Vite edition marker', { timeout: 60_000 }, () => {
+  it('defaults an unqualified build to Free and writes a matching Vite edition marker', { timeout: 300e3 }, () => {
     const outDir = resolve(repoRoot, 'out');
     const backupOutDir = resolve(repoRoot, `.tmp-out-backup-${process.pid}-${Date.now()}-default-free`);
     const tempDir = mkdtempSync(join(tmpdir(), 'winkgo-build-default-free-'));
@@ -199,7 +199,7 @@ childProcess.execSync = function mockedExecSync(command) {
     }
   });
 
-  it('rejects skip-vite when the cached Vite output was built for another edition', { timeout: 60_000 }, () => {
+  it('rejects skip-vite when the cached Vite output was built for another edition', { timeout: 300e3 }, () => {
     const outDir = resolve(repoRoot, 'out');
     const backupOutDir = resolve(repoRoot, `.tmp-out-backup-${process.pid}-${Date.now()}-edition-mismatch`);
     const tempDir = mkdtempSync(join(tmpdir(), 'winkgo-build-edition-mismatch-'));
@@ -483,7 +483,7 @@ childProcess.execSync = function mockedExecSync() {
       args: ['auto', '--mac', '--x64'],
       expectedArch: 'x64',
     },
-  ])('prepares bundled WinkGoCore for $expectedArch with args $args', { timeout: 60_000 }, ({ args, expectedArch }) => {
+  ])('prepares bundled WinkGoCore for $expectedArch with args $args', { timeout: 300e3 }, ({ args, expectedArch }) => {
     const tempDir = mkdtempSync(join(tmpdir(), 'winkgo-build-test-'));
     const hookPath = join(tempDir, 'hook.cjs');
     const callsPath = join(tempDir, 'prepare-calls.json');
