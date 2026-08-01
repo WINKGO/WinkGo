@@ -307,5 +307,6 @@
     "7zip-bin@5.2.0": "patches/7zip-bin@5.2.0.patch"
   },
   "productName": "WINK GO",
-  "winkgoCoreVersion": "v0.1.52"
+  "winkgoCoreVersion": "v0.1.52",
+  "x-upstream-modification-notice": "Modified from AionUI by WINK GO contributors in 2026."
 }

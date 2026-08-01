@@ -12,7 +12,7 @@
   "generatedFrom": [
     {
       "path": "bun.lock",
-      "sha256": "11d6abaa38a64514595b20224e24a18ad76fc60c3f5806849f9a743faf85f47e"
+      "sha256": "5d87944dd9634e88374465b3c53d99f1de64c71dcc3dea55be879a9ddadc60f3"
     },
     {
       "path": "mobile/bun.lock",

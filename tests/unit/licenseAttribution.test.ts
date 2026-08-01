@@ -163,14 +163,19 @@ describe('Apache-2.0 derivative attribution', () => {
     expect(source).not.toContain('Copyright 2025 AionUi');
   });
 
-  it('does not bundle skill materials whose license forbids copying or redistribution', () => {
+  it('bundles only the independently written PDF compatibility skill', () => {
     const builtinSkillsRoot = resolve(projectRoot, 'backend/crates/winkgo-app/assets/builtin-skills');
+    const pdfSkillRoot = resolve(builtinSkillsRoot, 'pdf');
     const restrictedLegacyFileHashes = new Set([
       '6f8bd7f4d8ec5cb52b7a59ccb9e8c14c2a4ba529cb5adfc5e0bc676892b8ca79',
       'ca855e47acbe3a75ab28bec7c020d1b6effa24e0c7dd8fc38efcd5d279acefe0',
     ]);
 
-    expect(existsSync(resolve(builtinSkillsRoot, 'pdf/SKILL.md'))).toBe(false);
+    expect(readFileSync(resolve(pdfSkillRoot, 'SOURCE.md'), 'utf8')).toContain(
+      'No text, code, prompts, scripts, or assets from the removed redistribution-'
+    );
+    expect(readFileSync(resolve(pdfSkillRoot, 'LICENSE'), 'utf8')).toContain('Apache License');
+    expect(readFileSync(resolve(pdfSkillRoot, 'SKILL.md'), 'utf8')).toMatch(/independently written PDF\s+Toolkit/);
 
     for (const filePath of listFilesRecursively(builtinSkillsRoot)) {
       const digest = createHash('sha256').update(readFileSync(filePath)).digest('hex');
