@@ -14,7 +14,27 @@ mkdir -p "$ARTIFACTS_DIR/linux-build-x64"
 mkdir -p "$ARTIFACTS_DIR/linux-build-arm64"
 
 # Windows x64
-touch "$ARTIFACTS_DIR/windows-build-x64/WINK-GO-Free-Setup-1.0.0-x64.exe"
+printf 'mock installer\n' > "$ARTIFACTS_DIR/windows-build-x64/WINK-GO-Free-Setup-1.0.0-x64.exe"
+echo "15544AC73074E3F7C7559F06CF9EF04B596E55A7A647D2F209875ADB3BF8D1C0  WINK-GO-Free-Setup-1.0.0-x64.exe" > "$ARTIFACTS_DIR/windows-build-x64/WINK-GO-Free-Setup-1.0.0-x64.exe.sha256.txt"
+cat > "$ARTIFACTS_DIR/windows-build-x64/winkgo-free-update.json" <<'EOF'
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "edition": "free",
+  "releaseProfile": "free",
+  "fileName": "WINK-GO-Free-Setup-1.0.0-x64.exe",
+  "downloadUrl": "https://winkgo.top/releases/free/1.0.0/WINK-GO-Free-Setup-1.0.0-x64.exe",
+  "sha256": "15544AC73074E3F7C7559F06CF9EF04B596E55A7A647D2F209875ADB3BF8D1C0",
+  "sizeBytes": 15,
+  "windows": {
+    "version": "1.0.0",
+    "fileName": "WINK-GO-Free-Setup-1.0.0-x64.exe",
+    "downloadUrl": "https://winkgo.top/releases/free/1.0.0/WINK-GO-Free-Setup-1.0.0-x64.exe",
+    "sha256": "15544AC73074E3F7C7559F06CF9EF04B596E55A7A647D2F209875ADB3BF8D1C0",
+    "sizeBytes": 15
+  }
+}
+EOF
 cat > "$ARTIFACTS_DIR/windows-build-x64/latest.yml" <<'EOF'
 version: 1.0.0
 files:

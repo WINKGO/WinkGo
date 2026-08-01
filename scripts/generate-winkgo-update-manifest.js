@@ -35,9 +35,16 @@ const installer = fs.readFileSync(installerPath);
 const sha256 = crypto.createHash('sha256').update(installer).digest('hex').toUpperCase();
 const sizeBytes = installer.byteLength;
 const generatedAt = new Date().toISOString();
-const officialSite = 'https://github.com/WINKGO/wink-go/releases';
-const downloadUrl = String(process.env.WINKGO_DOWNLOAD_URL || officialSite).trim();
-const officialDownloadUrl = String(process.env.WINKGO_OFFICIAL_DOWNLOAD_URL || '').trim();
+const officialSite = 'https://winkgo.top/';
+const domesticDownloadUrl = `https://winkgo.top/releases/free/${version}/${installerName}`;
+const githubDownloadUrl = `https://github.com/WINKGO/WinkGo/releases/download/v${version}/${installerName}`;
+const downloadUrl = String(
+  process.env.WINKGO_DOWNLOAD_URL ||
+    (edition === 'free' ? domesticDownloadUrl : 'https://github.com/WINKGO/wink-go/releases')
+).trim();
+const officialDownloadUrl = String(
+  process.env.WINKGO_OFFICIAL_DOWNLOAD_URL || (edition === 'free' ? githubDownloadUrl : '')
+).trim();
 const notes =
   String(process.env.WINKGO_RELEASE_NOTES || '').trim() ||
   'WINK GO 桌面版能力与体验更新，具体内容请查看 GitHub Release 页面。';
