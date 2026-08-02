@@ -38,6 +38,28 @@ function verifyWindowsExecutableIcon(executablePath) {
   }
 }
 
+function resolveWindowsUnpackedExecutable(outDir, targetArch) {
+  const preferredDirectories = [`win-${targetArch}-unpacked`, 'win-unpacked'];
+  const discoveredDirectories = fs.existsSync(outDir)
+    ? fs
+        .readdirSync(outDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && /^win(?:-[a-z0-9]+)?-unpacked$/i.test(entry.name))
+        .map((entry) => entry.name)
+        .sort()
+    : [];
+
+  for (const directoryName of [...new Set([...preferredDirectories, ...discoveredDirectories])]) {
+    const executablePath = path.join(outDir, directoryName, 'WINK-GO.exe');
+    if (fs.existsSync(executablePath)) return executablePath;
+  }
+
+  throw new Error(
+    `Windows unpacked executable was not found for ${targetArch}. Checked: ${[
+      ...new Set([...preferredDirectories, ...discoveredDirectories]),
+    ].join(', ')}`
+  );
+}
+
 // Incremental build: hash of source files to detect changes
 const INCREMENTAL_CACHE_FILE = 'out/.build-hash';
 const VITE_EDITION_MARKER_FILE = 'out/.winkgo-vite-build.json';
@@ -698,7 +720,7 @@ function cleanupWindowsPackOutput() {
   }
 }
 
-function auditFinalWindowsInstallers(buildEdition, targetArch) {
+function auditFinalWindowsInstallers(buildEdition, targetArch, packedExecutablePath) {
   const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
   const escapedVersion = String(packageJson.version).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const escapedArch = String(targetArch).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -716,12 +738,17 @@ function auditFinalWindowsInstallers(buildEdition, targetArch) {
   }
 
   for (const installerPath of installers) {
-    const auditResult = spawnSync(process.execPath, ['scripts/audit-release-privacy.cjs', '--exe', installerPath], {
-      cwd: path.resolve(__dirname, '..'),
-      env: process.env,
-      stdio: 'inherit',
-      windowsHide: true,
-    });
+    const packedAsarPath = path.join(path.dirname(packedExecutablePath), 'resources', 'app.asar');
+    const auditResult = spawnSync(
+      process.execPath,
+      ['scripts/audit-release-privacy.cjs', '--exe', installerPath, '--packed-asar', packedAsarPath],
+      {
+        cwd: path.resolve(__dirname, '..'),
+        env: process.env,
+        stdio: 'inherit',
+        windowsHide: true,
+      }
+    );
     if (auditResult.error || auditResult.status !== 0) {
       throw new Error(
         `Final installer privacy audit failed for ${path.basename(installerPath)}: ${
@@ -1084,9 +1111,8 @@ try {
     }
   }
 
-  if (isWindowsBuild) {
-    verifyWindowsExecutableIcon(path.join(outDir, 'win-unpacked', 'WINK-GO.exe'));
-  }
+  const packedWindowsExecutable = isWindowsBuild ? resolveWindowsUnpackedExecutable(outDir, targetArch) : '';
+  if (packedWindowsExecutable) verifyWindowsExecutableIcon(packedWindowsExecutable);
 
   // Privacy gate 2/3: inspect electron-builder's unpacked application payload.
   execSync('node scripts/audit-release-privacy.cjs --packed', {
@@ -1097,7 +1123,7 @@ try {
   if (isWindowsBuild) {
     // Privacy gate 3/3: inspect the final NSIS archive and prove that its
     // embedded app.asar is identical to the just-audited win-unpacked ASAR.
-    auditFinalWindowsInstallers(buildEdition, targetArch);
+    auditFinalWindowsInstallers(buildEdition, targetArch, packedWindowsExecutable);
     execSync('node scripts/generate-winkgo-update-manifest.js', {
       stdio: 'inherit',
       env: process.env,

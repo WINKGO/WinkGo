@@ -347,11 +347,27 @@ describe('release packaging configuration', () => {
 
   it('refuses to publish a Windows executable without the WINK GO icon', () => {
     const script = readProjectFile('scripts/build-with-builder.js');
+    const privacyAudit = readProjectFile('scripts/audit-release-privacy.cjs');
 
     expect(script).toContain('verifyWindowsExecutableIcon');
     expect(script).toContain('verify-windows-executable-icon.js');
+    expect(script).toContain('resolveWindowsUnpackedExecutable');
+    expect(script).toContain('`win-${targetArch}-unpacked`');
+    expect(script).toContain("'--packed-asar'");
+    expect(privacyAudit).toContain("'out/win-arm64-unpacked/resources'");
     expect(script).not.toContain('Retrying local build with win.signAndEditExecutable=false');
     expect(script).not.toContain('`${builderCommand} --config.win.signAndEditExecutable=false`');
+  });
+
+  it('builds Linux x64 release bundles against the Debian 12 glibc baseline', () => {
+    const releaseWorkflow = readProjectFile('.github/workflows/build-and-release.yml');
+    const manualWorkflow = readProjectFile('.github/workflows/build-manual.yml');
+    const webCliWorkflow = readProjectFile('.github/workflows/pack-web-cli.yml');
+
+    expect(releaseWorkflow).toContain('"platform":"linux-x64","os":"ubuntu-22.04"');
+    expect(manualWorkflow).toContain('"platform":"linux-x64","os":"ubuntu-22.04"');
+    expect(webCliWorkflow).toContain('{ platform: linux, arch: x64, os: ubuntu-22.04 }');
+    expect(webCliWorkflow).toContain('image: debian:bookworm-slim');
   });
 
   it('does not let a generic notarization log line bypass the packed release audit', () => {

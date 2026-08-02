@@ -2,6 +2,13 @@
 
 # Changelog
 
+## 2.2.9 (2026-08-02)
+
+- Restored Windows startup for existing installations whose migration history was recorded with Windows line endings.
+- Kept genuine migration changes blocked while safely recognizing SQL files that differ only by LF or CRLF line endings.
+- Fixed Windows ARM64 release verification to locate the architecture-specific unpacked executable and its audited application archive.
+- Built Linux x64 desktop and Web CLI bundles on Ubuntu 22.04 for Debian 12 / glibc 2.36 compatibility.
+
 ## 2.2.8 (2026-08-02)
 
 - Restored Windows startup for existing installations whose migration history was recorded with Windows line endings.
