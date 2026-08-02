@@ -568,7 +568,10 @@ childProcess.execSync = function mockedExecSync(command) {
   if (commandText.includes('electron-builder') && process.argv.includes('--win')) {
     const version = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')).version;
     const arch = process.argv.includes('--arm64') ? 'arm64' : 'x64';
+    const unpackedDirectory = arch === 'arm64' ? 'win-arm64-unpacked' : 'win-unpacked';
     ensurePlaceholder(\`out/WINK-GO-Free-Setup-\${version}-\${arch}.exe\`);
+    ensurePlaceholder(\`out/\${unpackedDirectory}/WINK-GO.exe\`);
+    ensurePlaceholder(\`out/\${unpackedDirectory}/resources/app.asar\`);
   }
   return Buffer.from('');
 };

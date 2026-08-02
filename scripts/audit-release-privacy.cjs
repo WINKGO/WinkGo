@@ -167,6 +167,8 @@ const stageUiRoots = stageRoots.filter((root) => root !== 'resources/bundled-win
 
 const packedRoots = [
   'out/win-unpacked/resources',
+  'out/win-x64-unpacked/resources',
+  'out/win-arm64-unpacked/resources',
   'out/mac',
   'out/mac-arm64',
   'out/mac-x64',
