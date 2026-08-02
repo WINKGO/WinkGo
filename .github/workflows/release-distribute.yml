@@ -147,7 +147,7 @@ jobs:
           set -euo pipefail
           cat release-bundle.tar.gz | ssh winkgo-release "publish $VERSION"
 
-      - name: Verify public updater and installer bytes
+      - name: Verify public updater metadata and installer boundary bytes
         env:
           VERSION: ${{ steps.version.outputs.version }}
         shell: bash
@@ -155,10 +155,9 @@ jobs:
           set -euo pipefail
           INSTALLER="WINK-GO-Free-Setup-${VERSION}-x64.exe"
           CACHE_BUSTER="workflow=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          EXPECTED_SIZE="$(stat --format='%s' "dist/$INSTALLER")"
+          EXPECTED_SHA256="$(sha256sum "dist/$INSTALLER" | awk '{ print toupper($1) }')"
           mkdir -p public-check
-          curl --fail --silent --show-error --location \
-            "https://winkgo.top/releases/free/${VERSION}/${INSTALLER}?${CACHE_BUSTER}" \
-            --output "public-check/$INSTALLER"
           curl --fail --silent --show-error --location \
             "https://winkgo.top/releases/free/${INSTALLER}.sha256.txt?${CACHE_BUSTER}" \
             --output "public-check/${INSTALLER}.sha256.txt"
@@ -168,10 +167,24 @@ jobs:
           curl --fail --silent --show-error --location \
             "https://winkgo.top/winkgo-free-update.json?${CACHE_BUSTER}" \
             --output public-check/winkgo-free-update.json
-          cp dist/LICENSE dist/NOTICE dist/THIRD_PARTY_NOTICES.md \
-            dist/THIRD_PARTY_DEPENDENCIES.json dist/THIRD_PARTY_LICENSES.txt \
-            dist/PRIVACY.md dist/TERMS.md public-check/
-          node scripts/security/nginx-release-receiver.cjs validate "$VERSION" public-check
+          node scripts/security/nginx-release-receiver.cjs validate-public \
+            "$VERSION" public-check "$EXPECTED_SHA256" "$EXPECTED_SIZE"
+
+          INSTALLER_URL="https://winkgo.top/releases/free/${VERSION}/${INSTALLER}?${CACHE_BUSTER}"
+          PUBLIC_SIZE="$(curl --fail --silent --show-error --location --head \
+            --output /dev/null --write-out '%header{content-length}' "$INSTALLER_URL" | tr -d '\r')"
+          test "$PUBLIC_SIZE" = "$EXPECTED_SIZE"
+
+          FIRST_STATUS="$(curl --fail --silent --show-error --location --range 0-0 \
+            --output public-check/first.byte --write-out '%{http_code}' "$INSTALLER_URL")"
+          LAST_OFFSET="$((EXPECTED_SIZE - 1))"
+          LAST_STATUS="$(curl --fail --silent --show-error --location --range "${LAST_OFFSET}-${LAST_OFFSET}" \
+            --output public-check/last.byte --write-out '%{http_code}' "$INSTALLER_URL")"
+          test "$FIRST_STATUS" = '206'
+          test "$LAST_STATUS" = '206'
+          head -c 1 "dist/$INSTALLER" | cmp --silent - public-check/first.byte
+          tail -c 1 "dist/$INSTALLER" | cmp --silent - public-check/last.byte
+
           curl --fail --silent --show-error --location \
             "https://winkgo.top/?${CACHE_BUSTER}" --output public-index.html
           grep -F "https://winkgo.top/releases/free/${VERSION}/${INSTALLER}" public-index.html

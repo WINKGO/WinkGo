@@ -18,6 +18,16 @@ const receiver = require('../../../scripts/security/nginx-release-receiver.cjs')
     sha256: string;
     sizeBytes: number;
   };
+  validatePublicMetadata: (
+    metadataDirectory: string,
+    version: string,
+    expectedSha256: string,
+    expectedSizeBytes: number
+  ) => {
+    installerName: string;
+    sha256: string;
+    sizeBytes: number;
+  };
   validateArchiveEntries: (entries: string[], version: string) => string[];
   validateArchiveTypes: (verboseEntries: string[], expectedCount: number) => void;
   publishBundle: (options: {
@@ -115,6 +125,27 @@ describe('restricted nginx release receiver', () => {
 
       writeFileSync(join(directory, installerName), Buffer.from('tampered'));
       expect(() => receiver.validateBundle(directory, version)).toThrow(/checksum|size/i);
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
+  });
+
+  it('validates public metadata without downloading the complete installer again', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'winkgo-public-metadata-test-'));
+    const version = '2.2.7';
+
+    try {
+      const { digest, installerBytes, installerName } = writeValidBundle(directory, version);
+      rmSync(join(directory, installerName));
+
+      expect(receiver.validatePublicMetadata(directory, version, digest, installerBytes.byteLength)).toEqual({
+        installerName,
+        sha256: digest,
+        sizeBytes: installerBytes.byteLength,
+      });
+      expect(() => receiver.validatePublicMetadata(directory, version, digest, installerBytes.byteLength + 1)).toThrow(
+        /size/i
+      );
     } finally {
       rmSync(directory, { force: true, recursive: true });
     }

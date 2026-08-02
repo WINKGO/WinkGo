@@ -41,33 +41,26 @@ function invariant(condition, message) {
   }
 }
 
-function validateBundle(bundleDirectory, version) {
+function validatePublicMetadata(metadataDirectory, version, expectedSha256, expectedSizeBytes) {
   invariant(/^\d+\.\d+\.\d+$/.test(version), 'Invalid release version.');
 
   const installerName = `WINK-GO-Free-Setup-${version}-x64.exe`;
-  const installerPath = path.join(bundleDirectory, installerName);
-  const checksumPath = path.join(bundleDirectory, `${installerName}.sha256.txt`);
-  const latestPath = path.join(bundleDirectory, 'latest.yml');
-  const manifestPath = path.join(bundleDirectory, 'winkgo-free-update.json');
+  const checksumPath = path.join(metadataDirectory, `${installerName}.sha256.txt`);
+  const latestPath = path.join(metadataDirectory, 'latest.yml');
+  const manifestPath = path.join(metadataDirectory, 'winkgo-free-update.json');
+  const sha256 = String(expectedSha256 || '').toUpperCase();
+  const sizeBytes = Number(expectedSizeBytes);
 
-  for (const requiredPath of [
-    installerPath,
-    checksumPath,
-    latestPath,
-    manifestPath,
-    ...LEGAL_FILES.map((fileName) => path.join(bundleDirectory, fileName)),
-  ]) {
+  invariant(/^[A-F0-9]{64}$/.test(sha256), 'Expected installer checksum is invalid.');
+  invariant(Number.isSafeInteger(sizeBytes) && sizeBytes > 0, 'Expected installer size is invalid.');
+
+  for (const requiredPath of [checksumPath, latestPath, manifestPath]) {
     invariant(
       fs.lstatSync(requiredPath, { throwIfNoEntry: false })?.isFile(),
       `Missing release file: ${path.basename(requiredPath)}`
     );
     invariant(fs.statSync(requiredPath).size > 0, `Release file is empty: ${path.basename(requiredPath)}`);
   }
-
-  const installer = fs.readFileSync(installerPath);
-  invariant(installer.length > 0, 'Installer is empty.');
-  const sha256 = crypto.createHash('sha256').update(installer).digest('hex').toUpperCase();
-  const sizeBytes = installer.byteLength;
 
   const checksumText = fs.readFileSync(checksumPath, 'utf8').trim();
   const checksumMatch = /^([A-Fa-f0-9]{64}) {2}([^/\\]+)$/.exec(checksumText);
@@ -108,6 +101,24 @@ function validateBundle(bundleDirectory, version) {
   );
 
   return { installerName, sha256, sizeBytes };
+}
+
+function validateBundle(bundleDirectory, version) {
+  invariant(/^\d+\.\d+\.\d+$/.test(version), 'Invalid release version.');
+
+  const installerName = `WINK-GO-Free-Setup-${version}-x64.exe`;
+  const installerPath = path.join(bundleDirectory, installerName);
+  for (const requiredPath of [installerPath, ...LEGAL_FILES.map((fileName) => path.join(bundleDirectory, fileName))]) {
+    invariant(
+      fs.lstatSync(requiredPath, { throwIfNoEntry: false })?.isFile(),
+      `Missing release file: ${path.basename(requiredPath)}`
+    );
+    invariant(fs.statSync(requiredPath).size > 0, `Release file is empty: ${path.basename(requiredPath)}`);
+  }
+
+  const installer = fs.readFileSync(installerPath);
+  const sha256 = crypto.createHash('sha256').update(installer).digest('hex').toUpperCase();
+  return validatePublicMetadata(bundleDirectory, version, sha256, installer.byteLength);
 }
 
 function validateArchiveEntries(entries, version) {
@@ -305,6 +316,18 @@ async function receiveArchiveFromStdin(version) {
 }
 
 async function main() {
+  if (process.argv[2] === 'validate-public') {
+    const version = process.argv[3];
+    const metadataDirectory = process.argv[4];
+    const expectedSha256 = process.argv[5];
+    const expectedSizeBytes = process.argv[6];
+    invariant(/^\d+\.\d+\.\d+$/.test(version || ''), 'Public validation requires a strict version.');
+    invariant(metadataDirectory, 'Public validation requires a metadata directory.');
+    const result = validatePublicMetadata(path.resolve(metadataDirectory), version, expectedSha256, expectedSizeBytes);
+    process.stdout.write(`${JSON.stringify(result)}\n`);
+    return;
+  }
+
   if (process.argv[2] === 'validate') {
     const version = process.argv[3];
     const bundleDirectory = process.argv[4];
@@ -328,6 +351,7 @@ async function main() {
 module.exports = {
   parseForcedCommand,
   validateBundle,
+  validatePublicMetadata,
   validateArchiveEntries,
   validateArchiveTypes,
   publishBundle,
