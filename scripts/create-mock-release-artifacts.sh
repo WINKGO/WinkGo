@@ -81,12 +81,12 @@ files:
     size: 200000
 EOF
 
-# Linux x64
-touch "$ARTIFACTS_DIR/linux-build-x64/WINK-GO-Free-1.0.0-linux-x64.deb"
+# Linux x64 (Debian names this architecture amd64)
+touch "$ARTIFACTS_DIR/linux-build-x64/WINK-GO-Free-1.0.0-linux-amd64.deb"
 cat > "$ARTIFACTS_DIR/linux-build-x64/latest-linux.yml" <<'EOF'
 version: 1.0.0
 files:
-  - url: WINK-GO-Free-1.0.0-linux-x64.deb
+  - url: WINK-GO-Free-1.0.0-linux-amd64.deb
     sha512: fake-sha512-linux
     size: 300000
 EOF

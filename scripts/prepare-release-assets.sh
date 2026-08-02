@@ -195,6 +195,12 @@ for arch in x64 arm64; do
     fi
   done
 
+done
+
+# electron-builder uses Debian's canonical architecture name "amd64" for
+# x86_64 .deb packages. Keep the release filename aligned with the package it
+# actually produced instead of inventing a non-existent "x64" alias.
+for arch in amd64 arm64; do
   asset="WINK-GO-Free-${VERSION}-linux-${arch}.deb"
   if [ ! -f "$OUTPUT_DIR/$asset" ]; then
     echo "::error::Missing Linux package: $asset"

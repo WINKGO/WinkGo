@@ -2,6 +2,11 @@
 
 # Changelog
 
+## 2.2.11 (2026-08-02)
+
+- Fixed final release assembly to recognize the Debian-standard `amd64` package name produced for Linux x64 builds.
+- Updated Linux installation instructions and release validation to use the same canonical architecture name.
+
 ## 2.2.10 (2026-08-02)
 
 - Fixed Linux ARM64 release auditing to recognize architecture-specific unpacked output directories.

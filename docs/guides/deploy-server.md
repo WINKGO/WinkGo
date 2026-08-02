@@ -34,10 +34,10 @@ Deploy WINK GO WebUI on headless Linux servers — cloud VMs, Kubernetes Pods, a
 ```bash
 # Replace this value with the version shown on the WINK GO Releases page.
 VERSION=2.2.0
-wget "https://github.com/WINKGO/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-x64.deb"
+wget "https://github.com/WINKGO/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-amd64.deb"
 
 # Install
-sudo dpkg -i "WINK-GO-Free-${VERSION}-linux-x64.deb"
+sudo dpkg -i "WINK-GO-Free-${VERSION}-linux-amd64.deb"
 sudo apt-get install -f  # Fix missing dependencies
 ```
 
@@ -272,7 +272,7 @@ For Gemini API calls, configure the proxy inside WINK GO WebUI:
 
 | Issue                                     | Solution                                                     |
 | ----------------------------------------- | ------------------------------------------------------------ |
-| `dpkg` dependency errors in containers    | `dpkg --force-all -i WINK-GO-Free-VERSION-linux-x64.deb`     |
+| `dpkg` dependency errors in containers    | `dpkg --force-all -i WINK-GO-Free-VERSION-linux-amd64.deb`   |
 | WINK GO can only access `/tmp`            | Set `WORKDIR` in the startup script to your workspace path   |
 | WebUI not accessible remotely             | Check firewall rules, or use ngrok / SSH tunnel              |
 | All requests fail when proxy is down      | Use PAC file (`--proxy-pac-url`) instead of `--proxy-server` |
@@ -338,10 +338,10 @@ For Gemini API calls, configure the proxy inside WINK GO WebUI:
 ```bash
 # 将版本号替换为 WINK GO Releases 页面显示的版本
 VERSION=2.2.0
-wget "https://github.com/WINKGO/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-x64.deb"
+wget "https://github.com/WINKGO/wink-go/releases/download/v${VERSION}/WINK-GO-Free-${VERSION}-linux-amd64.deb"
 
 # 安装
-sudo dpkg -i "WINK-GO-Free-${VERSION}-linux-x64.deb"
+sudo dpkg -i "WINK-GO-Free-${VERSION}-linux-amd64.deb"
 sudo apt-get install -f  # 修复依赖
 ```
 

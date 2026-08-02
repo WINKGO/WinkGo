@@ -101,8 +101,7 @@ for arch in x64 arm64; do
   for f in \
     "WINK-GO-Free-Setup-${VERSION}-${arch}.exe" \
     "WINK-GO-Free-${VERSION}-mac-${arch}.dmg" \
-    "WINK-GO-Free-${VERSION}-mac-${arch}.zip" \
-    "WINK-GO-Free-${VERSION}-linux-${arch}.deb"; do
+    "WINK-GO-Free-${VERSION}-mac-${arch}.zip"; do
     if [ ! -f "$OUTPUT_DIR/$f" ]; then
       echo "FAIL: missing distributable: $f"
       ERRORS=$((ERRORS + 1))
@@ -110,6 +109,16 @@ for arch in x64 arm64; do
       echo "PASS: $f exists"
     fi
   done
+done
+
+for arch in amd64 arm64; do
+  f="WINK-GO-Free-${VERSION}-linux-${arch}.deb"
+  if [ ! -f "$OUTPUT_DIR/$f" ]; then
+    echo "FAIL: missing distributable: $f"
+    ERRORS=$((ERRORS + 1))
+  else
+    echo "PASS: $f exists"
+  fi
 done
 
 # Web-CLI tarballs + checksums
