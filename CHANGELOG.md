@@ -2,6 +2,11 @@
 
 # Changelog
 
+## 2.2.10 (2026-08-02)
+
+- Fixed Linux ARM64 release auditing to recognize architecture-specific unpacked output directories.
+- Removed the in-run self-rerun job that GitHub rejects while the same workflow is still active.
+
 ## 2.2.9 (2026-08-02)
 
 - Restored Windows startup for existing installations whose migration history was recorded with Windows line endings.

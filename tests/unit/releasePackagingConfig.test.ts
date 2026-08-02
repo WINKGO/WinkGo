@@ -355,8 +355,16 @@ describe('release packaging configuration', () => {
     expect(script).toContain('`win-${targetArch}-unpacked`');
     expect(script).toContain("'--packed-asar'");
     expect(privacyAudit).toContain("'out/win-arm64-unpacked/resources'");
+    expect(privacyAudit).toContain("'out/linux-arm64-unpacked'");
     expect(script).not.toContain('Retrying local build with win.signAndEditExecutable=false');
     expect(script).not.toContain('`${builderCommand} --config.win.signAndEditExecutable=false`');
+  });
+
+  it('does not attempt to rerun an active release workflow from inside itself', () => {
+    const releaseWorkflow = readProjectFile('.github/workflows/build-and-release.yml');
+
+    expect(releaseWorkflow).not.toContain('Auto Retry on Build Failure');
+    expect(releaseWorkflow).not.toContain('/actions/runs/${{ github.run_id }}/rerun');
   });
 
   it('builds Linux x64 release bundles against the Debian 12 glibc baseline', () => {
