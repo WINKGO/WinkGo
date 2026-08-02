@@ -323,6 +323,10 @@ describe('release packaging configuration', () => {
     expect(distributionWorkflow).toContain('WINKGO_RELEASE_SSH_PRIVATE_KEY');
     expect(distributionWorkflow).toContain('WINKGO_RELEASE_SSH_KNOWN_HOSTS');
     expect(distributionWorkflow).toContain('scripts/security/nginx-release-receiver.cjs validate');
+    expect(distributionWorkflow).toContain('nginx-release-receiver.cjs validate-public');
+    expect(distributionWorkflow).toContain('--range 0-0');
+    expect(distributionWorkflow).toContain('content-length');
+    expect(distributionWorkflow).not.toContain('--output "public-check/$INSTALLER"');
     expect(distributionWorkflow).toContain('publish $VERSION');
     expect(distributionWorkflow).toContain('verify_only');
     expect(distributionWorkflow).not.toContain('AWS_');
