@@ -378,6 +378,21 @@ describe('release packaging configuration', () => {
     expect(webCliWorkflow).toContain('image: debian:bookworm-slim');
   });
 
+  it('uses Debian amd64 naming for Linux x64 desktop packages', () => {
+    const prepareScript = readProjectFile('scripts/prepare-release-assets.sh');
+    const verifyScript = readProjectFile('scripts/verify-release-assets.sh');
+    const mockScript = readProjectFile('scripts/create-mock-release-artifacts.sh');
+    const installScript = readProjectFile('scripts/install-ubuntu.sh');
+
+    expect(prepareScript).toContain('WINK-GO-Free-${VERSION}-linux-${arch}.deb');
+    expect(verifyScript).toContain('WINK-GO-Free-${VERSION}-linux-${arch}.deb');
+    expect(prepareScript).toContain('for arch in amd64 arm64');
+    expect(verifyScript).toContain('for arch in amd64 arm64');
+    expect(mockScript).toContain('WINK-GO-Free-1.0.0-linux-amd64.deb');
+    expect(installScript).toContain('RELEASE_ARCH="amd64"');
+    expect(mockScript).not.toContain('WINK-GO-Free-1.0.0-linux-x64.deb');
+  });
+
   it('does not let a generic notarization log line bypass the packed release audit', () => {
     const workflow = readProjectFile('.github/workflows/_build-reusable.yml');
 

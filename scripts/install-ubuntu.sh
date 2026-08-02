@@ -76,7 +76,7 @@ detect_arch() {
     machine="$(uname -m)"
     case "$machine" in
         x86_64|amd64)
-            RELEASE_ARCH="x64"
+            RELEASE_ARCH="amd64"
             ;;
         aarch64|arm64)
             RELEASE_ARCH="arm64"
