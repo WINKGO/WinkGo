@@ -174,6 +174,8 @@ const packedRoots = [
   'out/mac-x64',
   'out/mac-universal',
   'out/linux-unpacked',
+  'out/linux-x64-unpacked',
+  'out/linux-arm64-unpacked',
 ];
 
 function getAuditRoots(auditMode) {
