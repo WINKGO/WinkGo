@@ -5,6 +5,7 @@
 pub mod active_lease;
 pub(crate) mod agent_runtime;
 pub mod agent_task;
+pub mod antigravity_hook;
 pub mod capability;
 pub mod cc_switch;
 pub(crate) mod cli_probe;

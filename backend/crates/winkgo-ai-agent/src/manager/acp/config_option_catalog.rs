@@ -139,11 +139,14 @@ pub(crate) fn extract_modes_from_value(value: &Value) -> Option<SessionModeState
 }
 
 pub(crate) fn extract_models_from_value(value: &Value) -> Option<SessionModelState> {
-    serde_json::from_value(value.clone())
-        .ok()
+    // WINK GO also persists the frontend-friendly `{ id, label }` shape. Try
+    // that shape first: feeding it into ACP's `SessionModelState` decoder
+    // makes the schema's lossy list visitor log one "missing field modelId"
+    // warning per entry before this fallback gets a chance to recover it.
+    model_payload_to_state(value)
+        .or_else(|| serde_json::from_value(value.clone()).ok())
         .or_else(|| serde_json::from_value(keys_to_camel_case(value.clone())).ok())
         .filter(|models: &SessionModelState| !models.available_models.is_empty())
-        .or_else(|| model_payload_to_state(value))
 }
 
 fn find_select<'a>(
@@ -192,16 +195,28 @@ fn decode_config_options(value: &Value) -> Option<Vec<SessionConfigOption>> {
 }
 
 fn model_payload_to_state(value: &Value) -> Option<SessionModelState> {
-    let object = value.as_object()?;
-    let models_value = object
-        .get("available_models")
-        .or_else(|| object.get("availableModels"))?;
+    let object = value.as_object();
+    let models_value = match object {
+        Some(object) => object
+            .get("available_models")
+            .or_else(|| object.get("availableModels"))
+            .or_else(|| object.get("models"))?,
+        None => value,
+    };
     let models = models_value.as_array()?;
     let available_models: Vec<ModelInfo> = models
         .iter()
         .filter_map(|entry| {
+            if let Some(id) = entry.as_str().filter(|id| !id.is_empty()) {
+                return Some(ModelInfo::new(id.to_owned(), id.to_owned()));
+            }
             let object = entry.as_object()?;
-            let id = object.get("id")?.as_str()?;
+            let id = object
+                .get("id")
+                .or_else(|| object.get("modelId"))
+                .or_else(|| object.get("model_id"))?
+                .as_str()
+                .filter(|id| !id.is_empty())?;
             let label = object
                 .get("label")
                 .or_else(|| object.get("name"))
@@ -214,10 +229,15 @@ fn model_payload_to_state(value: &Value) -> Option<SessionModelState> {
         return None;
     }
     let current_model_id = object
-        .get("current_model_id")
-        .or_else(|| object.get("currentModelId"))
-        .and_then(Value::as_str)
-        .filter(|id| !id.is_empty())
+        .and_then(|object| {
+            object
+                .get("current_model_id")
+                .or_else(|| object.get("currentModelId"))
+                .or_else(|| object.get("current_model"))
+                .or_else(|| object.get("currentModel"))
+                .and_then(Value::as_str)
+                .filter(|id| !id.is_empty())
+        })
         .unwrap_or_else(|| available_models[0].model_id.0.as_ref());
     Some(SessionModelState::new(current_model_id.to_owned(), available_models))
 }
@@ -618,6 +638,42 @@ mod tests {
         assert_eq!(models.available_models.len(), 2);
         assert_eq!(models.available_models[1].model_id.to_string(), "gpt-5.4");
         assert_eq!(models.available_models[1].name, "gpt-5.4");
+    }
+
+    #[test]
+    fn extracts_canonical_acp_model_entries_without_losing_the_catalog() {
+        let value = json!({
+            "currentModelId": "claude-sonnet-4-6",
+            "availableModels": [
+                {"modelId": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6"},
+                {"modelId": "gemini-3.6-flash-high", "name": "Gemini 3.6 Flash High"}
+            ]
+        });
+
+        let models = extract_models_from_value(&value).expect("canonical ACP model state");
+
+        assert_eq!(models.current_model_id.to_string(), "claude-sonnet-4-6");
+        assert_eq!(models.available_models.len(), 2);
+        assert_eq!(models.available_models[0].name, "Claude Sonnet 4.6");
+        assert_eq!(models.available_models[1].model_id.to_string(), "gemini-3.6-flash-high");
+    }
+
+    #[test]
+    fn extracts_raw_and_wrapped_model_lists_used_by_direct_cli_backends() {
+        let raw = json!(["gemini-3.6-flash-high", "claude-sonnet-4-6"]);
+        let wrapped = json!({
+            "models": [
+                {"model_id": "gemini-3.6-flash-medium", "label": "Gemini Flash Medium"}
+            ]
+        });
+
+        let raw_models = extract_models_from_value(&raw).expect("raw model ids");
+        let wrapped_models = extract_models_from_value(&wrapped).expect("wrapped model list");
+
+        assert_eq!(raw_models.current_model_id.to_string(), "gemini-3.6-flash-high");
+        assert_eq!(raw_models.available_models.len(), 2);
+        assert_eq!(wrapped_models.current_model_id.to_string(), "gemini-3.6-flash-medium");
+        assert_eq!(wrapped_models.available_models[0].name, "Gemini Flash Medium");
     }
 
     #[test]

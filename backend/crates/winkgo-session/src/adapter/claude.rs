@@ -527,6 +527,12 @@ impl ClaudeAdapter {
                 output_tokens,
                 total_tokens,
                 cost_usd: v.get("total_cost_usd").and_then(Value::as_f64),
+                context_window: None,
+                breakdown: crate::event::UsageBreakdown {
+                    cached_read_tokens: cache_read,
+                    cached_write_tokens: cache_creation,
+                    thought_tokens: 0,
+                },
             });
         }
         out
@@ -1805,6 +1811,7 @@ mod tests {
                     output_tokens,
                     total_tokens,
                     cost_usd,
+                    ..
                 } => Some((input_tokens, output_tokens, total_tokens, cost_usd)),
                 _ => None,
             })

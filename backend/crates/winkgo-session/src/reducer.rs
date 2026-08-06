@@ -1033,6 +1033,8 @@ mod tests {
                 output_tokens: 1,
                 total_tokens: 2,
                 cost_usd: Some(0.5),
+                breakdown: Default::default(),
+                context_window: None,
             },
             // use the payload-carrying phase (stronger than the proptest's nullary ToolsReady)
             SessionEvent::Provisioning {
@@ -1053,6 +1055,7 @@ mod tests {
             SessionEvent::Notice {
                 level: crate::event::NoticeLevel::Warning,
                 message: "advisory".into(),
+                localized: None,
             },
             SessionEvent::ItemStarted {
                 item_id: "i".into(),
@@ -1180,6 +1183,8 @@ mod tests {
                 output_tokens: 1,
                 total_tokens: 2,
                 cost_usd: None,
+                breakdown: Default::default(),
+                context_window: None,
             },
             SessionEvent::Provisioning {
                 phase: ProvisioningPhase::ToolsWaiting,
@@ -1210,6 +1215,7 @@ mod tests {
             SessionEvent::Notice {
                 level: crate::event::NoticeLevel::Warning,
                 message: "advisory".into(),
+                localized: None,
             },
             SessionEvent::ItemStarted {
                 item_id: "i".into(),
@@ -2180,6 +2186,8 @@ mod proptest_totality {
                 output_tokens: 1,
                 total_tokens: 2,
                 cost_usd: None,
+                breakdown: Default::default(),
+                context_window: None,
             }),
             Just(SessionEvent::Provisioning {
                 phase: ProvisioningPhase::ToolsReady
@@ -2244,6 +2252,7 @@ mod proptest_totality {
             Just(SessionEvent::Notice {
                 level: crate::event::NoticeLevel::Warning,
                 message: "advisory".into(),
+                localized: None,
             }),
             Just(SessionEvent::SessionInfo {
                 context_usage: None,

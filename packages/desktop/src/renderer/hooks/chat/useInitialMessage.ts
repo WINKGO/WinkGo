@@ -1,8 +1,10 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Hook for managing initial message sending from guid page
  * This is a more elegant solution that could replace the current implementation
  */
 
+import type { ChatFileRef } from '@/common/types/chatFile';
 import { uuid } from '@/common/utils';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -10,13 +12,13 @@ type InitialMessageState = 'idle' | 'waiting_auth' | 'sending' | 'sent' | 'faile
 
 interface InitialMessageData {
   input: string;
-  files?: string[];
+  files?: ChatFileRef[];
 }
 
 export const useInitialMessage = (
   conversation_id: string,
   acpStatus: string | null,
-  onSend: (msg_id: string, input: string, files: string[]) => Promise<boolean>
+  onSend: (msg_id: string, input: string, files: ChatFileRef[]) => Promise<boolean>
 ) => {
   const [state, setState] = useState<InitialMessageState>('idle');
   const [error, setError] = useState<string | null>(null);

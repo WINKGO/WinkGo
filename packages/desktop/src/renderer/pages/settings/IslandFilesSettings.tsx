@@ -5,11 +5,22 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Input, Message as ArcoMessage, Select, Slider, Switch } from '@arco-design/web-react';
+import {
+  Button,
+  Input,
+  InputNumber,
+  Message as ArcoMessage,
+  Modal,
+  Select,
+  Slider,
+  Switch,
+  Tooltip,
+} from '@arco-design/web-react';
 import {
   Delete,
   FileCollection,
   FolderOpen,
+  Help,
   Keyboard,
   Message as MessageIcon,
   Plus,
@@ -23,6 +34,9 @@ import { useTranslation } from 'react-i18next';
 import { ipcBridge } from '@/common';
 import type {
   IStartOnBootStatus,
+  WinkGoMailAccountInput,
+  WinkGoMailErrorCode,
+  WinkGoMailStatus,
   WinkGoOrganizeOperation,
   WinkGoOrganizerMode,
   WinkGoOrganizerRule,
@@ -39,6 +53,75 @@ import SettingsPageHeader from './components/SettingsPageHeader';
 import SettingsPageWrapper from './components/SettingsPageWrapper';
 
 const MAX_CUSTOM_RULES = 32;
+const MAIL_HELP_LINKS = [
+  { name: 'QQ Mail', server: 'imap.qq.com · 993 · TLS', url: 'https://service.mail.qq.com/detail/0/75' },
+  { name: 'NetEase Mail', server: 'imap.163.com · 993 · TLS', url: 'https://mail.163.com/' },
+  {
+    name: 'Gmail',
+    server: 'imap.gmail.com · 993 · TLS',
+    url: 'https://support.google.com/accounts/answer/185833',
+  },
+  {
+    name: 'Outlook',
+    server: 'outlook.office365.com · 993 · TLS',
+    url: 'https://support.microsoft.com/outlook/pop-imap-and-smtp-settings-for-outlook-com',
+  },
+] as const;
+const MAIL_PROVIDER_PRESETS = [
+  { domains: ['qq.com', 'foxmail.com'], host: 'imap.qq.com', port: 993, security: 'tls' },
+  { domains: ['163.com'], host: 'imap.163.com', port: 993, security: 'tls' },
+  { domains: ['126.com'], host: 'imap.126.com', port: 993, security: 'tls' },
+  { domains: ['yeah.net'], host: 'imap.yeah.net', port: 993, security: 'tls' },
+  { domains: ['gmail.com', 'googlemail.com'], host: 'imap.gmail.com', port: 993, security: 'tls' },
+  {
+    domains: ['outlook.com', 'hotmail.com', 'live.com', 'msn.com'],
+    host: 'outlook.office365.com',
+    port: 993,
+    security: 'tls',
+  },
+  { domains: ['icloud.com', 'me.com', 'mac.com'], host: 'imap.mail.me.com', port: 993, security: 'tls' },
+] as const satisfies ReadonlyArray<{
+  domains: readonly string[];
+  host: string;
+  port: number;
+  security: WinkGoMailAccountInput['security'];
+}>;
+const DEFAULT_MAIL_ACCOUNT: Omit<WinkGoMailAccountInput, 'password'> = {
+  enabled: true,
+  label: '',
+  email: '',
+  username: '',
+  host: '',
+  port: 993,
+  security: 'tls',
+  pollIntervalMinutes: 2,
+  downloadDirectory: '',
+};
+
+const resolveMailProviderPreset = (email: string) => {
+  const domain = email.trim().toLocaleLowerCase().split('@').at(-1);
+  if (!domain || domain === email.trim().toLocaleLowerCase()) return undefined;
+  return MAIL_PROVIDER_PRESETS.find((preset) => preset.domains.some((item) => item === domain));
+};
+
+const normalizeMailProviderFields = (
+  account: Omit<WinkGoMailAccountInput, 'password'>
+): Omit<WinkGoMailAccountInput, 'password'> => {
+  const preset = resolveMailProviderPreset(account.email);
+  if (!preset) return account;
+
+  const host = account.host.trim().toLocaleLowerCase();
+  const knownPresetHosts = new Set<string>(MAIL_PROVIDER_PRESETS.map((item) => item.host));
+  const shouldApplyPreset = !host || host.includes('@') || knownPresetHosts.has(host);
+  if (!shouldApplyPreset) return account;
+
+  return {
+    ...account,
+    host: preset.host,
+    port: preset.port,
+    security: preset.security,
+  };
+};
 const HOTKEYS = {
   memo: 'Alt + 1',
   fileShelf: 'Alt + 2',
@@ -87,7 +170,7 @@ type SettingsCardProps = {
   children: React.ReactNode;
   description: string;
   icon: React.ReactElement;
-  title: string;
+  title: React.ReactNode;
 };
 
 const SettingsCard: React.FC<SettingsCardProps> = ({ children, description, icon, title }) => (
@@ -149,6 +232,26 @@ const IslandFilesSettings: React.FC = () => {
   );
   const [ruleName, setRuleName] = useState('');
   const [ruleKeywords, setRuleKeywords] = useState('');
+  const [mailForm, setMailForm] = useState(DEFAULT_MAIL_ACCOUNT);
+  const [mailPassword, setMailPassword] = useState('');
+  const [mailStatus, setMailStatus] = useState<WinkGoMailStatus>({
+    account: null,
+    state: 'disabled',
+    unreadCount: 0,
+  });
+  const [mailBusy, setMailBusy] = useState<'save' | 'test' | 'check' | 'clear' | null>(null);
+  const [mailHelpVisible, setMailHelpVisible] = useState(false);
+
+  const hydrateMailStatus = useCallback((status: WinkGoMailStatus) => {
+    setMailStatus(status);
+    if (!status.account) return;
+    const { passwordConfigured: _passwordConfigured, ...config } = status.account;
+    setMailForm(normalizeMailProviderFields(config));
+  }, []);
+
+  const updateMailEmail = useCallback((email: string) => {
+    setMailForm((current) => normalizeMailProviderFields({ ...current, email }));
+  }, []);
 
   useEffect(() => {
     void ipcBridge.application.getStartOnBootStatus
@@ -158,6 +261,27 @@ const IslandFilesSettings: React.FC = () => {
       })
       .catch((): undefined => undefined);
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    const unsubscribe = ipcBridge.winkGoMail.statusChanged.on((status) => {
+      if (!disposed) hydrateMailStatus(status);
+    });
+    void ipcBridge.winkGoMail.getStatus
+      .invoke()
+      .then((status) => {
+        if (!disposed) hydrateMailStatus(status);
+      })
+      .catch(() => {
+        if (!disposed) {
+          setMailStatus((current) => ({ ...current, state: 'error', lastErrorCode: 'connection_failed' }));
+        }
+      });
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [hydrateMailStatus]);
 
   useEffect(() => {
     if (destinationRoot) return;
@@ -281,6 +405,115 @@ const IslandFilesSettings: React.FC = () => {
     setRuleName('');
     setRuleKeywords('');
   }, [persistRules, ruleKeywords, ruleName, rules]);
+
+  const mailPayload = useCallback(
+    (): WinkGoMailAccountInput => ({
+      ...mailForm,
+      password: mailPassword || undefined,
+    }),
+    [mailForm, mailPassword]
+  );
+
+  const mailErrorText = useCallback(
+    (code?: WinkGoMailErrorCode) => t(`settings.imap.errors.${code || 'connection_failed'}`),
+    [t]
+  );
+
+  const validateMailForm = useCallback(() => {
+    const email = mailForm.email.trim();
+    const host = mailForm.host.trim();
+    if (!email.includes('@') || !host || host.includes('@') || /\s/u.test(host)) {
+      ArcoMessage.error(mailErrorText('invalid_config'));
+      return false;
+    }
+    return true;
+  }, [mailErrorText, mailForm.email, mailForm.host]);
+
+  const saveMailSettings = useCallback(async () => {
+    if (!validateMailForm()) return;
+    setMailBusy('save');
+    try {
+      const result = await ipcBridge.winkGoMail.saveAccount.invoke(mailPayload());
+      hydrateMailStatus(result.status);
+      if (!result.ok) {
+        ArcoMessage.error(mailErrorText(result.errorCode));
+        return;
+      }
+      setMailPassword('');
+      ArcoMessage.success(t('settings.imap.saved'));
+    } catch {
+      ArcoMessage.error(mailErrorText());
+    } finally {
+      setMailBusy(null);
+    }
+  }, [hydrateMailStatus, mailErrorText, mailPayload, t, validateMailForm]);
+
+  const testMailSettings = useCallback(async () => {
+    if (!validateMailForm()) return;
+    setMailBusy('test');
+    try {
+      const result = await ipcBridge.winkGoMail.testConnection.invoke(mailPayload());
+      if (result.ok) {
+        ArcoMessage.success(t('settings.imap.testSuccess', { latency: result.latencyMs }));
+      } else {
+        ArcoMessage.error(mailErrorText(result.errorCode));
+      }
+    } catch {
+      ArcoMessage.error(mailErrorText());
+    } finally {
+      setMailBusy(null);
+    }
+  }, [mailErrorText, mailPayload, t, validateMailForm]);
+
+  const checkMailNow = useCallback(async () => {
+    setMailBusy('check');
+    try {
+      const status = await ipcBridge.winkGoMail.checkNow.invoke();
+      hydrateMailStatus(status);
+      if (status.state === 'error') ArcoMessage.error(mailErrorText(status.lastErrorCode));
+      else ArcoMessage.success(t('settings.imap.checkComplete', { count: status.unreadCount }));
+    } catch {
+      ArcoMessage.error(mailErrorText());
+    } finally {
+      setMailBusy(null);
+    }
+  }, [hydrateMailStatus, mailErrorText, t]);
+
+  const clearMailSettings = useCallback(async () => {
+    setMailBusy('clear');
+    try {
+      const status = await ipcBridge.winkGoMail.clearAccount.invoke();
+      hydrateMailStatus(status);
+      setMailForm(DEFAULT_MAIL_ACCOUNT);
+      setMailPassword('');
+      ArcoMessage.success(t('settings.imap.removed'));
+    } catch {
+      ArcoMessage.error(mailErrorText());
+    } finally {
+      setMailBusy(null);
+    }
+  }, [hydrateMailStatus, mailErrorText, t]);
+
+  const chooseMailDownloadDirectory = useCallback(async () => {
+    const selected = await ipcBridge.dialog.showOpen.invoke({
+      defaultPath: mailForm.downloadDirectory || undefined,
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (selected?.[0]) setMailForm((current) => ({ ...current, downloadDirectory: selected[0] }));
+  }, [mailForm.downloadDirectory]);
+
+  const mailStatusDescription = useMemo(() => {
+    const state = t(`settings.imap.states.${mailStatus.state}`);
+    if (mailStatus.state === 'error') return `${state} · ${mailErrorText(mailStatus.lastErrorCode)}`;
+    if (mailStatus.lastCheckedAt) {
+      return t('settings.imap.statusWithUnread', {
+        state,
+        count: mailStatus.unreadCount,
+        time: new Date(mailStatus.lastCheckedAt).toLocaleTimeString(),
+      });
+    }
+    return state;
+  }, [mailErrorText, mailStatus, t]);
 
   const shortcutStatus = useMemo(
     () => `${recentFiles.length} 条本机索引${lastBatch.length > 0 ? ' · 可撤销上次整理' : ''}`,
@@ -466,6 +699,158 @@ const IslandFilesSettings: React.FC = () => {
             />
           </PreferenceRow>
         </SettingsCard>
+
+        <SettingsCard
+          icon={<MessageIcon />}
+          title={
+            <span className='inline-flex items-center gap-6px'>
+              <span>{t('settings.imap.title')}</span>
+              <Tooltip content={t('settings.imap.helpTooltip')} mini>
+                <Button
+                  type='text'
+                  size='mini'
+                  className='h-22px min-w-22px p-0! text-t-tertiary'
+                  aria-label={t('settings.imap.helpTooltip')}
+                  icon={<Help theme='outline' size='15' fill='currentColor' />}
+                  onClick={() => setMailHelpVisible(true)}
+                />
+              </Tooltip>
+            </span>
+          }
+          description={t('settings.imap.description')}
+        >
+          <PreferenceRow label={t('settings.imap.enabled')} description={mailStatusDescription}>
+            <Switch
+              checked={mailForm.enabled}
+              onChange={(enabled) => setMailForm((current) => ({ ...current, enabled }))}
+            />
+          </PreferenceRow>
+          <PreferenceRow label={t('settings.imap.account')} description={t('settings.imap.accountHint')}>
+            <div className='w-360px max-w-[50vw] grid gap-8px sm:grid-cols-2'>
+              <Input
+                placeholder={t('settings.imap.emailPlaceholder')}
+                value={mailForm.email}
+                onChange={updateMailEmail}
+              />
+              <Input
+                placeholder={t('settings.imap.usernamePlaceholder')}
+                value={mailForm.username}
+                onChange={(username) => setMailForm((current) => ({ ...current, username }))}
+              />
+            </div>
+          </PreferenceRow>
+          <PreferenceRow label={t('settings.imap.server')} description={t('settings.imap.serverHint')}>
+            <div className='w-460px max-w-[56vw] grid grid-cols-[minmax(150px,1fr)_90px_120px] gap-8px'>
+              <Input
+                placeholder={t('settings.imap.hostPlaceholder')}
+                value={mailForm.host}
+                onChange={(host) => setMailForm((current) => ({ ...current, host }))}
+              />
+              <InputNumber
+                min={1}
+                max={65535}
+                value={mailForm.port}
+                onChange={(port) => setMailForm((current) => ({ ...current, port: Number(port) || 993 }))}
+              />
+              <Select
+                value={mailForm.security}
+                onChange={(security) =>
+                  setMailForm((current) => ({
+                    ...current,
+                    security: security as WinkGoMailAccountInput['security'],
+                    port:
+                      security === 'tls' && current.port === 143
+                        ? 993
+                        : security === 'starttls' && current.port === 993
+                          ? 143
+                          : current.port,
+                  }))
+                }
+              >
+                <Select.Option value='tls'>{t('settings.imap.tls')}</Select.Option>
+                <Select.Option value='starttls'>{t('settings.imap.starttls')}</Select.Option>
+              </Select>
+            </div>
+          </PreferenceRow>
+          <PreferenceRow
+            label={t('settings.imap.password')}
+            description={
+              mailStatus.account?.passwordConfigured
+                ? t('settings.imap.passwordConfigured')
+                : t('settings.imap.passwordHint')
+            }
+          >
+            <Input.Password
+              className='w-260px max-w-[46vw]'
+              autoComplete='new-password'
+              placeholder={t('settings.imap.passwordPlaceholder')}
+              value={mailPassword}
+              onChange={setMailPassword}
+            />
+          </PreferenceRow>
+          <PreferenceRow label={t('settings.imap.interval')} description={t('settings.imap.intervalHint')}>
+            <InputNumber className='w-120px' disabled suffix={t('settings.imap.secondsWithin')} value={10} />
+          </PreferenceRow>
+          <PreferenceRow
+            label={t('settings.imap.downloadDirectory')}
+            description={mailForm.downloadDirectory || t('settings.imap.defaultDownloadDirectory')}
+          >
+            <Button
+              size='small'
+              icon={<FolderOpen theme='outline' size='15' fill='currentColor' />}
+              onClick={() => void chooseMailDownloadDirectory()}
+            >
+              {t('settings.imap.chooseDirectory')}
+            </Button>
+          </PreferenceRow>
+          <div className='flex flex-wrap items-center justify-end gap-8px py-14px'>
+            {mailStatus.account && (
+              <Button status='danger' loading={mailBusy === 'clear'} onClick={() => void clearMailSettings()}>
+                {t('settings.imap.remove')}
+              </Button>
+            )}
+            <Button disabled={!mailStatus.account} loading={mailBusy === 'check'} onClick={() => void checkMailNow()}>
+              {t('settings.imap.checkNow')}
+            </Button>
+            <Button loading={mailBusy === 'test'} onClick={() => void testMailSettings()}>
+              {t('settings.imap.test')}
+            </Button>
+            <Button type='primary' loading={mailBusy === 'save'} onClick={() => void saveMailSettings()}>
+              {t('settings.imap.save')}
+            </Button>
+          </div>
+          <div className='pb-14px text-11px leading-18px text-t-quaternary'>{t('settings.imap.privacy')}</div>
+        </SettingsCard>
+
+        <Modal
+          visible={mailHelpVisible}
+          title={t('settings.imap.helpTitle')}
+          footer={null}
+          unmountOnExit
+          onCancel={() => setMailHelpVisible(false)}
+        >
+          <div className='grid gap-16px'>
+            <p className='m-0 text-13px leading-22px text-t-secondary'>{t('settings.imap.helpBody')}</p>
+            <div>
+              <strong className='mb-8px block text-13px text-t-primary'>{t('settings.imap.helpProviderHint')}</strong>
+              <div className='grid gap-8px sm:grid-cols-2'>
+                {MAIL_HELP_LINKS.map((provider) => (
+                  <Button
+                    key={provider.name}
+                    long
+                    className='h-auto! min-h-52px justify-start! py-8px! text-left!'
+                    onClick={() => void ipcBridge.shell.openExternal.invoke(provider.url).catch(console.error)}
+                  >
+                    <span className='grid gap-2px'>
+                      <strong>{t('settings.imap.helpOpenProvider', { provider: provider.name })}</strong>
+                      <small className='text-11px text-t-tertiary'>{provider.server}</small>
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Modal>
 
         <SettingsCard icon={<TagOne />} title='自定义文件分类' description='用户规则优先匹配，最多保存 32 类'>
           <div className='py-14px'>

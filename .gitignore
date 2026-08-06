@@ -201,9 +201,11 @@ tests/e2e/report/
 !/docs/vendor/aionui-upstream-inventory.tsv
 !/docs/vendor/aioncore-upstream-inventory.tsv
 !/docs/vendor/aionrs-upstream-inventory.tsv
+!/docs/vendor/aionui-selected-post-v2.1.41-patches.md
 /resources/winkgo/provider-skills/
 /packages/desktop/winkgo_native_drop.node
 /packages/desktop/native/winkgo_native_drop.node
+/tmp/
 
 # Native/Python build caches
 **/target/

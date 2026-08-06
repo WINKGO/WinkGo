@@ -7,44 +7,89 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { buildDisplayMessage } from '@/renderer/utils/file/messageFiles';
+import { localFileRef, projectFileRef, uploadFileRef } from '@/common/types/chatFile';
+import { collectChatFileRefs, splitChatFileRefs } from '@/renderer/utils/file/messageFiles';
 
-describe('buildDisplayMessage', () => {
-  const workspace = '/tmp/winkgo/workspace-1';
-
-  it('stores workspace files with workspace prefix', () => {
-    const files = [`${workspace}/uploads/photo.jpg`];
-    const result = buildDisplayMessage('hello', files, workspace);
-    expect(result).toContain(`${workspace}/uploads/photo.jpg`);
+describe('collectChatFileRefs', () => {
+  it('collects uploaded paths as upload references', () => {
+    expect(collectChatFileRefs(['/uploads/photo.jpg'], [])).toEqual([uploadFileRef('/uploads/photo.jpg')]);
   });
 
-  it('preserves nested subdirectories inside workspace with prefix', () => {
-    const files = [`${workspace}/uploads/subdir/doc.pdf`];
-    const result = buildDisplayMessage('hello', files, workspace);
-    expect(result).toContain(`${workspace}/uploads/subdir/doc.pdf`);
+  it('preserves a Windows backend-local reference verbatim', () => {
+    const path = String.raw`\\?\C:\workspace\src\main.ts`;
+    expect(
+      collectChatFileRefs(
+        [],
+        [
+          {
+            path,
+            name: 'main.ts',
+            isFile: true,
+            chatRef: localFileRef(path),
+          },
+        ]
+      )
+    ).toEqual([localFileRef(path)]);
   });
 
-  it('keeps absolute paths outside workspace unchanged', () => {
-    const files = ['/other/path/external.txt'];
-    const result = buildDisplayMessage('hello', files, workspace);
-    expect(result).toContain('/other/path/external.txt');
-    expect(result).not.toContain(`${workspace}/external.txt`);
+  it('preserves a project-scoped reference from Explorer', () => {
+    const ref = projectFileRef('pe-1', 'src/main.ts');
+    expect(
+      collectChatFileRefs(
+        [],
+        [
+          {
+            path: 'src/main.ts',
+            name: 'main.ts',
+            isFile: true,
+            chatRef: ref,
+          },
+        ]
+      )
+    ).toEqual([ref]);
   });
 
-  it('converts relative paths into workspace-prefixed paths', () => {
-    const files = ['relative/file.txt'];
-    const result = buildDisplayMessage('hello', files, workspace);
-    expect(result).toContain(`${workspace}/relative/file.txt`);
+  it('deduplicates identical references without merging different sources', () => {
+    const path = '/uploads/a.txt';
+    expect(collectChatFileRefs([path, path], [{ path, name: 'a.txt', isFile: true }])).toEqual([uploadFileRef(path)]);
+    expect(collectChatFileRefs([path], [{ path, name: 'a.txt', isFile: true, chatRef: localFileRef(path) }])).toEqual([
+      uploadFileRef(path),
+      localFileRef(path),
+    ]);
+  });
+});
+
+describe('splitChatFileRefs', () => {
+  it('restores uploads to the upload lane', () => {
+    expect(splitChatFileRefs([uploadFileRef('/uploads/a.txt')])).toEqual({
+      uploadFiles: ['/uploads/a.txt'],
+      atPath: [],
+    });
   });
 
-  it('returns input unchanged when no files', () => {
-    const result = buildDisplayMessage('hello', [], workspace);
-    expect(result).toBe('hello');
+  it('restores project and local references to the selection lane', () => {
+    const project = projectFileRef('pe-1', 'src/main.ts');
+    const local = localFileRef(String.raw`C:\workspace\README.md`);
+    const result = splitChatFileRefs([project, local]);
+
+    expect(result.uploadFiles).toEqual([]);
+    expect(result.atPath).toEqual([
+      {
+        path: 'src/main.ts',
+        name: 'main.ts',
+        isFile: true,
+        chatRef: project,
+      },
+      {
+        path: String.raw`C:\workspace\README.md`,
+        name: 'README.md',
+        isFile: true,
+        chatRef: local,
+      },
+    ]);
   });
 
-  it('strips WINKGO timestamp separators from filenames while keeping prefix', () => {
-    const files = [`${workspace}/uploads/photo_winkgo_1234567890123.jpg`];
-    const result = buildDisplayMessage('hello', files, workspace);
-    expect(result).toContain(`${workspace}/uploads/photo.jpg`);
+  it('returns empty lanes for an empty queue', () => {
+    expect(splitChatFileRefs([])).toEqual({ uploadFiles: [], atPath: [] });
   });
 });

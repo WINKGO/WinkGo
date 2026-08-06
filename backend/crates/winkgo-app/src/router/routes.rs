@@ -31,13 +31,15 @@ use winkgo_extension::{extension_routes, hub_routes, skill_routes};
 use winkgo_file::file_routes;
 use winkgo_mcp::mcp_routes;
 use winkgo_office::{office_proxy_routes, office_routes};
-use winkgo_realtime::{WsHandlerState, ws_upgrade_handler};
+use winkgo_project::project_routes;
+use winkgo_realtime::{NoopMessageRouter, WsHandlerState, ws_upgrade_handler};
 use winkgo_shell::shell_routes;
 use winkgo_system::{ClientPrefService, connection_test_routes, system_routes};
 use winkgo_team::{TeamSessionService, team_routes};
 
 use crate::services::AppServices;
 
+use super::fs_monitor::spawn_fs_monitor;
 use super::health::health_check;
 use super::runtime_team_tools::{RuntimeTeamToolsState, runtime_team_tools_routes};
 use super::state::{ModuleStates, RouterBuildError, build_module_states, build_ws_state};
@@ -113,7 +115,9 @@ pub async fn create_router_with_runtime(services: &AppServices) -> Result<(Route
         elapsed_ms = boot.elapsed().as_millis(),
         "startup: route tree build started"
     );
-    let router = create_router_with_states(services, states);
+    let fs_router = spawn_fs_monitor(Arc::new(services.project_service.clone()), services.ws_manager.clone());
+    let ws_state = build_ws_state(services, fs_router);
+    let router = create_router_with_all_state(services, states, ws_state);
     tracing::info!(
         elapsed_ms = boot.elapsed().as_millis(),
         "startup: router assembly completed"
@@ -132,7 +136,7 @@ pub async fn create_router_with_runtime(services: &AppServices) -> Result<(Route
 /// Used for testing when specific service overrides are needed
 /// (e.g. injecting a mock HTTP server URL for version check).
 pub fn create_router_with_states(services: &AppServices, states: ModuleStates) -> Router {
-    let ws_state = build_ws_state(services);
+    let ws_state = build_ws_state(services, Arc::new(NoopMessageRouter));
     create_router_with_all_state(services, states, ws_state)
 }
 
@@ -184,6 +188,9 @@ pub fn create_router_with_all_state(services: &AppServices, states: ModuleStates
     // File routes protected by auth middleware
     let file_authenticated =
         file_routes(states.file).route_layer(from_fn_with_state(auth_mw_state.clone(), auth_middleware));
+
+    let project_authenticated =
+        project_routes(states.project).route_layer(from_fn_with_state(auth_mw_state.clone(), auth_middleware));
 
     // MCP routes protected by auth middleware
     let mcp_authenticated =
@@ -242,7 +249,18 @@ pub fn create_router_with_all_state(services: &AppServices, states: ModuleStates
     });
     tracing::info!(elapsed_ms = boot.elapsed().as_millis(), "startup: route groups built");
 
+    // Antigravity permission hook callback. Deliberately NOT behind
+    // auth_middleware: the hook is a local process with no user session and
+    // presents a per-conversation token instead (checked in the handler).
+    let antigravity_hook = crate::router::antigravity_hook::antigravity_hook_routes(
+        crate::router::antigravity_hook::AntigravityHookRouterState {
+            task_manager: services.worker_task_manager.clone(),
+            tokens: services.antigravity_hook_tokens.clone(),
+        },
+    );
+
     let router = Router::new()
+        .merge(antigravity_hook)
         .route("/health", get(health_check))
         .merge(auth_routes(auth_state))
         .merge(system_authenticated)
@@ -252,6 +270,7 @@ pub fn create_router_with_all_state(services: &AppServices, states: ModuleStates
         .merge(agent_authenticated)
         .merge(connection_test_authenticated)
         .merge(file_authenticated)
+        .merge(project_authenticated)
         .merge(mcp_authenticated)
         .merge(extension_authenticated)
         .merge(hub_authenticated)

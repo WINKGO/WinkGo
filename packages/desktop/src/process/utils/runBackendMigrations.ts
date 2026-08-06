@@ -206,6 +206,7 @@ async function isCommandAvailable(command: string): Promise<boolean> {
 async function ensureBuiltinChromeDevtoolsAvailability(server?: IMcpServer): Promise<void> {
   if (
     !server ||
+    server.enabled !== true ||
     server.name !== BUILTIN_CHROME_DEVTOOLS_NAME ||
     server.transport.type !== 'stdio' ||
     server.transport.command !== 'npx'
@@ -296,7 +297,11 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
 
   const refreshedServers = await mcpService.listServers.invoke();
   const chromeDevtoolsServer = refreshedServers.find((server) => server.name === BUILTIN_CHROME_DEVTOOLS_NAME);
-  await ensureBuiltinChromeDevtoolsAvailability(chromeDevtoolsServer);
+  // Availability discovery is diagnostic work, not a database migration.
+  // Keeping it off the awaited startup chain avoids making every launch wait
+  // for `npx`/Node resolution or an MCP process handshake. Disabled built-ins
+  // are skipped entirely by the helper above.
+  void ensureBuiltinChromeDevtoolsAvailability(chromeDevtoolsServer);
 
   if (
     imageEnvResolution.ok === true &&

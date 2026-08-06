@@ -13,16 +13,17 @@ use winkgo_api_types::{
     ApiResponse, BrowseDirectoryQuery, BrowseDirectoryResponse, CancelZipRequest, CopyFilesRequest, CopyFilesResponse,
     CreateTempFileRequest, DirOrFileResponse, FetchRemoteImageRequest, FileChangeInfoResponse, FileMetadataResponse,
     FileWatchRequest, GetFileMetadataRequest, GetFilesByDirRequest, GetImageBase64Request, ListWorkspaceFilesRequest,
-    ReadFileBufferRequest, ReadFileRequest, RemoveEntryRequest, RenameRequest, RenameResponse, SnapshotBaselineRequest,
-    SnapshotCompareResponse, SnapshotDiscardRequest, SnapshotInfoResponse, SnapshotStageRequest,
-    SnapshotWorkspaceRequest, WorkspaceFlatFileResponse, WorkspaceOfficeWatchRequest, WriteFileRequest, ZipRequest,
+    ReadFileBufferRequest, ReadFileRequest, RemoveEntryRequest, RenameRequest, RenameResponse, RevealItemRequest,
+    SnapshotBaselineRequest, SnapshotCompareResponse, SnapshotDiscardRequest, SnapshotInfoResponse,
+    SnapshotStageRequest, SnapshotWorkspaceRequest, WorkspaceFlatFileResponse, WorkspaceOfficeWatchRequest,
+    WriteFileRequest, ZipRequest,
 };
 use winkgo_common::ApiError;
 use winkgo_common::constants::UPLOAD_MAX_SIZE;
 
 use crate::browse;
 use crate::error::FileError;
-use crate::traits::{FileServiceRef, FileWatchServiceRef, SnapshotServiceRef};
+use crate::traits::{FileServiceRef, FileWatchServiceRef, ItemRevealerRef, SnapshotServiceRef};
 use crate::types::{
     CompareResult, CopyResult, DirOrFile, FileChangeInfo, FileMetadata, SnapshotInfo, SnapshotMode, WorkspaceFlatFile,
     ZipEntry,
@@ -44,6 +45,18 @@ impl From<FileError> for ApiError {
             },
             FileError::NotFound(message) => ApiError::NotFound(message),
             FileError::Internal(message) => ApiError::Internal(message),
+            FileError::WatchUnavailable { errno } => ApiError::coded(
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                "FILE_WATCH_UNAVAILABLE",
+                "File watching is unavailable on this system.",
+                errno.map(|number| serde_json::json!({ "errno": number })),
+            ),
+            FileError::RevealFailed(message) => ApiError::coded(
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "REVEAL_FAILED",
+                message,
+                None::<serde_json::Value>,
+            ),
         }
     }
 }
@@ -94,6 +107,8 @@ pub struct FileRouterState {
     pub file_service: FileServiceRef,
     pub watch_service: FileWatchServiceRef,
     pub snapshot_service: SnapshotServiceRef,
+    pub project: Arc<winkgo_project::ProjectService>,
+    pub revealer: ItemRevealerRef,
     pub allowed_roots: Vec<std::path::PathBuf>,
     /// Roots permitted by the shallow `/api/fs/browse` endpoint. This is
     /// typically wider than `allowed_roots` (it includes `cwd`, Windows
@@ -131,6 +146,7 @@ pub fn file_routes(state: FileRouterState) -> Router {
         .route("/api/fs/read-buffer", post(read_file_buffer))
         .route("/api/fs/write", post(write_file))
         .route("/api/fs/copy", post(copy_files))
+        .route("/api/fs/reveal", post(reveal_item))
         .route("/api/fs/remove", post(remove_entry))
         .route("/api/fs/rename", post(rename_entry))
         .route("/api/fs/temp", post(create_temp_file))
@@ -278,11 +294,44 @@ async fn copy_files(
     body: Result<Json<CopyFilesRequest>, JsonRejection>,
 ) -> Result<Json<ApiResponse<CopyFilesResponse>>, ApiError> {
     let Json(req) = body.map_err(ApiError::from)?;
+    let resolved = state
+        .project
+        .resolve_reference(winkgo_project::ReferenceInput {
+            pe_id: req.target.pe_id,
+            relative_path: req.target.relative_path,
+            op: winkgo_project::FileOp::Write,
+        })
+        .await
+        .map_err(ApiError::from)?;
+    let target_dir = resolved
+        .absolute_path
+        .ok_or_else(|| ApiError::BadRequest("copy target is not a local path".to_owned()))?;
     let result = state
         .file_service
-        .copy_files_to_workspace(&req.file_paths, &req.workspace, req.source_root.as_deref())
+        .copy_files_to_workspace(&req.file_paths, &target_dir, req.source_root.as_deref())
         .await?;
     Ok(Json(ApiResponse::ok(to_copy_response(result))))
+}
+
+async fn reveal_item(
+    State(state): State<FileRouterState>,
+    body: Result<Json<RevealItemRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<()>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    let resolved = state
+        .project
+        .resolve_reference(winkgo_project::ReferenceInput {
+            pe_id: req.pe_id,
+            relative_path: req.relative_path,
+            op: winkgo_project::FileOp::Read,
+        })
+        .await
+        .map_err(ApiError::from)?;
+    let absolute_path = resolved
+        .absolute_path
+        .ok_or_else(|| FileError::BadRequest("reveal target is not a local path".to_owned()))?;
+    state.revealer.reveal(&absolute_path).await?;
+    Ok(Json(ApiResponse::success()))
 }
 
 async fn remove_entry(
@@ -752,6 +801,15 @@ mod tests {
         assert_eq!(api_err.error_code(), "PATH_OUTSIDE_SANDBOX");
         assert_eq!(api_err.error_details().unwrap()["field"], "path");
         assert_eq!(api_err.error_details().unwrap()["operation"], "access");
+    }
+
+    #[test]
+    fn watch_unavailable_maps_to_stable_service_error() {
+        let api_error = ApiError::from(FileError::WatchUnavailable { errno: Some(24) });
+
+        assert_eq!(api_error.error_code(), "FILE_WATCH_UNAVAILABLE");
+        assert_eq!(api_error.status_code(), axum::http::StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(api_error.error_details().unwrap()["errno"], 24);
     }
 
     #[test]

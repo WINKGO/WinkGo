@@ -16,6 +16,13 @@
 
 import { BrowserWindow } from 'electron';
 import { ipcBridge } from '@/common';
+import { getCloseToTrayEnabled, getIsQuitting } from '@process/utils/tray';
+
+function resolveControlWindow(): BrowserWindow | null {
+  const focused = BrowserWindow.getFocusedWindow();
+  if (focused && !focused.isDestroyed()) return focused;
+  return BrowserWindow.getAllWindows().find((window) => !window.isDestroyed()) ?? null;
+}
 
 /**
  * 为指定窗口注册最大化状态监听器
@@ -45,7 +52,7 @@ export function registerWindowMaximizeListeners(window: BrowserWindow): void {
 export function initWindowControlsBridge(): void {
   // 最小化窗口 / Minimize window
   ipcBridge.windowControls.minimize.provider(() => {
-    const window = BrowserWindow.getFocusedWindow();
+    const window = resolveControlWindow();
     if (window) {
       window.minimize();
     }
@@ -54,7 +61,7 @@ export function initWindowControlsBridge(): void {
 
   // 最大化窗口 / Maximize window
   ipcBridge.windowControls.maximize.provider(() => {
-    const window = BrowserWindow.getFocusedWindow();
+    const window = resolveControlWindow();
     if (window) {
       window.maximize();
     }
@@ -63,7 +70,7 @@ export function initWindowControlsBridge(): void {
 
   // 取消最大化窗口 / Unmaximize window
   ipcBridge.windowControls.unmaximize.provider(() => {
-    const window = BrowserWindow.getFocusedWindow();
+    const window = resolveControlWindow();
     if (window) {
       window.unmaximize();
     }
@@ -72,8 +79,11 @@ export function initWindowControlsBridge(): void {
 
   // 关闭窗口 / Close window
   ipcBridge.windowControls.close.provider(() => {
-    const window = BrowserWindow.getFocusedWindow();
-    if (window) {
+    const window = resolveControlWindow();
+    if (!window) return Promise.resolve();
+    if (getCloseToTrayEnabled() && !getIsQuitting()) {
+      window.hide();
+    } else {
       window.close();
     }
     return Promise.resolve();
@@ -81,7 +91,7 @@ export function initWindowControlsBridge(): void {
 
   // 获取窗口是否最大化状态 / Get window maximized state
   ipcBridge.windowControls.isMaximized.provider(() => {
-    const window = BrowserWindow.getFocusedWindow();
+    const window = resolveControlWindow();
     return Promise.resolve(window?.isMaximized() ?? false);
   });
 

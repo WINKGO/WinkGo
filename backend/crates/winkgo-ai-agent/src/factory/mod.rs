@@ -3,6 +3,7 @@ pub mod acp_assembler;
 
 mod acp;
 mod acp_launch_policy;
+mod antigravity;
 mod context;
 pub(crate) mod winkgo_agent;
 
@@ -45,6 +46,10 @@ pub struct AgentFactoryDeps {
     /// run through `SessionAgentTask` (direct-CLI) instead of the ACP manager, so
     /// the spawner is unconditionally wired — there is no fallback to the ACP path.
     pub session_spawner: Arc<dyn winkgo_process::Spawner>,
+    /// Local callback address used by the Antigravity permission hook.
+    pub antigravity_hook_base_url: Option<String>,
+    /// Per-conversation authentication tokens for hook callbacks.
+    pub antigravity_hook_tokens: Arc<crate::antigravity_hook::HookTokenRegistry>,
 }
 
 /// Build a production agent factory that dispatches to concrete agent types.
@@ -72,6 +77,7 @@ async fn build_agent(deps: Arc<AgentFactoryDeps>, options: BuildTaskOptions) -> 
         AgentSessionKind::WinkGoAgent(winkgo_agent_context) => {
             winkgo_agent::build(deps, *winkgo_agent_context, model, ctx).await
         }
+        AgentSessionKind::Antigravity(antigravity_context) => antigravity::build(deps, *antigravity_context, ctx).await,
     }
 }
 

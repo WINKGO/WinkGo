@@ -98,6 +98,8 @@ vi.mock('react-i18next', () => ({
           'Imported {{successCount}} skill(s), {{failureCount}} failed: {{failures}}',
         'settings.skillsHub.importErrors.SKILL_IMPORT_FILE_TOO_LARGE':
           'A file in this skill is over the size limit. Remove the large file and try again.',
+        'settings.skillsHub.deleteAffectsNewOnlyHint':
+          'Deleting only affects new conversations. Skills already selected in existing conversations keep working.',
       };
       const template = translations[k] ?? (typeof options?.defaultValue === 'string' ? options.defaultValue : k);
       return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => String(options?.[key] ?? ''));
@@ -591,6 +593,22 @@ describe('SkillsHubSettings', () => {
       await waitFor(() => expect(mocks.messageSuccess).toHaveBeenCalledWith('Deleted 2 skill(s)'));
       // Batch mode exits after deletion.
       await waitFor(() => expect(screen.queryByTestId('btn-batch-delete')).not.toBeInTheDocument());
+    });
+
+    it('explains that deletion does not break skills already attached to existing conversations', async () => {
+      render(<SkillsHubSettings withWrapper={false} />);
+
+      await screen.findByTestId('my-skill-card-skill-alpha');
+      fireEvent.click(screen.getByTestId('btn-delete-skill-alpha'));
+
+      await waitFor(() => expect(mocks.modalConfirm).toHaveBeenCalled());
+      const config = mocks.modalConfirm.mock.calls.at(-1)?.[0] as { content?: React.ReactNode };
+      render(<>{config.content}</>);
+      expect(
+        screen.getByText(
+          'Deleting only affects new conversations. Skills already selected in existing conversations keep working.'
+        )
+      ).toBeInTheDocument();
     });
 
     it('select all toggles every visible skill', async () => {

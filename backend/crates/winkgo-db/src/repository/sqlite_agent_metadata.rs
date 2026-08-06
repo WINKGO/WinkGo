@@ -645,8 +645,8 @@ mod tests {
     async fn seed_rows_populated_after_migrations() {
         let (repo, _db) = setup().await;
         let rows = repo.list_all().await.unwrap();
-        // 37 ACP vendors + 2 non-ACP builtins + 1 internal = 40.
-        assert_eq!(rows.len(), 40);
+        // 39 ACP vendors + 2 non-ACP builtins + 1 internal = 42.
+        assert_eq!(rows.len(), 43, "seed rows: 42 pre-existing + antigravity");
         assert!(
             rows.iter()
                 .any(|r| r.name == "Claude Code" && r.agent_source == "builtin")

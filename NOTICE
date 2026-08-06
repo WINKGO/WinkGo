@@ -9,6 +9,11 @@ https://github.com/iOfficeAI/AionUi
 Commit: 2d8925fc67a97a20996fadcd2a0862b778b572ba
 Copyright 2025 AionUi (aionui.com)
 
+Selected later compatibility, stability, and agent-registry patches were
+additionally adapted from AionUI and AionCore history reviewed through
+2026-08-03. The exact selected commits and scopes are recorded in:
+docs/vendor/aionui-selected-post-v2.1.41-patches.md
+
 AionCore v0.1.52
 https://github.com/iOfficeAI/AionCore
 Commit: 76f5554286ba0b6d33fb74d5c2bb2b3b0b83100d

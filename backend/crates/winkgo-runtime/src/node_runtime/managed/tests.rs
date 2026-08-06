@@ -144,6 +144,27 @@ fn managed_runtime_official_source_uses_nodejs_org() {
 }
 
 #[test]
+fn managed_runtime_download_candidates_prefer_verified_domestic_mirror() {
+    let spec = PlatformSpec {
+        folder_suffix: "win-x64",
+        archive_ext: "zip",
+        archive_sha256: "1054540bce22b54ec7e50ebc078ec5d090700a77657607a58f6a64df21f49fdd",
+        runtime_key: "win32-x64",
+        executable: "node.exe",
+    };
+    let [mirror, official] = ManagedNodeDownloadSource::candidates(spec);
+
+    assert_eq!(mirror.source, "npmmirror.com");
+    assert_eq!(
+        mirror.url,
+        "https://registry.npmmirror.com/-/binary/node/v24.11.0/node-v24.11.0-win-x64.zip"
+    );
+    assert_eq!(mirror.sha256, spec.archive_sha256);
+    assert_eq!(official.source, "nodejs.org");
+    assert_eq!(official.sha256, spec.archive_sha256);
+}
+
+#[test]
 fn managed_node_contract_uses_runtime_key_and_exported_root() {
     let tmp = tempfile::tempdir().unwrap();
     let bundle_root = tmp.path().join("managed-resources");

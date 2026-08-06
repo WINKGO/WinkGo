@@ -16,6 +16,7 @@ const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { verifyDatabaseMigrations } = require('./verify-database-migrations.cjs');
 
 // DMG retry logic for macOS: detects DMG creation failures by checking artifacts
 // (.app exists but .dmg missing) and retries only the DMG step using
@@ -893,6 +894,14 @@ let buildFailed = false;
 
 try {
   restorePackageVersionOverride = applyDebugAutoUpdateVersionOverride(packageJsonPath);
+
+  // A released Core database remembers every applied migration. Omitting or
+  // editing one in a later installer makes existing users fail before the UI
+  // can start. Refuse to build such an update.
+  const migrationAudit = verifyDatabaseMigrations(path.resolve(__dirname, '..'));
+  console.log(
+    `✅ Database migrations locked: ${migrationAudit.count} files, latest version ${migrationAudit.latestVersion}`
+  );
 
   // 1. Ensure package.json main entry is correct for electron-vite
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));

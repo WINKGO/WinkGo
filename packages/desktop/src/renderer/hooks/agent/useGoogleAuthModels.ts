@@ -27,18 +27,26 @@ export const useGoogleAuthModels = (): GoogleAuthModelResult => {
   const proxyKey = googleConfig?.proxy || '';
 
   // Check whether Google Auth CLI is ready.
-  const { data: isGoogleAuth } = useSWR('google.auth.status' + proxyKey, async () => {
-    const data = await ipcBridge.googleAuth.status.invoke({ proxy: googleConfig?.proxy });
-    return data.success;
-  });
+  const { data: isGoogleAuth } = useSWR(
+    'google.auth.status' + proxyKey,
+    async () => {
+      const data = await ipcBridge.googleAuth.status.invoke({ proxy: googleConfig?.proxy });
+      return data.success;
+    },
+    { revalidateOnFocus: true }
+  );
 
   const shouldCheckSubscription = Boolean(isGoogleAuth);
 
   // Only hit subscription API when authenticated.
   const subscriptionKey = shouldCheckSubscription ? 'google.subscription.status' + proxyKey : null;
-  const { data: subscriptionResponse } = useSWR(subscriptionKey, () => {
-    return ipcBridge.google.subscriptionStatus.invoke({ proxy: googleConfig?.proxy });
-  });
+  const { data: subscriptionResponse } = useSWR(
+    subscriptionKey,
+    () => {
+      return ipcBridge.google.subscriptionStatus.invoke({ proxy: googleConfig?.proxy });
+    },
+    { revalidateOnFocus: true }
+  );
 
   return {
     isGoogleAuth: Boolean(isGoogleAuth),

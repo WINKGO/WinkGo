@@ -20,7 +20,8 @@ import { useSettingsViewMode } from '@/renderer/components/settings/SettingsModa
 import { useTalkToButler } from '@/renderer/hooks/assistant/useTalkToButler';
 
 const PetSettings: React.FC = () => {
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(false);
+  const [enabledResolved, setEnabledResolved] = useState(false);
   const [size, setSize] = useState(280);
   const [dnd, setDnd] = useState(false);
   const [confirmEnabled, setConfirmEnabled] = useState(true);
@@ -31,7 +32,6 @@ const PetSettings: React.FC = () => {
   const isDesktop = isElectronDesktop();
 
   useEffect(() => {
-    setEnabled(configService.get('pet.enabled') ?? true);
     setSize(configService.get('pet.size') ?? 280);
     setDnd(configService.get('pet.dnd') ?? false);
     setConfirmEnabled(configService.get('pet.confirmEnabled') ?? true);
@@ -48,6 +48,7 @@ const PetSettings: React.FC = () => {
       .then(([nextEnabled, nextSize, nextDnd, nextConfirmEnabled]) => {
         if (cancelled) return;
         setEnabled(nextEnabled);
+        setEnabledResolved(true);
         setSize(nextSize);
         setDnd(nextDnd);
         setConfirmEnabled(nextConfirmEnabled);
@@ -63,6 +64,9 @@ const PetSettings: React.FC = () => {
       })
       .catch((error) => {
         console.error('[PetSettings] Failed to synchronize desktop pet settings:', error);
+        if (cancelled) return;
+        setEnabled(false);
+        setEnabledResolved(true);
       });
 
     return () => {
@@ -142,7 +146,14 @@ const PetSettings: React.FC = () => {
           {t('pet.butlerSetup')}
         </Button>
       ),
-      component: <Switch checked={enabled} onChange={handleEnabledChange} />,
+      component: (
+        <Switch
+          checked={enabled}
+          loading={!enabledResolved}
+          disabled={!enabledResolved}
+          onChange={handleEnabledChange}
+        />
+      ),
     },
     {
       key: 'size',

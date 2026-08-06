@@ -10,6 +10,7 @@
 //! compile in parallel.
 
 mod acp_conn;
+mod antigravity;
 mod claude_conn;
 mod codex_conn;
 mod conversation_session;
@@ -19,6 +20,9 @@ mod suspend;
 mod types;
 
 pub use acp_conn::{AcpConnection, AcpSessionBackend, acp_capabilities};
+pub use antigravity::{
+    AntigravityConnection, AntigravitySessionBackend, VersionDrift, antigravity_capabilities, version_drift,
+};
 pub use claude_conn::{ClaudeConnection, ClaudeSessionBackend};
 pub use codex_conn::{CodexConnection, CodexSessionBackend, codex_capabilities};
 pub use conversation_session::{ConversationSession, MsgStatus, PendingMessage};
@@ -94,6 +98,16 @@ pub trait SessionBackend: Send + Sync {
     /// which recovers via its own `permission_router`).
     fn pending_permission_requests(&self) -> Vec<PendingPermissionView> {
         Vec::new()
+    }
+
+    /// Force-stop an active backend process. Backends that only need their
+    /// normal drop-based cleanup can keep the default no-op implementation.
+    async fn terminate(&self) {}
+
+    /// Ask the user to decide a permission request raised by an external hook.
+    /// Antigravity uses this because its headless CLI cannot prompt directly.
+    async fn request_external_permission(&self, _tool_name: String, _input: serde_json::Value) -> PermissionDecision {
+        PermissionDecision::Denied
     }
 }
 
@@ -221,6 +235,8 @@ pub struct SessionConfig {
     /// only (byte-identical to the pre-#103 spawn). Carried into the F-4 wake
     /// recipe so a resume-respawn re-applies the same env (R16 continuity).
     pub spawn_env: Vec<winkgo_common::EnvVar>,
+    /// Antigravity only: `.agents/hooks.json` body for WINK GO's permission bridge.
+    pub permission_hook_body: Option<String>,
     /// G1-A: the codex sandbox policy injected into `thread/start` (the native
     /// codex app-server `sandbox` field; codex_conn serializes it data-driven
     /// instead of the hardcoded `"workspace-write"`). `None` (default) ⇒

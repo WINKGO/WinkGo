@@ -29,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import useSWR, { mutate as swrMutate } from 'swr';
 import SettingsPageWrapper from '../components/SettingsPageWrapper';
+import SkillFileBrowser from './SkillFileBrowser';
 import { getAssistantsUsingSkill } from './SkillUsedByStack';
 
 interface SkillInfo {
@@ -573,6 +574,10 @@ const SkillDetailPage: React.FC = () => {
                 </div>
               </SectionCard>
             ) : null}
+
+            <SectionCard title={t('settings.skillsHub.detailFilesTitle')} data-testid='skill-detail-files'>
+              <SkillFileBrowser skill={skill} />
+            </SectionCard>
 
             {/* Single source of truth: assistants using this skill, with inline add/remove */}
             <SectionCard

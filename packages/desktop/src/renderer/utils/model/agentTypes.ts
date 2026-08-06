@@ -230,6 +230,15 @@ export function formatManagedAgentDiagnosticMessage(t: TFunction, agent: Managed
         resource,
         defaultValue: fallback,
       });
+    case 'version_drift_older':
+    case 'version_drift_newer': {
+      const explanation = t(`settings.agentManagement.errorCodes.${agent.last_check_error_code}`, {
+        defaultValue: agent.last_check_guidance || '',
+      });
+      const versions = agent.last_check_error_message?.trim();
+      if (!explanation) return versions || fallback;
+      return versions ? `${explanation}（${versions}）` : explanation;
+    }
     default:
       return fallback;
   }

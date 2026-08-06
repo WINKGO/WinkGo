@@ -1468,7 +1468,7 @@ mod tests {
         // when none of the CLIs are installed on the test host.
         let reg = registry().await;
         let all = reg.list_all_including_hidden().await;
-        assert_eq!(all.len(), 40);
+        assert_eq!(all.len(), 43);
     }
 
     #[tokio::test]
@@ -1544,7 +1544,7 @@ mod tests {
                 .unwrap_or_else(|error| panic!("missing release lock for {backend}: {error}"));
             locked += 1;
         }
-        assert_eq!(locked, 11);
+        assert_eq!(locked, 13);
     }
 
     /// On a host that has *none* of the seeded CLIs installed, the
@@ -1579,7 +1579,8 @@ mod tests {
         let reg = registry().await;
         let all = reg.list_all_including_hidden().await;
         let count = |t: AgentType| all.iter().filter(|m| m.agent_type == t).count();
-        assert_eq!(count(AgentType::Acp), 37);
+        assert_eq!(count(AgentType::Acp), 39);
+        assert_eq!(count(AgentType::Antigravity), 1);
         assert_eq!(count(AgentType::Nanobot), 1);
         assert_eq!(count(AgentType::OpenclawGateway), 1);
         assert_eq!(count(AgentType::WinkGoAgent), 1);
@@ -1689,7 +1690,7 @@ mod tests {
     async fn diagnostic_snapshot_pairs_rows_with_reasons() {
         let reg = registry().await;
         let snapshot = reg.diagnostic_snapshot().await;
-        assert_eq!(snapshot.len(), 40, "every row appears once");
+        assert_eq!(snapshot.len(), 43, "every row appears once");
 
         for (meta, reason) in &snapshot {
             match (meta.available, reason) {

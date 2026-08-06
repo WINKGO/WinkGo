@@ -16,7 +16,18 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { setGlobalNavigate } from '@/renderer/utils/navigation';
-import { usePreviewContext } from '@renderer/pages/conversation/Preview';
+import { PreviewPanel, usePreviewContext } from '@renderer/pages/conversation/Preview';
+import { ProjectPanelHost } from '@renderer/components/layout/ProjectPanelHost';
+import { ProjectPanelMobileOverlay } from '@renderer/components/layout/ProjectPanelMobileOverlay';
+import { setCurrentProject, useCurrentProject } from '@renderer/pages/conversation/explorer/currentProjectStore';
+import { setCurrentConversation } from '@renderer/pages/conversation/explorer/currentConversationStore';
+import { useContainerWidth } from '@renderer/pages/conversation/hooks/useContainerWidth';
+import { useProjectExplorerColumnWidth } from '@renderer/hooks/ui/useProjectExplorerColumnWidth';
+import { useProjectPreviewRegionWidth } from '@renderer/hooks/ui/useProjectPreviewRegionWidth';
+import { useProjectPanelCollapse } from '@renderer/hooks/ui/useProjectPanelCollapse';
+import { isMacEnvironment } from '@renderer/pages/conversation/utils/detectPlatform';
+import { dispatchWorkspaceToggleEvent } from '@renderer/utils/workspace/workspaceEvents';
+import { MIN_PREVIEW_PANEL_PX } from '@renderer/pages/conversation/utils/layoutCalc';
 import { LayoutContext } from '@renderer/hooks/context/LayoutContext';
 import { NavigationHistoryProvider } from '@renderer/hooks/context/NavigationHistoryContext';
 import { useDeepLink } from '@renderer/hooks/system/useDeepLink';
@@ -28,6 +39,7 @@ import { cleanupSiderTooltips } from '@renderer/utils/ui/siderTooltip';
 import { useConversationShortcuts } from '@renderer/hooks/ui/useConversationShortcuts';
 import { isElectronDesktop } from '@renderer/utils/platform';
 import { WINK_GO_BRAND_ICON as winkGoWordmark } from '@renderer/utils/model/winkGoBranding';
+import { ExpandLeft } from '@icon-park/react';
 import '@renderer/styles/layout.css';
 
 const SidebarIcon: React.FC<{ size?: number; strokeWidth?: number }> = ({ size = 18, strokeWidth = 4 }) => (
@@ -149,24 +161,46 @@ const Layout: React.FC<{
     }
     void navigate('/guid');
   }, [navigate]);
-  // Close preview whenever the user leaves the conversation route entirely
-  // (e.g. switches to a team, /guid, or settings). Within /conversation/:id
-  // the finer-grained closePreviewIfWorkspaceChanged in conversation/index.tsx
-  // handles workspace changes, so we only need to act here on route-type changes.
-  // Use closePreview directly — closePreviewIfWorkspaceChanged skips the call
-  // when lastWorkspaceRef is already null (e.g. on team routes where it was
-  // never updated), which would leave the panel open.
-  const { closePreview: closePreviewOnRouteChange } = usePreviewContext();
+  // Project Explorer and preview live above the per-conversation subtree, so
+  // same-project switches preserve monitor state and preview tabs. The legacy
+  // workspace panel remains available when a conversation has no project_id.
+  const { closePreview: closePreviewOnRouteChange, isOpen: isPreviewOpen } = usePreviewContext();
+  const currentProject = useCurrentProject();
+  const { containerRef: mainRowRef, containerWidth: mainRowWidth } = useContainerWidth();
+  const explorerActive = Boolean(currentProject) && !isMobile;
+  const { widthPx: explorerWidthPx, createDragHandle: createExplorerDragHandle } = useProjectExplorerColumnWidth(
+    mainRowWidth,
+    isPreviewOpen,
+    explorerActive
+  );
+  const { collapsed: explorerCollapsed } = useProjectPanelCollapse({
+    projectId: currentProject,
+    isMobile,
+    active: Boolean(currentProject),
+  });
+  const isMacRuntime = isMacEnvironment();
+  const toggleExplorer = useCallback(() => {
+    dispatchWorkspaceToggleEvent();
+  }, []);
+  const explorerMobileWidthPx = Math.min(420, Math.max(280, Math.round(viewportWidth * 0.85)));
+  const previewRegionActive = Boolean(currentProject) && !isMobile && isPreviewOpen;
+  const { widthPx: previewWidthPx, createDragHandle: createPreviewRegionDragHandle } = useProjectPreviewRegionWidth(
+    mainRowWidth,
+    explorerCollapsed ? 0 : explorerWidthPx,
+    previewRegionActive
+  );
   const routeLayoutMountedRef = useRef(false);
   useEffect(() => {
     if (!routeLayoutMountedRef.current) {
       routeLayoutMountedRef.current = true;
       return; // skip initial mount — preview starts closed, don't wipe persisted tabs
     }
-    if (!location.pathname.startsWith('/conversation/')) {
+    if (!workspaceAvailable) {
       closePreviewOnRouteChange();
+      setCurrentProject(null);
+      setCurrentConversation(null);
     }
-  }, [location.pathname, closePreviewOnRouteChange]);
+  }, [location.pathname, workspaceAvailable, closePreviewOnRouteChange]);
 
   const collapsedRef = useRef(collapsed);
   const dragStateRef = useRef<{ active: boolean; startX: number; startWidth: number }>({
@@ -289,7 +323,6 @@ const Layout: React.FC<{
         startX: event.clientX,
         startWidth: collapsedRef.current ? DESKTOP_COLLAPSED_WIDTH : DEFAULT_SIDER_WIDTH,
       };
-      document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
     },
     [isMobile]
@@ -313,7 +346,6 @@ const Layout: React.FC<{
     const endDrag = () => {
       if (!dragStateRef.current.active) return;
       dragStateRef.current.active = false;
-      document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
 
@@ -426,7 +458,7 @@ const Layout: React.FC<{
               </ArcoLayout.Content>
               {!isMobile && (
                 <div
-                  className='absolute top-0 h-full w-8px z-20 cursor-col-resize group'
+                  className='absolute top-0 h-full w-8px z-20 group'
                   style={{ right: '-4px' }}
                   onMouseDown={beginSiderResizeDrag}
                   aria-hidden='true'
@@ -436,23 +468,90 @@ const Layout: React.FC<{
               )}
             </ArcoLayout.Sider>
 
-            <ArcoLayout.Content
-              className={'bg-1 layout-content flex flex-col min-h-0'}
-              onClick={() => {
-                if (isMobile && !collapsed) setCollapsed(true);
-              }}
-              style={
-                isMobile
-                  ? {
-                      width: '100%',
-                    }
-                  : undefined
-              }
-            >
-              <Outlet />
-              {directorySelectionContextHolder}
-              <PwaPullToRefresh />
-            </ArcoLayout.Content>
+            <div ref={mainRowRef} className='flex flex-1 min-h-0 overflow-hidden'>
+              <ArcoLayout.Content
+                className={'bg-1 layout-content flex flex-col min-h-0 flex-1'}
+                onClick={() => {
+                  if (isMobile && !collapsed) setCollapsed(true);
+                }}
+                style={isMobile ? { width: '100%' } : undefined}
+              >
+                <Outlet />
+                {directorySelectionContextHolder}
+                <PwaPullToRefresh />
+              </ArcoLayout.Content>
+
+              {previewRegionActive && (
+                <div
+                  data-project-preview-region
+                  className='preview-panel flex flex-col relative overflow-visible rounded-[15px] mb-[12px] mr-[12px] ml-[8px]'
+                  style={{
+                    width: `${Math.round(previewWidthPx)}px`,
+                    flexGrow: 0,
+                    flexShrink: 0,
+                    border: '1px solid var(--bg-3)',
+                    minWidth: `${MIN_PREVIEW_PANEL_PX}px`,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {createPreviewRegionDragHandle({
+                    className: 'absolute top-0 bottom-0 z-30',
+                    style: { width: '20px', left: '-20px' },
+                    reverse: true,
+                    linePlacement: 'end',
+                    lineClassName: 'opacity-30 group-hover:opacity-100 group-active:opacity-100',
+                    lineStyle: { width: '2px' },
+                  })}
+                  <div className='h-full w-full overflow-hidden rounded-[15px]'>
+                    <PreviewPanel />
+                  </div>
+                </div>
+              )}
+
+              {!isMobile && (
+                <ProjectPanelHost
+                  widthPx={explorerWidthPx}
+                  collapsed={explorerCollapsed}
+                  onToggle={toggleExplorer}
+                  showChevron={!isMacRuntime}
+                  dragHandle={createExplorerDragHandle({
+                    className: 'absolute left-0 top-0 bottom-0 z-20',
+                    reverse: true,
+                  })}
+                />
+              )}
+            </div>
+
+            {!isMobile && !isMacRuntime && Boolean(currentProject) && explorerCollapsed && (
+              <button
+                type='button'
+                className='workspace-toggle-floating fixed z-101 flex items-center justify-center'
+                style={{
+                  top: '50%',
+                  right: '0px',
+                  transform: 'translateY(-50%)',
+                  width: '20px',
+                  height: '64px',
+                  borderTopLeftRadius: '10px',
+                  borderBottomLeftRadius: '10px',
+                  backgroundColor: 'var(--bg-2)',
+                  boxShadow: '0 8px 20px rgba(0, 0, 0, 0.12)',
+                }}
+                onClick={toggleExplorer}
+                aria-label='Expand explorer'
+              >
+                <ExpandLeft size={16} />
+              </button>
+            )}
+
+            {isMobile && Boolean(currentProject) && (
+              <ProjectPanelMobileOverlay
+                projectId={currentProject as string}
+                collapsed={explorerCollapsed}
+                onCollapse={toggleExplorer}
+                widthPx={explorerMobileWidthPx}
+              />
+            )}
           </ArcoLayout>
         </div>
       </NavigationHistoryProvider>

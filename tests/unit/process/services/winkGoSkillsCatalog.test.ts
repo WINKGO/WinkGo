@@ -110,4 +110,48 @@ describe('WINK GO Skills catalog', () => {
     expect(config.allowedToolNames).toContain('music.launch_netease_music');
     expect(config.compatibilityToolAliases['desktop_agents.add_workbuddy_skill']).toBeUndefined();
   });
+
+  it('opens Soda Music as a visible window instead of leaving a hidden black host', () => {
+    syncWinkGoSkillBridge(['soda_music']);
+    const config = JSON.parse(
+      fs.readFileSync(path.join(temporaryDirectory, 'winkgo-runtime-skills', 'enabled-skills.json'), 'utf8')
+    );
+
+    expect(config.compatibilityToolAliases['music.fizz_app_open']).toMatchObject({
+      canonicalToolName: 'music.station_open',
+      defaultArguments: { player: 'fizz', minimize: false },
+    });
+  });
+
+  it('removes ambiguous legacy music aliases when multiple players are enabled', () => {
+    const plan = syncWinkGoSkillBridge(['netease_music', 'qq_music', 'soda_music']);
+    const config = JSON.parse(
+      fs.readFileSync(path.join(temporaryDirectory, 'winkgo-runtime-skills', 'enabled-skills.json'), 'utf8')
+    );
+    const ambiguousAliases = [
+      'music.like_current_song',
+      'music.open_music_app',
+      'music.search_and_play',
+      'music.station_play_toggle',
+      'music.toggle_lyrics',
+    ];
+    const canonicalToolsThatMustNotBeRewritten = [
+      'music.station_lyrics_toggle',
+      'music.track_heart_toggle',
+      'music.track_resolve_and_start',
+    ];
+
+    expect(plan.enabledSkillIds).toEqual(['netease_music', 'qq_music', 'soda_music']);
+    for (const aliasName of ambiguousAliases) {
+      expect(config.compatibilityToolAliases[aliasName]).toBeUndefined();
+      expect(config.allowedToolNames).not.toContain(aliasName);
+    }
+    for (const toolName of canonicalToolsThatMustNotBeRewritten) {
+      expect(config.compatibilityToolAliases[toolName]).toBeUndefined();
+      expect(config.allowedToolNames).toContain(toolName);
+    }
+    expect(config.allowedToolNames).toContain('music.track_resolve_and_start');
+    expect(config.allowedToolNames).toContain('music.fizz_search_play');
+    expect(config.allowedToolNames).toContain('music.qq_lyrics_toggle');
+  });
 });

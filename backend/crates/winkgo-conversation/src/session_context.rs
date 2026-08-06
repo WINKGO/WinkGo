@@ -6,8 +6,8 @@ use std::sync::Arc;
 use chrono::Datelike;
 use tracing::{debug, info, warn};
 use winkgo_ai_agent::session_context::{
-    AcpSessionBuildContext, AgentSessionContext, AgentSessionKind, ConversationContext, WinkGoAgentSessionBuildContext,
-    WorkspaceContext,
+    AcpSessionBuildContext, AgentSessionContext, AgentSessionKind, AntigravitySessionBuildContext, ConversationContext,
+    WinkGoAgentSessionBuildContext, WorkspaceContext,
 };
 use winkgo_ai_agent::shared_kernel::{ConfigKey, ConfigValue, ModeId, ModelId, PersistedSessionState};
 use winkgo_ai_agent::types::BuildTaskOptions;
@@ -186,6 +186,18 @@ impl<'a> SessionContextBuilder<'a> {
             AgentType::WinkGoAgent => Ok(AgentSessionKind::WinkGoAgent(Box::new(build_winkgo_agent_context(
                 row, extra, team, seed,
             )))),
+            AgentType::Antigravity => {
+                let acp = self.build_acp_context(row, extra, team).await?;
+                Ok(AgentSessionKind::Antigravity(Box::new(
+                    AntigravitySessionBuildContext {
+                        config: acp.config,
+                        team: acp.team,
+                        belongs_to_team: acp.belongs_to_team,
+                        session_id: acp.session_id,
+                        session_snapshot: acp.session_snapshot,
+                    },
+                )))
+            }
             AgentType::Gemini
             | AgentType::Codex
             | AgentType::OpenclawGateway

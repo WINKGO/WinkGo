@@ -53,7 +53,7 @@
     },
     "music.fizz_app_open": {
       "canonical_tool_name": "music.station_open",
-      "default_arguments": { "player": "fizz" }
+      "default_arguments": { "player": "fizz", "minimize": false }
     },
     "music.fizz_lyrics_toggle": {
       "canonical_tool_name": "music.station_lyrics_toggle",

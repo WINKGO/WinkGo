@@ -508,7 +508,15 @@
     }
   },
   "contextUsage": {
-    "contextUsed": "コンテキスト使用量"
+    "contextUsed": "コンテキスト使用量",
+    "tokensUsed": "{{tokens}} トークン使用済み",
+    "windowUnknown": "コンテキストウィンドウのサイズは不明",
+    "sessionCost": "セッションコスト",
+    "input": "入力",
+    "output": "出力",
+    "thought": "思考",
+    "cachedRead": "キャッシュ読み取り",
+    "cachedWrite": "キャッシュ書き込み"
   },
   "skill_generator": {
     "title": "Generate Skill/Rule",
@@ -573,8 +581,50 @@
       },
       "ACP_EMPTY_TURN_REFUSAL": {
         "body": "モデルは、表示できる返信を生成する前にこのリクエストを拒否しました。"
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "このターンで {{count}} 件のステップが失敗し、実行されませんでした。agy はこうしたターンも成功として終了するため、返答ではなく実際の結果を確認してください。"
+      },
+      "ANTIGRAVITY_VERSION_OLDER": {
+        "body": "インストールされている agy {{reported}} は、この統合が検証した {{verified}} より古いため、一部の機能が利用できない可能性があります。agy の更新をご検討ください。"
+      },
+      "ANTIGRAVITY_VERSION_NEWER": {
+        "body": "インストールされている agy {{reported}} は、この統合が検証した {{verified}} より新しいバージョンです。通常は問題なく動作しますが、異常があればご報告ください。"
       }
     }
   },
-  "notFound": "会話が存在しないか、削除されました"
+  "officePreview": {
+    "fileWatchUnavailable": "リアルタイムのファイル監視を利用できません。新しい Office ファイルは自動でプレビューされません。WINK GO を再起動し、問題が続く場合は多数のファイル監視を使用しているプログラムを終了してから再試行してください。"
+  },
+  "notFound": "会話が存在しないか、削除されました",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "名前を変更",
+      "addToChat": "チャットに追加"
+    },
+    "namePlaceholder": "名前",
+    "deleteConfirm": "「{{name}}」を削除しますか？この操作は取り消せません。",
+    "renameFailed": "名前の変更に失敗しました",
+    "tabs": {
+      "files": "ファイル",
+      "changes": "変更"
+    },
+    "changesPlaceholder": "ソース管理は別レーンで近日公開。",
+    "addedToChat": "{{name}} をチャットに追加しました",
+    "imported": "{{count}} 件のファイルをインポートしました",
+    "importPartialFailed": "{{copied}} 件コピー、{{failed}} 件失敗（名前の重複または非対応）",
+    "importFailed": "ファイルのインポートに失敗しました",
+    "search": {
+      "placeholder": "ファイル名で検索",
+      "searching": "検索中…",
+      "empty": "一致するファイルがありません",
+      "limitReached": "最初の {{count}} 件を表示 — 絞り込んでください"
+    }
+  }
 }

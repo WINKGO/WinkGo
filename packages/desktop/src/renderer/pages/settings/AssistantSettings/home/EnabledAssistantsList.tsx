@@ -40,6 +40,7 @@ type EnabledAssistantsListProps = {
   onOpenDetail: (assistant: AssistantListItem) => void;
   onToggleEnabled: (assistant: AssistantListItem, checked: boolean) => void;
   onReorder: (activeId: string, overId: string) => void | Promise<void>;
+  onStartChat: (assistant: AssistantListItem) => void;
 };
 
 type EnabledAssistantRowProps = {
@@ -48,6 +49,7 @@ type EnabledAssistantRowProps = {
   draggable: boolean;
   onOpenDetail: (assistant: AssistantListItem) => void;
   onToggleEnabled: (assistant: AssistantListItem, checked: boolean) => void;
+  onStartChat: (assistant: AssistantListItem) => void;
 };
 
 const EnabledAssistantRow: React.FC<EnabledAssistantRowProps> = ({
@@ -56,6 +58,7 @@ const EnabledAssistantRow: React.FC<EnabledAssistantRowProps> = ({
   draggable,
   onOpenDetail,
   onToggleEnabled,
+  onStartChat,
 }) => {
   const { t } = useTranslation();
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -116,6 +119,17 @@ const EnabledAssistantRow: React.FC<EnabledAssistantRowProps> = ({
         </div>
       </div>
       <div className='ml-10px flex flex-shrink-0 items-center gap-8px sm:gap-14px' onClick={(e) => e.stopPropagation()}>
+        {assistant.enabled !== false ? (
+          <Button
+            type='text'
+            size='small'
+            data-testid={`btn-chat-${assistant.id}`}
+            className='!inline-flex !h-28px !items-center !justify-center !rounded-9px !bg-fill-2 !px-12px !leading-none !text-t-secondary !opacity-0 transition-all hover:!bg-primary-6 hover:!text-white group-hover:!opacity-100'
+            onClick={() => onStartChat(assistant)}
+          >
+            {t('settings.assistantGoChat')}
+          </Button>
+        ) : null}
         <span className='hidden min-w-0 shrink-0 sm:inline-flex'>
           <RuntimeBadge assistant={assistant} />
         </span>
@@ -138,6 +152,7 @@ const EnabledAssistantsList: React.FC<EnabledAssistantsListProps> = ({
   onOpenDetail,
   onToggleEnabled,
   onReorder,
+  onStartChat,
 }) => {
   const { t } = useTranslation();
   const sensors = useSensors(
@@ -196,6 +211,7 @@ const EnabledAssistantsList: React.FC<EnabledAssistantsListProps> = ({
                   draggable={sortingEnabled}
                   onOpenDetail={onOpenDetail}
                   onToggleEnabled={onToggleEnabled}
+                  onStartChat={onStartChat}
                 />
               ))}
             </div>

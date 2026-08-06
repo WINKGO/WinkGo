@@ -296,6 +296,15 @@ pub struct SessionAgentTask {
 }
 
 impl SessionAgentTask {
+    /// Raise a tool approval that originated in an external permission hook.
+    pub async fn request_external_permission(
+        &self,
+        tool_name: String,
+        input: serde_json::Value,
+    ) -> winkgo_session::PermissionDecision {
+        self.backend.request_external_permission(tool_name, input).await
+    }
+
     /// Build a task around an already-opened `SessionBackend` and start the
     /// event-translation pump. `agent_type` is `AgentType::Acp` for claude/codex
     /// (they present as the ACP family to the rest of the app).
@@ -1070,6 +1079,22 @@ pub struct SessionBuildInputs<'a> {
     /// spawn-time `session-cli-config` dump AND threads it (with the vendor
     /// label) into the `SessionAgentTask` for the send-time dump.
     pub prompt_dump_dir: Option<std::path::PathBuf>,
+    /// Antigravity-only hook configuration restored when approval mode is active.
+    pub permission_hook_body: Option<String>,
+}
+
+/// Resolve the session's actual initial mode. A persisted runtime selection
+/// wins over the create-time seed, then aliases are normalized for the agent.
+pub(crate) fn resolved_session_mode(
+    config: &AcpBuildExtra,
+    session_snapshot: Option<&PersistedSessionState>,
+    metadata: &winkgo_api_types::AgentMetadata,
+) -> Option<String> {
+    session_snapshot
+        .and_then(|s| s.current_mode_id.as_ref().map(|m| m.as_str().to_owned()))
+        .or_else(|| config.session_mode.clone())
+        .map(|m| crate::manager::acp::mode_normalize::normalize_requested_mode(metadata, &m))
+        .filter(|s| !s.is_empty())
 }
 
 /// The pure spec + mode/model mapping — the sibling of clean-slate's
@@ -1108,16 +1133,101 @@ fn spec_mode_model(
     // the catalog row's `yolo_id` / backend label; a mode without an alias passes
     // through unchanged. Runs BEFORE the codex sandbox/approval derivation downstream
     // (which matches both the alias and the native id, so ordering is safe).
-    let mode = session_snapshot
-        .and_then(|s| s.current_mode_id.as_ref().map(|m| m.as_str().to_owned()))
-        .or_else(|| config.session_mode.clone())
-        .map(|m| crate::manager::acp::mode_normalize::normalize_requested_mode(metadata, &m))
-        .filter(|s| !s.is_empty());
+    let mode = resolved_session_mode(config, session_snapshot, metadata);
     let model = session_snapshot
         .and_then(|s| s.current_model_id.as_ref().map(|m| m.as_str().to_owned()))
         .or_else(|| config.current_model_id.clone())
         .filter(|s| !s.is_empty());
     (spec, mode, model)
+}
+
+/// Build an Antigravity (`agy`) direct-CLI session.
+pub async fn build_antigravity_instance(
+    inputs: SessionBuildInputs<'_>,
+    spawner: Arc<dyn winkgo_process::Spawner>,
+) -> Result<crate::agent_task::AgentInstance, AgentError> {
+    use winkgo_session::{AntigravityConnection, BackendConnection, McpServerSpec, SessionConfig, SessionInit};
+
+    let SessionBuildInputs {
+        conversation_id,
+        workspace,
+        config,
+        metadata,
+        session_snapshot,
+        backend_session_id,
+        mcp_server_repo,
+        runtime_env,
+        broadcaster,
+        catalog_writeback,
+        acp_session_repo,
+        prompt_dump_dir: _,
+        permission_hook_body,
+    } = inputs;
+
+    let (spec, mode, model) = spec_mode_model(&conversation_id, backend_session_id, config, session_snapshot, metadata);
+
+    let mut neutral = match mcp_server_repo {
+        Some(repo) => {
+            crate::mcp_resolve::resolve_session_mcp_servers(
+                repo.as_ref(),
+                config.mcp_server_ids.as_deref(),
+                &conversation_id,
+                broadcaster.clone(),
+            )
+            .await
+        }
+        None => Vec::new(),
+    };
+    neutral.extend(config.session_mcp_servers.iter().cloned());
+    let mut mcp_servers: Vec<McpServerSpec> = neutral.iter().map(session_server_to_spec).collect();
+    if let Some(cfg) = config.team_mcp_stdio_config.as_ref() {
+        let mut coordination = vec![team_mcp_server_spec(cfg)];
+        coordination.append(&mut mcp_servers);
+        mcp_servers = coordination;
+    }
+
+    let init = SessionInit {
+        mcp_servers,
+        skills: config.skills.clone(),
+        preset_context: config.preset_context.clone(),
+        session_snapshot: None,
+        resume: matches!(spec, winkgo_session::SessionSpec::Resume { .. }),
+    };
+    let mut session_config = SessionConfig {
+        cwd: Some(workspace.clone()),
+        model,
+        mode,
+        init,
+        permission_hook_body,
+        cli_program: None,
+        ..Default::default()
+    };
+    session_config.spawn_env = assemble_spawn_env(&metadata.env, runtime_env);
+
+    let backend = AntigravityConnection::new(spawner)
+        .open_session(spec, session_config)
+        .await
+        .map_err(|e| match e {
+            winkgo_session::BackendError::WorkspaceUnavailable(path) => {
+                AgentError::workspace_path_runtime_unavailable(path)
+            }
+            e => AgentError::bad_gateway(format!("open antigravity session: {e}")),
+        })?;
+
+    if let Some((agent_id, catalog_tx)) = catalog_writeback {
+        spawn_catalog_writeback(agent_id, backend.clone(), catalog_tx);
+    }
+
+    let task = SessionAgentTask::new_with_preload(
+        winkgo_common::AgentType::Antigravity,
+        conversation_id,
+        workspace,
+        backend,
+        acp_session_repo,
+        &metadata.handshake,
+        None,
+    );
+    Ok(crate::agent_task::AgentInstance::Session(task))
 }
 
 /// Build a claude/codex `SessionAgentTask` (the session-model port's `IAgentTask`)
@@ -1157,6 +1267,7 @@ pub async fn build_session_instance(
         catalog_writeback,
         acp_session_repo,
         prompt_dump_dir,
+        permission_hook_body: _,
     } = inputs;
 
     // GAP #1/#2 — the pure spec + mode/model mapping (resume anchor → Resume/Fresh,
@@ -1609,6 +1720,10 @@ fn team_mcp_server_spec(cfg: &winkgo_api_types::TeamMcpStdioConfig) -> winkgo_se
 /// Verbatim port of clean-slate `session_runtime::spawn_catalog_writeback`: wait
 /// for MODELS specifically before committing (codex answers modes before models),
 /// forwarding the best model-less partial only if the window elapses.
+const CATALOG_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50);
+const CATALOG_INTERIM_TICKS: usize = 100;
+const CATALOG_MODEL_WINDOW_TICKS: usize = 700;
+
 pub fn spawn_catalog_writeback(
     agent_id: String,
     backend: Arc<dyn winkgo_session::SessionBackend>,
@@ -1616,7 +1731,8 @@ pub fn spawn_catalog_writeback(
 ) {
     tokio::spawn(async move {
         let mut best_partial = None;
-        for _ in 0..100 {
+        let mut interim_sent = false;
+        for tick in 0..CATALOG_MODEL_WINDOW_TICKS {
             let caps = backend.capabilities();
             if let Some(partial) = catalog_partial_from_caps(&caps) {
                 if !caps.available_models.is_empty() {
@@ -1627,9 +1743,15 @@ pub fn spawn_catalog_writeback(
                 // Modes/commands only so far — remember it, keep waiting for models.
                 best_partial = Some(partial);
             }
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            if tick + 1 == CATALOG_INTERIM_TICKS
+                && let Some(partial) = best_partial.clone()
+            {
+                catalog_tx.send_partial(agent_id.clone(), partial);
+                interim_sent = true;
+            }
+            tokio::time::sleep(CATALOG_POLL_INTERVAL).await;
         }
-        if let Some(partial) = best_partial {
+        if !interim_sent && let Some(partial) = best_partial {
             catalog_tx.send_partial(agent_id, partial);
         }
     });
@@ -2655,6 +2777,8 @@ fn translate_event(event: SessionEvent, conversation_id: &str, terminal_result_s
             output_tokens,
             total_tokens,
             cost_usd,
+            breakdown,
+            context_window,
         } => {
             // The frontend ContextUsageIndicator reads `used` (tokens consumed) and,
             // optionally, `size` (context window) + `cost` — the exact shape the ACP
@@ -2669,9 +2793,16 @@ fn translate_event(event: SessionEvent, conversation_id: &str, terminal_result_s
             if let Some(cost) = cost_usd {
                 usage["cost"] = serde_json::json!({ "amount": cost, "currency": "USD" });
             }
-            // Keep the raw counters too (harmless extra keys) for any richer consumer.
-            usage["input_tokens"] = serde_json::json!(input_tokens);
-            usage["output_tokens"] = serde_json::json!(output_tokens);
+            if let Some(size) = context_window {
+                usage["size"] = serde_json::json!(size);
+            }
+            usage["_meta"] = serde_json::json!({
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cached_read_tokens": breakdown.cached_read_tokens,
+                "cached_write_tokens": breakdown.cached_write_tokens,
+                "thought_tokens": breakdown.thought_tokens,
+            });
             vec![AgentStreamEvent::AcpContextUsage(usage)]
         }
         // A confirmed mode/model switch is NOT forwarded as a stream frame. The origin
@@ -2726,16 +2857,24 @@ fn translate_event(event: SessionEvent, conversation_id: &str, terminal_result_s
         // turn that is already running (or immediately re-settled by the turn's terminal
         // Finish), so it does not manufacture a spurious idle timer the way a config frame
         // would. `NoticeLevel` has only Info/Warning (no Error tier), matching TipType.
-        SessionEvent::Notice { level, message } => {
+        SessionEvent::Notice {
+            level,
+            message,
+            localized,
+        } => {
             let tip_type = match level {
                 winkgo_session::NoticeLevel::Info => TipType::Info,
                 winkgo_session::NoticeLevel::Warning => TipType::Warning,
             };
+            let (code, params) = match localized {
+                Some(localized) => (Some(localized.code), Some(serde_json::Value::Object(localized.params))),
+                None => (None, None),
+            };
             vec![AgentStreamEvent::Tips(TipsEventData {
                 content: message,
                 tip_type,
-                code: None,
-                params: None,
+                code,
+                params,
             })]
         }
         // Events with no origin-side counterpart (or purely internal) are dropped.
@@ -3405,6 +3544,8 @@ mod translate_tests {
                 output_tokens: 20,
                 total_tokens: 30,
                 cost_usd: Some(0.5),
+                breakdown: Default::default(),
+                context_window: None,
             },
             "conv-1",
             false,
@@ -3440,6 +3581,7 @@ mod translate_tests {
                 SessionEvent::Notice {
                     level,
                     message: "set effort: rejected by agent".into(),
+                    localized: None,
                 },
                 "conv-1",
                 false,

@@ -514,7 +514,15 @@
     }
   },
   "contextUsage": {
-    "contextUsed": "contexto usado"
+    "contextUsed": "contexto usado",
+    "tokensUsed": "{{tokens}} tokens usados",
+    "windowUnknown": "Tamanho da janela de contexto desconhecido",
+    "sessionCost": "Custo da sessão",
+    "input": "Entrada",
+    "output": "Saída",
+    "thought": "Raciocínio",
+    "cachedRead": "Leitura de cache",
+    "cachedWrite": "Escrita de cache"
   },
   "skill_generator": {
     "title": "Gerar Habilidade/Regra",
@@ -579,8 +587,50 @@
       },
       "ACP_EMPTY_TURN_REFUSAL": {
         "body": "O modelo recusou esta solicitação antes de produzir qualquer resposta visível."
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "{{count}} etapa(s) falharam e NÃO tiveram efeito. O agy encerra esses turnos como bem-sucedidos mesmo assim, então confira o resultado real em vez da resposta."
+      },
+      "ANTIGRAVITY_VERSION_OLDER": {
+        "body": "A versão instalada do agy {{reported}} é anterior à {{verified}} verificada nesta integração; alguns recursos podem estar ausentes. Considere atualizar o agy."
+      },
+      "ANTIGRAVITY_VERSION_NEWER": {
+        "body": "A versão instalada do agy {{reported}} é mais recente que a {{verified}} verificada nesta integração. Deve continuar funcionando; relate qualquer comportamento estranho."
       }
     }
   },
-  "notFound": "Conversa não encontrada ou foi deletada"
+  "officePreview": {
+    "fileWatchUnavailable": "O monitoramento de arquivos em tempo real não está disponível. Novos arquivos do Office não serão abertos automaticamente na visualização. Reinicie o WINK GO; se o problema continuar, feche programas que usam muitos monitores de arquivos e tente novamente."
+  },
+  "notFound": "Conversa não encontrada ou foi deletada",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "Renomear",
+      "addToChat": "Adicionar ao chat"
+    },
+    "namePlaceholder": "Nome",
+    "deleteConfirm": "Excluir “{{name}}”? Isso não pode ser desfeito.",
+    "renameFailed": "Não foi possível renomear",
+    "tabs": {
+      "files": "Arquivos",
+      "changes": "Alterações"
+    },
+    "changesPlaceholder": "O controle de versão fica em uma aba separada — em breve.",
+    "addedToChat": "{{name}} adicionado ao chat",
+    "imported": "{{count}} arquivo(s) importado(s)",
+    "importPartialFailed": "{{copied}} copiado(s), {{failed}} com falha (conflitos de nome ou não suportados)",
+    "importFailed": "Falha ao importar os arquivos",
+    "search": {
+      "placeholder": "Buscar arquivos por nome",
+      "searching": "Buscando…",
+      "empty": "Nenhum arquivo corresponde",
+      "limitReached": "Mostrando os primeiros {{count}} — refine a busca"
+    }
+  }
 }

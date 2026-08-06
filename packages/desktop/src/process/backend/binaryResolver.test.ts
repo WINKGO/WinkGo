@@ -1,7 +1,7 @@
 // Modified from AionUI by WINK GO contributors in 2026.
 import { execSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveBinaryPath } from './binaryResolver';
 
@@ -15,6 +15,8 @@ vi.mock('node:fs', () => ({
 }));
 
 const originalResourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
+const originalBackendBin = process.env.WINKGO_BACKEND_BIN;
+const originalRendererUrl = process.env.ELECTRON_RENDERER_URL;
 
 function setResourcesPath(resourcesPath: string | undefined): void {
   Object.defineProperty(process, 'resourcesPath', {
@@ -33,10 +35,36 @@ function dirEntry(name: string, isDirectory = false): ReturnType<typeof readdirS
 describe('resolveBinaryPath', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env.WINKGO_BACKEND_BIN;
+    delete process.env.ELECTRON_RENDERER_URL;
   });
 
   afterEach(() => {
     setResourcesPath(originalResourcesPath);
+    if (originalBackendBin === undefined) delete process.env.WINKGO_BACKEND_BIN;
+    else process.env.WINKGO_BACKEND_BIN = originalBackendBin;
+    if (originalRendererUrl === undefined) delete process.env.ELECTRON_RENDERER_URL;
+    else process.env.ELECTRON_RENDERER_URL = originalRendererUrl;
+  });
+
+  it('uses an explicit source-built Core only in electron-vite development', () => {
+    const configured = 'backend/target/debug/winkgo_core.exe';
+    process.env.ELECTRON_RENDERER_URL = 'http://127.0.0.1:5173';
+    process.env.WINKGO_BACKEND_BIN = configured;
+    vi.mocked(existsSync).mockImplementation((path) => path === resolve(configured));
+
+    expect(resolveBinaryPath()).toBe(resolve(configured));
+    expect(execSync).not.toHaveBeenCalled();
+  });
+
+  it('ignores the source-built Core override outside development', () => {
+    process.env.WINKGO_BACKEND_BIN = 'backend/target/debug/winkgo_core.exe';
+    vi.mocked(existsSync).mockReturnValue(false);
+    vi.mocked(execSync).mockImplementation(() => {
+      throw new Error('not found on PATH');
+    });
+
+    expect(() => resolveBinaryPath()).toThrow('Cannot find "winkgo_core" binary');
   });
 
   it('attaches bundled path diagnostics when winkgo_core cannot be resolved', () => {

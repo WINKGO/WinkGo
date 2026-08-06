@@ -43,6 +43,7 @@ pub struct WorkspaceContext {
 pub enum AgentSessionKind {
     Acp(Box<AcpSessionBuildContext>),
     WinkGoAgent(Box<WinkGoAgentSessionBuildContext>),
+    Antigravity(Box<AntigravitySessionBuildContext>),
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +51,21 @@ pub struct AcpSessionBuildContext {
     pub config: AcpBuildExtra,
     pub team: Option<TeamSessionBinding>,
     pub belongs_to_team: bool,
+    pub session_id: Option<String>,
+    pub session_snapshot: Option<PersistedSessionState>,
+}
+
+/// Build inputs for an Antigravity (`agy` CLI) session.
+///
+/// Structurally the same as [`AcpSessionBuildContext`] — both describe a CLI
+/// agent with a workspace, MCP servers, skills and a resume anchor — but kept
+/// separate so the two never share a factory path (agy does not speak ACP).
+#[derive(Debug, Clone)]
+pub struct AntigravitySessionBuildContext {
+    pub config: AcpBuildExtra,
+    pub team: Option<TeamSessionBinding>,
+    pub belongs_to_team: bool,
+    /// The agy conversation id to resume, when this session has run before.
     pub session_id: Option<String>,
     pub session_snapshot: Option<PersistedSessionState>,
 }

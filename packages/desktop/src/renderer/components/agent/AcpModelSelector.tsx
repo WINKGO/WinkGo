@@ -27,6 +27,9 @@ import {
   RuntimeSelectorSubMenuTitle,
 } from './runtimeSelectorOptions';
 
+/** Runtime state of one team member. Kept local to avoid importing team-domain types here. */
+export type AcpWarmupStatus = 'dormant' | 'pending' | 'ready' | 'failed';
+
 const configErrorMessageKey = (error: unknown) => {
   const errorKind = classifyConfigSetError(error);
   if (errorKind === 'command_ack') return 'agent.config.commandAck';
@@ -55,7 +58,12 @@ const AcpModelSelector: React.FC<{
   loadConfigOptions?: AcpConfigOptionsLoader;
   /** Deprecated: runtime config loading now ensures the conversation runtime. */
   waitForWarmup?: boolean;
-}> = ({ conversation_id, backend, initialModelId, prepareRuntime, prepareSetRuntime, loadConfigOptions }) => {
+  /** Optional manual wake control. Omitted for ordinary one-to-one conversations. */
+  warmup?: {
+    status: AcpWarmupStatus;
+    trigger?: () => Promise<void>;
+  };
+}> = ({ conversation_id, backend, initialModelId, prepareRuntime, prepareSetRuntime, loadConfigOptions, warmup }) => {
   const { t } = useTranslation();
   const layout = useLayoutContext();
   const isMobileHeaderCompact = Boolean(layout?.isMobile);
@@ -104,6 +112,44 @@ const AcpModelSelector: React.FC<{
 
   const renderLogo = () => <Brain theme='outline' size='14' fill={iconColors.secondary} className='shrink-0' />;
 
+  const [triggeringWarmup, setTriggeringWarmup] = useState(false);
+  useEffect(() => {
+    if (warmup && warmup.status !== 'dormant') setTriggeringWarmup(false);
+  }, [warmup]);
+
+  const canManualWarmup = Boolean(
+    warmup && (warmup.status === 'dormant' || warmup.status === 'failed') && warmup.trigger
+  );
+  const showWarmupSpinner = triggeringWarmup || warmup?.status === 'pending';
+  const handleWarmupClick = useCallback(async () => {
+    if (!warmup?.trigger || triggeringWarmup) return;
+    setTriggeringWarmup(true);
+    try {
+      await warmup.trigger();
+    } catch {
+      // The team runtime status stream owns the user-visible failure state.
+    } finally {
+      setTriggeringWarmup(false);
+    }
+  }, [triggeringWarmup, warmup]);
+
+  const renderReadonlyPill = (label: string, readonlyTooltip: React.ReactNode) => {
+    const clickable = !showWarmupSpinner && canManualWarmup;
+    return (
+      <Tooltip content={clickable ? t('agent.warmup.clickToWake') : readonlyTooltip} position='top'>
+        <RuntimeSelectorPill
+          testId='acp-model-selector-warmup'
+          className='sendbox-model-btn header-model-btn agent-mode-compact-pill'
+          label={label}
+          leading={renderLogo()}
+          loading={showWarmupSpinner}
+          onClick={clickable ? () => void handleWarmupClick() : undefined}
+          style={{ cursor: clickable ? 'pointer' : 'default' }}
+        />
+      </Tooltip>
+    );
+  };
+
   if (!model_info && isLoading) {
     return (
       <div
@@ -116,29 +162,11 @@ const AcpModelSelector: React.FC<{
   }
 
   if (!model_info) {
-    return (
-      <Tooltip content={t('conversation.welcome.modelSwitchNotSupported')} position='top'>
-        <RuntimeSelectorPill
-          className='sendbox-model-btn header-model-btn agent-mode-compact-pill'
-          label={t('conversation.welcome.useCliModel')}
-          leading={renderLogo()}
-          style={{ cursor: 'default' }}
-        />
-      </Tooltip>
-    );
+    return renderReadonlyPill(t('conversation.welcome.useCliModel'), t('conversation.welcome.modelSwitchNotSupported'));
   }
 
   if (!canSwitch) {
-    return (
-      <Tooltip content={tooltipContent} position='top'>
-        <RuntimeSelectorPill
-          className='sendbox-model-btn header-model-btn agent-mode-compact-pill'
-          label={combinedLabel}
-          leading={renderLogo()}
-          style={{ cursor: 'default' }}
-        />
-      </Tooltip>
-    );
+    return renderReadonlyPill(combinedLabel, tooltipContent);
   }
 
   return (

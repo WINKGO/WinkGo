@@ -55,6 +55,38 @@ pub struct ReadSkillInfoResponse {
     pub description: String,
 }
 
+/// Request body for listing the files that belong to one listed skill.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ListSkillFilesRequest {
+    pub skill_name: String,
+}
+
+/// Request body for reading one file relative to a listed skill root.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ReadSkillFileRequest {
+    pub skill_name: String,
+    pub relative_path: String,
+}
+
+/// Filesystem entry type returned by the read-only skill browser.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum SkillFileEntryTypeResponse {
+    Directory,
+    File,
+}
+
+/// One node in the read-only skill file tree.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SkillFileNodeResponse {
+    pub name: String,
+    pub relative_path: String,
+    #[serde(rename = "type")]
+    pub entry_type: SkillFileEntryTypeResponse,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<SkillFileNodeResponse>,
+}
+
 // ---------------------------------------------------------------------------
 // B. Skill import / export / delete
 // ---------------------------------------------------------------------------

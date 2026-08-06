@@ -132,10 +132,17 @@ impl ConversationService {
     // ── Usage / Slash commands ──────────────────────────────────────
 
     pub async fn get_usage(&self, conversation_id: &str) -> Result<Option<serde_json::Value>, ConversationError> {
-        self.task(conversation_id)?
-            .get_usage()
+        if let Ok(task) = self.task(conversation_id) {
+            return task.get_usage().await.map_err(ConversationError::from);
+        }
+        let state = self
+            .acp_session_repo()
+            .load_runtime_state(conversation_id)
             .await
-            .map_err(ConversationError::from)
+            .map_err(|e| ConversationError::internal(format!("Failed to load usage state: {e}")))?;
+        Ok(state
+            .and_then(|s| s.context_usage_json)
+            .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok()))
     }
 
     pub async fn get_slash_commands(&self, conversation_id: &str) -> Result<Vec<SlashCommandItem>, ConversationError> {

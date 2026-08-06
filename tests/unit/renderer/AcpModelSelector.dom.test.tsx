@@ -105,6 +105,7 @@ vi.mock('react-i18next', () => ({
       if (key === 'agent.model.noResults') return 'No matching models';
       if (key === 'conversation.welcome.useCliModel') return 'Use CLI model';
       if (key === 'conversation.welcome.modelSwitchNotSupported') return 'Model switch is not supported';
+      if (key === 'agent.warmup.clickToWake') return 'Click to wake this team member';
       return options?.defaultValue ?? key;
     },
   }),
@@ -396,5 +397,45 @@ describe('AcpModelSelector runtime options', () => {
     expect(button).not.toHaveAttribute('loading');
     expect(button).toHaveTextContent('Auto (Gemini 3) · High');
     expect(loading.parentElement?.lastElementChild).toBe(loading);
+  });
+
+  it('lets a dormant team member be woken from the read-only model pill', async () => {
+    const trigger = vi.fn().mockResolvedValue(undefined);
+    useAcpModelInfoMock.mockReturnValue(makeResult({ model_info: null, canSwitch: false, isLoading: false }));
+
+    render(
+      <AcpModelSelector conversation_id='conversation-1' backend='codex' warmup={{ status: 'dormant', trigger }} />
+    );
+
+    const pill = screen.getByTestId('acp-model-selector-warmup');
+    expect(pill.closest('[data-tooltip-content]')).toHaveAttribute(
+      'data-tooltip-content',
+      'Click to wake this team member'
+    );
+    fireEvent.click(pill);
+    await waitFor(() => expect(trigger).toHaveBeenCalledTimes(1));
+  });
+
+  it('shows pending warmup without allowing another trigger', () => {
+    const trigger = vi.fn().mockResolvedValue(undefined);
+    useAcpModelInfoMock.mockReturnValue(makeResult({ model_info: null, canSwitch: false, isLoading: false }));
+
+    render(
+      <AcpModelSelector conversation_id='conversation-1' backend='codex' warmup={{ status: 'pending', trigger }} />
+    );
+
+    expect(screen.getByTestId('runtime-selector-loading-indicator')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('acp-model-selector-warmup'));
+    expect(trigger).not.toHaveBeenCalled();
+  });
+
+  it('keeps a ready non-switchable model pill read-only', () => {
+    const trigger = vi.fn().mockResolvedValue(undefined);
+    useAcpModelInfoMock.mockReturnValue(makeResult({ canSwitch: false, isLoading: false }));
+
+    render(<AcpModelSelector conversation_id='conversation-1' backend='codex' warmup={{ status: 'ready', trigger }} />);
+
+    fireEvent.click(screen.getByTestId('acp-model-selector-warmup'));
+    expect(trigger).not.toHaveBeenCalled();
   });
 });

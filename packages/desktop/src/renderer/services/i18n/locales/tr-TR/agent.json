@@ -33,6 +33,9 @@
     "searchPlaceholder": "Model ara",
     "noResults": "Eşleşen model yok"
   },
+  "warmup": {
+    "clickToWake": "Bu ekip üyesini uyandırmak için tıklayın"
+  },
   "config": {
     "setting": "Ayar uygulanıyor...",
     "commandAck": "Komut gönderildi, ancak durum doğrulanmadı. Daha sonra yenileyin veya yeniden deneyin.",

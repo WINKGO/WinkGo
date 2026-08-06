@@ -61,6 +61,8 @@ pub struct AppServices {
     pub skill_repo: Arc<dyn ISkillRepository>,
     runtime_helper_bin: String,
     runtime_base_url: String,
+    /// Shared with the Antigravity hook endpoint so it can authenticate callbacks.
+    pub(crate) antigravity_hook_tokens: Arc<winkgo_ai_agent::antigravity_hook::HookTokenRegistry>,
 }
 
 impl AppServices {
@@ -116,6 +118,24 @@ impl AppServices {
             .filter(|s| !s.is_empty());
 
         let (secret, is_new) = resolve_jwt_secret(env_secret.as_deref(), db_secret);
+
+        // A newly generated secret is only valid for a genuinely fresh
+        // installation. Re-check the system row independently before
+        // accepting a new secret so a transient/stale decode cannot silently
+        // rotate the encryption key and make stored provider credentials
+        // unreadable.
+        if is_new
+            && system_user.is_none()
+            && user_repo
+                .find_by_id("system_default_user")
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to verify system user absence: {e}"))?
+                .is_some()
+        {
+            anyhow::bail!(
+                "system user row exists but could not be read; refusing to generate a new JWT secret because it would invalidate encrypted credentials"
+            );
+        }
 
         // Persist newly generated secret to database
         if is_new && let Some(user) = &system_user {
@@ -181,6 +201,7 @@ impl AppServices {
             Arc::new(std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("winkgo_core")));
         let runtime_helper_bin = backend_binary_path.to_string_lossy().into_owned();
         let runtime_base_url = config.local_base_url();
+        let antigravity_hook_tokens = Arc::new(winkgo_ai_agent::antigravity_hook::HookTokenRegistry::new());
 
         // Session-model port: the subprocess spawner the clean-slate claude/codex
         // SessionBackend uses. Registry-backed (feature 001) so spawned processes are
@@ -207,6 +228,11 @@ impl AppServices {
             backend_binary_path: backend_binary_path.clone(),
             mcp_server_repo: Some(mcp_server_repo),
             session_spawner,
+            // agy cannot prompt for tool permission in headless mode, so WINK GO
+            // registers itself as its PreToolUse hook; the hook process calls
+            // back here to raise the user's permission card.
+            antigravity_hook_base_url: Some(runtime_base_url.clone()),
+            antigravity_hook_tokens: antigravity_hook_tokens.clone(),
         });
 
         // Agent factory is now wired. Future extension/custom agents
@@ -240,6 +266,7 @@ impl AppServices {
         Ok(Self {
             database,
             jwt_service: Arc::new(JwtService::new(secret.clone())),
+            antigravity_hook_tokens,
             user_repo,
             cookie_config: Arc::new(CookieConfig::from_env()),
             qr_token_store: Arc::new(QrTokenStore::new()),

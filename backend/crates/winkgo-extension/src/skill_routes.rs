@@ -12,11 +12,12 @@ use tracing::warn;
 
 use winkgo_api_types::{
     AddExternalPathRequest, ApiResponse, ExportSkillRequest, ExternalSkillSourceResponse, ImportSkillFailureResponse,
-    ImportSkillRequest, ImportSkillResponse, MaterializeSkillsRequest, MaterializeSkillsResponse, MaterializedSkillRef,
-    NamedPathResponse, ReadAssistantRuleRequest, ReadBuiltinResourceRequest, ReadSkillInfoRequest,
-    ReadSkillInfoResponse, RemoveExternalPathRequest, ScanForSkillsRequest, ScanForSkillsResponse,
-    ScannedSkillResponse, SkillImportLimitsResponse, SkillImportRecordResponse, SkillListItemResponse,
-    SkillPathsResponse, SkillSourceResponse, WriteAssistantRuleRequest,
+    ImportSkillRequest, ImportSkillResponse, ListSkillFilesRequest, MaterializeSkillsRequest,
+    MaterializeSkillsResponse, MaterializedSkillRef, NamedPathResponse, ReadAssistantRuleRequest,
+    ReadBuiltinResourceRequest, ReadSkillFileRequest, ReadSkillInfoRequest, ReadSkillInfoResponse,
+    RemoveExternalPathRequest, ScanForSkillsRequest, ScanForSkillsResponse, ScannedSkillResponse,
+    SkillFileEntryTypeResponse, SkillFileNodeResponse, SkillImportLimitsResponse, SkillImportRecordResponse,
+    SkillListItemResponse, SkillPathsResponse, SkillSourceResponse, WriteAssistantRuleRequest,
 };
 use winkgo_common::ApiError;
 use winkgo_db::ISkillRepository;
@@ -70,6 +71,8 @@ pub fn skill_routes(state: SkillRouterState) -> Router {
         .route("/api/skills/import-history", get(list_import_history))
         .route("/api/skills/import-limits", get(get_import_limits))
         .route("/api/skills/info", post(read_skill_info))
+        .route("/api/skills/files", post(list_skill_files))
+        .route("/api/skills/files/read", post(read_skill_file))
         .route("/api/skills/paths", get(get_skill_paths))
         // Import / export / delete
         .route("/api/skills/import", post(import_skill))
@@ -136,6 +139,52 @@ async fn read_skill_info(
     let Json(req) = body.map_err(ApiError::from)?;
     let (name, description) = skill_service::read_skill_info(Path::new(&req.skill_path)).await?;
     Ok(Json(ApiResponse::ok(ReadSkillInfoResponse { name, description })))
+}
+
+fn to_file_node_response(node: skill_service::SkillFileNode) -> SkillFileNodeResponse {
+    SkillFileNodeResponse {
+        name: node.name,
+        relative_path: node.relative_path,
+        entry_type: if node.is_directory {
+            SkillFileEntryTypeResponse::Directory
+        } else {
+            SkillFileEntryTypeResponse::File
+        },
+        children: node.children.into_iter().map(to_file_node_response).collect(),
+    }
+}
+
+async fn listed_skill_location(state: &SkillRouterState, skill_name: &str) -> Result<String, ApiError> {
+    let skills = skill_service::list_available_skills_with_repo(&state.skill_paths, state.skill_repo.as_ref()).await?;
+    skills
+        .into_iter()
+        .find(|skill| skill.name == skill_name)
+        .map(|skill| skill.location)
+        .ok_or_else(|| ApiError::NotFound(format!("Skill not found: {skill_name}")))
+}
+
+/// `POST /api/skills/files` — list files below a catalogued skill root.
+async fn list_skill_files(
+    State(state): State<SkillRouterState>,
+    body: Result<Json<ListSkillFilesRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<Vec<SkillFileNodeResponse>>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    let location = listed_skill_location(&state, &req.skill_name).await?;
+    let nodes = skill_service::list_skill_files_at_location(Path::new(&location)).await?;
+    Ok(Json(ApiResponse::ok(
+        nodes.into_iter().map(to_file_node_response).collect(),
+    )))
+}
+
+/// `POST /api/skills/files/read` — read one UTF-8 file below that skill root.
+async fn read_skill_file(
+    State(state): State<SkillRouterState>,
+    body: Result<Json<ReadSkillFileRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<String>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    let location = listed_skill_location(&state, &req.skill_name).await?;
+    let content = skill_service::read_skill_file_at_location(Path::new(&location), &req.relative_path).await?;
+    Ok(Json(ApiResponse::ok(content)))
 }
 
 /// `GET /api/skills/paths` — get user and built-in skill directories.

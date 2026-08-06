@@ -20,6 +20,7 @@ import {
   initWinkGoFormatBridge,
   initWinkGoImageBridge,
   initWinkGoInspirationBridge,
+  initWinkGoMailBridge,
   initWinkGoSkillsBridge,
   initWinkGoWindowsBridge,
   initWinkGoXiaozhiBridge,
@@ -41,6 +42,7 @@ export function initAllBridges(_deps: BridgeDependencies = {}): void {
   initWinkGoFilesBridge();
   initWinkGoFormatBridge();
   initWinkGoImageBridge();
+  initWinkGoMailBridge();
   initWinkGoWindowsBridge();
   initWinkGoInspirationBridge();
   initWinkGoXiaozhiBridge();
@@ -60,6 +62,7 @@ export {
   initWinkGoFormatBridge,
   initWinkGoImageBridge,
   initWinkGoInspirationBridge,
+  initWinkGoMailBridge,
   initWinkGoSkillsBridge,
   initWinkGoWindowsBridge,
   initWinkGoXiaozhiBridge,

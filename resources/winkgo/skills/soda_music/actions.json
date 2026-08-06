@@ -7,7 +7,8 @@
       "phrases": ["打开", "启动"],
       "tool_names": ["music.station_open"],
       "default_arguments": {
-        "player": "fizz"
+        "player": "fizz",
+        "minimize": false
       }
     },
     {

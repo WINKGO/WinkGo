@@ -17,12 +17,19 @@ import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import { appendPromptToDraft, useConversationSendBoxPrefill } from '@/renderer/hooks/chat/useSendBoxDraft';
 import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
-import { buildAtFileInsertion, getActiveAtFileQuery, getAllAtFileQueries } from '@/renderer/utils/chat/atFileQuery';
+import {
+  buildAtFileInsertion,
+  getActiveAtFileQuery,
+  getAllAtFileQueries,
+  resolveAtFileMenuKey,
+} from '@/renderer/utils/chat/atFileQuery';
 import { getLastAssistantText } from '@/renderer/utils/chat/getLastAssistantText';
 import { emitter, type ReplyQuote, useAddEventListener } from '@/renderer/utils/emitter';
 import { mergeFileSelectionItems, type FileSelectionItem } from '@/renderer/utils/file/fileSelection';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
-import { filterWorkspaceMentionItems } from '@/renderer/utils/file/workspaceMentions';
+import { filterWorkspaceMentionItems, workspaceMentionItemFromListing } from '@/renderer/utils/file/workspaceMentions';
+import { useProjectMentionSearch } from '@/renderer/pages/conversation/explorer/search/useProjectMentionSearch';
+import { peLabeledPath } from '@/renderer/pages/conversation/explorer/search/searchModel';
 import { copyText } from '@/renderer/utils/ui/clipboard';
 import { blurActiveElement, shouldBlockMobileInputFocus } from '@/renderer/utils/ui/focus';
 import { Button, Input, Message, Tag } from '@arco-design/web-react';
@@ -55,6 +62,9 @@ const constVoid = (): void => undefined;
 const MAX_SINGLE_LINE_CHARACTERS = 800;
 const BTW_COMMAND_RE = /^\/btw(?:\s+([\s\S]*))?$/i;
 const AT_FILE_HIGHLIGHT_COLOR = 'var(--primary)';
+// Max items shown in the `@` dropdown (both data sources); the result panel skin
+// is unbounded (streaming append) — this caps only the inline mention menu.
+const AT_FILE_MENTION_LIMIT = 8;
 
 const getSelectedItemMatchKeys = (item: FileSelectionItem): string[] => {
   if (typeof item === 'string') {
@@ -537,10 +547,25 @@ const SendBox: React.FC<{
     Boolean(activeAtFileQuery) &&
     activeAtFileTokenKey !== dismissedAtFileToken &&
     !isCommandMenuOpen;
-  const visibleAtFileMenuItems = useMemo(
-    () => filterWorkspaceMentionItems(workspaceMentionItems, deferredAtFileQuery),
-    [deferredAtFileQuery, workspaceMentionItems]
-  );
+  // `@`-mention data source is an INTENTIONAL dual path (not dead code). While
+  // the project's pe roots are unresolved (backfill / async project.get loading
+  // window — see useProjectMentionSearch) `active` is false and `@` uses the
+  // legacy workspace flat-list fallback; once roots arrive it streams from
+  // fs/search. DEFENSIVE loading-window gate, not project-vs-no-project. This
+  // window is also why `list_workspace_files` can't be removed yet. Do not collapse.
+  const projectMention = useProjectMentionSearch({
+    query: deferredAtFileQuery,
+    isOpen: isAtFileMenuOpen,
+    limit: AT_FILE_MENTION_LIMIT,
+  });
+  const visibleAtFileMenuItems = useMemo(() => {
+    // Project path: ranked hits as project chat-ref items. Legacy fallback:
+    // local flat-list filter+rank over the once-loaded workspace list.
+    if (projectMention.active) {
+      return projectMention.items;
+    }
+    return filterWorkspaceMentionItems(workspaceMentionItems, deferredAtFileQuery);
+  }, [deferredAtFileQuery, projectMention.active, projectMention.items, workspaceMentionItems]);
   const isOverlayOpen = isCommandMenuOpen || btwCommand.isOpen || isAtFileMenuOpen;
 
   const getTextareaElement = useCallback((): HTMLTextAreaElement | null => {
@@ -711,7 +736,11 @@ const SendBox: React.FC<{
   };
 
   useEffect(() => {
-    if (!isAtFileMenuOpen || !conversationContext?.workspace || !atFileSessionKey) {
+    // Legacy fallback only — runs while pe roots are unresolved (backfill /
+    // loading window, see dual-path note above). Once roots resolve the `@`
+    // dropdown streams from fs/search instead, so skip the one-shot workspace
+    // flat-list fetch entirely.
+    if (!isAtFileMenuOpen || !conversationContext?.workspace || !atFileSessionKey || projectMention.active) {
       fetchedAtFileSessionKeyRef.current = null;
       setWorkspaceMentionItems([]);
       setWorkspaceMentionLoading(false);
@@ -732,12 +761,9 @@ const SendBox: React.FC<{
         if (cancelled) {
           return;
         }
-        const files = result.map((item) => ({
-          path: item.fullPath,
-          name: item.name,
-          isFile: true,
-          relativePath: item.relativePath || undefined,
-        }));
+        // Loading-window fallback items carry a `local` chat-ref so a send does
+        // not fall back to an `upload` ref → managed-dir 400 (ELECTRON-3TG).
+        const files = result.map(workspaceMentionItemFromListing);
         setWorkspaceMentionItems(files);
       })
       .catch((error) => {
@@ -756,7 +782,10 @@ const SendBox: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [atFileSessionKey, conversationContext?.workspace, isAtFileMenuOpen]);
+  }, [atFileSessionKey, conversationContext?.workspace, projectMention.active, isAtFileMenuOpen]);
+
+  // The project path (drive fs/search on open/query, cancel on close) lives in
+  // useProjectMentionSearch — no separate effect here.
 
   useEffect(() => {
     if (!activeAtFileTokenKey) {
@@ -889,13 +918,13 @@ const SendBox: React.FC<{
     (item: FileOrFolderItem) => {
       switch (conversationContext?.type) {
         case 'winkgo_agent':
-          emitter.emit('winkgo_agent.selected.file.append', [item]);
+          emitter.emit('winkgo_agent.selected.file.append', [item], conversationContext.conversation_id);
           break;
         case 'acp':
-          emitter.emit('acp.selected.file.append', [item]);
+          emitter.emit('acp.selected.file.append', [item], conversationContext.conversation_id);
           break;
         case 'codex':
-          emitter.emit('codex.selected.file.append', [item]);
+          emitter.emit('codex.selected.file.append', [item], conversationContext.conversation_id);
           break;
         default:
           break;
@@ -1119,39 +1148,34 @@ const SendBox: React.FC<{
         return false;
       }
 
-      if (event.key === 'Escape') {
+      const action = resolveAtFileMenuKey(event.key, visibleAtFileMenuItems.length > 0);
+      if (!action) {
+        return false;
+      }
+
+      if (action === 'dismiss') {
         event.preventDefault();
         setDismissedAtFileToken(activeAtFileTokenKey);
         return true;
       }
-
-      if (!visibleAtFileMenuItems.length) {
-        return false;
-      }
-
-      if (event.key === 'ArrowDown') {
+      if (action === 'down') {
         event.preventDefault();
         setAtFileMenuActiveIndex((previous) => (previous + 1) % visibleAtFileMenuItems.length);
         return true;
       }
-
-      if (event.key === 'ArrowUp') {
+      if (action === 'up') {
         event.preventDefault();
         setAtFileMenuActiveIndex((previous) => (previous === 0 ? visibleAtFileMenuItems.length - 1 : previous - 1));
         return true;
       }
 
-      if (event.key === 'Enter') {
-        const selectedItem = visibleAtFileMenuItems[atFileMenuActiveIndex];
-        if (!selectedItem) {
-          return false;
-        }
-        event.preventDefault();
-        insertSelectedAtFile(selectedItem);
-        return true;
+      const selectedItem = visibleAtFileMenuItems[atFileMenuActiveIndex];
+      if (!selectedItem) {
+        return false;
       }
-
-      return false;
+      event.preventDefault();
+      insertSelectedAtFile(selectedItem);
+      return true;
     },
     [activeAtFileTokenKey, atFileMenuActiveIndex, insertSelectedAtFile, isAtFileMenuOpen, visibleAtFileMenuItems]
   );
@@ -1424,10 +1448,20 @@ const SendBox: React.FC<{
               }
               items={visibleAtFileMenuItems}
               label={t('messages.atFile.menuLabel', { defaultValue: 'File mentions' })}
-              loading={workspaceMentionLoading}
+              loading={projectMention.active ? projectMention.loading : workspaceMentionLoading}
               loadingText={t('messages.atFile.loading', { defaultValue: 'Loading...' })}
               onHoverItem={setAtFileMenuActiveIndex}
               onSelectItem={insertSelectedAtFile}
+              getSubtitle={
+                projectMention.active
+                  ? (item) =>
+                      peLabeledPath(
+                        item.chatRef?.kind === 'project' ? item.chatRef.pe_id : undefined,
+                        item.relativePath || item.path || '',
+                        projectMention.peNames
+                      )
+                  : undefined
+              }
             />
           </div>
         )}

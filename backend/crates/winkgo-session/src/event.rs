@@ -18,6 +18,25 @@
 /// `AdapterSpecific.payload` is an opaque escape hatch this contract does NOT
 /// promise total equality over; `assert_eq!` only needs `PartialEq`. Deriving
 /// fewer traits than available is always legal ⇒ the shape compiles as-is.
+/// Per-turn token counters used by the context-usage detail view.
+/// These counters describe the current turn; `UsageDelta.total_tokens` remains
+/// the context-occupancy value reported by the backend.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct UsageBreakdown {
+    /// Tokens read from an existing prompt cache.
+    pub cached_read_tokens: u64,
+    /// Tokens newly written to the prompt cache.
+    pub cached_write_tokens: u64,
+    /// Reasoning/thinking tokens reported separately by the backend.
+    pub thought_tokens: u64,
+}
+
+impl UsageBreakdown {
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)] // +Serialize/Deserialize (Addendum 2a, 007 §C2). only PartialEq — see FIX 4a above
 pub enum SessionEvent {
     // ---- command lower (FIX 2): orchestration lowers Command::Send here ----
@@ -276,6 +295,10 @@ pub enum SessionEvent {
         output_tokens: u64,
         total_tokens: u64,
         cost_usd: Option<f64>,
+        #[serde(default)]
+        breakdown: UsageBreakdown,
+        #[serde(default)]
+        context_window: Option<u64>,
     },
 
     /// MCP / tool provisioning as a LIVE event (Addendum 5 / U16). Reducer no-op.
@@ -367,7 +390,15 @@ pub enum SessionEvent {
     /// `{turnId, willRetry}` and is either a transient retry (→ Heartbeat) or the
     /// turn's terminal cause (→ already covered by `turn/completed`). Reducer NO-OP
     /// (an advisory does not move the FSM). Only the conversation layer projects it.
-    Notice { level: NoticeLevel, message: String },
+    Notice {
+        level: NoticeLevel,
+        /// English text, ALWAYS present. It is what the UI shows when
+        /// `localized` is absent or its code has no translation in the active
+        /// locale, so it must stand on its own — never a placeholder.
+        message: String,
+        /// Optional translation handle. `None` renders `message` verbatim.
+        localized: Option<LocalizedText>,
+    },
 
     /// Live tool-OUTPUT delta (codex `item/commandExecution/outputDelta`). The
     /// incremental stdout/stderr of a RUNNING tool, keyed by the owning tool's
@@ -652,6 +683,35 @@ pub enum ProvisioningPhase {
 /// `warning` / `guardianWarning` / `configWarning` (something the user should know
 /// but the turn can still proceed); `Info` covers `deprecationNotice` (advisory,
 /// non-urgent). Backend-neutral so a future backend's advisory maps here too.
+/// A message the UI can translate: a stable code plus its interpolation values.
+///
+/// The emitting backend owns the code; the frontend looks it up under
+/// `conversation.agentTip.codes.<code>.body` and falls back to the `Notice`'s
+/// English `message` when the key is missing. Params are whatever that string
+/// interpolates (e.g. `{"count": 2}`), carried as JSON so a backend can add a
+/// placeholder without changing this type.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct LocalizedText {
+    pub code: String,
+    #[serde(default)]
+    pub params: serde_json::Map<String, serde_json::Value>,
+}
+
+impl LocalizedText {
+    pub fn new(code: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            params: serde_json::Map::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn with(mut self, key: impl Into<String>, value: impl Into<serde_json::Value>) -> Self {
+        self.params.insert(key.into(), value.into());
+        self
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum NoticeLevel {
     Info,
@@ -1006,6 +1066,7 @@ mod additive_tests {
                 SessionEvent::Notice {
                     level: NoticeLevel::Warning,
                     message: "config key X is deprecated".into(),
+                    localized: None,
                 },
                 BackendProduced,
                 Display,
@@ -1124,6 +1185,8 @@ mod additive_tests {
                     output_tokens: 1,
                     total_tokens: 2,
                     cost_usd: None,
+                    breakdown: Default::default(),
+                    context_window: None,
                 },
                 BackendProduced,
                 Display,
@@ -1387,6 +1450,8 @@ mod additive_tests {
                 output_tokens: 50,
                 total_tokens: 150,
                 cost_usd: Some(0.0021),
+                breakdown: Default::default(),
+                context_window: None,
             },
             SessionEvent::Provisioning {
                 phase: ProvisioningPhase::ToolsWaiting,
@@ -1405,6 +1470,7 @@ mod additive_tests {
             SessionEvent::Notice {
                 level: NoticeLevel::Info,
                 message: "deprecated: use --foo".into(),
+                localized: None,
             },
             SessionEvent::ToolOutputDelta {
                 item_id: "call_0".into(),

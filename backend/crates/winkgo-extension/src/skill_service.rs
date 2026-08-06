@@ -294,6 +294,145 @@ pub struct SkillListItem {
     pub source: SkillSource,
 }
 
+/// Read-only tree node used by the skill detail file browser.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SkillFileNode {
+    pub name: String,
+    pub relative_path: String,
+    pub is_directory: bool,
+    pub children: Vec<SkillFileNode>,
+}
+
+const SKILL_BROWSER_MAX_ENTRIES: usize = 2_000;
+const SKILL_BROWSER_MAX_DEPTH: usize = 20;
+const SKILL_BROWSER_MAX_READ_BYTES: u64 = 2 * 1024 * 1024;
+
+fn compare_skill_file_nodes(left: &SkillFileNode, right: &SkillFileNode) -> std::cmp::Ordering {
+    let left_manifest = left.relative_path.eq_ignore_ascii_case(SKILL_MANIFEST_FILE);
+    let right_manifest = right.relative_path.eq_ignore_ascii_case(SKILL_MANIFEST_FILE);
+    right_manifest
+        .cmp(&left_manifest)
+        .then_with(|| right.is_directory.cmp(&left.is_directory))
+        .then_with(|| left.name.to_lowercase().cmp(&right.name.to_lowercase()))
+}
+
+fn list_skill_directory_blocking(
+    root: &Path,
+    directory: &Path,
+    depth: usize,
+    remaining: &mut usize,
+) -> Result<Vec<SkillFileNode>, ExtensionError> {
+    if depth > SKILL_BROWSER_MAX_DEPTH {
+        return Err(ExtensionError::InvalidSkillPath(
+            "skill directory nesting exceeds the browser limit".into(),
+        ));
+    }
+
+    let mut nodes = Vec::new();
+    for entry in std::fs::read_dir(directory)? {
+        if *remaining == 0 {
+            return Err(ExtensionError::InvalidSkillPath(
+                "skill contains too many files to display safely".into(),
+            ));
+        }
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        if file_type.is_symlink() {
+            continue;
+        }
+        if !file_type.is_dir() && !file_type.is_file() {
+            continue;
+        }
+
+        *remaining -= 1;
+        let absolute_path = entry.path();
+        let relative_path = absolute_path
+            .strip_prefix(root)
+            .map_err(|_| ExtensionError::PathTraversal(absolute_path.display().to_string()))?
+            .to_string_lossy()
+            .replace('\\', "/");
+        let is_directory = file_type.is_dir();
+        let children = if is_directory {
+            list_skill_directory_blocking(root, &absolute_path, depth + 1, remaining)?
+        } else {
+            Vec::new()
+        };
+        nodes.push(SkillFileNode {
+            name: entry.file_name().to_string_lossy().into_owned(),
+            relative_path,
+            is_directory,
+            children,
+        });
+    }
+    nodes.sort_by(compare_skill_file_nodes);
+    Ok(nodes)
+}
+
+async fn canonical_skill_root(skill_location: &Path) -> Result<PathBuf, ExtensionError> {
+    let metadata = tokio::fs::metadata(skill_location)
+        .await
+        .map_err(|_| ExtensionError::SkillNotFound(skill_location.display().to_string()))?;
+    let root = if metadata.is_dir() {
+        skill_location.to_path_buf()
+    } else {
+        skill_location
+            .parent()
+            .ok_or_else(|| ExtensionError::InvalidSkillPath(skill_location.display().to_string()))?
+            .to_path_buf()
+    };
+    tokio::fs::canonicalize(&root)
+        .await
+        .map_err(|_| ExtensionError::SkillNotFound(root.display().to_string()))
+}
+
+/// List a skill's files without following symlinks. The supplied location must
+/// come from the authenticated skill catalog; routes never accept an arbitrary
+/// filesystem location from the client.
+pub async fn list_skill_files_at_location(skill_location: &Path) -> Result<Vec<SkillFileNode>, ExtensionError> {
+    let root = canonical_skill_root(skill_location).await?;
+    tokio::task::spawn_blocking(move || {
+        let mut remaining = SKILL_BROWSER_MAX_ENTRIES;
+        list_skill_directory_blocking(&root, &root, 0, &mut remaining)
+    })
+    .await
+    .map_err(|error| ExtensionError::Internal(format!("skill file listing task failed: {error}")))?
+}
+
+/// Read one UTF-8 file below a listed skill root. Absolute paths, traversal,
+/// symlink escapes, directories, and oversized files are rejected.
+pub async fn read_skill_file_at_location(skill_location: &Path, relative_path: &str) -> Result<String, ExtensionError> {
+    let relative = Path::new(relative_path);
+    if relative_path.trim().is_empty()
+        || relative.is_absolute()
+        || relative
+            .components()
+            .any(|component| !matches!(component, std::path::Component::Normal(_)))
+    {
+        return Err(ExtensionError::PathTraversal(relative_path.to_string()));
+    }
+
+    let root = canonical_skill_root(skill_location).await?;
+    let candidate = root.join(relative);
+    let target = tokio::fs::canonicalize(&candidate)
+        .await
+        .map_err(|_| ExtensionError::SkillNotFound(relative_path.to_string()))?;
+    if !target.starts_with(&root) {
+        return Err(ExtensionError::PathTraversal(relative_path.to_string()));
+    }
+
+    let metadata = tokio::fs::metadata(&target).await?;
+    if !metadata.is_file() {
+        return Err(ExtensionError::InvalidSkillPath(relative_path.to_string()));
+    }
+    if metadata.len() > SKILL_BROWSER_MAX_READ_BYTES {
+        return Err(ExtensionError::InvalidSkillPath(format!(
+            "skill file exceeds the {} byte preview limit",
+            SKILL_BROWSER_MAX_READ_BYTES
+        )));
+    }
+    tokio::fs::read_to_string(target).await.map_err(ExtensionError::from)
+}
+
 /// List all available skills (built-in + user custom), deduplicated.
 ///
 /// User custom skills override built-in skills with the same name.

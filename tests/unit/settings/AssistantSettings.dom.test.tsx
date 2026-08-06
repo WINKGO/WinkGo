@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { ConfigProvider } from '@arco-design/web-react';
 import { MemoryRouter } from 'react-router';
 import AssistantSettings from '@/renderer/pages/settings/AssistantSettings';
@@ -210,6 +210,7 @@ describe('AssistantSettings', () => {
           onOpenDetail={vi.fn()}
           onToggleEnabled={vi.fn()}
           onReorder={vi.fn()}
+          onStartChat={vi.fn()}
         />
       </ConfigProvider>
     );
@@ -250,6 +251,7 @@ describe('AssistantSettings', () => {
           onOpenDetail={vi.fn()}
           onToggleEnabled={vi.fn()}
           onReorder={vi.fn()}
+          onStartChat={vi.fn()}
         />
       </ConfigProvider>
     );
@@ -282,6 +284,7 @@ describe('AssistantSettings', () => {
           onOpenDetail={vi.fn()}
           onToggleEnabled={vi.fn()}
           onReorder={vi.fn()}
+          onStartChat={vi.fn()}
         />
       </ConfigProvider>
     );
@@ -289,5 +292,39 @@ describe('AssistantSettings', () => {
     const row = screen.getByTestId('enabled-assistant-row-claude');
     expect(row.querySelector('.arco-avatar-circle')).toHaveStyle({ height: '20px', width: '20px' });
     expect(row.querySelector('img')).toHaveClass('object-contain');
+  });
+
+  it('starts chat from an enabled assistant row without opening its editor', () => {
+    const onStartChat = vi.fn();
+    const onOpenDetail = vi.fn();
+    const assistants = [
+      {
+        id: 'cli',
+        name: 'Codex',
+        sort_order: 1,
+        source: 'generated',
+        enabled: true,
+        agent: { type: 'acp', source: 'builtin', acp_backend: 'codex' },
+      },
+    ] as AssistantListItem[];
+
+    render(
+      <ConfigProvider>
+        <EnabledAssistantsList
+          assistants={assistants}
+          assistantOrder={[]}
+          localeKey='en-US'
+          searchActive={false}
+          onOpenDetail={onOpenDetail}
+          onToggleEnabled={vi.fn()}
+          onReorder={vi.fn()}
+          onStartChat={onStartChat}
+        />
+      </ConfigProvider>
+    );
+
+    fireEvent.click(screen.getByTestId('btn-chat-cli'));
+    expect(onStartChat).toHaveBeenCalledWith(expect.objectContaining({ id: 'cli' }));
+    expect(onOpenDetail).not.toHaveBeenCalled();
   });
 });

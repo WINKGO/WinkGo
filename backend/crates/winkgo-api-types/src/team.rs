@@ -3,6 +3,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use winkgo_common::TimestampMs;
 
 use crate::TeamMcpStdioConfig;
+use crate::chat_file::ChatFileRef;
 
 // ---------------------------------------------------------------------------
 // A. Team management — Request DTOs
@@ -253,7 +254,7 @@ pub struct TeamMcpRuntimeConfig {
 pub struct SendTeamMessageRequest {
     pub content: String,
     #[serde(default)]
-    pub files: Option<Vec<String>>,
+    pub files: Option<Vec<ChatFileRef>>,
 }
 
 /// Request body for `POST /api/teams/:id/agents/:slotId/messages`.
@@ -264,7 +265,7 @@ pub struct SendTeamMessageRequest {
 pub struct SendAgentMessageRequest {
     pub content: String,
     #[serde(default)]
-    pub files: Option<Vec<String>>,
+    pub files: Option<Vec<ChatFileRef>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

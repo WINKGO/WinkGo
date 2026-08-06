@@ -13,6 +13,7 @@ import { WINK_GO_ORGANIZER_STORAGE_KEYS } from '@/renderer/utils/winkgo/islandFi
 const mocks = vi.hoisted(() => ({
   applySettings: vi.fn(() => Promise.resolve(true)),
   getDefaultFolder: vi.fn(() => Promise.resolve('C:\\Users\\Tester\\Documents\\WINK GO 收纳箱')),
+  getMailStatus: vi.fn(),
   getStartOnBootStatus: vi.fn(() =>
     Promise.resolve({
       success: true,
@@ -20,7 +21,13 @@ const mocks = vi.hoisted(() => ({
     })
   ),
   navigate: vi.fn(),
+  openExternal: vi.fn(() => Promise.resolve()),
   requestNotificationAccess: vi.fn(() => Promise.resolve({ status: 'Allowed' })),
+  saveMailAccount: vi.fn(),
+  testMailConnection: vi.fn(),
+  checkMailNow: vi.fn(),
+  clearMailAccount: vi.fn(),
+  mailStatusHandler: undefined as ((status: unknown) => void) | undefined,
   setStartOnBoot: vi.fn(),
   showOpen: vi.fn(),
   undo: vi.fn(),
@@ -30,6 +37,64 @@ vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
 }));
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, params?: Record<string, string | number>) => {
+      const translations: Record<string, string> = {
+        'settings.imap.title': '邮箱通知',
+        'settings.imap.description': '通过本机 IMAP 安全收取新邮件，并在灵动岛提醒',
+        'settings.imap.helpTooltip': '查看邮箱配置帮助',
+        'settings.imap.helpTitle': '如何配置邮箱通知',
+        'settings.imap.helpBody': '先开启 IMAP 并生成客户端授权码，再测试连接并保存。',
+        'settings.imap.helpProviderHint': '常用邮箱官方直达入口',
+        'settings.imap.helpOpenProvider': '打开 {{provider}}',
+        'settings.imap.enabled': '启用邮箱接收',
+        'settings.imap.account': '邮箱账号',
+        'settings.imap.accountHint': '登录名留空时使用邮箱地址',
+        'settings.imap.emailPlaceholder': 'name@example.com',
+        'settings.imap.usernamePlaceholder': 'IMAP 登录名（可留空）',
+        'settings.imap.server': 'IMAP 服务器',
+        'settings.imap.serverHint': '仅支持 TLS 或强制 STARTTLS，不允许明文连接',
+        'settings.imap.hostPlaceholder': 'imap.example.com',
+        'settings.imap.tls': 'TLS',
+        'settings.imap.starttls': 'STARTTLS',
+        'settings.imap.password': '邮箱密码或授权码',
+        'settings.imap.passwordHint': '优先使用邮箱服务商提供的客户端授权码',
+        'settings.imap.passwordPlaceholder': '输入邮箱密码或客户端授权码',
+        'settings.imap.interval': '检查间隔',
+        'settings.imap.intervalHint': '每 1 到 60 分钟检查一次',
+        'settings.imap.minutes': '分钟',
+        'settings.imap.downloadDirectory': '正文与附件保存位置',
+        'settings.imap.defaultDownloadDirectory': '默认保存位置',
+        'settings.imap.chooseDirectory': '选择文件夹',
+        'settings.imap.checkNow': '立即检查',
+        'settings.imap.test': '测试连接',
+        'settings.imap.save': '保存邮箱设置',
+        'settings.imap.privacy': '密码使用安全存储',
+        'settings.imap.saved': '邮箱设置已安全保存',
+        'settings.imap.states.disabled': '未启用',
+      };
+      const template = translations[key] ?? key;
+      return Object.entries(params ?? {}).reduce(
+        (value, [name, replacement]) => value.replace(`{{${name}}}`, String(replacement)),
+        template
+      );
+    },
+  }),
+}));
+
+vi.mock('@arco-design/web-react', async () => {
+  const actual = await vi.importActual<typeof import('@arco-design/web-react')>('@arco-design/web-react');
+  return {
+    ...actual,
+    Message: {
+      success: vi.fn(),
+      warning: vi.fn(),
+      error: vi.fn(),
+    },
+  };
+});
+
 vi.mock('@/common', () => ({
   ipcBridge: {
     application: {
@@ -37,9 +102,25 @@ vi.mock('@/common', () => ({
       setStartOnBoot: { invoke: mocks.setStartOnBoot },
     },
     dialog: { showOpen: { invoke: mocks.showOpen } },
+    shell: { openExternal: { invoke: mocks.openExternal } },
     winkGoFiles: {
       getDefaultFolder: { invoke: mocks.getDefaultFolder },
       undo: { invoke: mocks.undo },
+    },
+    winkGoMail: {
+      getStatus: { invoke: mocks.getMailStatus },
+      saveAccount: { invoke: mocks.saveMailAccount },
+      testConnection: { invoke: mocks.testMailConnection },
+      checkNow: { invoke: mocks.checkMailNow },
+      clearAccount: { invoke: mocks.clearMailAccount },
+      statusChanged: {
+        on: (handler: (status: unknown) => void) => {
+          mocks.mailStatusHandler = handler;
+          return () => {
+            mocks.mailStatusHandler = undefined;
+          };
+        },
+      },
     },
     winkGoWindows: {
       requestNotificationAccess: { invoke: mocks.requestNotificationAccess },
@@ -68,6 +149,15 @@ describe('IslandFilesSettings', () => {
       desktopIsland: { applySettings: mocks.applySettings },
     });
     mocks.showOpen.mockResolvedValue(undefined);
+    mocks.getMailStatus.mockResolvedValue({ account: null, state: 'disabled', unreadCount: 0 });
+    mocks.saveMailAccount.mockResolvedValue({
+      ok: true,
+      status: { account: null, state: 'idle', unreadCount: 0 },
+    });
+    mocks.testMailConnection.mockResolvedValue({ ok: true, latencyMs: 88 });
+    mocks.checkMailNow.mockResolvedValue({ account: null, state: 'connected', unreadCount: 0 });
+    mocks.clearMailAccount.mockResolvedValue({ account: null, state: 'disabled', unreadCount: 0 });
+    mocks.mailStatusHandler = undefined;
     mocks.undo.mockResolvedValue({ restored: [], failures: [] });
     mocks.setStartOnBoot.mockResolvedValue({
       success: true,
@@ -106,6 +196,12 @@ describe('IslandFilesSettings', () => {
       '备忘录快捷键',
       '微信通知卡片',
       '自定义文件分类',
+      '邮箱通知',
+      '邮箱账号',
+      'IMAP 服务器',
+      '邮箱密码或授权码',
+      '检查间隔',
+      '正文与附件保存位置',
     ]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
@@ -113,6 +209,87 @@ describe('IslandFilesSettings', () => {
       expect(screen.getByText(shortcut)).toBeInTheDocument();
     }
     await screen.findByText('C:\\Users\\Tester\\Documents\\WINK GO 收纳箱');
+  });
+
+  it('sends IMAP credentials to the main process without persisting them in renderer storage', async () => {
+    render(<IslandFilesSettings />);
+
+    fireEvent.change(screen.getByPlaceholderText('name@example.com'), { target: { value: 'user@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('imap.example.com'), { target: { value: 'imap.example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('输入邮箱密码或客户端授权码'), {
+      target: { value: 'app-password' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '保存邮箱设置' }));
+
+    await waitFor(() => {
+      expect(mocks.saveMailAccount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'user@example.com',
+          host: 'imap.example.com',
+          password: 'app-password',
+          security: 'tls',
+        })
+      );
+    });
+    expect(JSON.stringify(window.localStorage)).not.toContain('app-password');
+  });
+
+  it('automatically fills the secure QQ Mail IMAP endpoint from the email address', async () => {
+    render(<IslandFilesSettings />);
+
+    const emailInput = screen.getByPlaceholderText('name@example.com');
+    const hostInput = screen.getByPlaceholderText('imap.example.com');
+    fireEvent.change(emailInput, { target: { value: '1394748660@qq.com' } });
+
+    expect(hostInput).toHaveValue('imap.qq.com');
+    fireEvent.change(screen.getByPlaceholderText('输入邮箱密码或客户端授权码'), {
+      target: { value: 'qq-client-authorization-code' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '保存邮箱设置' }));
+
+    await waitFor(() => {
+      expect(mocks.saveMailAccount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: '1394748660@qq.com',
+          host: 'imap.qq.com',
+          port: 993,
+          security: 'tls',
+        })
+      );
+    });
+  });
+
+  it('repairs a saved email address that was mistakenly used as the QQ IMAP host', async () => {
+    mocks.getMailStatus.mockResolvedValueOnce({
+      account: {
+        enabled: true,
+        label: '',
+        email: '1394748660@qq.com',
+        username: '',
+        host: '1394748660@qq.com',
+        port: 993,
+        security: 'tls',
+        pollIntervalMinutes: 2,
+        downloadDirectory: '',
+        passwordConfigured: true,
+      },
+      state: 'idle',
+      unreadCount: 0,
+    });
+
+    render(<IslandFilesSettings />);
+
+    await waitFor(() => expect(screen.getByPlaceholderText('imap.example.com')).toHaveValue('imap.qq.com'));
+  });
+
+  it('opens email setup help from the question button and links to the provider', async () => {
+    render(<IslandFilesSettings />);
+
+    fireEvent.click(screen.getByRole('button', { name: '查看邮箱配置帮助' }));
+
+    expect(await screen.findByText('如何配置邮箱通知')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /打开 QQ Mail/ }));
+    expect(mocks.openExternal).toHaveBeenCalledWith('https://service.mail.qq.com/detail/0/75');
   });
 
   it('stores a custom organizer category for the desktop island', async () => {

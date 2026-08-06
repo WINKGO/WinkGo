@@ -8,7 +8,7 @@
 
 import type { IMessageTips } from '@/common/chat/chatLib';
 import { Collapse, Tag } from '@arco-design/web-react';
-import { Attention, CheckOne } from '@icon-park/react';
+import { Attention, CheckOne, Info } from '@icon-park/react';
 import classNames from 'classnames';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,8 +19,9 @@ import CollapsibleContent from '@renderer/components/chat/CollapsibleContent';
 import { iconColors } from '@/renderer/styles/colors';
 import { brandLegacyTextForDisplay } from '@/renderer/utils/model/winkGoBranding';
 
-const icon = {
+export const icon = {
   success: <CheckOne theme='filled' size='16' fill={iconColors.success} className='m-t-2px' />,
+  info: <Info theme='filled' size='16' strokeLinejoin='bevel' className='m-t-2px' fill={iconColors.brand} />,
   warning: <Attention theme='filled' size='16' strokeLinejoin='bevel' className='m-t-2px' fill={iconColors.warning} />,
   error: <Attention theme='filled' size='16' strokeLinejoin='bevel' className='m-t-2px' fill={iconColors.danger} />,
 };

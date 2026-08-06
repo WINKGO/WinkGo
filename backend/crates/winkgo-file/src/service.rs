@@ -766,12 +766,23 @@ impl crate::traits::IFileService for FileService {
             let mut copied = Vec::new();
             let mut failed = Vec::new();
 
+            let mut fail = |path: &str, reason: &str| {
+                failed.push(winkgo_api_types::CopyFailure {
+                    path: path.to_owned(),
+                    reason: reason.to_owned(),
+                });
+            };
+
             for fp in &file_paths_owned {
                 let source_extra = source_root_owned.as_deref().or_else(|| Path::new(fp).parent());
                 let src = match validate_path_with_extra_root(fp, &roots_refs, source_extra) {
                     Ok(p) if p.is_file() => p,
-                    _ => {
-                        failed.push(fp.clone());
+                    Ok(_) => {
+                        fail(fp, "not a file (directories are not supported yet)");
+                        continue;
+                    }
+                    Err(_) => {
+                        fail(fp, "source is not accessible or outside the allowed roots");
                         continue;
                     }
                 };
@@ -785,9 +796,13 @@ impl crate::traits::IFileService for FileService {
                 };
 
                 let dest = ws_canonical.join(&relative);
+                if dest.exists() {
+                    fail(fp, "a file with the same name already exists at the destination");
+                    continue;
+                }
                 match copy_single_file_sync(&src, &dest) {
                     Ok(()) => copied.push(fp.clone()),
-                    Err(_) => failed.push(fp.clone()),
+                    Err(_) => fail(fp, "copy failed"),
                 }
             }
 

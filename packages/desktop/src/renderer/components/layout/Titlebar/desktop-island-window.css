@@ -81,8 +81,11 @@
 }
 
 .titlebar-dynamic-island--floating[data-panel='media'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='tools'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='mail'] .titlebar-dynamic-island__capsule-drag-handle,
 .titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__capsule-drag-handle,
 .titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='apps'] .titlebar-dynamic-island__capsule-drag-handle,
 .titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__capsule-drag-handle,
 .titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__capsule-drag-handle,
 .titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__capsule-drag-handle,
@@ -429,6 +432,20 @@
   animation: none;
 }
 
+.titlebar-dynamic-island--floating[data-panel='media'][data-media-view='lyrics'] {
+  min-height: 330px;
+  border-radius: 23px;
+  clip-path: inset(0 round 23px);
+}
+
+.titlebar-dynamic-island--floating[data-panel='media'][data-media-view='lyrics']
+  .titlebar-dynamic-island__panel--media {
+  height: 330px;
+  border-radius: 23px;
+  clip-path: inset(0 round 23px);
+  cursor: default;
+}
+
 /* The timer follows the original one-card interaction but keeps every input
    and action visibly framed, including at Windows display scaling. */
 .titlebar-dynamic-island--floating[data-panel='timer'] {
@@ -443,16 +460,18 @@
 
 .titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__panel--timer {
   top: 0;
+  box-sizing: border-box;
   width: 100%;
   height: 128px;
   overflow: hidden;
-  border-color: rgba(77, 91, 114, 0.22);
-  border-radius: 23px;
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow:
-    0 18px 42px rgba(24, 32, 45, 0.16),
-    0 5px 14px rgba(24, 32, 45, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(77, 91, 114, 0.2);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: none !important;
+  clip-path: inset(0 round 22px);
+  filter: none;
+  transform: none;
+  backdrop-filter: none;
 }
 
 .titlebar-dynamic-island--floating[data-panel='timer'] .titlebar-dynamic-island__panel-header {
@@ -556,10 +575,103 @@
   background: #eef0f3;
 }
 
+/* Compact horizontal utility row. The launcher stays at its collapsed
+   position while colored skill buttons open to its left. */
+.titlebar-dynamic-island--floating[data-panel='tools'],
+.titlebar-dynamic-island--floating[data-panel='mail'] {
+  min-height: 0;
+  gap: 0;
+}
+
+.titlebar-dynamic-island--floating[data-panel='mail'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='mail'] > .titlebar-dynamic-island__alarm {
+  display: none !important;
+}
+
+.titlebar-dynamic-island--floating[data-panel='mail'] .titlebar-dynamic-island__panel--mail {
+  top: 0;
+  width: 100%;
+  transform: none;
+  border: 1px solid rgba(77, 91, 114, 0.17);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: inset 0 0 0 1px rgba(77, 91, 114, 0.035);
+}
+
+.titlebar-dynamic-island--floating[data-panel='tools'] {
+  position: relative;
+  min-height: 46px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='tools'] > .titlebar-dynamic-island__capsule.arco-btn {
+  display: none !important;
+}
+
+.titlebar-dynamic-island--floating[data-panel='tools'] > .titlebar-dynamic-island__alarm.arco-btn {
+  position: absolute;
+  z-index: 6;
+  top: 0;
+  left: 212px;
+  box-shadow: none;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.titlebar-dynamic-island--floating[data-panel='tools'] > .titlebar-dynamic-island__alarm.arco-btn:hover {
+  box-shadow: none;
+  transform: scale(1.05);
+}
+
+.titlebar-dynamic-island--floating[data-panel='tools'] .titlebar-dynamic-island__panel--tools {
+  z-index: 3;
+  top: 0;
+  width: 250px;
+  height: 46px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  backdrop-filter: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='tools'] .titlebar-dynamic-island__tool-wheel {
+  height: 46px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='tools'] .titlebar-dynamic-island__tool-wheel-item {
+  top: 19px;
+  left: 231px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='mail'] .titlebar-dynamic-island__panel--mail {
+  min-height: 180px;
+  overflow: hidden;
+}
+
+.titlebar-dynamic-island--floating[data-panel='mail'] .titlebar-dynamic-island__panel-header {
+  box-sizing: border-box;
+  min-height: 62px;
+  padding: 9px 12px 8px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='mail'] .titlebar-dynamic-island__mail-panel {
+  padding: 8px 12px 10px;
+}
+
+.titlebar-dynamic-island--floating[data-island-theme='black'][data-panel='mail'] .titlebar-dynamic-island__panel--mail {
+  border-color: rgba(255, 255, 255, 0.13);
+  background: #15171b;
+  color: #fff;
+}
+
 /* The utility surfaces below are the original compact WINK GO island
    contracts. They expand the transparent desktop window in-place instead of
    opening a generic desktop popover. */
 .titlebar-dynamic-island--floating[data-panel='files'],
+.titlebar-dynamic-island--floating[data-panel='apps'],
 .titlebar-dynamic-island--floating[data-panel='category'],
 .titlebar-dynamic-island--floating[data-panel='destination'],
 .titlebar-dynamic-island--floating[data-panel='drop'],
@@ -572,6 +684,8 @@
 
 .titlebar-dynamic-island--floating[data-panel='files'] > .titlebar-dynamic-island__capsule,
 .titlebar-dynamic-island--floating[data-panel='files'] > .titlebar-dynamic-island__alarm,
+.titlebar-dynamic-island--floating[data-panel='apps'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='apps'] > .titlebar-dynamic-island__alarm,
 .titlebar-dynamic-island--floating[data-panel='category'] > .titlebar-dynamic-island__capsule,
 .titlebar-dynamic-island--floating[data-panel='category'] > .titlebar-dynamic-island__alarm,
 .titlebar-dynamic-island--floating[data-panel='destination'] > .titlebar-dynamic-island__capsule,
@@ -586,6 +700,7 @@
 }
 
 .titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__panel,
+.titlebar-dynamic-island--floating[data-panel='apps'] .titlebar-dynamic-island__panel,
 .titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__panel,
 .titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__panel,
 .titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel,
@@ -601,6 +716,7 @@
 }
 
 .titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__panel-header,
+.titlebar-dynamic-island--floating[data-panel='apps'] .titlebar-dynamic-island__panel-header,
 .titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__panel-header,
 .titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__panel-header,
 .titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel-header,
@@ -612,6 +728,7 @@
 }
 
 .titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__panel-icon,
+.titlebar-dynamic-island--floating[data-panel='apps'] .titlebar-dynamic-island__panel-icon,
 .titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__panel-icon,
 .titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__panel-icon,
 .titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel-icon,
@@ -624,6 +741,7 @@
 }
 
 .titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__panel-header strong,
+.titlebar-dynamic-island--floating[data-panel='apps'] .titlebar-dynamic-island__panel-header strong,
 .titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__panel-header strong,
 .titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__panel-header strong,
 .titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel-header strong,
@@ -633,6 +751,7 @@
 }
 
 .titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__panel-header small,
+.titlebar-dynamic-island--floating[data-panel='apps'] .titlebar-dynamic-island__panel-header small,
 .titlebar-dynamic-island--floating[data-panel='category'] .titlebar-dynamic-island__panel-header small,
 .titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__panel-header small,
 .titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__panel-header small,
@@ -645,6 +764,23 @@
   gap: 0;
   height: 90px;
   padding: 0 12px 10px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='apps'] .titlebar-dynamic-island__quick-apps-panel {
+  min-height: 116px;
+  padding: 2px 12px 7px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='apps'] .titlebar-dynamic-island__quick-apps {
+  min-height: 82px;
+  padding: 3px 2px;
+}
+
+.titlebar-dynamic-island--floating[data-panel='apps'] .titlebar-dynamic-island__quick-app-launch.arco-btn,
+.titlebar-dynamic-island--floating[data-panel='apps'] .titlebar-dynamic-island__quick-app-add.arco-btn {
+  border-color: #dfe6ef;
+  background: #f8fafc;
+  box-shadow: 0 3px 10px rgba(71, 93, 119, 0.055);
 }
 
 .titlebar-dynamic-island--floating[data-panel='files'] .titlebar-dynamic-island__file-drop,

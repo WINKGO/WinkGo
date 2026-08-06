@@ -91,6 +91,8 @@ import type {
 } from '../update/updateTypes';
 import type { AgentMetadata } from '@/renderer/utils/model/agentTypes';
 import type { Theme } from '@/common/theme/types';
+import type { AttachFolderRequest, ProjectDetailDto, ProjectEntryDto } from '@/common/types/project';
+import type { ChatFileRef } from '@/common/types/chatFile';
 import type { ProtocolDetectionRequest, ProtocolDetectionResponse } from '../utils/protocolDetector';
 import {
   buildCreateConversationBody,
@@ -255,6 +257,15 @@ export const conversation = {
   getSlashCommands: httpGet<AcpSlashCommandApiItem[], { conversation_id: string }>(
     (p) => `/api/conversations/${p.conversation_id}/slash-commands`
   ),
+  getUsage: httpGet<
+    {
+      used: number;
+      size: number;
+      cost?: { amount: number; currency: string };
+      _meta?: Record<string, unknown>;
+    } | null,
+    { conversation_id: string }
+  >((p) => `/api/conversations/${p.conversation_id}/usage`),
   askSideQuestion: httpPost<ConversationSideQuestionResult, { conversation_id: string; question: string }>(
     (p) => `/api/conversations/${p.conversation_id}/side-question`,
     (p) => ({ question: p.question })
@@ -372,6 +383,29 @@ export const conversation = {
 
 export const runtime = {
   statusChanged: wsEmitter<IRuntimeStatusEvent>('runtime.statusChanged'),
+};
+
+// ---------------------------------------------------------------------------
+// Project Explorer control plane — routed to /api/projects/* (HTTP; the data
+// plane is the WS fs/* monitor). See explorer-stage3 HTTP contract.
+// ---------------------------------------------------------------------------
+
+export const project = {
+  /** GET /api/projects/{id} → full project detail incl. all pe roots (entries). */
+  get: httpGet<ProjectDetailDto, { project_id: string }>((p) => `/api/projects/${encodeURIComponent(p.project_id)}`),
+  /**
+   * POST /api/projects/{id}/folders → attach a folder, returns the single new (or,
+   * for a subdir, the existing focused) entry. 409 `project_explorer_duplicate` /
+   * `project_explorer_overlap` surface via BackendHttpError.code.
+   */
+  attachFolder: httpPost<ProjectEntryDto, { project_id: string } & AttachFolderRequest>(
+    (p) => `/api/projects/${encodeURIComponent(p.project_id)}/folders`,
+    (p) => (p.display_name ? { uri: p.uri, display_name: p.display_name } : { uri: p.uri })
+  ),
+  /** DELETE /api/projects/{id}/folders/{pe_id} → 204. Workspace entry is immutable (backend rejects). */
+  removeFolder: httpDelete<void, { project_id: string; pe_id: string }>(
+    (p) => `/api/projects/${encodeURIComponent(p.project_id)}/folders/${encodeURIComponent(p.pe_id)}`
+  ),
 };
 
 // ---------------------------------------------------------------------------
@@ -608,7 +642,7 @@ export type WinkGoUndoResult = {
 };
 
 export type WinkGoFileCommand = {
-  type: 'openMemo' | 'openShelf' | 'newCategory' | 'openFormat';
+  type: 'openMemo' | 'openShelf' | 'newCategory' | 'openFormat' | 'openApps';
 };
 
 export type WinkGoShortcutAction = WinkGoFileCommand['type'] | 'toggleIsland';
@@ -618,7 +652,19 @@ export type WinkGoFileShortcutStatus = {
   fileShelf: boolean;
   fileCategory: boolean;
   formatWorkbench: boolean;
+  quickApps: boolean;
   toggleIsland: boolean;
+};
+
+export type WinkGoQuickApp = {
+  name: string;
+  path: string;
+  iconDataUrl: string;
+};
+
+export type WinkGoQuickAppLaunchResult = {
+  launched: boolean;
+  error?: 'invalid_path' | 'not_found' | 'unsupported' | 'open_failed';
 };
 
 export type WinkGoFormatPreset =
@@ -689,7 +735,33 @@ export type WinkGoMediaSnapshot = {
   canGoPrevious: boolean;
   coverUrl: string;
   appIconUrl?: string;
+  /** Position captured from the Windows SMTC timeline. */
+  positionMs?: number;
+  /** Playable duration captured from the Windows SMTC timeline. */
+  durationMs?: number;
+  /** Playback-rate hint used to interpolate the timeline between native updates. */
+  playbackRate?: number;
+  /** Wall-clock time at which positionMs was sampled. */
+  timelineUpdatedAt?: number;
+  /** True when a player exposes no native timeline and WINK GO maintains a local monotonic clock. */
+  timelineEstimated?: boolean;
   updatedAt: number;
+};
+
+export type WinkGoLyricLine = {
+  timeMs: number;
+  text: string;
+  translation?: string;
+};
+
+export type WinkGoLyricsRequest = Pick<WinkGoMediaSnapshot, 'appId' | 'title' | 'artist' | 'albumTitle'>;
+
+export type WinkGoLyricsResult = {
+  status: 'ok' | 'not_found' | 'error';
+  trackKey: string;
+  source?: 'netease' | 'qqmusic' | 'qishui';
+  lines: WinkGoLyricLine[];
+  fetchedAt: number;
 };
 
 export type WinkGoCapturedNotification = {
@@ -700,6 +772,107 @@ export type WinkGoCapturedNotification = {
   appUserModelId: string;
   iconUrl?: string;
   createdAt: number;
+  mail?: {
+    uid: number;
+    accountEmail: string;
+    hasAttachments: boolean;
+    attachmentCount: number;
+  };
+};
+
+export type WinkGoMailSecurity = 'tls' | 'starttls';
+
+export type WinkGoMailErrorCode =
+  | 'invalid_config'
+  | 'missing_password'
+  | 'secure_storage_unavailable'
+  | 'authentication_failed'
+  | 'connection_failed'
+  | 'tls_failed'
+  | 'timeout'
+  | 'mailbox_unavailable'
+  | 'not_configured'
+  | 'message_not_found'
+  | 'message_too_large'
+  | 'download_failed';
+
+export type WinkGoMailAccountInput = {
+  enabled: boolean;
+  label: string;
+  email: string;
+  username: string;
+  password?: string;
+  host: string;
+  port: number;
+  security: WinkGoMailSecurity;
+  pollIntervalMinutes: number;
+  downloadDirectory: string;
+};
+
+export type WinkGoMailAccountConfig = Omit<WinkGoMailAccountInput, 'password'> & {
+  passwordConfigured: boolean;
+};
+
+export type WinkGoMailRuntimeState = 'disabled' | 'idle' | 'checking' | 'connected' | 'error';
+
+export type WinkGoMailStatus = {
+  account: WinkGoMailAccountConfig | null;
+  state: WinkGoMailRuntimeState;
+  lastCheckedAt?: number;
+  lastErrorCode?: WinkGoMailErrorCode;
+  unreadCount: number;
+};
+
+export type WinkGoMailMessage = {
+  id: string;
+  uid: number;
+  accountEmail: string;
+  senderName: string;
+  senderAddress: string;
+  subject: string;
+  receivedAt: number;
+  hasAttachments: boolean;
+  attachmentCount: number;
+  isUnread: boolean;
+};
+
+export type WinkGoMailListRequest = {
+  limit?: number;
+};
+
+export type WinkGoMailPreviewRequest = {
+  uid: number;
+};
+
+export type WinkGoMailPreviewResult = {
+  ok: boolean;
+  body?: string;
+  attachmentNames: string[];
+  errorCode?: WinkGoMailErrorCode;
+};
+
+export type WinkGoMailTestResult = {
+  ok: boolean;
+  errorCode?: WinkGoMailErrorCode;
+  latencyMs: number;
+};
+
+export type WinkGoMailSaveResult = {
+  ok: boolean;
+  status: WinkGoMailStatus;
+  errorCode?: WinkGoMailErrorCode;
+};
+
+export type WinkGoMailDownloadRequest = {
+  uid: number;
+};
+
+export type WinkGoMailDownloadResult = {
+  ok: boolean;
+  directory?: string;
+  bodyPath?: string;
+  attachments: string[];
+  errorCode?: WinkGoMailErrorCode;
 };
 
 export type WinkGoNotificationAccess = 'Allowed' | 'Denied' | 'Unspecified' | 'Unavailable' | string;
@@ -861,6 +1034,19 @@ export type WinkGoXiaozhiSnapshot = {
   legacyCompatible: boolean;
 };
 
+export type WinkGoXiaozhiActivity = {
+  id: string;
+  source: 'xiaozhi_hardware' | 'mobile_miniapp';
+  sourceLabel: string;
+  command: string;
+  toolName?: string;
+  status: 'running' | 'success' | 'error';
+  message: string;
+  startedAtMs: number;
+  updatedAtMs: number;
+  elapsedMs?: number;
+};
+
 export type WinkGoXiaozhiSaveRequest = {
   runtimeApi: string;
   lanIp: string;
@@ -961,11 +1147,31 @@ export const winkGoFiles = {
   organize: bridge.buildProvider<WinkGoOrganizeResult, WinkGoOrganizeRequest>('winkgo-files.organize'),
   undo: bridge.buildProvider<WinkGoUndoResult, { operations: WinkGoOrganizeOperation[] }>('winkgo-files.undo'),
   showItemInFolder: bridge.buildProvider<void, { path: string }>('winkgo-files.show-item-in-folder'),
+  selectQuickApps: bridge.buildProvider<WinkGoQuickApp[], void>('winkgo-files.select-quick-apps'),
+  refreshQuickApps: bridge.buildProvider<WinkGoQuickApp[], { paths: string[] }>('winkgo-files.refresh-quick-apps'),
+  launchQuickApp: bridge.buildProvider<WinkGoQuickAppLaunchResult, { path: string }>('winkgo-files.launch-quick-app'),
   activateShortcuts: bridge.buildProvider<WinkGoFileShortcutStatus, void>('winkgo-files.activate-shortcuts'),
   triggerShortcutAction: bridge.buildProvider<boolean, { action: WinkGoShortcutAction }>(
     'winkgo-files.trigger-shortcut-action'
   ),
   command: bridge.buildEmitter<WinkGoFileCommand>('winkgo-files.command'),
+};
+
+export const winkGoMail = {
+  getStatus: bridge.buildProvider<WinkGoMailStatus, void>('winkgo-mail.get-status'),
+  listMessages: bridge.buildProvider<WinkGoMailMessage[], WinkGoMailListRequest>('winkgo-mail.list-messages'),
+  previewMessage: bridge.buildProvider<WinkGoMailPreviewResult, WinkGoMailPreviewRequest>(
+    'winkgo-mail.preview-message'
+  ),
+  saveAccount: bridge.buildProvider<WinkGoMailSaveResult, WinkGoMailAccountInput>('winkgo-mail.save-account'),
+  clearAccount: bridge.buildProvider<WinkGoMailStatus, void>('winkgo-mail.clear-account'),
+  testConnection: bridge.buildProvider<WinkGoMailTestResult, WinkGoMailAccountInput>('winkgo-mail.test-connection'),
+  checkNow: bridge.buildProvider<WinkGoMailStatus, void>('winkgo-mail.check-now'),
+  downloadMessage: bridge.buildProvider<WinkGoMailDownloadResult, WinkGoMailDownloadRequest>(
+    'winkgo-mail.download-message'
+  ),
+  statusChanged: bridge.buildEmitter<WinkGoMailStatus>('winkgo-mail.status-changed'),
+  messageReceived: bridge.buildEmitter<WinkGoCapturedNotification>('winkgo-mail.message-received'),
 };
 
 export const winkGoFormat = {
@@ -991,6 +1197,7 @@ export const winkGoWindows = {
   controlMedia: bridge.buildProvider<{ controlled: boolean }, { action: WinkGoMediaControlAction }>(
     'winkgo-windows.control-media'
   ),
+  getLyrics: bridge.buildProvider<WinkGoLyricsResult, WinkGoLyricsRequest>('winkgo-windows.get-lyrics'),
   requestNotificationAccess: bridge.buildProvider<{ status: WinkGoNotificationAccess }, void>(
     'winkgo-windows.request-notification-access'
   ),
@@ -1038,6 +1245,7 @@ export const winkGoXiaozhi = {
   ),
   detectLanIp: bridge.buildProvider<WinkGoInspirationResult<string>, void>('winkgo-xiaozhi.detect-lan-ip'),
   statusChanged: bridge.buildEmitter<WinkGoXiaozhiSnapshot>('winkgo-xiaozhi.status-changed'),
+  activityChanged: bridge.buildEmitter<WinkGoXiaozhiActivity>('winkgo-xiaozhi.activity-changed'),
 };
 
 export const winkGoImages = {
@@ -1091,8 +1299,20 @@ export const dialog = {
 // File System — routed to /api/fs/* and /api/skills/*
 // ---------------------------------------------------------------------------
 
+export type SkillFileNode = {
+  name: string;
+  relative_path: string;
+  type: 'directory' | 'file';
+  children?: SkillFileNode[];
+};
+
 export const fs = {
   getFilesByDir: httpPost<Array<IDirOrFile>, { dir: string; root: string }>('/api/fs/dir'),
+  // Reveal a project-scoped entry in the OS file manager (Finder/Explorer).
+  // The backend resolves the pe-ref to an absolute path (resolve_reference) and
+  // calls shell.showItemInFolder — the front end never builds the absolute path
+  // (avoids the Windows verbatim `\\?\` pitfall). Electron-only at the call site.
+  reveal: httpPost<void, { pe_id: string; relative_path: string }>('/api/fs/reveal'),
   listWorkspaceFiles: withResponseMap(
     httpPost<Array<RawWorkspaceFlatFile>, { root: string }>('/api/fs/list'),
     fromBackendWorkspaceFlatFiles
@@ -1119,6 +1339,14 @@ export const fs = {
   >('/api/fs/zip'),
   cancelZip: httpPost<boolean, { request_id: string }>('/api/fs/zip/cancel'),
   getFileMetadata: httpPost<IFileMetadata, { path: string; workspace?: string }>('/api/fs/metadata'),
+  // Import OS files into a project entry's directory (A-paste). `target` is the
+  // drop-target pe + relative dir ('' = its root). Name conflicts are reported in
+  // `failed_files` (not overwritten); directories are rejected there this round.
+  copyFilesToProject: httpPost<
+    { copied_files: string[]; failed_files: Array<{ path: string; reason: string }> },
+    { file_paths: string[]; target: { pe_id: string; relative_path: string }; source_root?: string }
+  >('/api/fs/copy'),
+  // Compatibility surface for the retained legacy Workspace fallback.
   copyFilesToWorkspace: httpPost<
     { copied_files: string[]; failed_files?: Array<{ path: string; error: string }> },
     { file_paths: string[]; workspace: string; source_root?: string }
@@ -1226,6 +1454,8 @@ export const fs = {
   ),
   enableSkillsMarket: httpPost<void, void>('/api/skills/market/enable'),
   disableSkillsMarket: httpPost<void, void>('/api/skills/market/disable'),
+  listSkillFiles: httpPost<SkillFileNode[], { skill_name: string }>('/api/skills/files'),
+  readSkillFile: httpPost<string, { skill_name: string; relative_path: string }>('/api/skills/files/read'),
 };
 
 // ---------------------------------------------------------------------------
@@ -2029,7 +2259,9 @@ export interface ICronJobUpdateParams {
 interface ISendMessageParams {
   input: string;
   conversation_id: string;
-  files?: string[];
+  /** Source-tagged file refs; the backend resolves each to an absolute path and
+   *  injects it into the message. See {@link ChatFileRef}. */
+  files?: ChatFileRef[];
   loading_id?: string;
   inject_skills?: string[];
 }

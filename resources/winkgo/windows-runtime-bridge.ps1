@@ -527,6 +527,81 @@ function Copy-OrderedDictionary {
   return $copy
 }
 
+function ConvertTo-MediaComparisonJson {
+  param([Parameter(Mandatory = $true)] $Snapshot)
+
+  $comparison = Copy-OrderedDictionary $Snapshot
+  $comparison.updatedAt = 0
+  if ($comparison.Contains('positionMs')) { $comparison.positionMs = 0 }
+  if ($comparison.Contains('timelineUpdatedAt')) { $comparison.timelineUpdatedAt = 0 }
+  return $comparison | ConvertTo-Json -Compress -Depth 5
+}
+
+function Read-MediaTimeline {
+  param(
+    [Parameter(Mandatory = $true)] $Session,
+    [Parameter(Mandatory = $true)] $PlaybackInfo,
+    [Parameter(Mandatory = $true)] [string] $TrackKey,
+    [Parameter(Mandatory = $true)] [bool] $IsPlaying
+  )
+
+  $now = [DateTime]::UtcNow
+  try {
+    $timeline = $Session.GetTimelineProperties()
+    if ($null -ne $timeline) {
+      $positionMs = [long][Math]::Max(0, ($timeline.Position - $timeline.StartTime).TotalMilliseconds)
+      $durationMs = [long][Math]::Max(0, ($timeline.EndTime - $timeline.StartTime).TotalMilliseconds)
+      if ($durationMs -gt 0) {
+        $playbackRate = 1.0
+        try {
+          if ($null -ne $PlaybackInfo.PlaybackRate) {
+            $playbackRate = [double]$PlaybackInfo.PlaybackRate
+          }
+        } catch {
+          $playbackRate = 1.0
+        }
+        $script:estimatedTimelineTrackKey = $TrackKey
+        $script:estimatedTimelinePositionMs = [double][Math]::Min($positionMs, $durationMs)
+        $script:estimatedTimelineSampleAt = $now
+        $script:estimatedTimelineWasPlaying = $IsPlaying
+        return [ordered]@{
+          positionMs = [Math]::Min($positionMs, $durationMs)
+          durationMs = $durationMs
+          playbackRate = $playbackRate
+          timelineUpdatedAt = Get-UnixMilliseconds
+        }
+      }
+    }
+  } catch {
+    # Some desktop players expose playback metadata but throw when their SMTC
+    # timeline is read. The monotonic fallback below keeps synchronized lyrics
+    # moving without opening or focusing the player window.
+  }
+
+  if ([string]::IsNullOrWhiteSpace($TrackKey)) { return $null }
+  if ($script:estimatedTimelineTrackKey -ne $TrackKey) {
+    $script:estimatedTimelineTrackKey = $TrackKey
+    $script:estimatedTimelinePositionMs = 0.0
+    $script:estimatedTimelineSampleAt = $now
+    $script:estimatedTimelineWasPlaying = $IsPlaying
+  } else {
+    if ($script:estimatedTimelineWasPlaying) {
+      $elapsedMs = [Math]::Max(0, ($now - $script:estimatedTimelineSampleAt).TotalMilliseconds)
+      $script:estimatedTimelinePositionMs += $elapsedMs
+    }
+    $script:estimatedTimelineSampleAt = $now
+    $script:estimatedTimelineWasPlaying = $IsPlaying
+  }
+
+  return [ordered]@{
+    positionMs = [long][Math]::Max(0, $script:estimatedTimelinePositionMs)
+    durationMs = 0
+    playbackRate = 1.0
+    timelineUpdatedAt = Get-UnixMilliseconds
+    timelineEstimated = $true
+  }
+}
+
 function Close-WinRtResource {
   param($Resource)
 
@@ -581,6 +656,11 @@ $script:lastSyntheticMusicAudioActiveAt = [DateTime]::MinValue
 $script:lastMediaManagerRefreshAt = [DateTime]::MinValue
 $script:nextCoverRetryAt = [DateTime]::UtcNow
 $script:nextPlaybackPollAt = [DateTime]::UtcNow
+$script:nextTimelinePublishAt = [DateTime]::UtcNow
+$script:estimatedTimelineTrackKey = ''
+$script:estimatedTimelinePositionMs = 0.0
+$script:estimatedTimelineSampleAt = [DateTime]::UtcNow
+$script:estimatedTimelineWasPlaying = $false
 $script:nextMediaPollAt = [DateTime]::UtcNow
 $script:mediaTransitionPollUntil = [DateTime]::MinValue
 $script:nextNotificationPollAt = [DateTime]::UtcNow
@@ -1938,9 +2018,7 @@ function Publish-PreparedMediaSnapshot {
     $script:lastTrackKey = $trackKey
     $script:mediaTransitionPollUntil = [DateTime]::MinValue
   }
-  $comparison = Copy-OrderedDictionary $Snapshot
-  $comparison.updatedAt = 0
-  $comparisonJson = $comparison | ConvertTo-Json -Compress -Depth 5
+  $comparisonJson = ConvertTo-MediaComparisonJson $Snapshot
   if ($comparisonJson -eq $script:lastMediaJson) {
     return
   }
@@ -2070,9 +2148,14 @@ function Publish-MediaSnapshot {
       appIconUrl = $appIconUrl
       updatedAt = Get-UnixMilliseconds
     }
-    $comparison = Copy-OrderedDictionary $snapshot
-    $comparison.updatedAt = 0
-    $comparisonJson = $comparison | ConvertTo-Json -Compress -Depth 5
+    $timeline = Read-MediaTimeline $session $playbackInfo $trackKey $isPlaying
+    if ($null -ne $timeline) {
+      foreach ($entry in $timeline.GetEnumerator()) {
+        $snapshot[$entry.Key] = $entry.Value
+      }
+      $script:nextTimelinePublishAt = [DateTime]::UtcNow.AddMilliseconds(300)
+    }
+    $comparisonJson = ConvertTo-MediaComparisonJson $snapshot
     if ($comparisonJson -ne $script:lastMediaJson) {
       $script:lastMediaJson = $comparisonJson
       $script:latestMedia = $snapshot
@@ -2105,9 +2188,7 @@ function Publish-MediaSnapshot {
         $script:lastCoverUrl = $coverUrl
         $snapshot.coverUrl = $coverUrl
         $snapshot.updatedAt = Get-UnixMilliseconds
-        $comparison = Copy-OrderedDictionary $snapshot
-        $comparison.updatedAt = 0
-        $script:lastMediaJson = $comparison | ConvertTo-Json -Compress -Depth 5
+        $script:lastMediaJson = ConvertTo-MediaComparisonJson $snapshot
         $script:latestMedia = $snapshot
         Write-BridgeEvent @{ type = 'media-snapshot'; data = $snapshot }
       }
@@ -2139,16 +2220,27 @@ function Publish-MediaPlaybackState {
     $isPlaying = Resolve-MediaPlayingState (
       [string]$script:latestMedia.appId
     ) (([string]$playbackInfo.PlaybackStatus) -eq 'Playing')
-    if ([bool]$script:latestMedia.isPlaying -eq $isPlaying) {
+    $playbackChanged = [bool]$script:latestMedia.isPlaying -ne $isPlaying
+    $now = [DateTime]::UtcNow
+    $timeline = $null
+    if ($now -ge $script:nextTimelinePublishAt) {
+      $timelineTrackKey = "$($script:latestMedia.appId)|$($script:latestMedia.title)|$($script:latestMedia.artist)"
+      $timeline = Read-MediaTimeline $script:activeMediaSession $playbackInfo $timelineTrackKey $isPlaying
+      $script:nextTimelinePublishAt = $now.AddMilliseconds(300)
+    }
+    if (-not $playbackChanged -and $null -eq $timeline) {
       return
     }
 
     $snapshot = Copy-OrderedDictionary $script:latestMedia
     $snapshot.isPlaying = $isPlaying
+    if ($null -ne $timeline) {
+      foreach ($entry in $timeline.GetEnumerator()) {
+        $snapshot[$entry.Key] = $entry.Value
+      }
+    }
     $snapshot.updatedAt = Get-UnixMilliseconds
-    $comparison = Copy-OrderedDictionary $snapshot
-    $comparison.updatedAt = 0
-    $script:lastMediaJson = $comparison | ConvertTo-Json -Compress -Depth 5
+    $script:lastMediaJson = ConvertTo-MediaComparisonJson $snapshot
     $script:latestMedia = $snapshot
     Write-BridgeEvent @{ type = 'media-snapshot'; data = $snapshot }
   } catch {
@@ -2194,9 +2286,7 @@ function Invoke-MediaControl {
         'pause' { $snapshot.isPlaying = $false }
       }
       $snapshot.updatedAt = Get-UnixMilliseconds
-      $comparison = Copy-OrderedDictionary $snapshot
-      $comparison.updatedAt = 0
-      $script:lastMediaJson = $comparison | ConvertTo-Json -Compress -Depth 5
+      $script:lastMediaJson = ConvertTo-MediaComparisonJson $snapshot
       $script:latestMedia = $snapshot
       Write-BridgeEvent @{ type = 'media-snapshot'; data = $snapshot }
     }
@@ -2395,6 +2485,7 @@ function Handle-BridgeCommand {
         }
         if ($script:mediaEnabled) {
           $script:nextPlaybackPollAt = [DateTime]::UtcNow
+          $script:nextTimelinePublishAt = [DateTime]::UtcNow
           $script:nextMediaPollAt = [DateTime]::UtcNow
         } elseif (-not [string]::IsNullOrWhiteSpace($script:lastMediaJson)) {
           $script:lastMediaJson = ''
@@ -2569,12 +2660,16 @@ while ($keepRunning) {
   }
   if ($script:mediaEnabled -and $now -ge $script:nextMediaPollAt) {
     Publish-MediaSnapshot
-    $mediaPollDelay = if (
-      [DateTime]::UtcNow -lt $script:mediaTransitionPollUntil
-    ) {
-      180
+    $mediaPollDelay = if ([DateTime]::UtcNow -lt $script:mediaTransitionPollUntil) {
+      150
+    } elseif ($null -ne $script:latestMedia -and [bool]$script:latestMedia.isPlaying) {
+      # Several Windows music players expose a zero-length SMTC timeline. Keep
+      # full metadata polling responsive while music is playing so the local
+      # lyric clock starts within a fraction of a second after an automatic
+      # track change instead of inheriting the old 1.25 second detection lag.
+      420
     } else {
-      1250
+      1100
     }
     $script:nextMediaPollAt = [DateTime]::UtcNow.AddMilliseconds($mediaPollDelay)
   }

@@ -242,6 +242,18 @@ fn file_error_to_api_error(error: FileError) -> ApiError {
         },
         FileError::NotFound(message) => ApiError::NotFound(message),
         FileError::Internal(message) => ApiError::Internal(message),
+        FileError::WatchUnavailable { errno } => ApiError::coded(
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            "FILE_WATCH_UNAVAILABLE",
+            "File watching is unavailable on this system.",
+            errno.map(|number| serde_json::json!({ "errno": number })),
+        ),
+        FileError::RevealFailed(message) => ApiError::coded(
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "REVEAL_FAILED",
+            message,
+            None::<serde_json::Value>,
+        ),
     }
 }
 

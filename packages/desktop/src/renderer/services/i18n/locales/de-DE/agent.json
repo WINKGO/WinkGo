@@ -33,6 +33,9 @@
     "searchPlaceholder": "Modelle suchen",
     "noResults": "Keine passenden Modelle"
   },
+  "warmup": {
+    "clickToWake": "Klicken, um dieses Teammitglied zu starten"
+  },
   "config": {
     "setting": "Einstellung wird angewendet...",
     "commandAck": "Befehl gesendet, aber Status nicht bestätigt. Aktualisiere oder versuche es später erneut.",

@@ -7,14 +7,20 @@
  */
 
 import { ipcBridge } from '@/common';
+import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import type { ConversationContextValue } from '@/renderer/hooks/context/ConversationContext';
 import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
 import { useAutoPreviewOfficeFilesEnabled } from '@/renderer/hooks/system/useAutoPreviewOfficeFilesEnabled';
 import { getFileTypeInfo } from '@/renderer/utils/file/fileType';
+import { Message } from '@arco-design/web-react';
 import { useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const OFFICE_OPEN_DELAY_MS = 1000;
 const OFFICE_CONTENT_TYPES = new Set(['ppt', 'word', 'excel']);
+const FILE_WATCH_UNAVAILABLE_CODE = 'FILE_WATCH_UNAVAILABLE';
+
+let fileWatchUnavailableWarned = false;
 
 const normalizeWatchPath = (value: string): string => {
   const normalized = value.replaceAll('\\', '/');
@@ -39,6 +45,7 @@ export const useAutoPreviewOfficeFiles = (
   conversation: Pick<ConversationContextValue, 'conversation_id' | 'workspace'> | null
 ) => {
   const enabled = useAutoPreviewOfficeFilesEnabled();
+  const { t } = useTranslation();
   const { findPreviewTab, openPreview } = usePreviewContext();
   const knownOfficeFilesRef = useRef<Set<string>>(new Set());
   const openTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -95,8 +102,18 @@ export const useAutoPreviewOfficeFiles = (
             .map((file_path) => normalizeWatchPath(file_path))
             .filter((file_path) => OFFICE_CONTENT_TYPES.has(getFileTypeInfo(file_path).contentType))
         );
-      } catch {
-        // Ignore watcher/bootstrap failures; the hook should stay inert rather than noisy.
+      } catch (error) {
+        if (
+          !cancelled &&
+          !fileWatchUnavailableWarned &&
+          isBackendHttpError(error) &&
+          error.code === FILE_WATCH_UNAVAILABLE_CODE
+        ) {
+          fileWatchUnavailableWarned = true;
+          const errno = (error.details as { errno?: number } | undefined)?.errno;
+          console.warn('[useAutoPreviewOfficeFiles] live file watching unavailable', { errno });
+          Message.warning(t('conversation.officePreview.fileWatchUnavailable'));
+        }
       }
     };
 
@@ -124,5 +141,5 @@ export const useAutoPreviewOfficeFiles = (
       knownOfficeFilesRef.current.clear();
       void ipcBridge.workspaceOfficeWatch.stop.invoke({ workspace }).catch(() => {});
     };
-  }, [clearPendingOpenTimers, enabled, normalizedWorkspace, openOfficePreview, workspace]);
+  }, [clearPendingOpenTimers, enabled, normalizedWorkspace, openOfficePreview, t, workspace]);
 };

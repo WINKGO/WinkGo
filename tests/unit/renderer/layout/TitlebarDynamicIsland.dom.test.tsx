@@ -12,7 +12,11 @@ import type {
   ICronJob,
   IResponseMessage,
   WinkGoCapturedNotification,
+  WinkGoMailMessage,
+  WinkGoMailStatus,
   WinkGoMediaSnapshot,
+  WinkGoQuickApp,
+  WinkGoXiaozhiActivity,
   WinkGoXiaozhiSnapshot,
 } from '@/common/adapter/ipcBridge';
 
@@ -24,7 +28,9 @@ const mocks = vi.hoisted(() => ({
   onJobRemoved: vi.fn(() => () => {}),
   responseHandler: undefined as ((message: IResponseMessage) => void) | undefined,
   turnHandler: undefined as ((event: IConversationTurnCompletedEvent) => void) | undefined,
-  fileCommandHandler: undefined as ((event: { type: 'openShelf' | 'newCategory' | 'openFormat' }) => void) | undefined,
+  fileCommandHandler: undefined as
+    | ((event: { type: 'openShelf' | 'newCategory' | 'openFormat' | 'openApps' }) => void)
+    | undefined,
   showNotification: vi.fn(() => Promise.resolve()),
   showOpen: vi.fn<() => Promise<string[] | undefined>>(),
   getDefaultFolder: vi.fn(() => Promise.resolve('C:\\WINK GO Inbox')),
@@ -32,6 +38,9 @@ const mocks = vi.hoisted(() => ({
   undoFiles: vi.fn(),
   showItemInFolder: vi.fn(() => Promise.resolve()),
   openFile: vi.fn(() => Promise.resolve('')),
+  selectQuickApps: vi.fn<() => Promise<WinkGoQuickApp[]>>(),
+  refreshQuickApps: vi.fn<(input: { paths: string[] }) => Promise<WinkGoQuickApp[]>>(),
+  launchQuickApp: vi.fn(),
   detectFormatEngines: vi.fn(() =>
     Promise.resolve({
       ffmpegAvailable: true,
@@ -49,6 +58,7 @@ const mocks = vi.hoisted(() => ({
   configureWindowsRuntime: vi.fn(),
   getWindowsRuntimeState: vi.fn(),
   controlMedia: vi.fn(),
+  getLyrics: vi.fn(),
   requestNotificationAccess: vi.fn(),
   setFileDragActive: vi.fn(),
   setIslandSize: vi.fn(),
@@ -63,7 +73,15 @@ const mocks = vi.hoisted(() => ({
     | undefined,
   mediaHandler: undefined as ((snapshot: WinkGoMediaSnapshot | null) => void) | undefined,
   notificationHandler: undefined as ((notification: WinkGoCapturedNotification) => void) | undefined,
+  mailNotificationHandler: undefined as ((notification: WinkGoCapturedNotification) => void) | undefined,
+  mailStatusHandler: undefined as ((status: WinkGoMailStatus) => void) | undefined,
+  getMailStatus: vi.fn<() => Promise<WinkGoMailStatus>>(),
+  listMailMessages: vi.fn<(input: { limit?: number }) => Promise<WinkGoMailMessage[]>>(),
+  checkMailNow: vi.fn<() => Promise<WinkGoMailStatus>>(),
+  previewMail: vi.fn(),
+  downloadMail: vi.fn(),
   xiaozhiHandler: undefined as ((snapshot: WinkGoXiaozhiSnapshot) => void) | undefined,
+  xiaozhiActivityHandler: undefined as ((activity: WinkGoXiaozhiActivity) => void) | undefined,
 }));
 
 vi.mock('react-router', () => ({
@@ -126,9 +144,12 @@ vi.mock('@/common', () => ({
       organize: { invoke: mocks.organizeFiles },
       undo: { invoke: mocks.undoFiles },
       showItemInFolder: { invoke: mocks.showItemInFolder },
+      selectQuickApps: { invoke: mocks.selectQuickApps },
+      refreshQuickApps: { invoke: mocks.refreshQuickApps },
+      launchQuickApp: { invoke: mocks.launchQuickApp },
       activateShortcuts: { invoke: vi.fn(() => Promise.resolve({})) },
       command: {
-        on: (handler: (event: { type: 'openShelf' | 'newCategory' | 'openFormat' }) => void) => {
+        on: (handler: (event: { type: 'openShelf' | 'newCategory' | 'openFormat' | 'openApps' }) => void) => {
           mocks.fileCommandHandler = handler;
           return () => {
             mocks.fileCommandHandler = undefined;
@@ -150,6 +171,7 @@ vi.mock('@/common', () => ({
       configure: { invoke: mocks.configureWindowsRuntime },
       getState: { invoke: mocks.getWindowsRuntimeState },
       controlMedia: { invoke: mocks.controlMedia },
+      getLyrics: { invoke: mocks.getLyrics },
       requestNotificationAccess: { invoke: mocks.requestNotificationAccess },
       mediaChanged: {
         on: (handler: (snapshot: WinkGoMediaSnapshot | null) => void) => {
@@ -168,12 +190,43 @@ vi.mock('@/common', () => ({
         },
       },
     },
+    winkGoMail: {
+      getStatus: { invoke: mocks.getMailStatus },
+      listMessages: { invoke: mocks.listMailMessages },
+      checkNow: { invoke: mocks.checkMailNow },
+      previewMessage: { invoke: mocks.previewMail },
+      downloadMessage: { invoke: mocks.downloadMail },
+      statusChanged: {
+        on: (handler: (status: WinkGoMailStatus) => void) => {
+          mocks.mailStatusHandler = handler;
+          return () => {
+            mocks.mailStatusHandler = undefined;
+          };
+        },
+      },
+      messageReceived: {
+        on: (handler: (notification: WinkGoCapturedNotification) => void) => {
+          mocks.mailNotificationHandler = handler;
+          return () => {
+            mocks.mailNotificationHandler = undefined;
+          };
+        },
+      },
+    },
     winkGoXiaozhi: {
       statusChanged: {
         on: (handler: (snapshot: WinkGoXiaozhiSnapshot) => void) => {
           mocks.xiaozhiHandler = handler;
           return () => {
             mocks.xiaozhiHandler = undefined;
+          };
+        },
+      },
+      activityChanged: {
+        on: (handler: (activity: WinkGoXiaozhiActivity) => void) => {
+          mocks.xiaozhiActivityHandler = handler;
+          return () => {
+            mocks.xiaozhiActivityHandler = undefined;
           };
         },
       },
@@ -243,6 +296,9 @@ describe('TitlebarDynamicIsland', () => {
     mocks.undoFiles.mockReset();
     mocks.showItemInFolder.mockClear();
     mocks.openFile.mockClear();
+    mocks.selectQuickApps.mockReset();
+    mocks.refreshQuickApps.mockReset();
+    mocks.launchQuickApp.mockReset();
     mocks.detectFormatEngines.mockClear();
     mocks.getDefaultFormatOutputFolder.mockClear();
     mocks.selectFormatFiles.mockClear();
@@ -251,12 +307,20 @@ describe('TitlebarDynamicIsland', () => {
     mocks.configureWindowsRuntime.mockReset();
     mocks.getWindowsRuntimeState.mockReset();
     mocks.controlMedia.mockReset();
+    mocks.getLyrics.mockReset();
     mocks.requestNotificationAccess.mockReset();
     mocks.setFileDragActive.mockReset();
     mocks.setIslandSize.mockReset();
     mocks.nativeDropHandler = undefined;
     mocks.mediaHandler = undefined;
     mocks.notificationHandler = undefined;
+    mocks.mailNotificationHandler = undefined;
+    mocks.mailStatusHandler = undefined;
+    mocks.getMailStatus.mockReset();
+    mocks.listMailMessages.mockReset();
+    mocks.checkMailNow.mockReset();
+    mocks.previewMail.mockReset();
+    mocks.downloadMail.mockReset();
     mocks.listJobs.mockResolvedValue([]);
     mocks.showOpen.mockResolvedValue(undefined);
     mocks.organizeFiles.mockResolvedValue({
@@ -266,6 +330,9 @@ describe('TitlebarDynamicIsland', () => {
       skipped: [],
     });
     mocks.undoFiles.mockResolvedValue({ restored: [], failures: [] });
+    mocks.selectQuickApps.mockResolvedValue([]);
+    mocks.refreshQuickApps.mockResolvedValue([]);
+    mocks.launchQuickApp.mockResolvedValue({ launched: true });
     mocks.startFormatConversion.mockResolvedValue({ items: [], error: null });
     mocks.configureWindowsRuntime.mockResolvedValue({
       available: true,
@@ -284,7 +351,41 @@ describe('TitlebarDynamicIsland', () => {
       notification: null,
     });
     mocks.controlMedia.mockResolvedValue({ controlled: true });
+    mocks.getLyrics.mockImplementation((request: { appId: string; title: string; artist: string }) =>
+      Promise.resolve({
+        status: 'ok',
+        trackKey: `${request.appId}\u0000${request.title}\u0000${request.artist}`.toLocaleLowerCase(),
+        source: 'qqmusic',
+        lines: [
+          { timeMs: 0, text: 'First lyric' },
+          { timeMs: 10_000, text: 'Second lyric', translation: 'Translated lyric' },
+        ],
+        fetchedAt: Date.now(),
+      })
+    );
     mocks.requestNotificationAccess.mockResolvedValue({ status: 'Allowed' });
+    mocks.getMailStatus.mockResolvedValue({
+      account: null,
+      state: 'disabled',
+      unreadCount: 0,
+    });
+    mocks.listMailMessages.mockResolvedValue([]);
+    mocks.checkMailNow.mockResolvedValue({
+      account: null,
+      state: 'disabled',
+      unreadCount: 0,
+    });
+    mocks.downloadMail.mockResolvedValue({
+      ok: true,
+      directory: 'C:\\Downloads\\WINK GO 邮件\\user@example.com\\mail',
+      bodyPath: 'C:\\Downloads\\WINK GO 邮件\\user@example.com\\mail\\正文.txt',
+      attachments: ['C:\\Downloads\\WINK GO 邮件\\user@example.com\\mail\\report.pdf'],
+    });
+    mocks.previewMail.mockResolvedValue({
+      ok: true,
+      body: '这是邮件的完整正文。',
+      attachmentNames: ['report.pdf'],
+    });
     mocks.setFileDragActive.mockResolvedValue(true);
     mocks.setIslandSize.mockResolvedValue(true);
     Object.assign(window.electronAPI || {}, {
@@ -415,11 +516,14 @@ describe('TitlebarDynamicIsland', () => {
     expect(screen.queryByText(/下一项任务/)).toBeNull();
   });
 
-  it('opens and collapses the focus timer without changing the scheduled-task route', async () => {
+  it('opens the curved utility wheel and enters the focus timer without changing the route', async () => {
     render(<TitlebarDynamicIsland />);
 
     await screen.findByText('WINK GO is ready');
-    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.openFocusTimer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.openUtilityWheel' }));
+
+    expect(screen.getByTestId('titlebar-dynamic-island-tools-panel')).toBeTruthy();
+    fireEvent.click(screen.getByRole('option', { name: 'common.winkGoWorkspace.focusTimer' }));
 
     expect(screen.getByTestId('titlebar-dynamic-island-timer-panel')).toBeTruthy();
     expect(screen.getByText('25:00')).toBeTruthy();
@@ -427,6 +531,166 @@ describe('TitlebarDynamicIsland', () => {
 
     expect(screen.queryByTestId('titlebar-dynamic-island-timer-panel')).toBeNull();
     expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it('uses the mouse wheel to select email and opens the email panel', async () => {
+    render(<TitlebarDynamicIsland floating />);
+
+    await screen.findByText('is ready');
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.openUtilityWheel' }));
+    const wheel = screen.getByTestId('titlebar-dynamic-island-tools-panel');
+    fireEvent.wheel(wheel, { deltaY: 120 });
+
+    const mailTool = screen.getByRole('option', { name: 'common.winkGoWorkspace.mailNotifications' });
+    expect(mailTool).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(mailTool);
+
+    expect(screen.getByTestId('titlebar-dynamic-island-mail-panel')).toBeTruthy();
+  });
+
+  it('lists recent email and saves its body and attachments from the context menu', async () => {
+    mocks.getMailStatus.mockResolvedValue({
+      account: {
+        enabled: true,
+        label: 'QQ 邮箱',
+        email: 'user@qq.com',
+        username: 'user@qq.com',
+        host: 'imap.qq.com',
+        port: 993,
+        security: 'tls',
+        pollIntervalMinutes: 2,
+        downloadDirectory: '',
+        passwordConfigured: true,
+      },
+      state: 'connected',
+      unreadCount: 4,
+    });
+    mocks.listMailMessages.mockResolvedValue([
+      {
+        id: 'user@qq.com:42',
+        uid: 42,
+        accountEmail: 'user@qq.com',
+        senderName: '项目组',
+        senderAddress: 'team@example.com',
+        subject: '设计图与下载链接',
+        receivedAt: Date.now(),
+        hasAttachments: true,
+        attachmentCount: 2,
+        isUnread: true,
+      },
+    ]);
+    render(<TitlebarDynamicIsland floating />);
+
+    await screen.findByText('is ready');
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.openUtilityWheel' }));
+    fireEvent.click(screen.getByRole('option', { name: 'common.winkGoWorkspace.mailNotifications' }));
+
+    const subject = await screen.findByText('设计图与下载链接');
+    expect(screen.getByRole('button', { name: 'common.winkGoWorkspace.downloadMailAttachments' })).toBeTruthy();
+    fireEvent.click(subject.closest('article')!);
+    expect(await screen.findByText('这是邮件的完整正文。')).toBeTruthy();
+    expect(mocks.previewMail).toHaveBeenCalledWith({ uid: 42 });
+    fireEvent.contextMenu(subject.closest('article')!);
+
+    await waitFor(() => expect(mocks.downloadMail).toHaveBeenCalledWith({ uid: 42 }));
+    expect(
+      (await screen.findAllByRole('button', { name: 'common.winkGoWorkspace.openMailFolder' })).length
+    ).toBeGreaterThan(0);
+  });
+
+  it('opens the full email body and hides download controls when there are no attachments', async () => {
+    mocks.getMailStatus.mockResolvedValue({
+      account: {
+        enabled: true,
+        label: 'QQ 邮箱',
+        email: 'user@qq.com',
+        username: 'user@qq.com',
+        host: 'imap.qq.com',
+        port: 993,
+        security: 'tls',
+        pollIntervalMinutes: 2,
+        downloadDirectory: '',
+        passwordConfigured: true,
+      },
+      state: 'connected',
+      unreadCount: 1,
+    });
+    mocks.listMailMessages.mockResolvedValue([
+      {
+        id: 'user@qq.com:43',
+        uid: 43,
+        accountEmail: 'user@qq.com',
+        senderName: '通知中心',
+        senderAddress: 'notice@example.com',
+        subject: '没有附件的正文邮件',
+        receivedAt: Date.now(),
+        hasAttachments: false,
+        attachmentCount: 0,
+        isUnread: true,
+      },
+    ]);
+    mocks.previewMail.mockResolvedValue({
+      ok: true,
+      body: '这里显示邮件全文，不会写入下载目录。',
+      attachmentNames: [],
+    });
+    render(<TitlebarDynamicIsland floating />);
+
+    await screen.findByText('is ready');
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.openUtilityWheel' }));
+    fireEvent.click(screen.getByRole('option', { name: 'common.winkGoWorkspace.mailNotifications' }));
+    const subject = await screen.findByText('没有附件的正文邮件');
+    fireEvent.click(subject.closest('article')!);
+
+    expect(await screen.findByText('这里显示邮件全文，不会写入下载目录。')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common.winkGoWorkspace.downloadMailAttachments' })).toBeNull();
+    expect(mocks.downloadMail).not.toHaveBeenCalled();
+  });
+
+  it('shows a verification code directly in the message list', async () => {
+    mocks.getMailStatus.mockResolvedValue({
+      account: {
+        enabled: true,
+        label: 'QQ 邮箱',
+        email: 'user@qq.com',
+        username: 'user@qq.com',
+        host: 'imap.qq.com',
+        port: 993,
+        security: 'tls',
+        pollIntervalMinutes: 2,
+        downloadDirectory: '',
+        passwordConfigured: true,
+      },
+      state: 'connected',
+      unreadCount: 1,
+    });
+    mocks.listMailMessages.mockResolvedValue([
+      {
+        id: 'user@qq.com:44',
+        uid: 44,
+        accountEmail: 'user@qq.com',
+        senderName: 'ChatGPT',
+        senderAddress: 'noreply@tm.openai.com',
+        subject: '您的临时 ChatGPT 登录代码',
+        receivedAt: Date.now(),
+        hasAttachments: false,
+        attachmentCount: 0,
+        isUnread: true,
+      },
+    ]);
+    mocks.previewMail.mockResolvedValue({
+      ok: true,
+      body: '您的验证码是 654321，请勿转发。',
+      attachmentNames: [],
+    });
+    render(<TitlebarDynamicIsland floating />);
+
+    await screen.findByText('is ready');
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.openUtilityWheel' }));
+    fireEvent.click(screen.getByRole('option', { name: 'common.winkGoWorkspace.mailNotifications' }));
+
+    expect(await screen.findByText('654321')).toBeTruthy();
+    expect(mocks.previewMail).toHaveBeenCalledWith({ uid: 44 });
   });
 
   it('shows global tool activity from the shared conversation stream', async () => {
@@ -510,6 +774,30 @@ describe('TitlebarDynamicIsland', () => {
     });
 
     expect(await screen.findByTestId('titlebar-dynamic-island-toast-panel')).toHaveTextContent('云端转发已连接');
+  });
+
+  it('shows the real ESP32 command and Runtime completion in the island activity history', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    act(() => {
+      mocks.xiaozhiActivityHandler?.({
+        id: 'xiaozhi-command:xiaozhi_hardware:1:1',
+        source: 'xiaozhi_hardware',
+        sourceLabel: 'ESP32 小智',
+        command: '打开网易云',
+        toolName: 'music.station_open',
+        status: 'success',
+        message: 'WINK GO Runtime 已确认执行完成',
+        startedAtMs: Date.now() - 300,
+        updatedAtMs: Date.now(),
+        elapsedMs: 300,
+      });
+    });
+
+    const toast = await screen.findByTestId('titlebar-dynamic-island-toast-panel');
+    expect(toast).toHaveTextContent('ESP32 小智');
+    expect(toast).toHaveTextContent('打开网易云');
   });
 
   it('shows the active Windows media session and sends native playback controls', async () => {
@@ -673,7 +961,7 @@ describe('TitlebarDynamicIsland', () => {
     );
   });
 
-  it('clears the previous track artwork immediately while the next track artwork is loading', async () => {
+  it('keeps the decoded cover during the brief next-track artwork handoff', async () => {
     render(<TitlebarDynamicIsland floating />);
     await screen.findByText('is ready');
 
@@ -691,6 +979,11 @@ describe('TitlebarDynamicIsland', () => {
         coverUrl: 'data:image/png;base64,first-verified-cover',
         updatedAt,
       });
+    });
+    const island = screen.getByTestId('titlebar-dynamic-island');
+    expect(island.querySelector('img[src="data:image/png;base64,first-verified-cover"]')).toBeTruthy();
+
+    act(() => {
       mocks.mediaHandler?.({
         appId: 'QQMusic.exe',
         title: 'Second track',
@@ -705,10 +998,9 @@ describe('TitlebarDynamicIsland', () => {
       });
     });
 
-    const island = screen.getByTestId('titlebar-dynamic-island');
     expect(screen.getByRole('button', { name: 'WINK GO Second track · Second artist' })).toBeTruthy();
     expect(island).toHaveAttribute('data-identity-kind', 'media-app');
-    expect(island.querySelector('img[src="data:image/png;base64,first-verified-cover"]')).toBeNull();
+    expect(island.querySelector('img[src="data:image/png;base64,first-verified-cover"]')).toBeTruthy();
 
     act(() => {
       mocks.mediaHandler?.({
@@ -878,7 +1170,7 @@ describe('TitlebarDynamicIsland', () => {
     );
   });
 
-  it('returns floating music to the compact island from the white player surface', async () => {
+  it('opens synchronized lyrics with cover-matched ambience and returns when the background is clicked', async () => {
     render(<TitlebarDynamicIsland floating />);
     await screen.findByText('is ready');
 
@@ -893,6 +1185,10 @@ describe('TitlebarDynamicIsland', () => {
         canGoNext: true,
         canGoPrevious: true,
         coverUrl: 'data:image/png;base64,zoo-cover',
+        positionMs: 10_200,
+        durationMs: 0,
+        timelineUpdatedAt: Date.now(),
+        timelineEstimated: true,
         updatedAt: Date.now(),
       });
     });
@@ -902,9 +1198,63 @@ describe('TitlebarDynamicIsland', () => {
     expect(island).toHaveAttribute('data-panel', 'media');
     expect(screen.getByTestId('titlebar-dynamic-island-compact-media')).toBeTruthy();
 
-    fireEvent.click(screen.getByText('Zoo'));
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.openLyrics' }));
+    expect(island).toHaveAttribute('data-panel', 'media');
+    expect(island).toHaveAttribute('data-media-view', 'lyrics');
+    const expandedPlayer = await screen.findByTestId('titlebar-dynamic-island-lyrics-view');
+    expect(expandedPlayer).toBeTruthy();
+    expect(screen.getByTestId('titlebar-dynamic-island-vinyl')).toHaveAttribute('data-playing', 'true');
+    expect(screen.getByTestId('titlebar-dynamic-island-light-flow')).toBeTruthy();
+    expect(screen.getByTestId('titlebar-dynamic-island-lyrics-backdrop')).toHaveStyle({
+      backgroundImage: 'url("data:image/png;base64,zoo-cover")',
+    });
+    expect(screen.getByText('Second lyric').closest('[data-active="true"]')).toBeTruthy();
+    expect(screen.getByText('First lyric').closest('[data-phase="past"]')).toBeTruthy();
+    expect(screen.getByText('Second lyric').style.getPropertyValue('--lyric-progress')).toMatch(/^\d+%$/);
+    expect(expandedPlayer).toHaveAttribute('data-platform', 'qqmusic');
+
+    fireEvent.click(expandedPlayer);
+    expect(island).toHaveAttribute('data-media-view', 'controls');
+    const compactPlayer = screen.getByTestId('titlebar-dynamic-island-compact-media');
+    expect(compactPlayer).toBeTruthy();
+
+    fireEvent.click(compactPlayer);
     expect(island).toHaveAttribute('data-panel', 'none');
-    expect(screen.queryByTestId('titlebar-dynamic-island-compact-media')).toBeNull();
+  });
+
+  it('keeps the player usable when no trustworthy lyrics are found', async () => {
+    mocks.getLyrics.mockImplementationOnce((request: { appId: string; title: string; artist: string }) =>
+      Promise.resolve({
+        status: 'not_found',
+        trackKey: `${request.appId}\u0000${request.title}\u0000${request.artist}`.toLocaleLowerCase(),
+        lines: [],
+        fetchedAt: Date.now(),
+      })
+    );
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    act(() => {
+      mocks.mediaHandler?.({
+        appId: 'Spotify.exe',
+        title: 'Unknown song',
+        artist: 'Unknown artist',
+        albumTitle: '',
+        isPlaying: false,
+        canPlayPause: true,
+        canGoNext: true,
+        canGoPrevious: true,
+        coverUrl: '',
+        updatedAt: Date.now(),
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'WINK GO Unknown song · Unknown artist' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.openLyrics' }));
+    expect(await screen.findByText('common.winkGoWorkspace.lyricsUnavailable')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.playMedia' }));
+    await waitFor(() => expect(mocks.controlMedia).toHaveBeenCalledWith({ action: 'play_pause' }));
+    expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-media-view', 'lyrics');
   });
 
   it('keeps the floating media player open when a playback control is clicked', async () => {
@@ -1017,7 +1367,7 @@ describe('TitlebarDynamicIsland', () => {
     expect(mocks.getWindowsRuntimeState).toHaveBeenCalled();
   });
 
-  it('does not reuse the previous artwork when the post-skip state has new metadata', async () => {
+  it('only keeps the previous post-skip artwork for the short visual handoff', async () => {
     render(<TitlebarDynamicIsland floating />);
     await screen.findByText('is ready');
 
@@ -1062,7 +1412,10 @@ describe('TitlebarDynamicIsland', () => {
     await screen.findByText('Second track');
     const island = screen.getByTestId('titlebar-dynamic-island');
     expect(island).toHaveAttribute('data-identity-kind', 'media-app');
-    expect(island.querySelector('img[src="data:image/png;base64,first-track-cover"]')).toBeNull();
+    expect(island.querySelector('img[src="data:image/png;base64,first-track-cover"]')).toBeTruthy();
+    await waitFor(() => expect(island.querySelector('img[src="data:image/png;base64,first-track-cover"]')).toBeNull(), {
+      timeout: 1_200,
+    });
   });
 
   it('retries previous once when the player only restarts the current track', async () => {
@@ -1123,6 +1476,39 @@ describe('TitlebarDynamicIsland', () => {
     expect(screen.getByTestId('titlebar-dynamic-island-notification-panel')).toBeTruthy();
     expect(screen.getByText('common.winkGoWorkspace.notificationBodyHidden')).toBeTruthy();
     expect(screen.queryByText('这段正文默认不应直接显示')).toBeNull();
+  });
+
+  it('downloads a mail body and attachments only after the user requests them', async () => {
+    render(<TitlebarDynamicIsland />);
+    await screen.findByText('WINK GO is ready');
+
+    act(() => {
+      mocks.mailNotificationHandler?.({
+        id: 'winkgo-mail:user@example.com:42',
+        appName: '邮箱',
+        title: '项目组',
+        body: '本周报告',
+        appUserModelId: 'winkgo.mail.user@example.com',
+        createdAt: Date.now(),
+        mail: {
+          uid: 42,
+          accountEmail: 'user@example.com',
+          hasAttachments: true,
+          attachmentCount: 1,
+        },
+      });
+    });
+
+    expect(mocks.downloadMail).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /项目组/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.downloadMailContent' }));
+
+    await waitFor(() => expect(mocks.downloadMail).toHaveBeenCalledWith({ uid: 42 }));
+    expect(await screen.findByText('common.winkGoWorkspace.mailDownloaded')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.openMailFolder' }));
+    expect(mocks.showItemInFolder).toHaveBeenCalledWith({
+      path: 'C:\\Downloads\\WINK GO 邮件\\user@example.com\\mail\\正文.txt',
+    });
   });
 
   it('switches the identity and message copy when another application sends a notification', async () => {
@@ -1227,6 +1613,153 @@ describe('TitlebarDynamicIsland', () => {
     expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-panel', 'format');
     expect(screen.getByTestId('titlebar-dynamic-island-format-panel')).toBeTruthy();
     expect(screen.getByText('NCM 转 MP3')).toBeTruthy();
+  });
+
+  describe('quick app shelf', () => {
+    const notepad: WinkGoQuickApp = {
+      name: 'Notepad',
+      path: 'C:\\Windows\\System32\\notepad.exe',
+      iconDataUrl: 'data:image/png;base64,bm90ZXBhZA==',
+    };
+    const calculator: WinkGoQuickApp = {
+      name: 'Calculator',
+      path: 'C:\\Windows\\System32\\calc.exe',
+      iconDataUrl: 'data:image/png;base64,Y2FsYw==',
+    };
+
+    it('opens with Alt+5 and saves multiple selected applications without duplicates', async () => {
+      localStorage.setItem('winkgo.quick-apps.v1', JSON.stringify([notepad]));
+      mocks.selectQuickApps.mockResolvedValue([notepad, calculator]);
+      render(<TitlebarDynamicIsland floating />);
+      await screen.findByText('is ready');
+
+      fireEvent.keyDown(window, { altKey: true, key: '5' });
+      expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-panel', 'apps');
+      fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.addQuickApps' }));
+
+      await screen.findByRole('button', { name: 'Calculator' });
+      expect(screen.getAllByRole('button', { name: 'Notepad' })).toHaveLength(1);
+      expect(JSON.parse(localStorage.getItem('winkgo.quick-apps.v1') || '[]')).toHaveLength(2);
+    });
+
+    it('launches a stored application and collapses the island', async () => {
+      localStorage.setItem('winkgo.quick-apps.v1', JSON.stringify([notepad]));
+      render(<TitlebarDynamicIsland floating />);
+      await screen.findByText('is ready');
+
+      fireEvent.keyDown(window, { altKey: true, key: '5' });
+      fireEvent.click(screen.getByRole('button', { name: 'Notepad' }));
+
+      await waitFor(() =>
+        expect(mocks.launchQuickApp).toHaveBeenCalledWith({ path: 'C:\\Windows\\System32\\notepad.exe' })
+      );
+      expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-panel', 'none');
+    });
+
+    it('reorders applications after a long press without launching the dragged app', async () => {
+      localStorage.setItem('winkgo.quick-apps.v1', JSON.stringify([notepad, calculator]));
+      render(<TitlebarDynamicIsland floating />);
+      await screen.findByText('is ready');
+      fireEvent.keyDown(window, { altKey: true, key: '5' });
+
+      const notepadButton = screen.getByRole('button', { name: 'Notepad' });
+      const calculatorButton = screen.getByRole('button', { name: 'Calculator' });
+      const notepadCard = notepadButton.closest<HTMLElement>('[data-quick-app-path]');
+      const calculatorCard = calculatorButton.closest<HTMLElement>('[data-quick-app-path]');
+      expect(notepadCard).toBeTruthy();
+      expect(calculatorCard).toBeTruthy();
+      vi.spyOn(notepadCard!, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 72 } as DOMRect);
+      vi.spyOn(calculatorCard!, 'getBoundingClientRect').mockReturnValue({ left: 80, width: 72 } as DOMRect);
+
+      vi.useFakeTimers();
+      try {
+        fireEvent.pointerDown(notepadCard!, { button: 0, pointerId: 1, clientX: 36, clientY: 36 });
+        act(() => vi.advanceTimersByTime(421));
+        expect(notepadCard).toHaveClass('titlebar-dynamic-island__quick-app--dragging');
+
+        fireEvent.pointerMove(notepadCard!, { pointerId: 1, clientX: 116, clientY: 36 });
+        fireEvent.pointerUp(notepadCard!, { pointerId: 1, clientX: 116, clientY: 36 });
+
+        expect(
+          (JSON.parse(localStorage.getItem('winkgo.quick-apps.v1') || '[]') as WinkGoQuickApp[]).map(
+            (quickApp) => quickApp.name
+          )
+        ).toEqual(['Calculator', 'Notepad']);
+        fireEvent.click(notepadButton);
+        expect(mocks.launchQuickApp).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('keeps a visible application fallback when a stored icon cannot be decoded', async () => {
+      localStorage.setItem(
+        'winkgo.quick-apps.v1',
+        JSON.stringify([{ ...notepad, iconDataUrl: 'data:image/png;base64,broken' }])
+      );
+      render(<TitlebarDynamicIsland floating />);
+      await screen.findByText('is ready');
+
+      fireEvent.keyDown(window, { altKey: true, key: '5' });
+      const button = screen.getByRole('button', { name: 'Notepad' });
+      const iconImage = button.querySelector('img');
+      expect(iconImage).toBeTruthy();
+
+      fireEvent.error(iconImage as HTMLImageElement);
+      expect(button.querySelector('img')).toBeNull();
+      expect(button.querySelector('svg')).toBeTruthy();
+    });
+
+    it('refreshes missing icons for applications saved by an older version', async () => {
+      const iconlessNotepad = { ...notepad, iconDataUrl: '' };
+      localStorage.setItem('winkgo.quick-apps.v1', JSON.stringify([iconlessNotepad]));
+      mocks.refreshQuickApps.mockResolvedValue([notepad]);
+      render(<TitlebarDynamicIsland floating />);
+      await screen.findByText('is ready');
+
+      await waitFor(() =>
+        expect(mocks.refreshQuickApps).toHaveBeenCalledWith({ paths: ['C:\\Windows\\System32\\notepad.exe'] })
+      );
+      fireEvent.keyDown(window, { altKey: true, key: '5' });
+
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Notepad' }).querySelector('img')).toHaveAttribute(
+          'src',
+          notepad.iconDataUrl
+        )
+      );
+    });
+
+    it('retries a transient icon extraction failure instead of keeping the generic placeholder', async () => {
+      const iconlessNotepad = { ...notepad, iconDataUrl: '' };
+      localStorage.setItem('winkgo.quick-apps.v1', JSON.stringify([iconlessNotepad]));
+      mocks.refreshQuickApps.mockResolvedValueOnce([]).mockResolvedValueOnce([notepad]);
+      render(<TitlebarDynamicIsland floating />);
+      await screen.findByText('is ready');
+
+      await waitFor(() => expect(mocks.refreshQuickApps).toHaveBeenCalledTimes(2), { timeout: 2_500 });
+      fireEvent.keyDown(window, { altKey: true, key: '5' });
+
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Notepad' }).querySelector('img')).toHaveAttribute(
+          'src',
+          notepad.iconDataUrl
+        )
+      );
+    });
+
+    it('keeps the shelf open and reports a missing application instead of silently failing', async () => {
+      localStorage.setItem('winkgo.quick-apps.v1', JSON.stringify([notepad]));
+      mocks.launchQuickApp.mockResolvedValue({ error: 'not_found', launched: false });
+      render(<TitlebarDynamicIsland floating />);
+      await screen.findByText('is ready');
+
+      fireEvent.keyDown(window, { altKey: true, key: '5' });
+      fireEvent.click(screen.getByRole('button', { name: 'Notepad' }));
+
+      expect(await screen.findByText('common.winkGoWorkspace.quickAppMissing')).toBeTruthy();
+      expect(screen.getByTestId('titlebar-dynamic-island')).toHaveAttribute('data-panel', 'apps');
+    });
   });
 
   it('opens an organized file directly from the compact recent shelf', async () => {

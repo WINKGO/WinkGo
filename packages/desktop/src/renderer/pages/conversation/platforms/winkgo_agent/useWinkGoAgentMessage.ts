@@ -16,6 +16,7 @@ import { useMergeLiveMessage } from '@/renderer/pages/conversation/Messages/hook
 import { logStreamTerminalObserved } from '@/renderer/pages/conversation/runtime/useConversationRuntimeView';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { isConversationProcessing } from '@/renderer/pages/conversation/utils/conversationRuntime';
+import { beginConversationTurn, endConversationTurn } from '@/renderer/pages/conversation/utils/conversationTurnClock';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { processLocalCronResponse } from './localCronCommands';
 
@@ -44,6 +45,8 @@ export const useWinkGoAgentMessage = (
     subject: '',
   });
   const [tokenUsage, setTokenUsage] = useState<TokenUsageData | null>(null);
+  const [turnStartedAtMs, setTurnStartedAtMs] = useState<number | null>(null);
+  const hydratedConversationRef = useRef<string | null>(null);
   // Current active message ID to filter out events from old requests (prevents aborted request events from interfering with new ones)
   const activeMsgIdRef = useRef<string | null>(null);
   const messageBufferRef = useRef(new Map<string, string>());
@@ -119,6 +122,17 @@ export const useWinkGoAgentMessage = (
 
   // Combined running state: waiting for response OR stream is running OR tools are active
   const running = waitingResponse || streamRunning || hasActiveTools;
+
+  useEffect(() => {
+    if (running) {
+      setTurnStartedAtMs(beginConversationTurn(conversation_id));
+      return;
+    }
+    if (hydratedConversationRef.current === conversation_id) {
+      endConversationTurn(conversation_id);
+    }
+    setTurnStartedAtMs(null);
+  }, [conversation_id, running]);
 
   // Set current active message ID
   const setActiveMsgId = useCallback((msgId: string | null) => {
@@ -380,6 +394,8 @@ export const useWinkGoAgentMessage = (
       }
 
       if (!res) {
+        hydratedConversationRef.current = conversation_id;
+        endConversationTurn(conversation_id);
         setStreamRunning(false);
         streamRunningRef.current = false;
         setHasActiveTools(false);
@@ -390,6 +406,10 @@ export const useWinkGoAgentMessage = (
         return;
       }
       const isRunning = isConversationProcessing(res);
+      hydratedConversationRef.current = conversation_id;
+      if (!isRunning) {
+        endConversationTurn(conversation_id);
+      }
       setStreamRunning(isRunning);
       streamRunningRef.current = isRunning;
       // Reset tool states - they will be restored by incoming messages if still active
@@ -430,6 +450,7 @@ export const useWinkGoAgentMessage = (
     setThought,
     running,
     hasHydratedRunningState,
+    turnStartedAtMs,
     tokenUsage,
     setActiveMsgId,
     setWaitingResponse,

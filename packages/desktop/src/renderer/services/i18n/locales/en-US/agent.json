@@ -33,6 +33,9 @@
     "searchPlaceholder": "Search models",
     "noResults": "No matching models"
   },
+  "warmup": {
+    "clickToWake": "Click to wake this team member"
+  },
   "config": {
     "setting": "Applying setting...",
     "commandAck": "Command sent, but the state is not confirmed. Refresh or try again later.",

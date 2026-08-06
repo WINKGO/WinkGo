@@ -33,6 +33,9 @@
     "searchPlaceholder": "모델 검색",
     "noResults": "일치하는 모델이 없습니다"
   },
+  "warmup": {
+    "clickToWake": "클릭하여 이 팀 구성원 깨우기"
+  },
   "config": {
     "setting": "설정을 적용하는 중...",
     "commandAck": "명령을 보냈지만 상태가 아직 확인되지 않았습니다. 나중에 새로고침하거나 다시 시도하세요.",

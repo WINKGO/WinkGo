@@ -267,11 +267,22 @@ async fn try_init_file_staged(path: &Path) -> Result<Database, DatabaseInitError
 
     let pool = PoolOptions::<Sqlite>::new()
         .max_connections(MAX_CONNECTIONS)
-        .connect_with(opts)
+        .connect_with(opts.clone())
         .await
         .map_err(|e| DatabaseInitError::new("database.open", DbError::Query(e)))?;
 
     run_migrations_staged(&pool).await?;
+
+    // Migrations can rebuild tables. Connections opened before that DDL may
+    // retain stale prepared statements or schema state, so never let the
+    // bootstrap pool serve the first business query after an upgrade.
+    pool.close().await;
+    let pool = PoolOptions::<Sqlite>::new()
+        .max_connections(MAX_CONNECTIONS)
+        .connect_with(opts)
+        .await
+        .map_err(|e| DatabaseInitError::new("database.reopen", DbError::Query(e)))?;
+
     ensure_system_user(&pool)
         .await
         .map_err(|e| DatabaseInitError::new("database.seed", e))?;

@@ -12,7 +12,7 @@
   "generatedFrom": [
     {
       "path": "bun.lock",
-      "sha256": "5d87944dd9634e88374465b3c53d99f1de64c71dcc3dea55be879a9ddadc60f3"
+      "sha256": "9a807970f5e193326fe750b8a39570bf9e3f8a3c5f326bc9ab43083e660716d2"
     },
     {
       "path": "mobile/bun.lock",
@@ -20,7 +20,7 @@
     },
     {
       "path": "backend/Cargo.lock",
-      "sha256": "2903b9196b65224a440310a136e5fddf9483635b2210bc68688eb34a8c87fabe"
+      "sha256": "66c4754c37bdba18a3508f95ea6ab4e045805afaf4b33e78c9cb7ca235bf745b"
     },
     {
       "path": "backend/agent-runtime/Cargo.lock",
@@ -32,11 +32,11 @@
     }
   ],
   "summary": {
-    "packages": 2832,
-    "npmPackages": 2190,
+    "packages": 2873,
+    "npmPackages": 2231,
     "cargoPackages": 642,
     "lockOnlyNpmPackages": 197,
-    "uniqueLicenseTexts": 1099
+    "uniqueLicenseTexts": 1127
   },
   "packages": [
     {
@@ -12727,6 +12727,17 @@
       ]
     },
     {
+      "id": "npm:@pinojs/redact@0.4.0",
+      "ecosystem": "npm",
+      "name": "@pinojs/redact",
+      "version": "0.4.0",
+      "source": "git+https://github.com/pinojs/redact.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "58d4023bfbed5fb530c5bb8d44641299eac62c850267415ec939cc42dea87e4f"
+      ]
+    },
+    {
       "id": "npm:@pkgjs/parseargs@0.11.0",
       "ecosystem": "npm",
       "name": "@pkgjs/parseargs",
@@ -13634,6 +13645,17 @@
       "license": "MIT",
       "licenseTextHashes": [
         "1847e52cd02429ecd6b31cba32fabdfef4229732084c06a73bacdc71030818c0"
+      ]
+    },
+    {
+      "id": "npm:@selderee/plugin-htmlparser2@0.12.0",
+      "ecosystem": "npm",
+      "name": "@selderee/plugin-htmlparser2",
+      "version": "0.12.0",
+      "source": "git+https://github.com/mxxii/selderee.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "ac9deab2fc855a4333261bafc948bb949946a40bca3f58ae96419aa3eaf7b955"
       ]
     },
     {
@@ -15030,6 +15052,17 @@
       ]
     },
     {
+      "id": "npm:@types/mailparser@3.4.6",
+      "ecosystem": "npm",
+      "name": "@types/mailparser",
+      "version": "3.4.6",
+      "source": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "3d4ada4e04d153d74f5bc4e5e6aebd12ef20077716529c36089dc07f14fd0dcf"
+      ]
+    },
+    {
       "id": "npm:@types/mdast@4.0.4",
       "ecosystem": "npm",
       "name": "@types/mdast",
@@ -15964,6 +15997,18 @@
       "licenseTextHashes": []
     },
     {
+      "id": "npm:@zone-eu/mailsplit@5.4.14",
+      "ecosystem": "npm",
+      "name": "@zone-eu/mailsplit",
+      "version": "5.4.14",
+      "source": "https://github.com/zone-eu/mailsplit.git",
+      "license": "(MIT OR EUPL-1.1+)",
+      "licenseTextHashes": [
+        "c261d856395a4467e6e04ba968002c69080a981d11d4c98154201c2ece326184",
+        "d1cc09bdab0628b32bd6459357fc81aad6894c535baec7973d1dd8c85596fa08"
+      ]
+    },
+    {
       "id": "npm:abab@2.0.6",
       "ecosystem": "npm",
       "name": "abab",
@@ -16430,6 +16475,17 @@
       "license": "ISC",
       "licenseTextHashes": [
         "ecc042b5f1cdc6854fc00486065084bed877daa8a7fadce15ef943a550d1dff0"
+      ]
+    },
+    {
+      "id": "npm:atomic-sleep@1.0.0",
+      "ecosystem": "npm",
+      "name": "atomic-sleep",
+      "version": "1.0.0",
+      "source": "git+https://github.com/davidmarkclements/atomic-sleep.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "71cf9fa3b84592f05d6c1979d6fe6b6d555593c2b61c4fb9025c7cb9771e2b72"
       ]
     },
     {
@@ -18951,6 +19007,17 @@
       ]
     },
     {
+      "id": "npm:deepmerge-ts@7.1.5",
+      "ecosystem": "npm",
+      "name": "deepmerge-ts",
+      "version": "7.1.5",
+      "source": "git+https://github.com/RebeccaStevens/deepmerge-ts.git",
+      "license": "BSD-3-Clause",
+      "licenseTextHashes": [
+        "734d8fd2baff4a5b7450a5b8242d4a960bc4ade3b0ade5e6cad642965d1d496d"
+      ]
+    },
+    {
       "id": "npm:deepmerge@4.3.1",
       "ecosystem": "npm",
       "name": "deepmerge",
@@ -19683,6 +19750,17 @@
       ]
     },
     {
+      "id": "npm:encoding-japanese@2.2.0",
+      "ecosystem": "npm",
+      "name": "encoding-japanese",
+      "version": "2.2.0",
+      "source": "https://github.com/polygonplanet/encoding.js.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "9817440890faace3016b8552aeb245cecebbbc50ef1ae30f56dc6fbc36e08bda"
+      ]
+    },
+    {
       "id": "npm:encoding@0.1.13",
       "ecosystem": "npm",
       "name": "encoding",
@@ -19732,6 +19810,17 @@
       "name": "entities",
       "version": "6.0.1",
       "source": "git://github.com/fb55/entities.git",
+      "license": "BSD-2-Clause",
+      "licenseTextHashes": [
+        "cb992345949ccd6e8394b2cd6c465f7b897c864f845937dbf64e8997f389e164"
+      ]
+    },
+    {
+      "id": "npm:entities@7.0.1",
+      "ecosystem": "npm",
+      "name": "entities",
+      "version": "7.0.1",
+      "source": "https://github.com/fb55/entities.git",
       "license": "BSD-2-Clause",
       "licenseTextHashes": [
         "cb992345949ccd6e8394b2cd6c465f7b897c864f845937dbf64e8997f389e164"
@@ -21516,6 +21605,17 @@
       ]
     },
     {
+      "id": "npm:he@1.2.0",
+      "ecosystem": "npm",
+      "name": "he",
+      "version": "1.2.0",
+      "source": "https://github.com/mathiasbynens/he.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a"
+      ]
+    },
+    {
       "id": "npm:hermes-compiler@0.14.1",
       "ecosystem": "npm",
       "name": "hermes-compiler",
@@ -21686,6 +21786,17 @@
       "licenseTextHashes": []
     },
     {
+      "id": "npm:html-to-text@10.0.0",
+      "ecosystem": "npm",
+      "name": "html-to-text",
+      "version": "10.0.0",
+      "source": "git://github.com/html-to-text/node-html-to-text.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "43659035063c7ae7e47d4ba4bb41b6acbde34d2fb7d21205e92909ea4ddb843b"
+      ]
+    },
+    {
       "id": "npm:html-to-text@9.0.5",
       "ecosystem": "npm",
       "name": "html-to-text",
@@ -21716,6 +21827,17 @@
       "license": "MIT",
       "licenseTextHashes": [
         "ca4662cb5d1b738fbe5350c0d5485ba11773b4b7208974082ae6e129a52d631d"
+      ]
+    },
+    {
+      "id": "npm:htmlparser2@10.1.0",
+      "ecosystem": "npm",
+      "name": "htmlparser2",
+      "version": "10.1.0",
+      "source": "git://github.com/fb55/htmlparser2.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "e7ef69b1061a214641f062449491ea54e5ade7a382b52618892b6106eb1eee08"
       ]
     },
     {
@@ -21880,6 +22002,17 @@
       ]
     },
     {
+      "id": "npm:iconv-lite@0.7.3",
+      "ecosystem": "npm",
+      "name": "iconv-lite",
+      "version": "0.7.3",
+      "source": "https://github.com/pillarjs/iconv-lite.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "f9c6da891840e8951696e472b3c7d6f6d3ab2c7325f1dd30c0813244c15b288c"
+      ]
+    },
+    {
       "id": "npm:ieee754@1.2.1",
       "ecosystem": "npm",
       "name": "ieee754",
@@ -21910,6 +22043,17 @@
       "license": "MIT",
       "licenseTextHashes": [
         "3109783dad7527b490aabc49c3cb148573c19b41b843e70cf9388a93f3d7fccd"
+      ]
+    },
+    {
+      "id": "npm:imapflow@1.6.5",
+      "ecosystem": "npm",
+      "name": "imapflow",
+      "version": "1.6.5",
+      "source": "git+https://github.com/postalsys/imapflow.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "47332d2cd4269747a7b8a1ab5406ded5ff177dbafd7cf7e79060fe48ff5b45eb"
       ]
     },
     {
@@ -22061,6 +22205,17 @@
       "name": "ip-address",
       "version": "10.1.0",
       "source": "git://github.com/beaugunderson/ip-address.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "f8d791359a50cbcac82c29cb7b0b1b889b28be76fdd35b8ee33f0f7c8704702a"
+      ]
+    },
+    {
+      "id": "npm:ip-address@10.4.0",
+      "ecosystem": "npm",
+      "name": "ip-address",
+      "version": "10.4.0",
+      "source": "https://github.com/beaugunderson/ip-address.git",
       "license": "MIT",
       "licenseTextHashes": [
         "f8d791359a50cbcac82c29cb7b0b1b889b28be76fdd35b8ee33f0f7c8704702a"
@@ -23514,6 +23669,17 @@
       ]
     },
     {
+      "id": "npm:leac@0.7.0",
+      "ecosystem": "npm",
+      "name": "leac",
+      "version": "0.7.0",
+      "source": "git+https://github.com/mxxii/leac.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "886b9d612923a8c2b5186f4d562e1f1a84ef319af574c5f8be5d3dc21ca4b385"
+      ]
+    },
+    {
       "id": "npm:leven@3.1.0",
       "ecosystem": "npm",
       "name": "leven",
@@ -23522,6 +23688,39 @@
       "license": "MIT",
       "licenseTextHashes": [
         "48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0"
+      ]
+    },
+    {
+      "id": "npm:libbase64@1.3.0",
+      "ecosystem": "npm",
+      "name": "libbase64",
+      "version": "1.3.0",
+      "source": "git://github.com/nodemailer/libbase64.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "27d7db274ef1ff4ade7505f696a4d86243b6c73936d1ea10d235f0cee609a576"
+      ]
+    },
+    {
+      "id": "npm:libmime@5.4.1",
+      "ecosystem": "npm",
+      "name": "libmime",
+      "version": "5.4.1",
+      "source": "git+https://github.com/nodemailer/libmime.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "0f2482bc852021c3226c1df9d75b610a9b795a5a88032cda51098dce3dae6740"
+      ]
+    },
+    {
+      "id": "npm:libqp@2.1.1",
+      "ecosystem": "npm",
+      "name": "libqp",
+      "version": "2.1.1",
+      "source": "git://github.com/nodemailer/libqp.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "2dd95346123a3ae1ecae06a32a40d83f3bd3aecb0aa4198074c6518775974982"
       ]
     },
     {
@@ -23694,6 +23893,17 @@
       "ecosystem": "npm",
       "name": "linkify-it",
       "version": "2.2.0",
+      "source": "markdown-it/linkify-it",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "95e3f7f0e81e9b4940cdfaa1956aaff5e4dfd2fb1565041e7c78eb9a606f23e3"
+      ]
+    },
+    {
+      "id": "npm:linkify-it@5.0.2",
+      "ecosystem": "npm",
+      "name": "linkify-it",
+      "version": "5.0.2",
       "source": "markdown-it/linkify-it",
       "license": "MIT",
       "licenseTextHashes": [
@@ -24116,6 +24326,17 @@
       "license": "MIT",
       "licenseTextHashes": [
         "7917b04272f3f7c11f9fb89716742747a77f5906ebe5a81e70cbd090b8c7f961"
+      ]
+    },
+    {
+      "id": "npm:mailparser@3.9.14",
+      "ecosystem": "npm",
+      "name": "mailparser",
+      "version": "3.9.14",
+      "source": "https://github.com/nodemailer/mailparser.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "2fd433bea68ecffb8b9bb7f92e01485b9a3c6836ac8f4379738eac670d080013"
       ]
     },
     {
@@ -25665,6 +25886,17 @@
       ]
     },
     {
+      "id": "npm:nodemailer@9.0.3",
+      "ecosystem": "npm",
+      "name": "nodemailer",
+      "version": "9.0.3",
+      "source": "https://github.com/nodemailer/nodemailer.git",
+      "license": "MIT-0",
+      "licenseTextHashes": [
+        "4f814dcacd2da618d62829ea1f6238701cf421f18a6b36c91c5d8212245e2c78"
+      ]
+    },
+    {
       "id": "npm:nopt@1.0.10",
       "ecosystem": "npm",
       "name": "nopt",
@@ -25843,6 +26075,17 @@
       "license": "MIT",
       "licenseTextHashes": [
         "46231df5a7733c3f52f11b71f3df61813007745b62b09031acfb45fb42d75082"
+      ]
+    },
+    {
+      "id": "npm:on-exit-leak-free@2.1.2",
+      "ecosystem": "npm",
+      "name": "on-exit-leak-free",
+      "version": "2.1.2",
+      "source": "git+https://github.com/mcollina/on-exit-or-gc.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "47404ffc18f1267832bc0623857871de5a3a93ebb19693f5e1b963af91fab54b"
       ]
     },
     {
@@ -26231,6 +26474,17 @@
       ]
     },
     {
+      "id": "npm:parseley@0.13.1",
+      "ecosystem": "npm",
+      "name": "parseley",
+      "version": "0.13.1",
+      "source": "git+https://github.com/mxxii/parseley.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "886b9d612923a8c2b5186f4d562e1f1a84ef319af574c5f8be5d3dc21ca4b385"
+      ]
+    },
+    {
       "id": "npm:parseurl@1.3.3",
       "ecosystem": "npm",
       "name": "parseurl",
@@ -26396,6 +26650,17 @@
       ]
     },
     {
+      "id": "npm:peberminta@0.10.0",
+      "ecosystem": "npm",
+      "name": "peberminta",
+      "version": "0.10.0",
+      "source": "git+https://github.com/mxxii/peberminta.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "886b9d612923a8c2b5186f4d562e1f1a84ef319af574c5f8be5d3dc21ca4b385"
+      ]
+    },
+    {
       "id": "npm:peberminta@0.9.0",
       "ecosystem": "npm",
       "name": "peberminta",
@@ -26481,6 +26746,39 @@
       "license": "MIT",
       "licenseTextHashes": [
         "d0cd141b0c322fded5dfad1d4645bb2fedfc05b7321fe1009469638190d59ef9"
+      ]
+    },
+    {
+      "id": "npm:pino-abstract-transport@3.0.0",
+      "ecosystem": "npm",
+      "name": "pino-abstract-transport",
+      "version": "3.0.0",
+      "source": "git+https://github.com/pinojs/pino-abstract-transport.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "31f005ecff86a12a1351f4c2cb1133267c0b152546b08cd6fa4bdeb1943e00cd"
+      ]
+    },
+    {
+      "id": "npm:pino-std-serializers@7.1.0",
+      "ecosystem": "npm",
+      "name": "pino-std-serializers",
+      "version": "7.1.0",
+      "source": "git+ssh://git@github.com/pinojs/pino-std-serializers.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "6206673d24786f09656f7a480b7c50af289e9690963aaa135af5b626de5250df"
+      ]
+    },
+    {
+      "id": "npm:pino@10.3.1",
+      "ecosystem": "npm",
+      "name": "pino",
+      "version": "10.3.1",
+      "source": "git+https://github.com/pinojs/pino.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "d4eb00c3ef2fa54cdf05d167b15e994bc67226a7998e090e22a0bc8b16223a6c"
       ]
     },
     {
@@ -26774,6 +27072,17 @@
       ]
     },
     {
+      "id": "npm:process-warning@5.1.0",
+      "ecosystem": "npm",
+      "name": "process-warning",
+      "version": "5.1.0",
+      "source": "git+https://github.com/fastify/process-warning.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "8d3c1dd501e056405ab56f4ad87b987070d55d1fe814616584ec2360045f9017"
+      ]
+    },
+    {
       "id": "npm:process@0.11.10",
       "ecosystem": "npm",
       "name": "process",
@@ -26939,6 +27248,17 @@
       ]
     },
     {
+      "id": "npm:punycode.js@2.3.1",
+      "ecosystem": "npm",
+      "name": "punycode.js",
+      "version": "2.3.1",
+      "source": "https://github.com/mathiasbynens/punycode.js.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a"
+      ]
+    },
+    {
       "id": "npm:punycode@2.3.1",
       "ecosystem": "npm",
       "name": "punycode",
@@ -27068,6 +27388,17 @@
       "license": "MIT",
       "licenseTextHashes": [
         "38d7c4d8410c68eeae9ce24a8b4ee2380199d6df4abb1d9c15dc70b135935fe8"
+      ]
+    },
+    {
+      "id": "npm:quick-format-unescaped@4.0.4",
+      "ecosystem": "npm",
+      "name": "quick-format-unescaped",
+      "version": "4.0.4",
+      "source": "git+https://github.com/davidmarkclements/quick-format.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "5ac141bfc70bec8f40838502436bfcb85e3f4c24377e41b9ddef07bdd6aa51bc"
       ]
     },
     {
@@ -27592,6 +27923,28 @@
       "license": "MIT",
       "licenseTextHashes": [
         "dffec71d93f273d2af7b54c6c7e7e70b3289c632ec0d7253210ec21ac336d5ac"
+      ]
+    },
+    {
+      "id": "npm:real-require@0.2.0",
+      "ecosystem": "npm",
+      "name": "real-require",
+      "version": "0.2.0",
+      "source": "git+https://github.com/pinojs/real-require.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "cbf263504e800cf09f99962cce8497b76eef79c3526bca434b90c3ef4c17220d"
+      ]
+    },
+    {
+      "id": "npm:real-require@1.0.0",
+      "ecosystem": "npm",
+      "name": "real-require",
+      "version": "1.0.0",
+      "source": "git+https://github.com/pinojs/real-require.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "cbf263504e800cf09f99962cce8497b76eef79c3526bca434b90c3ef4c17220d"
       ]
     },
     {
@@ -28196,6 +28549,17 @@
       ]
     },
     {
+      "id": "npm:safe-stable-stringify@2.5.0",
+      "ecosystem": "npm",
+      "name": "safe-stable-stringify",
+      "version": "2.5.0",
+      "source": "git+https://github.com/BridgeAR/safe-stable-stringify.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "3a6d6de49d284a36c5d271ef0e62eca1838cc460dd7630e3f2c347c8f5b2232a"
+      ]
+    },
+    {
       "id": "npm:safer-buffer@2.1.2",
       "ecosystem": "npm",
       "name": "safer-buffer",
@@ -28279,6 +28643,17 @@
       "license": "MIT",
       "licenseTextHashes": [
         "1847e52cd02429ecd6b31cba32fabdfef4229732084c06a73bacdc71030818c0"
+      ]
+    },
+    {
+      "id": "npm:selderee@0.12.0",
+      "ecosystem": "npm",
+      "name": "selderee",
+      "version": "0.12.0",
+      "source": "git+https://github.com/mxxii/selderee.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "ac9deab2fc855a4333261bafc948bb949946a40bca3f58ae96419aa3eaf7b955"
       ]
     },
     {
@@ -28809,6 +29184,17 @@
       ]
     },
     {
+      "id": "npm:smart-buffer@4.2.0",
+      "ecosystem": "npm",
+      "name": "smart-buffer",
+      "version": "4.2.0",
+      "source": "https://github.com/JoshGlazebrook/smart-buffer.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "c46e2c333e1c9e6fcfd130cf91b8e54bf67b60fabbc04996f7e199b990353ff3"
+      ]
+    },
+    {
       "id": "npm:smol-toml@1.6.1",
       "ecosystem": "npm",
       "name": "smol-toml",
@@ -28817,6 +29203,28 @@
       "license": "BSD-3-Clause",
       "licenseTextHashes": [
         "fa5659948374d4f555594f47f6da073b40dc503e921aeeece30df4362b3051a5"
+      ]
+    },
+    {
+      "id": "npm:socks@2.8.9",
+      "ecosystem": "npm",
+      "name": "socks",
+      "version": "2.8.9",
+      "source": "git+https://github.com/JoshGlazebrook/socks.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "4f4f28866154c8d758241a64296e8790d45d7d912ff7b029930778c06d8f2a72"
+      ]
+    },
+    {
+      "id": "npm:sonic-boom@4.2.1",
+      "ecosystem": "npm",
+      "name": "sonic-boom",
+      "version": "4.2.1",
+      "source": "git+https://github.com/pinojs/sonic-boom.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "db5c3795cb080810fed0380bf4d6adef3f81579e8ae3a867d3c2abab2329db9d"
       ]
     },
     {
@@ -28905,6 +29313,17 @@
       "license": "MIT",
       "licenseTextHashes": [
         "48da2f39e100d4085767e94966b43f4fa95ff6a0698fba57ed460914e35f94a0"
+      ]
+    },
+    {
+      "id": "npm:split2@4.2.0",
+      "ecosystem": "npm",
+      "name": "split2",
+      "version": "4.2.0",
+      "source": "https://github.com/mcollina/split2.git",
+      "license": "ISC",
+      "licenseTextHashes": [
+        "c372ef2fa1dfcb124ed807609751e75e3a009f108c5724916b489288fcb88a0c"
       ]
     },
     {
@@ -29593,6 +30012,17 @@
       ]
     },
     {
+      "id": "npm:thread-stream@4.2.0",
+      "ecosystem": "npm",
+      "name": "thread-stream",
+      "version": "4.2.0",
+      "source": "git+https://github.com/mcollina/thread-stream.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "47404ffc18f1267832bc0623857871de5a3a93ebb19693f5e1b963af91fab54b"
+      ]
+    },
+    {
       "id": "npm:throat@5.0.0",
       "ecosystem": "npm",
       "name": "throat",
@@ -29687,6 +30117,17 @@
       "license": "MIT",
       "licenseTextHashes": [
         "cebc084d54e6dd99e53292ddb4bc1cdb63d9bfcd9ce438fe3aa6eb106d79e2ea"
+      ]
+    },
+    {
+      "id": "npm:tlds@1.261.0",
+      "ecosystem": "npm",
+      "name": "tlds",
+      "version": "1.261.0",
+      "source": "https://github.com/stephenmathieson/node-tlds.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "65972abf99c026dca44677f537b7bacc8d7a95df3126912b74e697b6352331a6"
       ]
     },
     {
@@ -30107,6 +30548,17 @@
       "ecosystem": "npm",
       "name": "uc.micro",
       "version": "1.0.6",
+      "source": "markdown-it/uc.micro",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "483acb265f182907d1caf6cff9c16c96f31325ed23792832cc5d8b12d5f88c8a"
+      ]
+    },
+    {
+      "id": "npm:uc.micro@2.1.0",
+      "ecosystem": "npm",
+      "name": "uc.micro",
+      "version": "2.1.0",
       "source": "markdown-it/uc.micro",
       "license": "MIT",
       "licenseTextHashes": [

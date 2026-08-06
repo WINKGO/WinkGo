@@ -9,6 +9,7 @@
  */
 
 const crypto = require('node:crypto');
+const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -94,6 +95,18 @@ function parseTsv(tsvPath) {
     const values = line.split('\t');
     return Object.fromEntries(header.map((key, index) => [key, values[index] ?? '']));
   });
+}
+
+function listGitVisibleFiles() {
+  return new Set(
+    execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    })
+      .split('\0')
+      .filter(Boolean)
+      .map((entry) => entry.replaceAll('\\', '/'))
+  );
 }
 
 function commentStyle(relativePath, type) {
@@ -199,6 +212,7 @@ function manifestHeader(project) {
 function main() {
   let annotated = 0;
   let manifestOnly = 0;
+  const gitVisibleFiles = listGitVisibleFiles();
 
   for (const project of PROJECTS) {
     const inventoryPath = path.join(REPO_ROOT, ...project.inventory.split('/'));
@@ -211,6 +225,7 @@ function main() {
       const inventoryCurrentPath = row.current_path.replaceAll('\\', '/');
       const repoRelativePath = path.posix.join(project.currentRoot, inventoryCurrentPath);
       const absolutePath = path.join(REPO_ROOT, ...repoRelativePath.split('/'));
+      if (!gitVisibleFiles.has(repoRelativePath)) continue;
       if (!fs.existsSync(absolutePath)) continue;
       if (!fs.statSync(absolutePath).isFile()) throw new Error(`Mapped path is not a file: ${repoRelativePath}`);
       if (sha256File(absolutePath, row.type) === row.upstream_sha256) continue;

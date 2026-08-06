@@ -56,6 +56,7 @@ import type { PropsWithChildren } from 'react';
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { TFunction } from 'i18next';
+import { SWRConfig } from 'swr';
 
 // Context providers
 import { AuthProvider } from './hooks/context/AuthContext';
@@ -157,6 +158,21 @@ function isInstallationIntegrityFailure(kind: RuntimeFailureKind | undefined): b
   return INSTALLATION_INTEGRITY_FAILURES.has(kind ?? 'unknown');
 }
 
+const BACKGROUND_STARTUP_TRANSIENT_FAILURES = new Set<RuntimeFailureKind>([
+  'timeout',
+  'download_failed',
+  'http_status',
+  'unknown',
+]);
+
+function isBackgroundStartupTransientFailure(event: IRuntimeStatusEvent): boolean {
+  return (
+    event.scope.kind === 'custom_agent' &&
+    event.scope.id === 'startup' &&
+    BACKGROUND_STARTUP_TRANSIENT_FAILURES.has(event.failure_kind ?? 'unknown')
+  );
+}
+
 function captureRuntimeInstallationIntegrityFailure(event: IRuntimeStatusEvent): void {
   if (!isInstallationIntegrityFailure(event.failure_kind)) {
     return;
@@ -217,6 +233,13 @@ const RuntimeFailureDialogs: React.FC = () => {
       if (event.phase !== 'failed') {
         return;
       }
+      // Startup runtime preparation is best-effort. Network failures must not
+      // block the whole desktop app; an actual Agent/MCP launch will retry and
+      // surface the scoped error if the runtime is still unavailable.
+      if (isBackgroundStartupTransientFailure(event)) {
+        console.warn('[WinkGo] Background Node runtime preparation deferred:', event);
+        return;
+      }
       const signature = [
         event.resource,
         event.resource_id ?? '',
@@ -254,20 +277,26 @@ const RuntimeFailureDialogs: React.FC = () => {
   return <>{modalContextHolder}</>;
 };
 
+const SWR_DEFAULTS = { revalidateOnFocus: false } as const;
+
 const AppProviders: React.FC<PropsWithChildren> = ({ children }) =>
   React.createElement(
-    AuthProvider,
-    null,
+    SWRConfig,
+    { value: SWR_DEFAULTS },
     React.createElement(
-      ThemeProvider,
+      AuthProvider,
       null,
       React.createElement(
-        PreviewProvider,
+        ThemeProvider,
         null,
         React.createElement(
-          FeedbackProvider,
+          PreviewProvider,
           null,
-          React.createElement(React.Fragment, null, React.createElement(RuntimeFailureDialogs, null), children)
+          React.createElement(
+            FeedbackProvider,
+            null,
+            React.createElement(React.Fragment, null, React.createElement(RuntimeFailureDialogs, null), children)
+          )
         )
       )
     )

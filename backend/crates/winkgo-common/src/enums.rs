@@ -12,6 +12,8 @@ pub enum AgentType {
     OpenclawGateway,
     Nanobot,
     Remote,
+    /// Google Antigravity, driven through the `agy` direct CLI backend.
+    Antigravity,
     #[serde(rename = "winkgo_agent", alias = "winkgoagent")]
     WinkGoAgent,
     /// Legacy Gemini conversations. Kept solely so that historical rows
@@ -35,6 +37,7 @@ impl AgentType {
             AgentType::OpenclawGateway => "OpenClaw Gateway",
             AgentType::Nanobot => "Nanobot",
             AgentType::Remote => "Remote",
+            AgentType::Antigravity => "Antigravity",
             AgentType::WinkGoAgent => "WinkGo CLI",
             AgentType::Gemini => "Gemini (legacy)",
             AgentType::Codex => "Codex (legacy)",
@@ -47,6 +50,7 @@ impl AgentType {
             AgentType::OpenclawGateway => "openclaw-gateway",
             AgentType::Nanobot => "nanobot",
             AgentType::Remote => "remote",
+            AgentType::Antigravity => "antigravity",
             AgentType::WinkGoAgent => "winkgo_agent",
             AgentType::Gemini => "gemini",
             AgentType::Codex => "codex",
@@ -54,7 +58,7 @@ impl AgentType {
     }
 
     pub fn supports_new_conversation(&self) -> bool {
-        matches!(self, AgentType::Acp | AgentType::WinkGoAgent)
+        matches!(self, AgentType::Acp | AgentType::WinkGoAgent | AgentType::Antigravity)
     }
 
     pub fn is_deprecated_runtime(&self) -> bool {
@@ -86,6 +90,7 @@ impl AgentType {
     pub fn native_skills_dirs(&self) -> Option<&'static [&'static str]> {
         match self {
             AgentType::WinkGoAgent => Some(&[".winkgo_agent/skills"]),
+            AgentType::Antigravity => Some(&[".agents/skills"]),
             AgentType::Acp
             | AgentType::OpenclawGateway
             | AgentType::Nanobot
@@ -118,6 +123,7 @@ impl AgentType {
                 _ => "yolo",
             },
             AgentType::WinkGoAgent
+            | AgentType::Antigravity
             | AgentType::Gemini
             | AgentType::Codex
             | AgentType::OpenclawGateway

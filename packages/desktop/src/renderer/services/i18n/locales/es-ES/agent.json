@@ -33,6 +33,9 @@
     "searchPlaceholder": "Buscar modelos",
     "noResults": "No hay modelos coincidentes"
   },
+  "warmup": {
+    "clickToWake": "Haz clic para activar a este miembro del equipo"
+  },
   "config": {
     "setting": "Aplicando configuración...",
     "commandAck": "Comando enviado, pero el estado no está confirmado. Actualiza o intenta de nuevo.",

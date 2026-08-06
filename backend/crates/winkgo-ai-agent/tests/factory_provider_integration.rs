@@ -90,6 +90,8 @@ fn make_factory(
         backend_binary_path: Arc::new(PathBuf::from("/tmp/winkgo_agent-test/winkgo_core")),
         mcp_server_repo: None,
         session_spawner,
+        antigravity_hook_base_url: None,
+        antigravity_hook_tokens: Arc::new(winkgo_ai_agent::antigravity_hook::HookTokenRegistry::default()),
     })
 }
 

@@ -29,6 +29,7 @@ winkgo-file.workspace = true
 winkgo-office.workspace = true
 winkgo-shell.workspace = true
 winkgo-ai-agent.workspace = true
+winkgo-session.workspace = true
 winkgo-mcp.workspace = true
 winkgo-conversation.workspace = true
 winkgo-extension.workspace = true

@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { app } from 'electron';
 import type { IWinkGoSmartHomePreferences, IWinkGoSmartHomePreferencesSaveRequest } from '@/common/adapter/ipcBridge';
 import { deleteWinkGoCredential, getWinkGoCredentialStatus, writeWinkGoCredential } from './WinkGoCredentialService';
@@ -554,6 +555,9 @@ export const syncWinkGoSkillBridge = (requestedSkillIds: string[]): WinkGoSkillB
   const allowedToolNames = new Set<string>();
   const allowedToolPrefixes = new Set<string>();
   const compatibilityToolAliases: Record<string, CompatibilityToolAlias> = {};
+  const conflictedCompatibilityToolAliases = new Set<string>();
+  const directActionToolOwners = new Map<string, Set<string>>();
+  const compatibilityAliasOwners = new Map<string, Set<string>>();
 
   for (const skillId of enabledSkillIds) {
     const sourcePath = findSourceSkillPath(skillId);
@@ -564,10 +568,55 @@ export const syncWinkGoSkillBridge = (requestedSkillIds: string[]): WinkGoSkillB
     const selectors = readToolSelectors(manifest, actions);
     selectors.names.forEach((name) => allowedToolNames.add(name));
     selectors.prefixes.forEach((prefix) => allowedToolPrefixes.add(prefix));
+    if (Array.isArray(actions?.actions)) {
+      for (const action of actions.actions) {
+        if (!action || typeof action !== 'object') continue;
+        for (const toolName of asStringList((action as Record<string, unknown>).tool_names)) {
+          const owners = directActionToolOwners.get(toolName) ?? new Set<string>();
+          owners.add(skillId);
+          directActionToolOwners.set(toolName, owners);
+        }
+      }
+    }
     for (const [aliasName, alias] of Object.entries(readCompatibilityToolAliases(manifest))) {
       allowedToolNames.add(aliasName);
-      compatibilityToolAliases[aliasName] = alias;
+      const owners = compatibilityAliasOwners.get(aliasName) ?? new Set<string>();
+      owners.add(skillId);
+      compatibilityAliasOwners.set(aliasName, owners);
+      if (conflictedCompatibilityToolAliases.has(aliasName)) continue;
+
+      const existingAlias = compatibilityToolAliases[aliasName];
+      if (!existingAlias) {
+        compatibilityToolAliases[aliasName] = alias;
+        continue;
+      }
+
+      // A few old generic music names were historically reused by multiple
+      // players. Keeping the last definition makes an explicit NetEase or QQ
+      // request silently open Soda Music (or vice versa), depending only on
+      // skill sort order. Ambiguous legacy names are therefore not exported
+      // when more than one enabled skill assigns them different semantics.
+      if (!isDeepStrictEqual(existingAlias, alias)) {
+        delete compatibilityToolAliases[aliasName];
+        conflictedCompatibilityToolAliases.add(aliasName);
+      }
     }
+  }
+
+  // Do not let one skill's fallback alias replace a modern canonical tool
+  // that another enabled skill calls directly. Current Runtime builds expose
+  // these canonical tools natively; older builds must fail clearly instead of
+  // silently routing (for example) a NetEase search into Soda Music.
+  for (const [aliasName, actionOwners] of directActionToolOwners) {
+    const aliasOwners = compatibilityAliasOwners.get(aliasName);
+    if (aliasOwners && [...actionOwners].some((owner) => !aliasOwners.has(owner))) {
+      delete compatibilityToolAliases[aliasName];
+      conflictedCompatibilityToolAliases.add(aliasName);
+    }
+  }
+
+  for (const aliasName of conflictedCompatibilityToolAliases) {
+    if (!directActionToolOwners.has(aliasName)) allowedToolNames.delete(aliasName);
   }
 
   const config: RuntimeSkillBridgeConfig = {

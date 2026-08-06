@@ -123,7 +123,21 @@ impl ProviderService {
     /// frontend can migrate its local store to the backend without losing
     /// the key on re-read. Storage remains encrypted at rest.
     fn row_to_response(&self, row: Provider) -> Result<ProviderResponse, SystemError> {
-        let api_key = decrypt_string(&row.api_key_encrypted, &self.encryption_key)?;
+        // One credential encrypted under a lost/rotated key must not make the
+        // entire provider list unusable. Keep the row visible with an empty
+        // key so the user can re-enter it while healthy rows still load.
+        let api_key = match decrypt_string(&row.api_key_encrypted, &self.encryption_key) {
+            Ok(key) => key,
+            Err(error) => {
+                tracing::warn!(
+                    provider_id = %row.id,
+                    provider_name = %row.name,
+                    %error,
+                    "provider api_key failed to decrypt; returning an empty key for recovery"
+                );
+                String::new()
+            }
+        };
 
         let models: Vec<String> = serde_json::from_str(&row.models)
             .map_err(|e| SystemError::Internal(format!("Failed to parse models JSON: {e}")))?;
@@ -585,6 +599,49 @@ mod tests {
         let created = svc.create(req).await.unwrap();
         assert_eq!(created.api_key, "sk-secret-original-value");
         assert!(!created.api_key.contains("***"));
+    }
+
+    #[tokio::test]
+    async fn undecryptable_api_key_keeps_provider_list_available() {
+        let db = init_database_memory().await.unwrap();
+        let pool = db.pool().clone();
+        let repo = Arc::new(SqliteProviderRepository::new(pool.clone()));
+        let svc = ProviderService::new(repo, TEST_KEY);
+
+        let healthy = svc
+            .create(CreateProviderRequest {
+                id: Some("provider-healthy".into()),
+                api_key: "sk-healthy".into(),
+                ..sample_create_request()
+            })
+            .await
+            .unwrap();
+        let damaged = svc
+            .create(CreateProviderRequest {
+                id: Some("provider-damaged".into()),
+                api_key: "sk-damaged".into(),
+                ..sample_create_request()
+            })
+            .await
+            .unwrap();
+
+        sqlx::query("UPDATE providers SET api_key_encrypted = 'not-valid-ciphertext' WHERE id = ?")
+            .bind(&damaged.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let providers = svc
+            .list()
+            .await
+            .expect("a damaged credential must not hide all providers");
+        let healthy_row = providers.iter().find(|provider| provider.id == healthy.id).unwrap();
+        let damaged_row = providers.iter().find(|provider| provider.id == damaged.id).unwrap();
+
+        assert_eq!(healthy_row.api_key, "sk-healthy");
+        assert!(damaged_row.api_key.is_empty());
+
+        db.close().await;
     }
 
     #[tokio::test]

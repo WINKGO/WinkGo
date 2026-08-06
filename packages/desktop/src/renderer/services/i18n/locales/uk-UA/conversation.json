@@ -508,7 +508,15 @@
     }
   },
   "contextUsage": {
-    "contextUsed": "контексту використано"
+    "contextUsed": "контексту використано",
+    "tokensUsed": "Використано токенів: {{tokens}}",
+    "windowUnknown": "Розмір контекстного вікна невідомий",
+    "sessionCost": "Вартість сесії",
+    "input": "Ввід",
+    "output": "Вивід",
+    "thought": "Міркування",
+    "cachedRead": "Читання кешу",
+    "cachedWrite": "Запис кешу"
   },
   "skill_generator": {
     "title": "Створити Навичку/Правило",
@@ -573,8 +581,50 @@
       },
       "ACP_EMPTY_TURN_REFUSAL": {
         "body": "Модель відхилила цей запит до появи видимої відповіді."
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "Кроків завершилося невдало: {{count}}; вони НЕ були виконані. agy все одно позначає такі ходи як успішні — перевіряйте фактичний результат, а не відповідь."
+      },
+      "ANTIGRAVITY_VERSION_OLDER": {
+        "body": "Встановлена версія agy {{reported}} старіша за перевірену для цієї інтеграції {{verified}}; частина можливостей може бути відсутня. Радимо оновити agy."
+      },
+      "ANTIGRAVITY_VERSION_NEWER": {
+        "body": "Встановлена версія agy {{reported}} новіша за перевірену для цієї інтеграції {{verified}}. Зазвичай усе працює; повідомляйте про дивну поведінку."
       }
     }
   },
-  "notFound": "Розмову не знайдено або її видалено"
+  "officePreview": {
+    "fileWatchUnavailable": "Відстеження файлів у реальному часі недоступне. Нові файли Office не відкриватимуться для попереднього перегляду автоматично. Перезапустіть WINK GO; якщо проблема не зникне, закрийте програми з великою кількістю файлових спостерігачів і повторіть спробу."
+  },
+  "notFound": "Розмову не знайдено або її видалено",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "Перейменувати",
+      "addToChat": "Додати в чат"
+    },
+    "namePlaceholder": "Назва",
+    "deleteConfirm": "Видалити «{{name}}»? Цю дію не можна скасувати.",
+    "renameFailed": "Не вдалося перейменувати",
+    "tabs": {
+      "files": "Файли",
+      "changes": "Зміни"
+    },
+    "changesPlaceholder": "Контроль версій буде в окремій вкладці — незабаром.",
+    "addedToChat": "{{name}} додано в чат",
+    "imported": "Імпортовано файлів: {{count}}",
+    "importPartialFailed": "Скопійовано: {{copied}}, з помилкою: {{failed}} (конфлікти імен або не підтримується)",
+    "importFailed": "Не вдалося імпортувати файли",
+    "search": {
+      "placeholder": "Пошук файлів за назвою",
+      "searching": "Пошук…",
+      "empty": "Немає відповідних файлів",
+      "limitReached": "Показано перші {{count}} — уточніть запит"
+    }
+  }
 }

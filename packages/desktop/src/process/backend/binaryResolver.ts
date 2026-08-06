@@ -8,7 +8,7 @@
  */
 
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { execSync } from 'node:child_process';
 
 const BINARY_NAME = 'winkgo_core';
@@ -20,8 +20,12 @@ type BackendBinaryResolveDiagnostics = {
   runtimeKey: string;
   binaryName: string;
   checkedBundledPath?: string;
+  checkedDevelopmentOverridePath?: string;
+  checkedDevelopmentBundledPath?: string;
   bundledDirExists?: boolean;
   runtimeDirExists?: boolean;
+  developmentBundledDirExists?: boolean;
+  developmentRuntimeDirExists?: boolean;
   resourcesDirEntries?: string[];
   runtimeDirEntries?: string[];
   pathLookupCommand: string;
@@ -74,8 +78,14 @@ export function resolveBinaryPath(): string {
     pathLookupCommand: process.platform === 'win32' ? `where ${BINARY_NAME}` : `which ${BINARY_NAME}`,
   };
 
+  const developmentOverride = developmentOverridePath(diagnostics);
+  if (developmentOverride) return developmentOverride;
+
   const bundled = bundledPath(runtimeKey, binaryName, diagnostics);
   if (bundled) return bundled;
+
+  const developmentBundled = developmentBundledPath(runtimeKey, binaryName, diagnostics);
+  if (developmentBundled) return developmentBundled;
 
   const fromPath = resolveFromSystemPATH(diagnostics);
   if (fromPath) return fromPath;
@@ -84,6 +94,43 @@ export function resolveBinaryPath(): string {
     `Cannot find "${BINARY_NAME}" binary. Checked bundled location and system PATH.`,
     diagnostics
   );
+}
+
+/**
+ * Allow a source checkout to run a freshly compiled Core without replacing the
+ * repository's bundled binary. The renderer URL is injected by electron-vite,
+ * so packaged applications never accept this development-only override.
+ */
+function developmentOverridePath(diagnostics: BackendBinaryResolveDiagnostics): string | null {
+  if (!process.env.ELECTRON_RENDERER_URL) return null;
+  const configured = process.env.WINKGO_BACKEND_BIN?.trim();
+  if (!configured) return null;
+
+  const candidate = resolve(configured);
+  diagnostics.checkedDevelopmentOverridePath = candidate;
+  return existsSync(candidate) ? candidate : null;
+}
+
+/**
+ * Resolve the repository-local runtime only while electron-vite is serving the
+ * renderer. Packaged builds never enter this branch, so installation integrity
+ * checks continue to require resources from process.resourcesPath.
+ */
+function developmentBundledPath(
+  runtimeKey: string,
+  binaryName: string,
+  diagnostics: BackendBinaryResolveDiagnostics
+): string | null {
+  if (!process.env.ELECTRON_RENDERER_URL) return null;
+
+  const bundledDir = join(process.cwd(), 'resources', 'bundled-winkgo-core');
+  const runtimeDir = join(bundledDir, runtimeKey);
+  const candidate = join(runtimeDir, binaryName);
+  diagnostics.checkedDevelopmentBundledPath = candidate;
+  diagnostics.developmentBundledDirExists = existsSync(bundledDir);
+  diagnostics.developmentRuntimeDirExists = existsSync(runtimeDir);
+
+  return existsSync(candidate) ? candidate : null;
 }
 
 /**

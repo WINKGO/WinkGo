@@ -13,6 +13,7 @@ import {
   detectWinkGoLanIp,
   getWinkGoXiaozhiSnapshot,
   refreshWinkGoBindingCode,
+  resolveWinkGoXiaozhiRuntimeLogPath,
   saveWinkGoXiaozhiConfig,
   startWinkGoRemoteGateway,
   startWinkGoXiaozhiRuntime,
@@ -20,6 +21,7 @@ import {
   subscribeWinkGoXiaozhiStatus,
   testWinkGoXiaozhiConnections,
 } from '@process/services/WinkGoXiaozhiService';
+import { WinkGoXiaozhiActivityMonitor } from '@process/services/WinkGoXiaozhiActivityService';
 
 let initialized = false;
 
@@ -54,6 +56,22 @@ export function initWinkGoXiaozhiBridge(): void {
   const unsubscribe = subscribeWinkGoXiaozhiStatus((snapshot) => {
     ipcBridge.winkGoXiaozhi.statusChanged.emit(snapshot);
   });
+  const activityMonitor = new WinkGoXiaozhiActivityMonitor(resolveWinkGoXiaozhiRuntimeLogPath, (activity) => {
+    ipcBridge.winkGoXiaozhi.activityChanged.emit(activity);
+  });
+  const stopActivityMonitor = activityMonitor.start();
+  if (winkGoCloudAuthService.hasUsableSession() && winkGoCloudAuthService.hasCapability('mcp.miniapp')) {
+    void getWinkGoXiaozhiSnapshot().catch((error) => {
+      // Re-post the saved gateway configuration on every desktop start. This
+      // deliberately makes the official ESP32 channel reconnect and refresh
+      // its advertised Runtime capabilities instead of keeping a stale tool
+      // cache after skills or music providers are changed.
+      console.warn(
+        '[WINK GO Xiaozhi] 启动时刷新 ESP32/小程序能力失败：',
+        error instanceof Error ? error.message : String(error)
+      );
+    });
+  }
   if (winkGoCloudAuthService.hasUsableSession() && winkGoCloudAuthService.hasCapability('remote.desktop')) {
     void startWinkGoRemoteGateway().catch(() => {
       // The settings page exposes a readable relay status; desktop startup must continue.
@@ -61,6 +79,7 @@ export function initWinkGoXiaozhiBridge(): void {
   }
   app.once('will-quit', () => {
     unsubscribe();
+    stopActivityMonitor();
     void stopWinkGoRemoteGateway();
   });
 }

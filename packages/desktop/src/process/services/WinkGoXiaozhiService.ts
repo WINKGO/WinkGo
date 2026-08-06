@@ -428,6 +428,11 @@ const findRuntimeExecutable = (): string | null => {
   return candidates.find(existsSync) ?? null;
 };
 
+export const resolveWinkGoXiaozhiRuntimeLogPath = (): string | null => {
+  const executable = findRuntimeExecutable();
+  return executable ? path.join(path.dirname(executable), 'logs', 'sparkbot.log') : null;
+};
+
 const buildSnapshot = async (config: WinkGoXiaozhiConfig): Promise<WinkGoXiaozhiSnapshot> => {
   const runtimePort = resolveRuntimePort(config.runtimeApi);
   const targets = ['runtime', 'bridge', 'hardware', 'mobile'].map((kind) =>
@@ -721,6 +726,9 @@ export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionRe
       SPARKBOT_MOBILE_REMOTE_GATEWAY_ENABLED: config.mobileEnabled ? '1' : '0',
       WINKGO_OWNER_PID: String(process.pid),
       WINKGO_EXIT_WHEN_OWNER_GONE: '1',
+      WINKGO_RUNTIME_ROOT: path.dirname(executable),
+      WINKGO_SKILLS_ROOT: path.join(path.dirname(executable), 'skills'),
+      SPARKBOT_SKILLS_ROOT: path.join(path.dirname(executable), 'skills'),
       PYTHONUTF8: '1',
       PYTHONIOENCODING: 'utf-8',
       ...(runtimeToken ? { WINKGO_RUNTIME_ACCESS_TOKEN: runtimeToken } : {}),

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import ConversationTitleMinimap from '@/renderer/pages/conversation/components/ConversationTitleMinimap';
 import { Input } from '@arco-design/web-react';
 import classNames from 'classnames';
@@ -103,7 +104,10 @@ const ChatTitleEditor: React.FC<ChatTitleEditorProps> = ({
         )}
       </div>
       {!editingTitle && (
-        <div className='w-0 flex items-center overflow-hidden opacity-0 transition-all duration-180 group-hover:w-40px group-hover:opacity-100 group-focus-within:w-40px group-focus-within:opacity-100'>
+        <div
+          data-testid='conversation-title-actions'
+          className='w-40px shrink-0 flex items-center overflow-hidden opacity-100'
+        >
           <span className='h-16px w-1px shrink-0 rounded-full bg-[color:color-mix(in_srgb,var(--color-text-4)_44%,transparent)]' />
           <div className='ml-4px mr-4px flex items-center justify-center'>
             <ConversationTitleMinimap conversation_id={conversation_id} />

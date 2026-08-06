@@ -106,7 +106,11 @@ impl ChannelSettingsService {
             }
 
             if let Some(at) = setting.agent_type.as_deref() {
-                let backend = if at == "acp" { setting.backend.clone() } else { None };
+                let backend = if agent_type_carries_backend(at) {
+                    setting.backend.clone()
+                } else {
+                    None
+                };
 
                 debug!(platform = %platform, agent_type = %at, backend = ?backend, "resolved channel agent config (new format)");
 
@@ -119,7 +123,11 @@ impl ChannelSettingsService {
             if let Some(raw_backend) = setting.backend.as_deref() {
                 let raw_backend = raw_backend.to_owned();
                 let agent_type = backend_to_agent_type(&raw_backend);
-                let backend = if agent_type == "acp" { Some(raw_backend) } else { None };
+                let backend = if agent_type_carries_backend(&agent_type) {
+                    Some(raw_backend)
+                } else {
+                    None
+                };
 
                 debug!(
                     platform = %platform,
@@ -260,7 +268,11 @@ impl ChannelSettingsService {
             .unwrap_or(definition.agent_id);
         let agent_backend = self.runtime_backend_for_agent_id(&agent_id).await?;
         let agent_type = backend_to_agent_type(&agent_backend);
-        let backend = if agent_type == "acp" { Some(agent_backend) } else { None };
+        let backend = if agent_type_carries_backend(&agent_type) {
+            Some(agent_backend)
+        } else {
+            None
+        };
 
         Ok(Some(ResolvedAgentConfig { agent_type, backend }))
     }
@@ -472,11 +484,16 @@ fn backend_to_agent_type(backend: &str) -> String {
         "openclaw-gateway" => "openclaw-gateway".to_owned(),
         "nanobot" => "nanobot".to_owned(),
         "remote" => "remote".to_owned(),
+        "antigravity" => "antigravity".to_owned(),
         _ => {
             // All ACP-compatible backends: claude, gemini, codex, codebuddy, opencode, qwen, copilot, droid, kimi, etc.
             "acp".to_owned()
         }
     }
+}
+
+fn agent_type_carries_backend(agent_type: &str) -> bool {
+    matches!(agent_type, "acp" | "antigravity")
 }
 
 /// Builds a `ProviderWithModel` from the resolved config, or returns

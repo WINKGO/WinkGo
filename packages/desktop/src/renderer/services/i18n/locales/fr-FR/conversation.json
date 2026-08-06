@@ -508,7 +508,15 @@
     }
   },
   "contextUsage": {
-    "contextUsed": "contexte utilisé"
+    "contextUsed": "contexte utilisé",
+    "tokensUsed": "{{tokens}} jetons utilisés",
+    "windowUnknown": "Taille de la fenêtre de contexte inconnue",
+    "sessionCost": "Coût de la session",
+    "input": "Entrée",
+    "output": "Sortie",
+    "thought": "Réflexion",
+    "cachedRead": "Lecture du cache",
+    "cachedWrite": "Écriture du cache"
   },
   "skill_generator": {
     "title": "Générer une compétence/règle",
@@ -572,8 +580,50 @@
       },
       "ACP_EMPTY_TURN_REFUSAL": {
         "body": "Le modèle a refusé cette demande avant de produire une réponse visible."
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "{{count}} étape(s) ont échoué et n'ont PAS pris effet. agy termine malgré tout ces tours comme réussis : vérifiez le résultat réel plutôt que la réponse."
+      },
+      "ANTIGRAVITY_VERSION_OLDER": {
+        "body": "La version installée d'agy {{reported}} est antérieure à la version {{verified}} validée pour cette intégration ; certaines fonctionnalités peuvent manquer. Une mise à jour est conseillée."
+      },
+      "ANTIGRAVITY_VERSION_NEWER": {
+        "body": "La version installée d'agy {{reported}} est postérieure à la version {{verified}} validée pour cette intégration. Elle devrait fonctionner ; signalez tout comportement anormal."
       }
     }
   },
-  "notFound": "Conversation introuvable ou supprimée"
+  "officePreview": {
+    "fileWatchUnavailable": "La surveillance des fichiers en temps réel n'est pas disponible. Les nouveaux fichiers Office ne s'ouvriront pas automatiquement dans l'aperçu. Redémarrez WINK GO ; si le problème persiste, fermez les programmes utilisant de nombreux observateurs de fichiers puis réessayez."
+  },
+  "notFound": "Conversation introuvable ou supprimée",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "Renommer",
+      "addToChat": "Ajouter au chat"
+    },
+    "namePlaceholder": "Nom",
+    "deleteConfirm": "Supprimer « {{name}} » ? Cette action est irréversible.",
+    "renameFailed": "Échec du renommage",
+    "tabs": {
+      "files": "Fichiers",
+      "changes": "Modifications"
+    },
+    "changesPlaceholder": "Le contrôle de version arrive dans un onglet séparé — bientôt.",
+    "addedToChat": "{{name}} ajouté au chat",
+    "imported": "{{count}} fichier(s) importé(s)",
+    "importPartialFailed": "{{copied}} copié(s), {{failed}} échec(s) (conflits de noms ou non pris en charge)",
+    "importFailed": "Échec de l’import des fichiers",
+    "search": {
+      "placeholder": "Rechercher des fichiers par nom",
+      "searching": "Recherche…",
+      "empty": "Aucun fichier correspondant",
+      "limitReached": "Affichage des {{count}} premiers — affinez la recherche"
+    }
+  }
 }

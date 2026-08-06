@@ -17,6 +17,7 @@ vi.mock('node:child_process', () => ({
 
 vi.mock('node:fs', () => ({
   mkdirSync: vi.fn(),
+  statSync: vi.fn(),
 }));
 
 vi.mock('node:net', () => ({
@@ -29,7 +30,7 @@ vi.mock('./agent-process-registry.js', () => ({
 }));
 
 import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, statSync } from 'node:fs';
 import { connect, createServer } from 'node:net';
 import { cleanupRegisteredAgentProcesses } from './agent-process-registry.js';
 import {
@@ -455,6 +456,29 @@ describe('BackendLifecycleManager.start (health timeout)', () => {
 
     expect(spawn).not.toHaveBeenCalled();
     expect(mgr.status).toBe('error');
+  });
+
+  it('does not mkdir an existing Windows drive root', async () => {
+    vi.mocked(statSync).mockImplementation(((path: unknown) =>
+      path === 'D:\\' ? { isDirectory: () => true } : undefined) as unknown as typeof statSync);
+    vi.mocked(spawn).mockImplementationOnce(() => {
+      throw new Error('halted after directory preparation');
+    });
+
+    try {
+      const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/winkgo_core');
+      const error = await mgr
+        .start('/db/path', '/log/dir', { cacheDir: '/cache', workDir: 'D:\\', logDir: '/log' })
+        .catch((reason: unknown) => reason as Error);
+
+      expect(error.message).toContain('spawn threw before startup');
+      expect(mkdirSync).not.toHaveBeenCalledWith('D:\\', expect.anything());
+      expect(spawn).toHaveBeenCalled();
+    } finally {
+      vi.mocked(statSync).mockReset();
+      vi.mocked(mkdirSync).mockReset();
+      vi.mocked(spawn).mockReset();
+    }
   });
 
   it('captures backend boundary code and stage from early-exit stderr', async () => {

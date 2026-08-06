@@ -259,6 +259,17 @@ describe('MessageText attachment paths', () => {
     expect(content.parentElement?.className).not.toContain('max-w-780px');
   });
 
+  it('wraps a long unbroken URL or path inside the user message bubble', () => {
+    const longPath = '/var/folders/winkgo/session/image-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+
+    renderMessageText(longPath, { position: 'right' });
+
+    const content = screen.getByTestId('message-text-content');
+    expect(content.className).toContain('[overflow-wrap:anywhere]');
+    expect(content.className).not.toContain('break-words');
+    expect(content).toHaveTextContent(longPath);
+  });
+
   it('keeps absolute attachment paths unchanged before previewing', () => {
     const message: IMessageText = {
       id: 'msg-2',

@@ -122,7 +122,7 @@ const _AddNewConversation: React.FC<{ conversation: TChatConversation }> = ({ co
                 modified_at: Date.now(),
                 // Clear ACP session fields to prevent new conversation from inheriting old session context
                 extra:
-                  source.type === 'acp'
+                  source.type === 'acp' || source.type === 'antigravity'
                     ? { ...source.extra, acp_session_id: undefined, acp_session_updated_at: undefined }
                     : source.extra,
               } as TChatConversation,
@@ -169,7 +169,10 @@ const WinkGoAgentConversationPanel: React.FC<{
     initialModel: conversation.model,
     onSelectModel,
   });
-  const workspaceEnabled = Boolean(conversation.extra?.workspace);
+  // Project conversations get the Layout-level Explorer column (stage3 FULL);
+  // ChatLayout's own right sider is only for no-project (legacy tree), so it does
+  // not double up or reserve an empty column.
+  const workspaceEnabled = Boolean(conversation.extra?.workspace) && !conversation.project_id;
   const cronJobId = resolveCronJobId(conversation.extra);
   const { info: presetAssistantInfo } = usePresetAssistantInfo(conversation);
   const winkgo_agentAssistantId = presetAssistantInfo?.assistantId;
@@ -214,7 +217,15 @@ const WinkGoAgentConversationPanel: React.FC<{
       </div>
     ),
     workspaceEnabled,
+    // For project conversations the preview panel is hoisted to the Layout-level
+    // project host (structurally persistent across same-project conversation
+    // switches — no remount). ChatLayout then renders chat only.
+    previewHosted: Boolean(conversation.project_id),
     workspacePath: conversation.extra?.workspace,
+    // Key the workspace-panel collapse preference per-project (falls back to
+    // conversation_id inside ChatLayout when there is no project) so the panel's
+    // open/closed state restores when switching conversations within a project.
+    workspacePreferenceKey: conversation.project_id,
     isTemporaryWorkspace: (conversation.extra as { is_temporary_workspace?: boolean } | undefined)
       ?.is_temporary_workspace,
     backend: 'winkgo_agent' as const,
@@ -247,7 +258,7 @@ const ChatConversation: React.FC<{
 }> = ({ conversation, hideSendBox }) => {
   const { t } = useTranslation();
   useActiveLease({ type: 'conversation', id: conversation?.id });
-  const workspaceEnabled = Boolean(conversation?.extra?.workspace);
+  const workspaceEnabled = Boolean(conversation?.extra?.workspace) && !conversation?.project_id;
   const cronJobId = resolveCronJobId(conversation?.extra);
   const layout = useLayoutContext();
   const isMobile = Boolean(layout?.isMobile);
@@ -273,6 +284,7 @@ const ChatConversation: React.FC<{
     }
     switch (conversation.type) {
       case 'acp':
+      case 'antigravity':
         return (
           <AcpChat
             key={conversation.id}
@@ -321,7 +333,7 @@ const ChatConversation: React.FC<{
     if (!conversation || isWinkGoAgentConversation) return undefined;
     if (isMobile) return undefined;
     if (isLegacyReadOnlyConversation) return undefined;
-    if (conversation.type === 'acp') {
+    if (conversation.type === 'acp' || conversation.type === 'antigravity') {
       const extra = conversation.extra as { current_model_id?: string };
       return (
         <AcpModelSelector
@@ -371,7 +383,9 @@ const ChatConversation: React.FC<{
       siderTitle={sliderTitle}
       sider={<ChatSlider conversation={conversation} />}
       workspaceEnabled={workspaceEnabled}
+      previewHosted={Boolean(conversation?.project_id)}
       workspacePath={conversation?.extra?.workspace}
+      workspacePreferenceKey={conversation?.project_id}
       isTemporaryWorkspace={
         (conversation?.extra as { is_temporary_workspace?: boolean } | undefined)?.is_temporary_workspace
       }

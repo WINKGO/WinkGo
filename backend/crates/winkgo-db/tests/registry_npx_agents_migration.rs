@@ -45,6 +45,13 @@ async fn verified_registry_npx_agents_use_stable_packages_and_conservative_team_
         ),
         ("kilo", "kilo", r#"["-y","@kilocode/cli","acp"]"#, None, None),
         (
+            "mimo-code",
+            "mimo",
+            r#"["-y","@mimo-ai/cli","acp"]"#,
+            Some(r#"[".mimocode/skills",".opencode/skills"]"#),
+            Some("build"),
+        ),
+        (
             "nova",
             "nova",
             r#"["-y","@compass-ai/nova","acp"]"#,
@@ -52,6 +59,13 @@ async fn verified_registry_npx_agents_use_stable_packages_and_conservative_team_
             None,
         ),
         ("sigit", "sigit", r#"["-y","@smbcloud/sigit"]"#, None, None),
+        (
+            "omp",
+            "omp",
+            r#"["-y","@oh-my-pi/pi-coding-agent","acp"]"#,
+            Some(r#"[".omp/skills",".claude/skills"]"#),
+            None,
+        ),
     ];
 
     for (backend, binary_name, args, skills, yolo_id) in cases {

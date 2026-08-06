@@ -239,6 +239,15 @@ const TitlebarQuickActions: React.FC<TitlebarQuickActionsProps> = ({ iconSize, i
           <kbd>Alt 4</kbd>
         </span>
       </Menu.Item>
+      <Menu.Item key='quick-apps' onClick={() => triggerIslandShortcut('openApps')}>
+        <span className='titlebar-quick-actions__item'>
+          <span className='titlebar-quick-actions__icon'>
+            <ApplicationMenu theme='outline' size='18' fill='currentColor' />
+          </span>
+          <span>{t('common.winkGoWorkspace.quickAppsTitle')}</span>
+          <kbd>Alt 5</kbd>
+        </span>
+      </Menu.Item>
       <Menu.Item key='toggle-island' onClick={() => triggerIslandShortcut('toggleIsland')}>
         <span className='titlebar-quick-actions__item'>
           <span className='titlebar-quick-actions__icon'>

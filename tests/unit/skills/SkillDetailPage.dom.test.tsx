@@ -78,6 +78,10 @@ vi.mock('@/renderer/pages/settings/components/SettingsPageWrapper', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('@/renderer/pages/settings/SkillsSettings/SkillFileBrowser', () => ({
+  default: ({ skill }: { skill: { name: string } }) => <div data-testid='skill-file-browser'>{skill.name}</div>,
+}));
+
 import SkillDetailPage from '@/renderer/pages/settings/SkillsSettings/SkillDetailPage';
 import { getAssistantsUsingSkill } from '@/renderer/pages/settings/SkillsSettings/SkillUsedByStack';
 

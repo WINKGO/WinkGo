@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Unified native module rebuild utility
  * Handles rebuilding native modules for different platforms and architectures
@@ -50,6 +51,27 @@ function getCommandPrefix(platform, useVx = true) {
     return 'vx --with msvc';
   }
   return 'vx';
+}
+
+/**
+ * Resolve a CLI that is already installed in this workspace. Bun's transitive
+ * package store does not always create a node_modules/.bin shim, and `bun x`
+ * then attempts a network install even though the tool is present locally.
+ * Keeping native rebuilds local makes release packaging deterministic and also
+ * allows it to work on machines whose package registry is temporarily
+ * unavailable.
+ */
+function resolveInstalledCli(projectRoot, packageDirectoryPattern, relativeCliPath) {
+  const bunStore = path.join(projectRoot, 'node_modules', '.bun');
+  if (!fs.existsSync(bunStore)) return null;
+
+  const packageDirectory = fs
+    .readdirSync(bunStore, { withFileTypes: true })
+    .find((entry) => entry.isDirectory() && packageDirectoryPattern.test(entry.name));
+  if (!packageDirectory) return null;
+
+  const cliPath = path.join(bunStore, packageDirectory.name, 'node_modules', ...relativeCliPath);
+  return fs.existsSync(cliPath) ? cliPath : null;
 }
 
 /**
@@ -194,6 +216,13 @@ function rebuildSingleModule(options) {
   const bunxCmd = getBunxCommand();
   const cmdPrefix = getCommandPrefix(platform);
   const useShell = cmdPrefix.length > 0; // Need shell for vx prefix
+  const localPrebuildInstall = resolveInstalledCli(projectRoot, /^prebuild-install@/, ['prebuild-install', 'bin.js']);
+  const localElectronRebuild = resolveInstalledCli(projectRoot, /^@electron\+rebuild@/, [
+    '@electron',
+    'rebuild',
+    'lib',
+    'cli.js',
+  ]);
 
   // For Linux cross-compilation, ALWAYS use prebuild-install
   // because electron-rebuild cannot cross-compile without ARM64 toolchain
@@ -245,12 +274,21 @@ function rebuildSingleModule(options) {
         '--force',
       ];
 
-      const fullCmd = cmdPrefix
-        ? `${cmdPrefix} ${bunxCmd} ${prebuildArgs.join(' ')}`
-        : `${bunxCmd} ${prebuildArgs.join(' ')}`;
+      const localPrebuildArgs = prebuildArgs.slice(2);
+      const fullCmd = localPrebuildInstall
+        ? `node "${localPrebuildInstall}" ${localPrebuildArgs.join(' ')}`
+        : cmdPrefix
+          ? `${cmdPrefix} ${bunxCmd} ${prebuildArgs.join(' ')}`
+          : `${bunxCmd} ${prebuildArgs.join(' ')}`;
       console.log(`     Running: ${fullCmd}`);
 
-      if (useShell) {
+      if (localPrebuildInstall) {
+        execFileSync(process.execPath, [localPrebuildInstall, ...localPrebuildArgs], {
+          cwd: moduleRoot,
+          env,
+          stdio: 'inherit',
+        });
+      } else if (useShell) {
         execSync(fullCmd, {
           cwd: moduleRoot,
           env,
@@ -298,12 +336,21 @@ function rebuildSingleModule(options) {
       `--arch=${targetArch}`,
     ];
 
-    const fullCmd = cmdPrefix
-      ? `${cmdPrefix} ${bunxCmd} ${rebuildArgs.join(' ')}`
-      : `${bunxCmd} ${rebuildArgs.join(' ')}`;
+    const localRebuildArgs = rebuildArgs.slice(2);
+    const fullCmd = localElectronRebuild
+      ? `node "${localElectronRebuild}" ${localRebuildArgs.join(' ')}`
+      : cmdPrefix
+        ? `${cmdPrefix} ${bunxCmd} ${rebuildArgs.join(' ')}`
+        : `${bunxCmd} ${rebuildArgs.join(' ')}`;
     console.log(`     Running: ${fullCmd}`);
 
-    if (useShell) {
+    if (localElectronRebuild) {
+      execFileSync(process.execPath, [localElectronRebuild, ...localRebuildArgs], {
+        cwd: projectRoot,
+        env,
+        stdio: 'inherit',
+      });
+    } else if (useShell) {
       execSync(fullCmd, {
         cwd: projectRoot,
         env,

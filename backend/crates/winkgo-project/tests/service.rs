@@ -194,7 +194,8 @@ async fn orphan_folder_is_adopted_on_next_create() {
 #[tokio::test]
 async fn create_standard_missing_dir_is_folder_not_found() {
     let (svc, _db) = service().await;
-    let missing = uri_of(std::path::Path::new("/nonexistent-winkgo-xyz-8f3a2b1c"));
+    let sandbox = tempfile::tempdir().unwrap();
+    let missing = uri_of(&sandbox.path().join("missing"));
     let err = svc.create_standard(missing).await.unwrap_err();
     assert_eq!(err.code(), "folder_not_found");
 }

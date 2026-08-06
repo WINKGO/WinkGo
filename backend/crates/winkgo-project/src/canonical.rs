@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::path::{Component, Path, PathBuf};
 
 use url::Url;
@@ -89,12 +90,15 @@ pub fn to_file_uri(path: &Path) -> Result<String, ProjectError> {
 
 /// Derive the absolute filesystem path from a `file:` canonical URI.
 pub fn fs_path(canonical: &Canonical) -> Result<PathBuf, ProjectError> {
-    Url::parse(canonical.as_str())
+    uri_to_path(canonical.as_str())
+}
+
+/// Derive an absolute filesystem path from an already-resolved `file:` URI.
+pub fn uri_to_path(uri: &str) -> Result<PathBuf, ProjectError> {
+    Url::parse(uri)
         .ok()
         .and_then(|u| u.to_file_path().ok())
-        .ok_or_else(|| ProjectError::FolderCanonicalizeFailed {
-            uri: canonical.as_str().to_owned(),
-        })
+        .ok_or_else(|| ProjectError::FolderCanonicalizeFailed { uri: uri.to_owned() })
 }
 
 /// Lexically resolve `.` / `..` and collapse redundant separators without

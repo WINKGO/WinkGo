@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ipcBridge } from '@/common';
 import type {
   WinkGoFileCommand,
   WinkGoOrganizeOperation,
   WinkGoOrganizerMode,
   WinkGoOrganizerRule,
+  WinkGoQuickApp,
+  WinkGoQuickAppLaunchResult,
 } from '@/common/adapter/ipcBridge';
 import {
   WINK_GO_ORGANIZER_SETTINGS_EVENT,
@@ -21,6 +23,10 @@ const {
 } = WINK_GO_ORGANIZER_STORAGE_KEYS;
 const MAX_RECENT_FILES = 12;
 const MAX_CUSTOM_RULES = 32;
+const QUICK_APPS_KEY = 'winkgo.quick-apps.v1';
+const MAX_QUICK_APPS = 18;
+const QUICK_APP_ICON_REFRESH_MAX_ATTEMPTS = 3;
+const QUICK_APP_ICON_REFRESH_RETRY_MS = 500;
 
 export type IslandRecentFile = Pick<
   WinkGoOrganizeOperation,
@@ -33,6 +39,11 @@ export type IslandFileOrganizerStatus = {
   failed?: number;
   restored?: number;
   code?: string;
+};
+
+export type IslandQuickAppStatus = {
+  type: 'idle' | 'error';
+  code?: WinkGoQuickAppLaunchResult['error'] | 'select_failed' | 'limit';
 };
 
 const readStorageArray = <T>(key: string, validate: (value: unknown) => value is T): T[] => {
@@ -69,6 +80,21 @@ const isOperation = (value: unknown): value is WinkGoOrganizeOperation => {
     typeof candidate.source === 'string' &&
     typeof candidate.destination === 'string' &&
     (candidate.mode === 'move' || candidate.mode === 'copy')
+  );
+};
+
+const isQuickApp = (value: unknown): value is WinkGoQuickApp => {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<WinkGoQuickApp>;
+  return (
+    typeof candidate.name === 'string' &&
+    candidate.name.length > 0 &&
+    candidate.name.length <= 256 &&
+    typeof candidate.path === 'string' &&
+    candidate.path.length > 0 &&
+    candidate.path.length <= 2048 &&
+    typeof candidate.iconDataUrl === 'string' &&
+    candidate.iconDataUrl.length <= 1024 * 1024
   );
 };
 
@@ -112,25 +138,36 @@ export const useIslandFileOrganizer = ({ enabled = true, onCommand }: UseIslandF
   const [pendingPaths, setPendingPaths] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<IslandFileOrganizerStatus>({ type: 'idle' });
+  const [quickApps, setQuickApps] = useState<WinkGoQuickApp[]>(() =>
+    readStorageArray(QUICK_APPS_KEY, isQuickApp).slice(0, MAX_QUICK_APPS)
+  );
+  const quickAppIconRefreshAttemptsRef = useRef(new Map<string, number>());
+  const [quickAppIconRefreshTick, setQuickAppIconRefreshTick] = useState(0);
+  const [quickAppsBusy, setQuickAppsBusy] = useState(false);
+  const [quickAppStatus, setQuickAppStatus] = useState<IslandQuickAppStatus>({ type: 'idle' });
 
   useEffect(() => {
     const unsubscribe = ipcBridge.winkGoFiles.command.on(({ type }) => {
-      if (enabled) onCommand(type);
+      if (type === 'openApps' || enabled) onCommand(type);
     });
     if (window.electronAPI) {
       void ipcBridge.winkGoFiles.activateShortcuts.invoke().catch((): undefined => undefined);
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!enabled || !event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       const command =
-        event.key === '2'
-          ? 'openShelf'
-          : event.key === '3'
-            ? 'newCategory'
-            : event.key === '4'
-              ? 'openFormat'
-              : undefined;
+        event.key === '5'
+          ? 'openApps'
+          : !enabled
+            ? undefined
+            : event.key === '2'
+              ? 'openShelf'
+              : event.key === '3'
+                ? 'newCategory'
+                : event.key === '4'
+                  ? 'openFormat'
+                  : undefined;
       if (!command) return;
       event.preventDefault();
       onCommand(command);
@@ -143,6 +180,73 @@ export const useIslandFileOrganizer = ({ enabled = true, onCommand }: UseIslandF
   }, [enabled, onCommand]);
 
   useEffect(() => {
+    if (!window.electronAPI) return undefined;
+    const paths = quickApps
+      .filter((quickApp) => {
+        const key = quickApp.path.toLocaleLowerCase();
+        return (
+          !quickApp.iconDataUrl &&
+          (quickAppIconRefreshAttemptsRef.current.get(key) || 0) < QUICK_APP_ICON_REFRESH_MAX_ATTEMPTS
+        );
+      })
+      .map((quickApp) => quickApp.path);
+    if (paths.length === 0) return undefined;
+    paths.forEach((appPath) => {
+      const key = appPath.toLocaleLowerCase();
+      quickAppIconRefreshAttemptsRef.current.set(key, (quickAppIconRefreshAttemptsRef.current.get(key) || 0) + 1);
+    });
+
+    let disposed = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleRetry = (refreshed: WinkGoQuickApp[] = []) => {
+      if (disposed) return;
+      const refreshedWithIcon = new Set(
+        refreshed
+          .filter((quickApp) => isQuickApp(quickApp) && Boolean(quickApp.iconDataUrl))
+          .map((quickApp) => quickApp.path.toLocaleLowerCase())
+      );
+      const shouldRetry = paths.some((appPath) => {
+        const key = appPath.toLocaleLowerCase();
+        return (
+          !refreshedWithIcon.has(key) &&
+          (quickAppIconRefreshAttemptsRef.current.get(key) || 0) < QUICK_APP_ICON_REFRESH_MAX_ATTEMPTS
+        );
+      });
+      if (shouldRetry) {
+        retryTimer = setTimeout(
+          () => setQuickAppIconRefreshTick((value) => value + 1),
+          QUICK_APP_ICON_REFRESH_RETRY_MS
+        );
+      }
+    };
+    void ipcBridge.winkGoFiles.refreshQuickApps
+      .invoke({ paths })
+      .then((refreshed) => {
+        if (disposed) return;
+        const byPath = new Map(
+          refreshed.filter(isQuickApp).map((quickApp) => [quickApp.path.toLocaleLowerCase(), quickApp] as const)
+        );
+        setQuickApps((current) => {
+          let changed = false;
+          const next = current.map((quickApp) => {
+            const refreshedApp = byPath.get(quickApp.path.toLocaleLowerCase());
+            if (!refreshedApp?.iconDataUrl || refreshedApp.iconDataUrl === quickApp.iconDataUrl) return quickApp;
+            changed = true;
+            return { ...quickApp, iconDataUrl: refreshedApp.iconDataUrl };
+          });
+          if (changed) writeStorage(QUICK_APPS_KEY, next);
+          return changed ? next : current;
+        });
+        scheduleRetry(refreshed);
+      })
+      .catch(() => scheduleRetry());
+    return () => {
+      disposed = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [quickApps, quickAppIconRefreshTick]);
+
+  useEffect(() => {
     const refreshFromStorage = () => {
       setRecentFiles(readStorageArray(RECENT_FILES_KEY, isRecentFile).slice(0, MAX_RECENT_FILES));
       setLastBatch(readStorageArray(LAST_BATCH_KEY, isOperation));
@@ -150,9 +254,14 @@ export const useIslandFileOrganizer = ({ enabled = true, onCommand }: UseIslandF
       setDestinationRoot(window.localStorage.getItem(ROOT_KEY) || '');
       setModeState(window.localStorage.getItem(MODE_KEY) === 'copy' ? 'copy' : 'move');
       setAutoRenameState(window.localStorage.getItem(AUTO_RENAME_KEY) !== 'false');
+      setQuickApps(readStorageArray(QUICK_APPS_KEY, isQuickApp).slice(0, MAX_QUICK_APPS));
     };
     const handleStorage = (event: StorageEvent) => {
-      if (event.key && (Object.values(WINK_GO_ORGANIZER_STORAGE_KEYS) as readonly string[]).includes(event.key)) {
+      if (
+        event.key &&
+        ((Object.values(WINK_GO_ORGANIZER_STORAGE_KEYS) as readonly string[]).includes(event.key) ||
+          event.key === QUICK_APPS_KEY)
+      ) {
         refreshFromStorage();
       }
     };
@@ -330,6 +439,89 @@ export const useIslandFileOrganizer = ({ enabled = true, onCommand }: UseIslandF
     await ipcBridge.winkGoFiles.showItemInFolder.invoke({ path: file.destination });
   }, []);
 
+  const chooseQuickApps = useCallback(async (): Promise<void> => {
+    if (quickAppsBusy) return;
+    setQuickAppsBusy(true);
+    setQuickAppStatus({ type: 'idle' });
+    try {
+      const selected = await ipcBridge.winkGoFiles.selectQuickApps.invoke();
+      if (selected.length === 0) return;
+      const unique = new Map<string, WinkGoQuickApp>();
+      for (const quickApp of quickApps) {
+        if (!isQuickApp(quickApp)) continue;
+        const key = quickApp.path.toLocaleLowerCase();
+        if (!unique.has(key)) unique.set(key, quickApp);
+      }
+      for (const quickApp of selected) {
+        if (!isQuickApp(quickApp)) continue;
+        const key = quickApp.path.toLocaleLowerCase();
+        const existing = unique.get(key);
+        if (!existing || (!existing.iconDataUrl && quickApp.iconDataUrl)) unique.set(key, quickApp);
+        if (!quickApp.iconDataUrl) quickAppIconRefreshAttemptsRef.current.delete(key);
+      }
+      const allQuickApps = [...unique.values()];
+      const nextQuickApps = allQuickApps.slice(0, MAX_QUICK_APPS);
+      setQuickApps(nextQuickApps);
+      writeStorage(QUICK_APPS_KEY, nextQuickApps);
+      if (allQuickApps.length > MAX_QUICK_APPS) setQuickAppStatus({ type: 'error', code: 'limit' });
+    } catch {
+      setQuickAppStatus({ type: 'error', code: 'select_failed' });
+    } finally {
+      setQuickAppsBusy(false);
+    }
+  }, [quickApps, quickAppsBusy]);
+
+  const launchQuickApp = useCallback(async (quickApp: WinkGoQuickApp): Promise<boolean> => {
+    setQuickAppStatus({ type: 'idle' });
+    try {
+      const result = await ipcBridge.winkGoFiles.launchQuickApp.invoke({ path: quickApp.path });
+      if (result.launched) return true;
+      setQuickAppStatus({ type: 'error', code: result.error || 'open_failed' });
+      return false;
+    } catch {
+      setQuickAppStatus({ type: 'error', code: 'open_failed' });
+      return false;
+    }
+  }, []);
+
+  const removeQuickApp = useCallback(
+    (appPath: string): void => {
+      const nextQuickApps = quickApps.filter((quickApp) => quickApp.path !== appPath);
+      quickAppIconRefreshAttemptsRef.current.delete(appPath.toLocaleLowerCase());
+      setQuickApps(nextQuickApps);
+      writeStorage(QUICK_APPS_KEY, nextQuickApps);
+      setQuickAppStatus({ type: 'idle' });
+    },
+    [quickApps]
+  );
+
+  const reorderQuickApp = useCallback((sourcePath: string, targetPath: string): void => {
+    if (sourcePath === targetPath) return;
+    setQuickApps((current) => {
+      const sourceIndex = current.findIndex((quickApp) => quickApp.path === sourcePath);
+      const targetIndex = current.findIndex((quickApp) => quickApp.path === targetPath);
+      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return current;
+      const next = [...current];
+      const [moved] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      writeStorage(QUICK_APPS_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const retryQuickAppIcon = useCallback((appPath: string): void => {
+    const key = appPath.toLocaleLowerCase();
+    quickAppIconRefreshAttemptsRef.current.delete(key);
+    setQuickApps((current) => {
+      const next = current.map((quickApp) =>
+        quickApp.path.toLocaleLowerCase() === key ? { ...quickApp, iconDataUrl: '' } : quickApp
+      );
+      writeStorage(QUICK_APPS_KEY, next);
+      return next;
+    });
+    setQuickAppIconRefreshTick((value) => value + 1);
+  }, []);
+
   return {
     recentFiles,
     lastBatch,
@@ -340,6 +532,9 @@ export const useIslandFileOrganizer = ({ enabled = true, onCommand }: UseIslandF
     pendingPaths,
     busy,
     status,
+    quickApps,
+    quickAppsBusy,
+    quickAppStatus,
     chooseFiles,
     chooseRoot,
     stagePaths,
@@ -351,6 +546,11 @@ export const useIslandFileOrganizer = ({ enabled = true, onCommand }: UseIslandF
     setAutoRename,
     openRecentFile,
     revealRecentFile,
+    chooseQuickApps,
+    launchQuickApp,
+    removeQuickApp,
+    reorderQuickApp,
+    retryQuickAppIcon,
     clearPending: () => setPendingPaths([]),
   };
 };

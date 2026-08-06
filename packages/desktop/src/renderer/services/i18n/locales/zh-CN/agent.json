@@ -33,6 +33,9 @@
     "searchPlaceholder": "搜索模型",
     "noResults": "没有匹配的模型"
   },
+  "warmup": {
+    "clickToWake": "点击唤醒这个团队成员"
+  },
   "config": {
     "setting": "正在应用设置...",
     "commandAck": "命令已发送，但状态尚未确认，请稍后刷新或重试",

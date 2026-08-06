@@ -1171,6 +1171,7 @@ async fn reader_task(ctx: ReaderCtx) {
                                         // the message + the error! log above).
                                         level: crate::event::NoticeLevel::Warning,
                                         message: format!("{label} failed: {message}"),
+                                        localized: None,
                                     },
                                 );
                             } else if let Some((kind, value)) = label.split_once('\u{2192}') {
@@ -1765,6 +1766,8 @@ async fn map_update(
                 output_tokens: output,
                 total_tokens: total,
                 cost_usd,
+                context_window: update.get("size").and_then(Value::as_u64),
+                breakdown: crate::event::UsageBreakdown::default(),
             }]
         }
         "current_mode_update" => {
@@ -1943,6 +1946,8 @@ fn parse_acp_result_usage(frame: &Value) -> Option<SessionEvent> {
         output_tokens: output,
         total_tokens: total,
         cost_usd,
+        context_window: usage.get("size").and_then(Value::as_u64),
+        breakdown: crate::event::UsageBreakdown::default(),
     })
 }
 
@@ -3411,7 +3416,7 @@ mod tests {
 
         let notice = tokio::time::timeout(std::time::Duration::from_secs(5), async {
             while let Some(env) = events.next().await {
-                if let SessionEvent::Notice { level, message } = env.event {
+                if let SessionEvent::Notice { level, message, .. } = env.event {
                     return Some((level, message));
                 }
             }
@@ -3635,6 +3640,7 @@ mod tests {
                 output_tokens,
                 total_tokens,
                 cost_usd,
+                ..
             } => {
                 assert_eq!(
                     *input_tokens, 0,
@@ -3668,6 +3674,7 @@ mod tests {
                 output_tokens,
                 total_tokens,
                 cost_usd,
+                ..
             }) => {
                 assert_eq!(*input_tokens, 1200);
                 assert_eq!(*output_tokens, 340);
@@ -3694,6 +3701,7 @@ mod tests {
                 output_tokens,
                 total_tokens,
                 cost_usd,
+                ..
             }) => {
                 assert_eq!((input_tokens, output_tokens, total_tokens), (900, 50, 950));
                 assert_eq!(cost_usd, Some(0.007));

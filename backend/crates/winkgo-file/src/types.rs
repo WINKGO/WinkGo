@@ -144,7 +144,7 @@ pub enum ZipEntry {
 #[derive(Debug, Clone)]
 pub struct CopyResult {
     pub copied_files: Vec<String>,
-    pub failed_files: Vec<String>,
+    pub failed_files: Vec<winkgo_api_types::CopyFailure>,
 }
 
 #[cfg(test)]

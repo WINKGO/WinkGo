@@ -15,6 +15,13 @@ Apache-2.0 upstream projects:
 | AionCore | `v0.1.52` | `76f5554286ba0b6d33fb74d5c2bb2b3b0b83100d` | <https://github.com/iOfficeAI/AionCore> | Copyright 2025 AionUi (aionui.com) |
 | aionrs   | `v0.2.7`  | `445a18e1625cc68ded3a647ee99332195fbe8508` | <https://github.com/iOfficeAI/aionrs>   | Copyright 2026 iOfficeAI           |
 
+WINK GO also selectively adapts later compatibility, stability, and agent
+registry changes from AionUI and AionCore reviewed through 2026-08-03. The
+exact selected commit list and adapted scope are recorded in
+[`docs/vendor/aionui-selected-post-v2.1.41-patches.md`](docs/vendor/aionui-selected-post-v2.1.41-patches.md).
+This does not replace the complete pinned inventories used for baseline
+file-by-file coverage.
+
 The AionCore tree is distributed under `backend/`; its `aionui-*` crates were
 renamed to `winkgo-*`. The aionrs tree is distributed under
 `backend/agent-runtime/`; its `aion-*` crates were renamed to

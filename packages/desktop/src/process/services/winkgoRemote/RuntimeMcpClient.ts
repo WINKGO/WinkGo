@@ -55,6 +55,36 @@ const extractText = (value: unknown): string => {
   return asText(record.text) || asText(record.message);
 };
 
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+
+export const normalizeRuntimeCommandResult = (value: unknown): WinkGoRemoteCommandResult => {
+  const result = asRecord(value);
+  const rawText = extractText(result) || '电脑端已执行，但没有返回可展示的结果。';
+  let payload = asRecord(result?.structuredContent);
+  if (!payload) {
+    try {
+      payload = asRecord(JSON.parse(rawText));
+    } catch {
+      payload = null;
+    }
+  }
+  const executionStatus = asText(payload?.execution_status ?? payload?.status).toLowerCase();
+  const failed =
+    result?.isError === true ||
+    payload?.success === false ||
+    payload?.ok === false ||
+    payload?.handled === false ||
+    ['error', 'failed', 'failure', 'timeout'].includes(executionStatus);
+  const spoken = asText(payload?.spoken_summary ?? payload?.message ?? payload?.error);
+  const text = spoken || rawText;
+  return {
+    ok: !failed,
+    text: text.length > 1_200 ? `${text.slice(0, 1_200)}...` : text,
+    raw: value,
+  };
+};
+
 type ExecutionContextArgument = 'execution_context' | 'context' | null;
 
 export const detectExecutionContextArgument = (value: unknown): ExecutionContextArgument => {
@@ -129,12 +159,7 @@ export class RuntimeMcpClient {
       options.timeoutMs ?? 60_000,
       options.signal
     )) as Record<string, unknown> | null;
-    const text = extractText(result) || '电脑端已执行，但没有返回可展示的结果。';
-    return {
-      ok: result?.isError !== true,
-      text: text.length > 1_200 ? `${text.slice(0, 1_200)}...` : text,
-      raw: result,
-    };
+    return normalizeRuntimeCommandResult(result);
   }
 
   async ping(timeoutMs = 1_500): Promise<boolean> {

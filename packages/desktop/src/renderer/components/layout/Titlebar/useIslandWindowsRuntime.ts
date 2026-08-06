@@ -16,10 +16,12 @@ import type { WinkGoMediaTarget } from '@renderer/utils/winkgo/islandFilePrefere
 
 const PRIVACY_STORAGE_KEY = 'winkgo.island.notificationPrivacy';
 const NOTIFICATION_CARD_DURATION_MS = 7_200;
+const MAIL_NOTIFICATION_CARD_DURATION_MS = 15_000;
 const MAX_NOTIFICATION_QUEUE_SIZE = 12;
 const MEDIA_CONTROL_OPTIMISTIC_WINDOW_MS = 1_600;
 const MEDIA_TRACK_REFRESH_DELAYS_MS = [160, 240, 400, 700, 1_000] as const;
 const MEDIA_ARTWORK_CACHE_LIMIT = 64;
+const MEDIA_TIMELINE_RENDER_INTERVAL_MS = 1_200;
 
 type OptimisticPlaybackState = {
   expectedPlaying: boolean;
@@ -28,6 +30,41 @@ type OptimisticPlaybackState = {
 };
 
 const mediaTrackKey = (media: WinkGoMediaSnapshot): string => `${media.appId}|${media.title}|${media.artist}`;
+
+/**
+ * Windows publishes timeline corrections several times per second. None of
+ * those values change the compact island, and MediaLyrics already advances a
+ * local clock between native samples. Keep the latest sample in the ref, but
+ * only repaint React when something the user can see changed.
+ */
+export const hasMaterialMediaChange = (
+  current: WinkGoMediaSnapshot | null,
+  next: WinkGoMediaSnapshot | null
+): boolean => {
+  if (!current || !next) return current !== next;
+  return (
+    current.appId !== next.appId ||
+    current.title !== next.title ||
+    current.artist !== next.artist ||
+    current.albumTitle !== next.albumTitle ||
+    current.isPlaying !== next.isPlaying ||
+    current.canPlayPause !== next.canPlayPause ||
+    current.canGoNext !== next.canGoNext ||
+    current.canGoPrevious !== next.canGoPrevious ||
+    current.coverUrl !== next.coverUrl ||
+    current.appIconUrl !== next.appIconUrl ||
+    current.durationMs !== next.durationMs ||
+    current.playbackRate !== next.playbackRate ||
+    current.timelineEstimated !== next.timelineEstimated
+  );
+};
+
+export const shouldRenderMediaSnapshot = (
+  rendered: WinkGoMediaSnapshot | null,
+  next: WinkGoMediaSnapshot | null,
+  lastRenderedAt: number,
+  now: number
+): boolean => hasMaterialMediaChange(rendered, next) || now - lastRenderedAt >= MEDIA_TIMELINE_RENDER_INTERVAL_MS;
 
 const readPrivacyPreference = (): boolean => {
   try {
@@ -110,6 +147,7 @@ type UseIslandWindowsRuntimeOptions = {
   mediaTarget?: WinkGoMediaTarget;
   notificationCardsEnabled?: boolean;
   notificationEnabled?: boolean;
+  mailNotificationsEnabled?: boolean;
 };
 
 export const useIslandWindowsRuntime = ({
@@ -117,6 +155,7 @@ export const useIslandWindowsRuntime = ({
   mediaTarget = 'system',
   notificationCardsEnabled = true,
   notificationEnabled = true,
+  mailNotificationsEnabled = true,
 }: UseIslandWindowsRuntimeOptions = {}) => {
   const [media, setMedia] = useState<WinkGoMediaSnapshot | null>(null);
   const [notification, setNotification] = useState<WinkGoCapturedNotification | null>(null);
@@ -125,6 +164,8 @@ export const useIslandWindowsRuntime = ({
   const optimisticPlaybackRef = useRef<OptimisticPlaybackState | null>(null);
   const mediaRefreshGenerationRef = useRef(0);
   const currentMediaRef = useRef<WinkGoMediaSnapshot | null>(null);
+  const renderedMediaRef = useRef<WinkGoMediaSnapshot | null>(null);
+  const lastMediaRenderAtRef = useRef(0);
   const mediaArtworkCacheRef = useRef(new Map<string, string>());
   const reconcileMediaSnapshotRef = useRef<(snapshot: WinkGoMediaSnapshot | null) => void>(() => {});
 
@@ -138,11 +179,14 @@ export const useIslandWindowsRuntime = ({
       if (disposed || activeNotification || notificationQueue.length === 0) return;
       activeNotification = notificationQueue.shift() ?? null;
       setNotification(activeNotification);
-      notificationTimer = window.setTimeout(() => {
-        activeNotification = null;
-        setNotification(null);
-        showNextNotification();
-      }, NOTIFICATION_CARD_DURATION_MS);
+      notificationTimer = window.setTimeout(
+        () => {
+          activeNotification = null;
+          setNotification(null);
+          showNextNotification();
+        },
+        activeNotification?.mail ? MAIL_NOTIFICATION_CARD_DURATION_MS : NOTIFICATION_CARD_DURATION_MS
+      );
     };
 
     const reconcileMediaSnapshot = (snapshot: WinkGoMediaSnapshot | null) => {
@@ -186,6 +230,8 @@ export const useIslandWindowsRuntime = ({
           isPlaying: optimistic.expectedPlaying,
         };
         currentMediaRef.current = optimisticMedia;
+        renderedMediaRef.current = optimisticMedia;
+        lastMediaRenderAtRef.current = Date.now();
         setMedia(optimisticMedia);
         return;
       }
@@ -199,13 +245,21 @@ export const useIslandWindowsRuntime = ({
         optimisticPlaybackRef.current = null;
       }
       currentMediaRef.current = nextMedia;
+      const renderTimestamp = Date.now();
+      if (
+        !shouldRenderMediaSnapshot(renderedMediaRef.current, nextMedia, lastMediaRenderAtRef.current, renderTimestamp)
+      ) {
+        return;
+      }
+      renderedMediaRef.current = nextMedia;
+      lastMediaRenderAtRef.current = renderTimestamp;
       setMedia(nextMedia);
     };
     reconcileMediaSnapshotRef.current = reconcileMediaSnapshot;
 
     const unsubscribeMedia = ipcBridge.winkGoWindows.mediaChanged.on(reconcileMediaSnapshot);
-    const unsubscribeNotifications = ipcBridge.winkGoWindows.notificationReceived.on((nextNotification) => {
-      if (disposed || !notificationCardsEnabled) return;
+    const enqueueNotification = (nextNotification: WinkGoCapturedNotification, enabled: boolean) => {
+      if (disposed || !enabled) return;
       if (
         activeNotification?.id === nextNotification.id ||
         notificationQueue.some((item) => item.id === nextNotification.id)
@@ -215,6 +269,12 @@ export const useIslandWindowsRuntime = ({
       notificationQueue.push(nextNotification);
       if (notificationQueue.length > MAX_NOTIFICATION_QUEUE_SIZE) notificationQueue.shift();
       showNextNotification();
+    };
+    const unsubscribeNotifications = ipcBridge.winkGoWindows.notificationReceived.on((nextNotification) => {
+      enqueueNotification(nextNotification, notificationCardsEnabled);
+    });
+    const unsubscribeMail = ipcBridge.winkGoMail.messageReceived.on((nextNotification) => {
+      enqueueNotification(nextNotification, mailNotificationsEnabled);
     });
 
     const configureForVisibility = () => {
@@ -247,13 +307,14 @@ export const useIslandWindowsRuntime = ({
       document.removeEventListener('visibilitychange', configureForVisibility);
       unsubscribeMedia();
       unsubscribeNotifications();
+      unsubscribeMail();
     };
-  }, [mediaEnabled, mediaTarget, notificationCardsEnabled, notificationEnabled]);
+  }, [mailNotificationsEnabled, mediaEnabled, mediaTarget, notificationCardsEnabled, notificationEnabled]);
 
   useEffect(() => {
-    if (notificationCardsEnabled) return;
+    if (notificationCardsEnabled || mailNotificationsEnabled) return;
     setNotification(null);
-  }, [notificationCardsEnabled]);
+  }, [mailNotificationsEnabled, notificationCardsEnabled]);
 
   const controlMedia = useCallback(
     async (action: WinkGoMediaControlAction): Promise<boolean> => {
@@ -280,6 +341,8 @@ export const useIslandWindowsRuntime = ({
           updatedAt: Date.now(),
         };
         currentMediaRef.current = optimisticMedia;
+        renderedMediaRef.current = optimisticMedia;
+        lastMediaRenderAtRef.current = Date.now();
         setMedia(optimisticMedia);
       }
       try {
@@ -287,6 +350,8 @@ export const useIslandWindowsRuntime = ({
         if (!result.controlled && previousMedia && expectedPlaying !== null) {
           optimisticPlaybackRef.current = null;
           currentMediaRef.current = previousMedia;
+          renderedMediaRef.current = previousMedia;
+          lastMediaRenderAtRef.current = Date.now();
           setMedia(previousMedia);
         }
         if (result.controlled && previousMedia && (action === 'next' || action === 'previous')) {
@@ -327,6 +392,8 @@ export const useIslandWindowsRuntime = ({
         if (previousMedia && expectedPlaying !== null) {
           optimisticPlaybackRef.current = null;
           currentMediaRef.current = previousMedia;
+          renderedMediaRef.current = previousMedia;
+          lastMediaRenderAtRef.current = Date.now();
           setMedia(previousMedia);
         }
         console.warn('[WINK GO island] Media control failed:', error);

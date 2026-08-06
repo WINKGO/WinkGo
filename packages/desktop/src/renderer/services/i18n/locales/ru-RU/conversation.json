@@ -508,7 +508,15 @@
     }
   },
   "contextUsage": {
-    "contextUsed": "контекст использован"
+    "contextUsed": "контекст использован",
+    "tokensUsed": "Использовано токенов: {{tokens}}",
+    "windowUnknown": "Размер контекстного окна неизвестен",
+    "sessionCost": "Стоимость сессии",
+    "input": "Ввод",
+    "output": "Вывод",
+    "thought": "Размышление",
+    "cachedRead": "Чтение кэша",
+    "cachedWrite": "Запись кэша"
   },
   "skill_generator": {
     "title": "Создать навык/правило",
@@ -573,8 +581,50 @@
       },
       "ACP_EMPTY_TURN_REFUSAL": {
         "body": "Модель отклонила этот запрос до того, как появился видимый ответ."
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "Шагов завершилось неудачей: {{count}}; они НЕ были выполнены. agy всё равно помечает такие ходы как успешные — проверяйте фактический результат, а не ответ."
+      },
+      "ANTIGRAVITY_VERSION_OLDER": {
+        "body": "Установленная версия agy {{reported}} старше проверенной для этой интеграции {{verified}}; часть возможностей может отсутствовать. Рекомендуется обновить agy."
+      },
+      "ANTIGRAVITY_VERSION_NEWER": {
+        "body": "Установленная версия agy {{reported}} новее проверенной для этой интеграции {{verified}}. Обычно всё работает; сообщайте о странном поведении."
       }
     }
   },
-  "notFound": "Беседа не найдена или была удалена"
+  "officePreview": {
+    "fileWatchUnavailable": "Отслеживание файлов в реальном времени недоступно. Новые файлы Office не будут открываться в предпросмотре автоматически. Перезапустите WINK GO; если проблема сохранится, закройте программы с большим числом файловых наблюдателей и повторите попытку."
+  },
+  "notFound": "Беседа не найдена или была удалена",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "Переименовать",
+      "addToChat": "Добавить в чат"
+    },
+    "namePlaceholder": "Имя",
+    "deleteConfirm": "Удалить «{{name}}»? Это действие нельзя отменить.",
+    "renameFailed": "Не удалось переименовать",
+    "tabs": {
+      "files": "Файлы",
+      "changes": "Изменения"
+    },
+    "changesPlaceholder": "Контроль версий появится в отдельной вкладке — скоро.",
+    "addedToChat": "{{name}} добавлен в чат",
+    "imported": "Импортировано файлов: {{count}}",
+    "importPartialFailed": "Скопировано: {{copied}}, с ошибкой: {{failed}} (конфликты имён или не поддерживается)",
+    "importFailed": "Не удалось импортировать файлы",
+    "search": {
+      "placeholder": "Поиск файлов по имени",
+      "searching": "Поиск…",
+      "empty": "Нет совпадающих файлов",
+      "limitReached": "Показаны первые {{count}} — уточните запрос"
+    }
+  }
 }

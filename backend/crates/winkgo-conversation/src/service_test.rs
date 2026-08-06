@@ -5386,6 +5386,9 @@ async fn auto_replay_rebuild_keeps_existing_acp_session_id_in_build_options() {
             AgentSessionKind::Acp(ctx) => {
                 assert_eq!(ctx.session_id.as_deref(), Some("sess-existing"));
             }
+            AgentSessionKind::Antigravity(_) => {
+                panic!("test conversation should build ACP options")
+            }
             AgentSessionKind::WinkGoAgent(_) => panic!("test conversation should build ACP options"),
         }
     }
@@ -6724,6 +6727,7 @@ async fn assistant_backed_acp_build_options_include_snapshot_rule_as_preset_cont
         AgentSessionKind::Acp(ctx) => {
             assert_eq!(ctx.config.preset_context.as_deref(), Some("assistant rule body"));
         }
+        AgentSessionKind::Antigravity(_) => panic!("test conversation should build ACP options"),
         AgentSessionKind::WinkGoAgent(_) => panic!("test conversation should build ACP options"),
     }
 }
@@ -6773,6 +6777,9 @@ async fn assistant_backed_winkgo_agent_build_options_include_snapshot_rule_as_pr
 
     match options.context.kind {
         AgentSessionKind::Acp(_) => panic!("test conversation should build WinkGoAgent options"),
+        AgentSessionKind::Antigravity(_) => {
+            panic!("test conversation should build WinkGoAgent options")
+        }
         AgentSessionKind::WinkGoAgent(ctx) => {
             assert_eq!(ctx.config.preset_rules.as_deref(), Some("assistant rule body"));
         }
@@ -7562,6 +7569,7 @@ fn winkgo_agent_session_mode(options: &BuildTaskOptions) -> Option<String> {
     match &options.context.kind {
         AgentSessionKind::WinkGoAgent(ctx) => ctx.config.session_mode.clone(),
         AgentSessionKind::Acp(_) => panic!("expected WinkGoAgent build options"),
+        AgentSessionKind::Antigravity(_) => panic!("expected WinkGoAgent build options"),
     }
 }
 

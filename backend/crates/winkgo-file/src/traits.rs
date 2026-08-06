@@ -165,6 +165,14 @@ pub trait IFileWatchService: Send + Sync {
     async fn stop_office_watch(&self, workspace: &str) -> Result<(), FileError>;
 }
 
+/// Capability port used to reveal a resolved absolute path in the OS file manager.
+#[async_trait::async_trait]
+pub trait IItemRevealer: Send + Sync {
+    async fn reveal(&self, absolute_path: &str) -> Result<(), FileError>;
+}
+
+pub type ItemRevealerRef = Arc<dyn IItemRevealer>;
+
 /// Git-based workspace snapshot system for tracking file changes.
 ///
 /// Supports two modes:

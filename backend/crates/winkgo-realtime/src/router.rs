@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use crate::types::ConnectionId;
 
 /// Routes upstream WebSocket messages to business logic handlers.
@@ -11,6 +12,11 @@ pub trait MessageRouter: Send + Sync {
     /// Called for any message whose `name` is not handled internally
     /// by the WebSocket layer (i.e. not `pong` or `subscribe-show-open`).
     fn route(&self, conn_id: ConnectionId, name: &str, data: serde_json::Value) -> bool;
+
+    /// Release any state owned by a closed WebSocket connection.
+    fn on_disconnect(&self, conn_id: ConnectionId) {
+        let _ = conn_id;
+    }
 }
 
 /// A no-op message router that reports every message as unhandled.

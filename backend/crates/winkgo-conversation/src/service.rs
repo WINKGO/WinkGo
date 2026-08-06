@@ -19,6 +19,7 @@ use chrono::Datelike;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tracing::{debug, error, info, warn};
+use winkgo_api_types::ChatFileRef;
 use winkgo_api_types::{
     ApprovalCheckResponse, AssistantConversationOverridesRequest, CancelConversationResponse, CloneConversationRequest,
     ConfirmRequest, ConfirmationListResponse, ConversationArtifactKind, ConversationArtifactListResponse,
@@ -43,7 +44,7 @@ use winkgo_db::{
 };
 use winkgo_extension::AssistantRuleDispatcher;
 use winkgo_mcp::{AcpMcpCapabilities, parse_acp_mcp_capabilities};
-use winkgo_project::{ProjectService, canonical};
+use winkgo_project::{ProjectService, ResolvedChatMessage, canonical};
 use winkgo_realtime::EventBroadcaster;
 use winkgo_runtime::{RuntimeCommandProbe, probe_node_runtime_supported, probe_runtime_command, resolve_command_path};
 
@@ -451,16 +452,16 @@ impl ConversationService {
     /// Best-effort by contract: a missing service, a bad URI, a resolve
     /// failure, or an update failure are all logged at `warn` and swallowed.
     /// This must NEVER affect conversation creation or reads.
-    async fn bind_project_best_effort(&self, conversation_id: &str, workspace_path: &str) {
+    async fn bind_project_best_effort(&self, conversation_id: &str, workspace_path: &str) -> bool {
         let project_service = self.project_service.read().ok().and_then(|guard| guard.clone());
         let Some(project_service) = project_service else {
-            return;
+            return false;
         };
         let uri = match canonical::to_file_uri(Path::new(workspace_path)) {
             Ok(uri) => uri,
             Err(err) => {
                 warn!(conversation_id = %conversation_id, error = err.code(), "project bind skipped: bad workspace uri");
-                return;
+                return false;
             }
         };
         match project_service.resolve_existing(uri).await {
@@ -471,14 +472,47 @@ impl ConversationService {
                     updated_at: Some(now_ms()),
                     ..Default::default()
                 };
-                if let Err(err) = self.conversation_repo.update(conversation_id, &update).await {
-                    warn!(conversation_id = %conversation_id, error = %ErrorChain(&err), "project bind: backfill update failed");
+                match self.conversation_repo.update(conversation_id, &update).await {
+                    Ok(_) => true,
+                    Err(err) => {
+                        warn!(conversation_id = %conversation_id, error = %ErrorChain(&err), "project bind: backfill update failed");
+                        false
+                    }
                 }
             }
             Err(err) => {
                 warn!(conversation_id = %conversation_id, error = err.code(), "project bind skipped");
+                false
             }
         }
+    }
+
+    /// Resolve structured chat-file references at the backend send boundary.
+    async fn resolve_message_attachments(
+        &self,
+        content: &str,
+        files: &[ChatFileRef],
+    ) -> Result<ResolvedChatMessage, ConversationError> {
+        if files.is_empty() {
+            return Ok(ResolvedChatMessage {
+                content: content.to_owned(),
+                files: Vec::new(),
+            });
+        }
+        let project = self
+            .project_service
+            .read()
+            .ok()
+            .and_then(|guard| guard.clone())
+            .ok_or_else(|| ConversationError::BadRequest {
+                reason: "project service unavailable; cannot resolve file attachments".to_owned(),
+            })?;
+        project
+            .resolve_chat_message(content, files, &std::env::temp_dir().join("winkgo"))
+            .await
+            .map_err(|error| ConversationError::BadRequest {
+                reason: error.to_string(),
+            })
     }
 
     pub fn with_assistant_definition_repo(&self, repo: Arc<dyn IAssistantDefinitionRepository>) {
@@ -907,7 +941,7 @@ impl ConversationService {
             }
             if let Some(permission) = snapshot.resolved_defaults.permission.as_ref() {
                 obj.insert("session_mode".to_owned(), serde_json::Value::String(permission.clone()));
-                if matches!(effective_type, AgentType::Acp) {
+                if matches!(effective_type, AgentType::Acp | AgentType::Antigravity) {
                     obj.insert(
                         "current_mode_id".to_owned(),
                         serde_json::Value::String(permission.clone()),
@@ -922,7 +956,7 @@ impl ConversationService {
             }
             if !snapshot.rules.content.trim().is_empty() {
                 match effective_type {
-                    AgentType::Acp => {
+                    AgentType::Acp | AgentType::Antigravity => {
                         obj.insert(
                             "preset_context".to_owned(),
                             serde_json::Value::String(snapshot.rules.content.clone()),
@@ -1175,7 +1209,7 @@ impl ConversationService {
             .and_then(|v| v.as_str())
             .filter(|s| !s.is_empty())
         {
-            self.bind_project_best_effort(&id, workspace).await;
+            let _ = self.bind_project_best_effort(&id, workspace).await;
         }
 
         if let Some(snapshot) = assistant_snapshot.as_ref() {
@@ -1218,7 +1252,7 @@ impl ConversationService {
         // ACP conversations own one `acp_session` row (1:1 by
         // conversation_id). Other agent types have no session-level
         // state so we only create it for ACP.
-        if effective_type == AgentType::Acp {
+        if matches!(effective_type, AgentType::Acp | AgentType::Antigravity) {
             self.create_acp_session_row(&id, &extra, assistant_snapshot.as_ref())
                 .await?;
         }
@@ -1808,17 +1842,22 @@ impl ConversationService {
             .map_err(|e| ConversationError::internal(format!("Invalid extra JSON: {e}")))?;
         self.backfill_extra_inplace(&row.id, &mut extra).await;
         // Project-bind side branch: lazily backfill owner binding on read.
-        if row.project_id.is_none()
+        let project_backfilled = if row.project_id.is_none()
             && let Some(workspace) = extra
                 .get("workspace")
                 .and_then(|v| v.as_str())
                 .filter(|s| !s.is_empty())
         {
-            self.bind_project_best_effort(&row.id, workspace).await;
-        }
+            self.bind_project_best_effort(&row.id, workspace).await
+        } else {
+            false
+        };
         let mut response = row_to_response_with_extra(row, extra, &self.workspace_root)?;
         self.attach_assistant_identity(&mut response).await?;
         response.runtime = Some(self.runtime_summary_for(id).await);
+        if project_backfilled {
+            self.broadcast_list_changed(id, "updated", response.source.as_ref());
+        }
         Ok(response)
     }
 
@@ -1915,7 +1954,7 @@ impl ConversationService {
             });
         }
 
-        if existing_type == AgentType::Acp
+        if matches!(existing_type, AgentType::Acp | AgentType::Antigravity)
             && let Some(incoming) = &req.extra
             && (incoming.get("current_model_id").is_some() || incoming.get("current_mode_id").is_some())
         {
@@ -2682,6 +2721,8 @@ impl ConversationService {
 
         reject_deprecated_runtime_row(&row)?;
 
+        let resolved = self.resolve_message_attachments(&req.content, &req.files).await?;
+
         let turn_id = Self::mint_turn_id();
         let turn_claim = self.runtime_state.try_claim_turn(conversation_id, &turn_id)?;
 
@@ -2695,7 +2736,7 @@ impl ConversationService {
             conversation_id: conversation_id.to_owned(),
             msg_id: Some(user_msg_id.clone()),
             r#type: "text".into(),
-            content: serde_json::json!({ "content": req.content }).to_string(),
+            content: serde_json::json!({ "content": &resolved.content }).to_string(),
             position: Some("right".into()),
             status: Some("finish".into()),
             hidden: req.hidden,
@@ -2723,7 +2764,7 @@ impl ConversationService {
             serde_json::json!({
                 "conversation_id": conversation_id,
                 "msg_id": &user_msg_id,
-                "content": &req.content,
+                "content": &resolved.content,
                 "position": "right",
                 "status": "finish",
                 "hidden": req.hidden,
@@ -2764,7 +2805,9 @@ impl ConversationService {
         ConversationTurnOrchestrator::new(self.clone(), Arc::clone(task_manager)).spawn_user_turn(TurnStartInput {
             user_id: user_id.to_owned(),
             conversation: row,
-            request: req,
+            content: resolved.content,
+            files: resolved.files,
+            inject_skills: req.inject_skills,
             required_runtime_mode: None,
             build_options: build_opts,
             stored_workspace,
@@ -2883,12 +2926,9 @@ impl ConversationService {
             .run_user_turn(TurnStartInput {
                 user_id: request.user_id,
                 conversation: row,
-                request: SendMessageRequest {
-                    content: request.content,
-                    files: request.files,
-                    inject_skills: request.inject_skills,
-                    hidden: request.user_message_hidden,
-                },
+                content: request.content,
+                files: request.files,
+                inject_skills: request.inject_skills,
                 required_runtime_mode: request.required_runtime_mode,
                 build_options: build_opts,
                 stored_workspace,
@@ -3036,7 +3076,7 @@ impl ConversationService {
             return Err(e.into());
         }
 
-        if agent.agent_type() == AgentType::Acp {
+        if matches!(agent.agent_type(), AgentType::Acp | AgentType::Antigravity) {
             let runtime_state = self.runtime_state();
             let task_manager = Arc::clone(task_manager);
             let conv_id = conversation_id.to_owned();
@@ -3788,6 +3828,12 @@ fn context_backend_value(context: &AgentSessionContext) -> Option<serde_json::Va
             .as_ref()
             .filter(|value| !value.is_empty())
             .map(|value| serde_json::Value::String(value.clone())),
+        AgentSessionKind::Antigravity(ctx) => ctx
+            .config
+            .backend
+            .as_ref()
+            .filter(|value| !value.is_empty())
+            .map(|value| serde_json::Value::String(value.clone())),
         _ => None,
     }
 }
@@ -3795,6 +3841,7 @@ fn context_backend_value(context: &AgentSessionContext) -> Option<serde_json::Va
 fn build_options_backend(options: &BuildTaskOptions) -> Option<&str> {
     match &options.context.kind {
         AgentSessionKind::Acp(ctx) => ctx.config.backend.as_deref(),
+        AgentSessionKind::Antigravity(ctx) => ctx.config.backend.as_deref(),
         AgentSessionKind::WinkGoAgent(_) => None,
     }
 }
@@ -3837,6 +3884,12 @@ impl ConversationService {
         match agent_type {
             AgentType::Acp => resolve_acp_mcp_support_policy(&self.agent_metadata_repo, extra).await,
             AgentType::WinkGoAgent => Ok(McpSupportPolicy::WINKGO_AGENT),
+            AgentType::Antigravity => Ok(McpSupportPolicy {
+                stdio: true,
+                sse: true,
+                http: false,
+                streamable_http: false,
+            }),
             _ => Ok(McpSupportPolicy::WINKGO_AGENT),
         }
     }
@@ -4258,6 +4311,7 @@ mod tests {
             pinned: false,
             pinned_at: None,
             channel_chat_id: None,
+            project_id: None,
             assistant: None,
             created_at: 0,
             modified_at: 0,

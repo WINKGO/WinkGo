@@ -6020,6 +6020,7 @@ dependencies = [
  "winkgo-project",
  "winkgo-realtime",
  "winkgo-runtime",
+ "winkgo-session",
  "winkgo-shell",
  "winkgo-system",
  "winkgo-team",
@@ -6268,6 +6269,7 @@ dependencies = [
  "walkdir",
  "winkgo-api-types",
  "winkgo-common",
+ "winkgo-project",
  "winkgo-realtime",
  "zip 2.4.2",
 ]
@@ -6349,13 +6351,22 @@ dependencies = [
 name = "winkgo-project"
 version = "0.1.52"
 dependencies = [
+ "async-trait",
+ "axum",
+ "base64",
  "chrono",
+ "http-body-util",
+ "ignore",
+ "notify",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
+ "tower",
  "tracing",
  "url",
+ "winkgo-api-types",
  "winkgo-common",
  "winkgo-db",
 ]

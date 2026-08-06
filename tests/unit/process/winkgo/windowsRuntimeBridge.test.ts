@@ -36,4 +36,13 @@ describe('WINK GO Windows media control bridge', () => {
     expect(bridgeSource).toContain('UseShellExecute = false');
     expect(bridgeSource).toContain('CreateNoWindow = true');
   });
+
+  it('maintains a monotonic lyric timeline when a player reports zero duration', () => {
+    expect(bridgeSource).toContain('$script:estimatedTimelinePositionMs += $elapsedMs');
+    expect(bridgeSource).toContain('timelineEstimated = $true');
+    expect(bridgeSource).toContain('Read-MediaTimeline $session $playbackInfo $trackKey $isPlaying');
+    expect(bridgeSource).toContain('$script:nextTimelinePublishAt = $now.AddMilliseconds(300)');
+    expect(bridgeSource).toContain('[bool]$script:latestMedia.isPlaying');
+    expect(bridgeSource).toContain('420');
+  });
 });

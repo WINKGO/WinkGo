@@ -38,7 +38,8 @@ use winkgo_mcp::{
 use winkgo_office::{
     ConversionService, OfficeRouterState, OfficecliWatchManager, ProxyService, SnapshotService as OfficeSnapshotService,
 };
-use winkgo_realtime::{NoopMessageRouter, WsHandlerState};
+use winkgo_project::ProjectRouterState;
+use winkgo_realtime::{MessageRouter, WsHandlerState};
 use winkgo_shell::ShellRouterState;
 use winkgo_system::{
     ClientPrefService, ConnectionTestRouterState, ConnectionTestService, FeedbackDiagnosticsService, ModelFetchService,
@@ -130,6 +131,7 @@ pub struct ModuleStates {
 
     pub connection_test: ConnectionTestRouterState,
     pub file: FileRouterState,
+    pub project: ProjectRouterState,
     pub mcp: McpRouterState,
     pub extension: ExtensionRouterState,
     pub hub: HubRouterState,
@@ -290,6 +292,7 @@ pub async fn build_module_states(
         }),
         connection_test: build_module_state_phase(&boot, "connection_test", build_connection_test_state),
         file: build_module_state_phase(&boot, "file", || build_file_state(services))?,
+        project: build_module_state_phase(&boot, "project", || build_project_state(services)),
         mcp: build_module_state_phase(&boot, "mcp", || build_mcp_state(services)),
         extension: ext_state,
         hub: hub_state,
@@ -319,6 +322,13 @@ pub async fn build_module_states(
         .await;
 
     Ok((states, channel_components))
+}
+
+/// Build the Project Explorer control-plane router state.
+pub fn build_project_state(services: &AppServices) -> ProjectRouterState {
+    ProjectRouterState {
+        project: Arc::new(services.project_service.clone()),
+    }
 }
 
 /// Build the default `AssistantRouterState` from application services.
@@ -441,19 +451,20 @@ pub fn build_file_state(services: &AppServices) -> Result<FileRouterState, Route
     let allowed_roots = default_allowed_roots(Some(services.work_dir.as_path()));
     let browse_roots = BrowseRoots::new();
     let file_service = Arc::new(FileService::new(broadcaster.clone(), allowed_roots.clone()));
-    let watch_service = Arc::new(FileWatchService::new(broadcaster).map_err(file_watch_init_error)?);
+    let watch_service = Arc::new(FileWatchService::new(broadcaster));
     let snapshot_service = Arc::new(SnapshotService::new());
+    let revealer: winkgo_file::ItemRevealerRef = Arc::new(super::item_revealer::ShellItemRevealer::new(Arc::new(
+        winkgo_shell::ShellService::new(Arc::new(winkgo_shell::DefaultSystemOpener)),
+    )));
     Ok(FileRouterState {
         file_service,
         watch_service,
         snapshot_service,
+        project: Arc::new(services.project_service.clone()),
+        revealer,
         allowed_roots,
         browse_roots,
     })
-}
-
-fn file_watch_init_error(error: winkgo_file::FileError) -> RouterBuildError {
-    RouterBuildError::new("router.file_watch", "failed to initialize file watch service").with_source(error)
 }
 
 /// Build the default `McpRouterState` from application services.
@@ -847,11 +858,11 @@ pub async fn build_extension_states(
 }
 
 /// Build the default `WsHandlerState` from application services.
-pub fn build_ws_state(services: &AppServices) -> WsHandlerState {
+pub fn build_ws_state(services: &AppServices, router: Arc<dyn MessageRouter>) -> WsHandlerState {
     if services.local {
         return WsHandlerState {
             manager: services.ws_manager.clone(),
-            router: Arc::new(NoopMessageRouter),
+            router,
             token_validator: Arc::new(|_| true),
             token_extractor: Arc::new(|_| Some("local".into())),
         };
@@ -864,7 +875,7 @@ pub fn build_ws_state(services: &AppServices) -> WsHandlerState {
 
     WsHandlerState {
         manager: services.ws_manager.clone(),
-        router: Arc::new(NoopMessageRouter),
+        router,
         token_validator,
         token_extractor,
     }
@@ -1207,14 +1218,5 @@ mod tests {
         assert_eq!(loaded[0].name, "demo-ext");
 
         services.database.close().await;
-    }
-
-    #[test]
-    fn file_watch_init_error_maps_to_bootstrap_server_failed() {
-        let err = file_watch_init_error(winkgo_file::FileError::Internal("watch backend unavailable".into()));
-
-        assert_eq!(err.stage(), "router.file_watch");
-        assert_eq!(err.message(), "failed to initialize file watch service");
-        assert!(!err.to_string().contains("watch backend unavailable"));
     }
 }

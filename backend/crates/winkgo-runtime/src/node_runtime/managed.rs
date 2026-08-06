@@ -26,6 +26,7 @@ const MANAGED_NODE_DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(600);
 const MANAGED_NODE_DOWNLOAD_IDLE_TIMEOUT: Duration = Duration::from_secs(30);
 const MANAGED_NODE_DOWNLOAD_ATTEMPTS: usize = 2;
 const MANAGED_NODE_PROGRESS_STEP_BYTES: u64 = 5 * 1024 * 1024;
+const MANAGED_NODE_NPMMIRROR_BASE_URL: &str = "https://registry.npmmirror.com/-/binary/node";
 
 #[derive(Debug, Clone, Copy)]
 struct PlatformSpec {
@@ -44,6 +45,16 @@ impl PlatformSpec {
     fn official_download_url(self) -> String {
         format!(
             "https://nodejs.org/dist/v{version}/{name}.{ext}",
+            version = MANAGED_NODE_VERSION,
+            name = self.directory_name(),
+            ext = self.archive_ext
+        )
+    }
+
+    fn npmmirror_download_url(self) -> String {
+        format!(
+            "{base}/v{version}/{name}.{ext}",
+            base = MANAGED_NODE_NPMMIRROR_BASE_URL,
             version = MANAGED_NODE_VERSION,
             name = self.directory_name(),
             ext = self.archive_ext
@@ -149,7 +160,7 @@ pub async fn install_and_validate_with_reporter(
     info!(
         version = MANAGED_NODE_VERSION,
         root = %runtime_root.display(),
-        url = %spec.official_download_url(),
+        url = %spec.npmmirror_download_url(),
         "managed node runtime install started"
     );
     install_archive_with_retry(&runtime_root, spec, reporter).await?;
@@ -540,10 +551,10 @@ impl Drop for InstallLockGuard {
 async fn install_archive(
     runtime_root: &Path,
     spec: PlatformSpec,
+    download_source: &ManagedNodeDownloadSource,
     reporter: Option<&dyn NodeRuntimeProgressReporter>,
 ) -> Result<(), NodeRuntimeError> {
     let client = build_http_client()?;
-    let download_source = ManagedNodeDownloadSource::official(spec);
     let url = download_source.url.clone();
     let version_dir = runtime_root.join(spec.directory_name());
     let archive_path = archive_download_path(runtime_root, spec);
@@ -621,12 +632,27 @@ fn verify_archive_checksum(path: &Path, expected_sha256: &str) -> Result<(), Nod
 }
 
 impl ManagedNodeDownloadSource {
+    fn npmmirror(spec: PlatformSpec) -> Self {
+        Self {
+            url: spec.npmmirror_download_url(),
+            sha256: spec.archive_sha256.to_owned(),
+            source: "npmmirror.com",
+        }
+    }
+
     fn official(spec: PlatformSpec) -> Self {
         Self {
             url: spec.official_download_url(),
             sha256: spec.archive_sha256.to_owned(),
             source: "nodejs.org",
         }
+    }
+
+    fn candidates(spec: PlatformSpec) -> [Self; 2] {
+        // The domestic mirror is intentionally tried first for mainland China.
+        // Both sources are verified against the SHA-256 pinned above, so a
+        // mirror can improve availability without becoming a trust anchor.
+        [Self::npmmirror(spec), Self::official(spec)]
     }
 }
 
@@ -636,20 +662,34 @@ async fn install_archive_with_retry(
     reporter: Option<&dyn NodeRuntimeProgressReporter>,
 ) -> Result<(), NodeRuntimeError> {
     let mut last_error = None;
-    for attempt in 1..=MANAGED_NODE_DOWNLOAD_ATTEMPTS {
-        match install_archive(runtime_root, spec, reporter).await {
-            Ok(()) => return Ok(()),
-            Err(error) if attempt < MANAGED_NODE_DOWNLOAD_ATTEMPTS => {
-                warn!(
-                    attempt,
-                    max_attempts = MANAGED_NODE_DOWNLOAD_ATTEMPTS,
-                    error = %error,
-                    root = %runtime_root.display(),
-                    "managed node runtime install attempt failed; retrying"
-                );
-                last_error = Some(error);
+    let sources = ManagedNodeDownloadSource::candidates(spec);
+    for (source_index, source) in sources.iter().enumerate() {
+        for attempt in 1..=MANAGED_NODE_DOWNLOAD_ATTEMPTS {
+            match install_archive(runtime_root, spec, source, reporter).await {
+                Ok(()) => return Ok(()),
+                Err(error) => {
+                    let has_more_attempts = attempt < MANAGED_NODE_DOWNLOAD_ATTEMPTS;
+                    let has_more_sources = source_index + 1 < sources.len();
+                    warn!(
+                        attempt,
+                        max_attempts = MANAGED_NODE_DOWNLOAD_ATTEMPTS,
+                        source = source.source,
+                        url = %source.url,
+                        fallback_pending = has_more_sources,
+                        error = %error,
+                        root = %runtime_root.display(),
+                        "managed node runtime install attempt failed"
+                    );
+                    last_error = Some(error);
+                    if !has_more_attempts && has_more_sources {
+                        info!(
+                            failed_source = source.source,
+                            next_source = sources[source_index + 1].source,
+                            "managed node runtime download falling back to next source"
+                        );
+                    }
+                }
             }
-            Err(error) => return Err(install_error(error, reporter)),
         }
     }
 

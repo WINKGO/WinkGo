@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use tracing::warn;
+use tracing::{error, warn};
 
 use crate::error::FileError;
 use winkgo_api_types::WebSocketMessage;
@@ -73,7 +73,9 @@ fn should_emit(debounce: &DashMap<String, Instant>, key: &str) -> bool {
 pub struct FileWatchService {
     broadcaster: Arc<dyn EventBroadcaster>,
     /// Shared watcher for all single-file watches.
-    file_watcher: Mutex<RecommendedWatcher>,
+    file_watcher: Option<Mutex<RecommendedWatcher>>,
+    /// OS error captured when the platform watcher failed to initialize.
+    watch_init_errno: Option<i32>,
     /// Set of canonical paths being watched (shared with the event handler).
     watched_files: Arc<DashMap<String, ()>>,
     /// Per-workspace Office watchers, keyed by canonical workspace path.
@@ -84,7 +86,7 @@ pub struct FileWatchService {
 
 impl FileWatchService {
     /// Create a new watch service backed by the platform's recommended watcher.
-    pub fn new(broadcaster: Arc<dyn EventBroadcaster>) -> Result<Self, FileError> {
+    pub fn new(broadcaster: Arc<dyn EventBroadcaster>) -> Self {
         let watched_files: Arc<DashMap<String, ()>> = Arc::new(DashMap::new());
         let debounce: Arc<DashMap<String, Instant>> = Arc::new(DashMap::new());
 
@@ -92,7 +94,7 @@ impl FileWatchService {
         let wf = watched_files.clone();
         let db = debounce.clone();
 
-        let file_watcher = notify::recommended_watcher(move |res: Result<notify::Event, notify::Error>| {
+        let watcher_result = notify::recommended_watcher(move |res: Result<notify::Event, notify::Error>| {
             let event = match res {
                 Ok(e) => e,
                 Err(e) => {
@@ -121,22 +123,58 @@ impl FileWatchService {
                 let json = serde_json::to_value(&payload).unwrap_or_default();
                 bc.broadcast(WebSocketMessage::new("fileWatch.fileChanged", json));
             }
-        })
-        .map_err(|e| FileError::Internal(format!("failed to create file watcher: {e}")))?;
+        });
 
-        Ok(Self {
+        Self::from_watcher_result(broadcaster, watched_files, debounce, watcher_result)
+    }
+
+    fn from_watcher_result(
+        broadcaster: Arc<dyn EventBroadcaster>,
+        watched_files: Arc<DashMap<String, ()>>,
+        debounce: Arc<DashMap<String, Instant>>,
+        watcher_result: Result<RecommendedWatcher, notify::Error>,
+    ) -> Self {
+        let (file_watcher, watch_init_errno) = match watcher_result {
+            Ok(watcher) => (Some(Mutex::new(watcher)), None),
+            Err(watcher_error) => {
+                let errno = watcher_init_errno(&watcher_error);
+                error!(
+                    error = %watcher_error,
+                    errno = ?errno,
+                    "file watcher creation failed; file watching is disabled while the backend continues"
+                );
+                (None, errno)
+            }
+        };
+
+        Self {
             broadcaster,
-            file_watcher: Mutex::new(file_watcher),
+            file_watcher,
+            watch_init_errno,
             watched_files,
             office_watchers: Mutex::new(HashMap::new()),
             debounce,
-        })
+        }
+    }
+
+    fn unavailable(&self) -> FileError {
+        FileError::WatchUnavailable {
+            errno: self.watch_init_errno,
+        }
+    }
+}
+
+fn watcher_init_errno(error: &notify::Error) -> Option<i32> {
+    match &error.kind {
+        notify::ErrorKind::Io(io_error) => io_error.raw_os_error(),
+        _ => None,
     }
 }
 
 #[async_trait::async_trait]
 impl crate::traits::IFileWatchService for FileWatchService {
     async fn start_watch(&self, file_path: &str) -> Result<(), FileError> {
+        let file_watcher = self.file_watcher.as_ref().ok_or_else(|| self.unavailable())?;
         let canonical = std::fs::canonicalize(file_path)
             .map_err(|e| FileError::NotFound(format!("cannot resolve path {file_path}: {e}")))?;
         let key = canonical.to_string_lossy().into_owned();
@@ -146,8 +184,7 @@ impl crate::traits::IFileWatchService for FileWatchService {
             return Ok(());
         }
 
-        let mut watcher = self
-            .file_watcher
+        let mut watcher = file_watcher
             .lock()
             .map_err(|e| FileError::Internal(format!("file watcher lock poisoned: {e}")))?;
         watcher
@@ -165,25 +202,27 @@ impl crate::traits::IFileWatchService for FileWatchService {
             return Ok(());
         }
 
-        let mut watcher = self
-            .file_watcher
-            .lock()
-            .map_err(|e| FileError::Internal(format!("file watcher lock poisoned: {e}")))?;
-        // Ignore unwatch errors — the file may have been deleted.
-        let _ = watcher.unwatch(&canonical);
+        if let Some(file_watcher) = self.file_watcher.as_ref() {
+            let mut watcher = file_watcher
+                .lock()
+                .map_err(|e| FileError::Internal(format!("file watcher lock poisoned: {e}")))?;
+            // Ignore unwatch errors — the file may have been deleted.
+            let _ = watcher.unwatch(&canonical);
+        }
         self.debounce.remove(&key);
         Ok(())
     }
 
     async fn stop_all_watches(&self) -> Result<(), FileError> {
-        let mut watcher = self
-            .file_watcher
-            .lock()
-            .map_err(|e| FileError::Internal(format!("file watcher lock poisoned: {e}")))?;
+        if let Some(file_watcher) = self.file_watcher.as_ref() {
+            let mut watcher = file_watcher
+                .lock()
+                .map_err(|e| FileError::Internal(format!("file watcher lock poisoned: {e}")))?;
 
-        for entry in self.watched_files.iter() {
-            let path = std::path::PathBuf::from(entry.key().as_str());
-            let _ = watcher.unwatch(&path);
+            for entry in self.watched_files.iter() {
+                let path = std::path::PathBuf::from(entry.key().as_str());
+                let _ = watcher.unwatch(&path);
+            }
         }
         self.watched_files.clear();
         // Clean file-watch debounce entries only (keep office ones).
@@ -192,6 +231,9 @@ impl crate::traits::IFileWatchService for FileWatchService {
     }
 
     async fn start_office_watch(&self, workspace: &str) -> Result<(), FileError> {
+        if self.file_watcher.is_none() {
+            return Err(self.unavailable());
+        }
         let canonical = std::fs::canonicalize(workspace)
             .map_err(|e| FileError::NotFound(format!("cannot resolve workspace {workspace}: {e}")))?;
         let key = canonical.to_string_lossy().into_owned();
@@ -275,6 +317,7 @@ impl crate::traits::IFileWatchService for FileWatchService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traits::IFileWatchService;
     use notify::event::{AccessKind, CreateKind, ModifyKind, RemoveKind};
     use std::path::PathBuf;
 
@@ -401,5 +444,39 @@ mod tests {
     #[test]
     fn empty_path() {
         assert!(!is_office_file(&PathBuf::new()));
+    }
+
+    struct NoopBroadcaster;
+
+    impl EventBroadcaster for NoopBroadcaster {
+        fn broadcast(&self, _event: WebSocketMessage<serde_json::Value>) {}
+    }
+
+    fn disabled_service(errno: i32) -> FileWatchService {
+        let watcher_error = notify::Error::new(notify::ErrorKind::Io(std::io::Error::from_raw_os_error(errno)));
+        FileWatchService::from_watcher_result(
+            Arc::new(NoopBroadcaster),
+            Arc::new(DashMap::new()),
+            Arc::new(DashMap::new()),
+            Err(watcher_error),
+        )
+    }
+
+    #[tokio::test]
+    async fn disabled_service_returns_stable_error_without_touching_the_path() {
+        let service = disabled_service(24);
+
+        let error = service.start_watch("definitely-missing.txt").await.unwrap_err();
+
+        assert!(matches!(error, FileError::WatchUnavailable { errno: Some(24) }));
+    }
+
+    #[tokio::test]
+    async fn disabled_service_rejects_office_watch_with_the_same_error() {
+        let service = disabled_service(28);
+
+        let error = service.start_office_watch("missing-workspace").await.unwrap_err();
+
+        assert!(matches!(error, FileError::WatchUnavailable { errno: Some(28) }));
     }
 }

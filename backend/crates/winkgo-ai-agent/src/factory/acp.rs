@@ -20,6 +20,35 @@ use winkgo_runtime::{ensure_runtime_command, ensure_runtime_command_with_reporte
 
 use crate::runtime_status::conversation_runtime_reporter;
 
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum BackendRoute {
+    DirectCli,
+    Antigravity,
+    AcpManager,
+}
+
+pub(crate) fn route_for_backend(backend: Option<&str>) -> BackendRoute {
+    match backend {
+        Some("antigravity") => BackendRoute::Antigravity,
+        Some("claude" | "codex") => BackendRoute::DirectCli,
+        _ => BackendRoute::AcpManager,
+    }
+}
+
+pub(super) async fn resolve_catalog_metadata(
+    registry: &Arc<crate::registry::AgentRegistry>,
+    config: &winkgo_api_types::AcpBuildExtra,
+) -> Result<winkgo_api_types::AgentMetadata, AgentError> {
+    let metadata = if let Some(ref agent_id) = config.agent_id {
+        registry.get(agent_id).await
+    } else if let Some(ref vendor) = config.backend {
+        registry.find_builtin_by_backend(vendor).await
+    } else {
+        None
+    };
+    metadata.ok_or_else(|| AgentError::bad_request("Agent requires either agent_id or backend in extra"))
+}
+
 pub(super) async fn build(
     deps: Arc<AgentFactoryDeps>,
     build_context: AcpSessionBuildContext,
@@ -29,14 +58,7 @@ pub(super) async fn build(
 
     // Resolve the catalog row — prefer explicit agent_id, fall
     // back to a vendor-label match for legacy payloads.
-    let meta = if let Some(ref agent_id) = config.agent_id {
-        deps.agent_registry.get(agent_id).await
-    } else if let Some(ref vendor) = config.backend {
-        deps.agent_registry.find_builtin_by_backend(vendor).await
-    } else {
-        None
-    }
-    .ok_or_else(|| AgentError::bad_request("ACP agent requires either agent_id or backend in extra"))?;
+    let meta = resolve_catalog_metadata(&deps.agent_registry, &config).await?;
 
     // Trust the catalog row over the client-supplied `backend` when an
     // `agent_id` was provided. The frontend collapses row-scoped rows
@@ -48,6 +70,21 @@ pub(super) async fn build(
         config.backend.clone_from(&meta.backend);
     }
 
+    if matches!(route_for_backend(config.backend.as_deref()), BackendRoute::Antigravity) {
+        return super::antigravity::build(
+            deps,
+            crate::session_context::AntigravitySessionBuildContext {
+                config,
+                team: build_context.team,
+                belongs_to_team: build_context.belongs_to_team,
+                session_id: build_context.session_id,
+                session_snapshot: build_context.session_snapshot,
+            },
+            ctx,
+        )
+        .await;
+    }
+
     // Session-model port: claude/codex ALWAYS run through the clean-slate direct-CLI
     // SessionBackend (SessionAgentTask), NOT the ACP manager. Every other ACP vendor
     // keeps the AcpAgentManager path below. There is no fallback: a claude/codex
@@ -55,7 +92,7 @@ pub(super) async fn build(
     // build inputs mirror clean-slate `build_runtime` 1:1 (resume anchor, mode/model
     // precedence, MCP + preset + skills init surface, cc-switch env, codex sandbox/approval).
     if let Some(backend_label) = config.backend.as_deref()
-        && matches!(backend_label, "claude" | "codex")
+        && matches!(route_for_backend(Some(backend_label)), BackendRoute::DirectCli)
     {
         let instance = crate::session_agent::build_session_instance(
             backend_label,
@@ -85,6 +122,7 @@ pub(super) async fn build(
                 // DEV (`--dump-prompts`): resolve the dump dir once (mirrors the
                 // winkgo_agent factory's `prompt_dump_dir`). `None` when off.
                 prompt_dump_dir: crate::dev_prompt_dump::dump_dir_for_data_dir(&deps.data_dir, deps.dump_prompts),
+                permission_hook_body: None,
             },
             deps.session_spawner.clone(),
         )

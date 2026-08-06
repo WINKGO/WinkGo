@@ -31,6 +31,9 @@
     "switchSuccess": "Le modèle a changé avec succès",
     "switchFailed": "Échec du changement de modèle"
   },
+  "warmup": {
+    "clickToWake": "Cliquez pour démarrer ce membre de l’équipe"
+  },
   "config": {
     "setting": "Application du paramètre...",
     "commandAck": "Commande envoyée, mais l'état n'est pas confirmé. Actualisez ou réessayez plus tard.",

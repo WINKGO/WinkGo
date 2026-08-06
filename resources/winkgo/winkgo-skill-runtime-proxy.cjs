@@ -266,6 +266,9 @@ const startManagedRuntime = async (config, token) => {
       SPARKBOT_MCP_WS_TOKEN: '',
       WINKGO_OWNER_PID: String(launch.ownerPid),
       WINKGO_EXIT_WHEN_OWNER_GONE: '1',
+      WINKGO_RUNTIME_ROOT: launch.workingDirectory,
+      WINKGO_SKILLS_ROOT: path.join(launch.workingDirectory, 'skills'),
+      SPARKBOT_SKILLS_ROOT: path.join(launch.workingDirectory, 'skills'),
       PYTHONUTF8: '1',
       PYTHONIOENCODING: 'utf-8',
       ...(token ? { WINKGO_RUNTIME_ACCESS_TOKEN: token } : {}),
@@ -391,12 +394,20 @@ class RuntimeConnection {
 }
 
 const runtime = new RuntimeConnection();
+let runtimeToolNames = new Set();
+let runtimeToolNamesReady = false;
 const output = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
 const isAllowed = (name, config) =>
   config.allowedToolNames.has(name) || config.allowedToolPrefixes.some((prefix) => name.startsWith(prefix));
 const transformCompatibilityCall = (name, rawArguments, config) => {
   const alias = config.compatibilityToolAliases[name];
-  if (!alias) return { name, arguments: rawArguments && typeof rawArguments === 'object' ? rawArguments : {} };
+  // A number of current Runtime tools intentionally keep their old public
+  // name.  Compatibility aliases are only a fallback for older Runtime
+  // builds; rewriting a native shared music tool would silently pin it to the
+  // last imported provider (for example every open/search command to Soda).
+  if (!alias || runtimeToolNames.has(name)) {
+    return { name, arguments: rawArguments && typeof rawArguments === 'object' ? rawArguments : {} };
+  }
   const sourceArguments = rawArguments && typeof rawArguments === 'object' ? rawArguments : {};
   const transformedArguments = { ...alias.defaultArguments, ...sourceArguments };
 
@@ -430,6 +441,12 @@ const appendCompatibilityTools = (tools, config) => {
     selectedNames.add(aliasName);
   }
   return selectedTools;
+};
+const rememberRuntimeTools = (result) => {
+  const tools = Array.isArray(result && result.tools) ? result.tools : [];
+  runtimeToolNames = new Set(tools.map((tool) => tool && tool.name).filter(Boolean));
+  runtimeToolNamesReady = true;
+  return tools;
 };
 const appendNativeTools = (tools, config) => {
   const selectedTools = [...tools];
@@ -490,7 +507,7 @@ const handleRequest = async (message) => {
         );
       }
     }
-    const tools = Array.isArray(result && result.tools) ? result.tools : [];
+    const tools = rememberRuntimeTools(result);
     const selectedTools = appendNativeTools(appendCompatibilityTools(tools, config), config);
     if (
       config.enabledSkillIds.includes('wechat') &&
@@ -529,6 +546,15 @@ const handleRequest = async (message) => {
           favoriteGroups: favorites.favoriteGroups,
         },
       };
+    }
+    if (config.compatibilityToolAliases[name] && !runtimeToolNamesReady) {
+      try {
+        await runtime.connect();
+        rememberRuntimeTools(await runtime.request('tools/list', {}));
+      } catch {
+        // If discovery fails, retain the legacy alias fallback below. The
+        // subsequent Runtime call will surface the real connection error.
+      }
     }
     const transformedCall = transformCompatibilityCall(name, params && params.arguments, config);
     if (nativeSmartHome.tools.some((tool) => tool.name === transformedCall.name)) {

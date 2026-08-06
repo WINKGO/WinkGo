@@ -8,6 +8,7 @@
 
 import { ipcBridge } from '@/common';
 import type { IConversationMcpStatus } from '@/common/config/storage';
+import { isChatFileRef, uploadFileRef, type ChatFileRef } from '@/common/types/chatFile';
 import AgentModeSelector from '@/renderer/components/agent/AgentModeSelector';
 import CommandQueuePanel from '@/renderer/components/chat/CommandQueuePanel';
 import MobileActionSheet, {
@@ -35,7 +36,6 @@ import {
   type ConversationCommandQueueItem,
 } from '@/renderer/pages/conversation/platforms/useConversationCommandQueue';
 import { useConversationRuntimeView } from '@/renderer/pages/conversation/runtime/useConversationRuntimeView';
-import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { getConversationRuntimeWorkspaceErrorMessage } from '@/renderer/pages/conversation/utils/conversationCreateError';
 import { getChatSurfaceWidthClass } from '@/renderer/pages/conversation/utils/chatSurfaceWidth';
 import { ensureConversationRuntime } from '@/renderer/pages/conversation/utils/ensureConversationRuntime';
@@ -45,8 +45,8 @@ import type { TeamSendBoxRuntime } from '@/renderer/pages/team/components/teamSe
 import { allSupportedExts } from '@/renderer/services/FileService';
 import { iconColors } from '@/renderer/styles/colors';
 import { emitter, useAddEventListener } from '@/renderer/utils/emitter';
-import { mergeFileSelectionItems } from '@/renderer/utils/file/fileSelection';
-import { buildDisplayMessage, collectSelectedFiles } from '@/renderer/utils/file/messageFiles';
+import { localSelectionItems, mergeFileSelectionItems } from '@/renderer/utils/file/fileSelection';
+import { collectChatFileRefs, splitChatFileRefs } from '@/renderer/utils/file/messageFiles';
 import type { AgentModeOption } from '@/renderer/utils/model/agentTypes';
 import { brandLegacyTextForDisplay, WINK_GO_CLI_DISPLAY_NAME } from '@/renderer/utils/model/winkGoBranding';
 import { Message, Tag } from '@arco-design/web-react';
@@ -122,10 +122,9 @@ const WinkGoAgentSendBox: React.FC<{
   modelSelection: WinkGoAgentModelSelection;
   session_mode?: string;
   agent_name?: string;
-  teamSendMessage?: (payload: { input: string; files: string[] }) => Promise<void>;
+  teamSendMessage?: (payload: { input: string; files: ChatFileRef[] }) => Promise<void>;
   teamRuntime?: TeamSendBoxRuntime;
 }> = ({ conversation_id, modelSelection, session_mode, agent_name, teamSendMessage, teamRuntime }) => {
-  const [workspacePath, setWorkspacePath] = useState('');
   const [dynamicModes, setDynamicModes] = useState<AgentModeOption[]>([]);
   const [currentMode, setCurrentMode] = useState<string | undefined>(session_mode);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
@@ -146,14 +145,17 @@ const WinkGoAgentSendBox: React.FC<{
   const teamPermission = useTeamPermission();
   const propagateMode = teamPermission?.propagateMode;
 
-  const { thought, running, setActiveMsgId, setWaitingResponse, resetState } = useWinkGoAgentMessage(conversation_id, {
-    onConfigChanged: (capabilities) => {
-      const modes = (capabilities as { modes?: string[] })?.modes;
-      if (modes && modes.length > 0) {
-        setDynamicModes(modeOptionsFromCapabilities(modes));
-      }
-    },
-  });
+  const { thought, running, turnStartedAtMs, setActiveMsgId, setWaitingResponse, resetState } = useWinkGoAgentMessage(
+    conversation_id,
+    {
+      onConfigChanged: (capabilities) => {
+        const modes = (capabilities as { modes?: string[] })?.modes;
+        if (modes && modes.length > 0) {
+          setDynamicModes(modeOptionsFromCapabilities(modes));
+        }
+      },
+    }
+  );
   const runtimeView = useConversationRuntimeView(conversation_id);
   const { markSendStarted, markSendAccepted, markSendFailed } = runtimeView;
 
@@ -191,13 +193,6 @@ const WinkGoAgentSendBox: React.FC<{
     if (!runtimeMode?.currentValue) return;
     setCurrentMode(runtimeMode.currentValue);
   }, [runtimeMode?.currentValue]);
-
-  useEffect(() => {
-    void getConversationOrNull(conversation_id).then((res) => {
-      if (!res?.extra?.workspace) return;
-      setWorkspacePath(res.extra.workspace);
-    });
-  }, [conversation_id]);
 
   useEffect(() => {
     if (!conversation_id) return;
@@ -265,11 +260,10 @@ const WinkGoAgentSendBox: React.FC<{
         throw new Error('No model selected');
       }
 
-      const displayMessage = buildDisplayMessage(input, files, workspacePath);
       try {
         void checkAndUpdateTitle(conversation_id, input);
         if (teamSendMessage) {
-          await teamSendMessage({ input: displayMessage, files });
+          await teamSendMessage({ input, files });
           emitter.emit('chat.history.refresh');
           if (files.length > 0) {
             emitter.emit('winkgo_agent.workspace.refresh');
@@ -280,7 +274,7 @@ const WinkGoAgentSendBox: React.FC<{
         markSendStarted();
         setWaitingResponse(true);
         const res = await ipcBridge.conversation.sendMessage.invoke({
-          input: displayMessage,
+          input,
           conversation_id,
           files,
         });
@@ -323,7 +317,6 @@ const WinkGoAgentSendBox: React.FC<{
       t,
       teamPermission,
       teamSendMessage,
-      workspacePath,
     ]
   );
 
@@ -367,7 +360,12 @@ const WinkGoAgentSendBox: React.FC<{
 
       try {
         const { input, files: initialFiles } = JSON.parse(storedMessage);
-        await executeCommand({ input, files: initialFiles || [] });
+        const initialRefs: ChatFileRef[] = Array.isArray(initialFiles)
+          ? initialFiles
+              .map((file: unknown) => (typeof file === 'string' ? uploadFileRef(file) : file))
+              .filter(isChatFileRef)
+          : [];
+        await executeCommand({ input, files: initialRefs });
       } catch (error) {
         console.error('[WinkGoAgentSendBox] Failed to send initial message:', error);
         sessionStorage.removeItem(processedKey);
@@ -378,7 +376,7 @@ const WinkGoAgentSendBox: React.FC<{
   }, [conversation_id, current_model?.use_model, executeCommand]);
 
   const onSendHandler = async (message: string) => {
-    const filesToSend = collectSelectedFiles(uploadFile, atPath);
+    const filesToSend = collectChatFileRefs(uploadFile, atPath);
     clearFiles();
     emitter.emit('winkgo_agent.selected.file.clear');
 
@@ -400,8 +398,9 @@ const WinkGoAgentSendBox: React.FC<{
     (item: ConversationCommandQueueItem) => {
       remove(item.id);
       setContent(item.input);
-      setUploadFile(Array.from(new Set(item.files)));
-      setAtPath([]);
+      const { uploadFiles, atPath: restoredAtPath } = splitChatFileRefs(item.files);
+      setUploadFile(uploadFiles);
+      setAtPath(restoredAtPath);
       emitter.emit('winkgo_agent.selected.file.clear');
     },
     [remove, setAtPath, setContent, setUploadFile]
@@ -409,9 +408,10 @@ const WinkGoAgentSendBox: React.FC<{
 
   const appendSelectedFiles = useCallback(
     (files: string[]) => {
-      setUploadFile((prev) => [...prev, ...files]);
+      const merged = mergeFileSelectionItems(atPathRef.current, localSelectionItems(files));
+      if (merged !== atPathRef.current) setAtPath(merged as Array<string | FileOrFolderItem>);
     },
-    [setUploadFile]
+    [setAtPath]
   );
   const { openFileSelector, onSlashBuiltinCommand } = useOpenFileSelector({
     onFilesSelected: appendSelectedFiles,
@@ -605,13 +605,22 @@ const WinkGoAgentSendBox: React.FC<{
     t,
   ]);
 
-  useAddEventListener('winkgo_agent.selected.file', setAtPath);
-  useAddEventListener('winkgo_agent.selected.file.append', (selectedItems: Array<string | FileOrFolderItem>) => {
-    const merged = mergeFileSelectionItems(atPathRef.current, selectedItems);
-    if (merged !== atPathRef.current) {
-      setAtPath(merged as Array<string | FileOrFolderItem>);
-    }
-  });
+  useAddEventListener(
+    'winkgo_agent.selected.file',
+    (items: Array<string | FileOrFolderItem>, targetConversationId: string | undefined) => {
+      if (targetConversationId === undefined || targetConversationId === conversation_id) setAtPath(items);
+    },
+    [conversation_id, setAtPath]
+  );
+  useAddEventListener(
+    'winkgo_agent.selected.file.append',
+    (selectedItems: Array<string | FileOrFolderItem>, targetConversationId: string | undefined) => {
+      if (targetConversationId !== undefined && targetConversationId !== conversation_id) return;
+      const merged = mergeFileSelectionItems(atPathRef.current, selectedItems);
+      if (merged !== atPathRef.current) setAtPath(merged as Array<string | FileOrFolderItem>);
+    },
+    [conversation_id, setAtPath]
+  );
 
   // Stop conversation handler
   const handleStop = async (): Promise<void> => {
@@ -670,8 +679,8 @@ const WinkGoAgentSendBox: React.FC<{
         thought={thought}
         running={teamRuntime?.loading ?? running}
         statusText={teamRuntime?.statusText}
-        externalElapsedSource={Boolean(teamRuntime)}
-        startedAtMs={teamRuntime?.startedAtMs ?? null}
+        externalElapsedSource={Boolean(teamRuntime) || turnStartedAtMs != null}
+        startedAtMs={teamRuntime ? (teamRuntime.startedAtMs ?? null) : turnStartedAtMs}
         onStop={effectiveHandleStop}
         onRetryStart={teamRuntime?.onRetryStart ? () => void teamRuntime.onRetryStart?.() : undefined}
       />
@@ -683,7 +692,7 @@ const WinkGoAgentSendBox: React.FC<{
         onChange={handleContentChange}
         selectedWorkspaceItems={atPath}
         onSelectedWorkspaceItemsChange={(items) => {
-          emitter.emit('winkgo_agent.selected.file', items);
+          emitter.emit('winkgo_agent.selected.file', items, conversation_id);
           setAtPath(items);
         }}
         loading={teamRuntime?.loading ?? isBusy}
@@ -757,7 +766,7 @@ const WinkGoAgentSendBox: React.FC<{
                         closable
                         onClose={() => {
                           const newAtPath = atPath.filter((v) => (typeof v === 'string' ? true : v.path !== item.path));
-                          emitter.emit('winkgo_agent.selected.file', newAtPath);
+                          emitter.emit('winkgo_agent.selected.file', newAtPath, conversation_id);
                           setAtPath(newAtPath);
                         }}
                       >

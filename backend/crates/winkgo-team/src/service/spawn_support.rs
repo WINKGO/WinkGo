@@ -23,18 +23,35 @@ pub(crate) fn parse_agent_type(backend: &str) -> Result<AgentType, TeamError> {
     Err(TeamError::InvalidRequest(format!("unsupported backend: {backend}")))
 }
 
-fn find_acp_backend_metadata(rows: &[AgentMetadataRow], backend: &str) -> Option<AgentMetadataRow> {
+fn find_cli_backend_metadata(rows: &[AgentMetadataRow], backend: &str) -> Option<AgentMetadataRow> {
     rows.iter()
-        .find(|row| row.agent_type == AgentType::Acp.serde_name() && row.backend.as_deref() == Some(backend))
+        .find(|row| {
+            row.backend.as_deref() == Some(backend)
+                && matches!(
+                    row.agent_type.as_str(),
+                    value if value == AgentType::Acp.serde_name()
+                        || value == AgentType::Antigravity.serde_name()
+                )
+        })
         .cloned()
 }
 
-pub(crate) async fn acp_backend_metadata(
+pub(crate) async fn cli_backend_metadata(
     agent_metadata_repo: &Arc<dyn IAgentMetadataRepository>,
     backend: &str,
 ) -> Result<Option<AgentMetadataRow>, TeamError> {
     let rows = agent_metadata_repo.list_all().await?;
-    Ok(find_acp_backend_metadata(&rows, backend))
+    Ok(find_cli_backend_metadata(&rows, backend))
+}
+
+pub(crate) fn agent_type_for_backend(
+    metadata: Option<&AgentMetadataRow>,
+    backend: &str,
+) -> Result<AgentType, TeamError> {
+    match metadata {
+        Some(row) => parse_agent_type(&row.agent_type),
+        None => parse_agent_type(backend),
+    }
 }
 
 pub(crate) fn session_mode_for_backend(

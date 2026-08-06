@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ipcBridge } from '@/common';
-import type { WinkGoXiaozhiSnapshot } from '@/common/adapter/ipcBridge';
+import type { WinkGoXiaozhiActivity, WinkGoXiaozhiSnapshot } from '@/common/adapter/ipcBridge';
 import {
   normalizeIslandActivities,
   normalizeTurnCompletedActivity,
@@ -13,6 +13,7 @@ import {
 const TRANSIENT_ACTIVITY_MAX_AGE_MS = 12_000;
 const ERROR_ACTIVITY_MAX_AGE_MS = 24_000;
 const ATTENTION_ACTIVITY_MAX_AGE_MS = 60_000;
+const XIAOZHI_ACTIVITY_MAX_AGE_MS = 5 * 60_000;
 
 const xiaozhiSignature = (snapshot: WinkGoXiaozhiSnapshot): string =>
   [
@@ -77,6 +78,19 @@ const normalizeXiaozhiActivity = (snapshot: WinkGoXiaozhiSnapshot): IslandActivi
   };
 };
 
+const normalizeXiaozhiCommandActivity = (activity: WinkGoXiaozhiActivity): IslandActivity => ({
+  id: activity.id,
+  source: activity.sourceLabel,
+  kind: 'tool',
+  status: activity.status,
+  title: sanitizeIslandActivityText(activity.command, '硬件控制指令'),
+  detail: sanitizeIslandActivityText(
+    activity.toolName ? `${activity.message} · ${activity.toolName}` : activity.message,
+    activity.message
+  ),
+  timestamp: activity.updatedAtMs,
+});
+
 export const useIslandActivityFeed = (enabled = true) => {
   const [activities, setActivities] = useState<IslandActivity[]>([]);
   const xiaozhiSignatureRef = useRef('');
@@ -118,11 +132,16 @@ export const useIslandActivityFeed = (enabled = true) => {
       xiaozhiSignatureRef.current = signature;
       setActivities((current) => upsertIslandActivities(current, [normalizeXiaozhiActivity(snapshot)]));
     });
+    const unsubscribeXiaozhiActivity =
+      ipcBridge.winkGoXiaozhi.activityChanged?.on?.((activity) => {
+        setActivities((current) => upsertIslandActivities(current, [normalizeXiaozhiCommandActivity(activity)]));
+      }) ?? (() => undefined);
 
     return () => {
       unsubscribeMessages();
       unsubscribeTurns();
       unsubscribeXiaozhi();
+      unsubscribeXiaozhiActivity();
     };
   }, [enabled]);
 
@@ -133,6 +152,7 @@ export const useIslandActivityFeed = (enabled = true) => {
       setActivities((current) => {
         const filtered = current.filter((activity) => {
           const age = now - activity.timestamp;
+          if (activity.id.startsWith('xiaozhi-command:')) return age < XIAOZHI_ACTIVITY_MAX_AGE_MS;
           if (activity.status === 'success') return age < TRANSIENT_ACTIVITY_MAX_AGE_MS;
           if (activity.status === 'error') return age < ERROR_ACTIVITY_MAX_AGE_MS;
           if (activity.status === 'attention') return age < ATTENTION_ACTIVITY_MAX_AGE_MS;

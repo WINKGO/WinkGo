@@ -19,16 +19,16 @@ export type ReplyQuote = {
 };
 
 interface EventTypes {
-  'winkgo_agent.selected.file': [Array<string | FileOrFolderItem>];
-  'winkgo_agent.selected.file.append': [Array<string | FileOrFolderItem>];
+  'winkgo_agent.selected.file': [Array<string | FileOrFolderItem>, targetConversationId?: string];
+  'winkgo_agent.selected.file.append': [Array<string | FileOrFolderItem>, targetConversationId?: string];
   'winkgo_agent.selected.file.clear': void;
   'winkgo_agent.workspace.refresh': void;
-  'acp.selected.file': [Array<string | FileOrFolderItem>];
-  'acp.selected.file.append': [Array<string | FileOrFolderItem>];
+  'acp.selected.file': [Array<string | FileOrFolderItem>, targetConversationId?: string];
+  'acp.selected.file.append': [Array<string | FileOrFolderItem>, targetConversationId?: string];
   'acp.selected.file.clear': void;
   'acp.workspace.refresh': void;
-  'codex.selected.file': [Array<string | FileOrFolderItem>];
-  'codex.selected.file.append': [Array<string | FileOrFolderItem>];
+  'codex.selected.file': [Array<string | FileOrFolderItem>, targetConversationId?: string];
+  'codex.selected.file.append': [Array<string | FileOrFolderItem>, targetConversationId?: string];
   'codex.selected.file.clear': void;
   'codex.workspace.refresh': void;
   'chat.history.refresh': void;

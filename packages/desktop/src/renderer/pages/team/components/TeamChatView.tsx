@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useWinkGoAgentModelSelection } from '@/renderer/pages/conversation/platforms/winkgo_agent/useWinkGoAgentModelSelection';
 import { isLegacyReadOnlyConversationType } from '@/renderer/pages/conversation/utils/conversationRuntime';
 import type { ITeamRunAck } from '@/common/types/team/teamTypes';
+import type { ChatFileRef } from '@/common/types/chatFile';
 import {
   buildTeamRetryStartHandler,
   buildTeamSendRuntime,
@@ -28,7 +29,7 @@ const LegacyReadOnlyConversation = React.lazy(
 
 // Narrow to WinkGoAgent conversations so model field is always available
 type WinkGoAgentConversation = Extract<TChatConversation, { type: 'winkgo_agent' }>;
-type TeamSendOverride = (payload: { input: string; files: string[] }) => Promise<void>;
+type TeamSendOverride = (payload: { input: string; files: ChatFileRef[] }) => Promise<void>;
 type TeamConversationCapabilitySnapshot = {
   skills?: string[];
   mcp_servers?: string[];
@@ -223,6 +224,7 @@ const TeamChatView: React.FC<TeamChatViewProps> = ({
 
     switch (conversation.type) {
       case 'acp':
+      case 'antigravity':
         return (
           <AcpChat
             key={conversation.id}

@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 winkgo-api-types.workspace = true
 winkgo-common.workspace = true
+winkgo-project.workspace = true
 winkgo-realtime.workspace = true
 async-trait.workspace = true
 axum.workspace = true

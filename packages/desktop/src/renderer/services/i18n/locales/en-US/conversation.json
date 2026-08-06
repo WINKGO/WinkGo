@@ -508,7 +508,15 @@
     }
   },
   "contextUsage": {
-    "contextUsed": "context used"
+    "contextUsed": "context used",
+    "tokensUsed": "{{tokens}} tokens used",
+    "windowUnknown": "Context window size unknown",
+    "sessionCost": "Session cost",
+    "input": "Input",
+    "output": "Output",
+    "thought": "Thinking",
+    "cachedRead": "Cache read",
+    "cachedWrite": "Cache write"
   },
   "skill_generator": {
     "title": "Generate Skill/Rule",
@@ -573,8 +581,50 @@
       },
       "ACP_EMPTY_TURN_REFUSAL": {
         "body": "The model refused this request before producing any visible reply."
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "{{count}} step(s) failed and did NOT take effect. agy ends such turns as successful, so check the result rather than the reply."
+      },
+      "ANTIGRAVITY_VERSION_OLDER": {
+        "body": "agy {{reported}} is older than the {{verified}} this integration was verified against; some features may be missing. Consider upgrading agy."
+      },
+      "ANTIGRAVITY_VERSION_NEWER": {
+        "body": "agy {{reported}} is newer than the {{verified}} this integration was verified against. It should still work; report anything that behaves oddly."
       }
     }
   },
-  "notFound": "Conversation not found or has been deleted"
+  "officePreview": {
+    "fileWatchUnavailable": "Live file watching is unavailable. New Office files will not open automatically. Restart WINK GO; if the issue continues, close programs using many file watchers and try again."
+  },
+  "notFound": "Conversation not found or has been deleted",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "Rename",
+      "addToChat": "Add to chat"
+    },
+    "namePlaceholder": "Name",
+    "deleteConfirm": "Delete “{{name}}”? This can’t be undone.",
+    "renameFailed": "Couldn't rename",
+    "tabs": {
+      "files": "Files",
+      "changes": "Changes"
+    },
+    "changesPlaceholder": "Source control lives in a separate lane — coming soon.",
+    "addedToChat": "Added {{name}} to chat",
+    "imported": "Imported {{count}} file(s)",
+    "importPartialFailed": "{{copied}} copied, {{failed}} failed (name conflicts or unsupported)",
+    "importFailed": "Failed to import files",
+    "search": {
+      "placeholder": "Search files by name",
+      "searching": "Searching…",
+      "empty": "No files match",
+      "limitReached": "Showing first {{count}} — refine to narrow"
+    }
+  }
 }

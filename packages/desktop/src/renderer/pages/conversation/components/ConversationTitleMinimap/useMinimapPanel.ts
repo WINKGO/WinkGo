@@ -6,7 +6,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { dispatchChatMessageJump } from '@/renderer/utils/chat/chatMinimapEvents';
+import type { ChatSearchPanelOpenDetail } from '@/renderer/utils/chat/chatMinimapEvents';
+import { CHAT_SEARCH_PANEL_OPEN_EVENT, dispatchChatMessageJump } from '@/renderer/utils/chat/chatMinimapEvents';
 import { loadAllConversationMessagesPaged } from '@/renderer/utils/chat/messagePagination';
 import { isPrimaryApplicationShortcut } from '@/renderer/utils/ui/keyboardShortcuts';
 import type { RefInputType } from '@arco-design/web-react/es/Input/interface';
@@ -183,6 +184,17 @@ export const useMinimapPanel = (conversation_id?: string): UseMinimapPanelReturn
     setIsSearchMode(true);
     void fetchTurnPreview();
   }, [conversation_id, fetchTurnPreview, panelHeight, updatePanelLayout]);
+
+  useEffect(() => {
+    if (!conversation_id) return;
+    const handleOpenRequest = (event: Event) => {
+      const detail = (event as CustomEvent<ChatSearchPanelOpenDetail>).detail;
+      if (!detail || detail.conversation_id !== conversation_id) return;
+      openSearchPanel();
+    };
+    window.addEventListener(CHAT_SEARCH_PANEL_OPEN_EVENT, handleOpenRequest);
+    return () => window.removeEventListener(CHAT_SEARCH_PANEL_OPEN_EVENT, handleOpenRequest);
+  }, [conversation_id, openSearchPanel]);
 
   const togglePanel = useCallback(() => {
     setVisible((prev) => {
