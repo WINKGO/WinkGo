@@ -141,10 +141,10 @@ function resolveLocalCargoTargetDir(projectRoot, platform, arch, env = process.e
   if (explicitTarget) return path.resolve(explicitTarget);
 
   const projectTarget = path.join(projectRoot, 'out', 'cargo-target', 'winkgo-core');
-  if (platform !== 'win32' || !/[^\x00-\x7F]/u.test(projectTarget)) return projectTarget;
+  if (platform !== 'win32' || !/[^\p{ASCII}]/u.test(projectTarget)) return projectTarget;
 
   const systemTemp = path.join(env.SystemRoot || env.WINDIR || 'C:\\Windows', 'Temp');
-  const asciiTempRoot = !/[^\x00-\x7F]/u.test(tempRoot) ? tempRoot : systemTemp;
+  const asciiTempRoot = !/[^\p{ASCII}]/u.test(tempRoot) ? tempRoot : systemTemp;
   const projectKey = createHash('sha256').update(path.resolve(projectRoot)).digest('hex').slice(0, 12);
   return path.join(asciiTempRoot, 'winkgo-cargo-target', projectKey, arch);
 }
