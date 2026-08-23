@@ -57,7 +57,9 @@
 
 .workspace-open-button {
   border: 1px solid transparent;
-  transition: border-color 0.16s ease, background-color 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
 }
 
 .workspace-open-button:hover {
@@ -85,7 +87,10 @@
   background-color: color-mix(in srgb, var(--color-bg-2) 94%, transparent);
   box-shadow: none;
   transform: translateY(-50%);
-  transition: width 0.16s ease, color 0.16s ease, background-color 0.16s ease;
+  transition:
+    width 0.16s ease,
+    color 0.16s ease,
+    background-color 0.16s ease;
 }
 
 .workspace-edge-toggle.arco-btn:hover,

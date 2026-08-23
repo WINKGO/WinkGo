@@ -4,13 +4,8 @@
   "actions": [
     {
       "id": "open",
-      "phrases": [
-        "打开",
-        "启动"
-      ],
-      "tool_names": [
-        "music.station_open"
-      ],
+      "phrases": ["打开", "启动"],
+      "tool_names": ["music.station_open"],
       "default_arguments": {
         "player": "cloud",
         "minimize": false
@@ -18,177 +13,102 @@
     },
     {
       "id": "close",
-      "phrases": [
-        "关闭",
-        "退出"
-      ],
-      "tool_names": [
-        "music.station_close"
-      ],
+      "phrases": ["关闭", "退出"],
+      "tool_names": ["music.station_close"],
       "default_arguments": {
         "player": "cloud"
       }
     },
     {
       "id": "liked",
-      "phrases": [
-        "我喜欢",
-        "红心歌曲",
-        "喜欢的音乐"
-      ],
-      "tool_names": [
-        "music.cloud_liked_songs_start"
-      ],
+      "phrases": ["我喜欢", "红心歌曲", "喜欢的音乐"],
+      "tool_names": ["music.cloud_liked_songs_start"],
       "default_arguments": {}
     },
     {
       "id": "like_current",
-      "phrases": [
-        "喜欢这首歌",
-        "收藏这首歌",
-        "点红心"
-      ],
-      "tool_names": [
-        "music.track_heart_toggle"
-      ],
+      "phrases": ["喜欢这首歌", "收藏这首歌", "点红心"],
+      "tool_names": ["music.track_heart_toggle"],
       "default_arguments": {
         "player": "cloud"
       }
     },
     {
       "id": "history",
-      "phrases": [
-        "最近播放",
-        "历史播放"
-      ],
-      "tool_names": [
-        "music.cloud_history_start"
-      ],
+      "phrases": ["最近播放", "历史播放"],
+      "tool_names": ["music.cloud_history_start"],
       "default_arguments": {}
     },
     {
       "id": "search_play",
-      "phrases": [
-        "搜索播放",
-        "播放",
-        "听"
-      ],
-      "tool_names": [
-        "music.track_resolve_and_start"
-      ],
+      "phrases": ["搜索播放", "播放", "听"],
+      "tool_names": ["music.track_resolve_and_start"],
       "default_arguments": {
         "player": "cloud"
       }
     },
     {
       "id": "collected_playlists",
-      "phrases": [
-        "收藏歌单",
-        "收藏的歌单"
-      ],
-      "tool_names": [
-        "music.cloud_collected_playlists_open"
-      ],
+      "phrases": ["收藏歌单", "收藏的歌单"],
+      "tool_names": ["music.cloud_collected_playlists_open"],
       "default_arguments": {}
     },
     {
       "id": "created_playlists",
-      "phrases": [
-        "创建的歌单",
-        "自建歌单"
-      ],
-      "tool_names": [
-        "music.cloud_created_playlists_open"
-      ],
+      "phrases": ["创建的歌单", "自建歌单"],
+      "tool_names": ["music.cloud_created_playlists_open"],
       "default_arguments": {}
     },
     {
       "id": "official_charts",
-      "phrases": [
-        "飙升榜",
-        "热歌榜",
-        "新歌榜",
-        "原创榜"
-      ],
-      "tool_names": [
-        "music.cloud_list_start_named"
-      ],
+      "phrases": ["飙升榜", "热歌榜", "新歌榜", "原创榜"],
+      "tool_names": ["music.cloud_list_start_named"],
       "default_arguments": {}
     },
     {
       "id": "daily_recommendation",
-      "phrases": [
-        "每日推荐",
-        "今日推荐"
-      ],
-      "tool_names": [
-        "music.cloud_daily_start"
-      ],
+      "phrases": ["每日推荐", "今日推荐"],
+      "tool_names": ["music.cloud_daily_start"],
       "default_arguments": {}
     },
     {
       "id": "private_radar",
-      "phrases": [
-        "私人雷达"
-      ],
-      "tool_names": [
-        "music.cloud_radar_mix_start"
-      ],
+      "phrases": ["私人雷达"],
+      "tool_names": ["music.cloud_radar_mix_start"],
       "default_arguments": {}
     },
     {
       "id": "private_roaming",
-      "phrases": [
-        "私人漫游"
-      ],
-      "tool_names": [
-        "music.play_roaming"
-      ],
+      "phrases": ["私人漫游"],
+      "tool_names": ["music.play_roaming"],
       "default_arguments": {}
     },
     {
       "id": "curated_playlists",
-      "phrases": [
-        "推荐歌单",
-        "精选歌单"
-      ],
-      "tool_names": [
-        "music.cloud_curated_start"
-      ],
+      "phrases": ["推荐歌单", "精选歌单"],
+      "tool_names": ["music.cloud_curated_start"],
       "default_arguments": {}
     },
     {
       "id": "next_track",
-      "phrases": [
-        "下一首"
-      ],
-      "tool_names": [
-        "music.station_track_next"
-      ],
+      "phrases": ["下一首"],
+      "tool_names": ["music.station_track_next"],
       "default_arguments": {
         "player": "cloud"
       }
     },
     {
       "id": "previous_track",
-      "phrases": [
-        "上一首"
-      ],
-      "tool_names": [
-        "music.station_track_previous"
-      ],
+      "phrases": ["上一首"],
+      "tool_names": ["music.station_track_previous"],
       "default_arguments": {
         "player": "cloud"
       }
     },
     {
       "id": "pause",
-      "phrases": [
-        "暂停"
-      ],
-      "tool_names": [
-        "music.control_playback"
-      ],
+      "phrases": ["暂停"],
+      "tool_names": ["music.control_playback"],
       "default_arguments": {
         "action": "pause",
         "player": "cloud"
@@ -196,12 +116,8 @@
     },
     {
       "id": "resume",
-      "phrases": [
-        "继续播放"
-      ],
-      "tool_names": [
-        "music.control_playback"
-      ],
+      "phrases": ["继续播放"],
+      "tool_names": ["music.control_playback"],
       "default_arguments": {
         "action": "play",
         "player": "cloud"
@@ -209,12 +125,8 @@
     },
     {
       "id": "volume_set",
-      "phrases": [
-        "音量调到80"
-      ],
-      "tool_names": [
-        "music.system_volume_set"
-      ],
+      "phrases": ["音量调到80"],
+      "tool_names": ["music.system_volume_set"],
       "default_arguments": {
         "player": "cloud",
         "percent": 80
@@ -222,52 +134,32 @@
     },
     {
       "id": "volume_raise",
-      "phrases": [
-        "调大音量"
-      ],
-      "tool_names": [
-        "music.system_volume_raise"
-      ],
+      "phrases": ["调大音量"],
+      "tool_names": ["music.system_volume_raise"],
       "default_arguments": {
         "player": "cloud"
       }
     },
     {
       "id": "volume_lower",
-      "phrases": [
-        "调小音量"
-      ],
-      "tool_names": [
-        "music.system_volume_lower"
-      ],
+      "phrases": ["调小音量"],
+      "tool_names": ["music.system_volume_lower"],
       "default_arguments": {
         "player": "cloud"
       }
     },
     {
       "id": "lyrics",
-      "phrases": [
-        "切换歌词",
-        "歌词"
-      ],
-      "tool_names": [
-        "music.station_lyrics_toggle"
-      ],
+      "phrases": ["切换歌词", "歌词"],
+      "tool_names": ["music.station_lyrics_toggle"],
       "default_arguments": {
         "player": "cloud"
       }
     },
     {
       "id": "play_mode",
-      "phrases": [
-        "单曲循环",
-        "顺序播放",
-        "列表循环",
-        "随机播放"
-      ],
-      "tool_names": [
-        "music.cloud_play_mode_set"
-      ],
+      "phrases": ["单曲循环", "顺序播放", "列表循环", "随机播放"],
+      "tool_names": ["music.cloud_play_mode_set"],
       "default_arguments": {}
     },
     {
@@ -281,9 +173,7 @@
         "放的什么歌",
         "播的什么歌"
       ],
-      "tool_names": [
-        "music.station_now_snapshot"
-      ],
+      "tool_names": ["music.station_now_snapshot"],
       "default_arguments": {
         "player": "cloud",
         "force_refresh": true
@@ -317,7 +207,7 @@
       "id": "compact_mode",
       "phrases": ["迷你模式", "切换迷你播放器", "紧凑模式"],
       "tool_names": ["music.station_compact_toggle"],
-      "default_arguments": {"player": "cloud"}
+      "default_arguments": { "player": "cloud" }
     }
   ]
 }

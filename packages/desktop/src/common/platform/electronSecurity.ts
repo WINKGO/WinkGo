@@ -16,13 +16,7 @@ const PDF_VIEWER_EXTENSION_ORIGIN = 'chrome-extension://mhjfbmdgcfjbbpaeojofohoe
 const MAX_EXTERNAL_URL_LENGTH = 8 * 1024;
 const MAX_EXTENSION_PARTITION_SUFFIX_LENGTH = 128;
 
-export type TrustedWindowRole =
-  | 'main'
-  | 'island'
-  | 'automation-overlay'
-  | 'pet-render'
-  | 'pet-hit'
-  | 'pet-confirm';
+export type TrustedWindowRole = 'main' | 'island' | 'automation-overlay' | 'pet-render' | 'pet-hit' | 'pet-confirm';
 
 export type TrustedWindowUrlPolicy = {
   devOrigin?: string;

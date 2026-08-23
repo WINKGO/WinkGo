@@ -224,7 +224,9 @@ test.describe('Desktop automation recorder', () => {
       .poll(
         async () =>
           (await recorderPanel.isVisible())
-            ? `visible: ${String(await recorderPanel.textContent()).replace(/\s+/g, ' ').trim()}`
+            ? `visible: ${String(await recorderPanel.textContent())
+                .replace(/\s+/g, ' ')
+                .trim()}`
             : 'hidden',
         { timeout: 45_000, message: 'Waiting for one-click recording to lock a safe external window' }
       )
@@ -246,15 +248,15 @@ test.describe('Desktop automation recorder', () => {
     await openDesktopRecorder(electronApp);
     await expect(recorderPanel.locator('.winkgo-desktop-recorder__status')).toHaveAttribute('data-phase', 'recording');
     await expect
-      .poll(async () => Number(await recorderPanel.locator('.winkgo-desktop-recorder__status').getAttribute('data-step-count')))
+      .poll(async () =>
+        Number(await recorderPanel.locator('.winkgo-desktop-recorder__status').getAttribute('data-step-count'))
+      )
       .toBeGreaterThanOrEqual(4);
     const captureInputs = recorderPanel.locator('.winkgo-desktop-recorder__capture input');
     await captureInputs.nth(0).fill(SKILL_NAME);
     await captureInputs.nth(1).fill('真实 Windows 计算器录制、持久化和确定性回放验收');
     await recorderPanel.screenshot({ path: path.join(ARTIFACT_ROOT, '02-recorded-steps.png') });
-    await recorderPanel
-      .getByRole('button', { name: /Stop and save|停止并保存|Save Skill|保存.*技能/i })
-      .click();
+    await recorderPanel.getByRole('button', { name: /Stop and save|停止并保存|Save Skill|保存.*技能/i }).click();
 
     const savedSkill = recorderPanel
       .locator('.winkgo-desktop-recorder__skills article')

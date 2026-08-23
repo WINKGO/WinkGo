@@ -12,9 +12,7 @@ describe('HTML preview workspace path boundary', () => {
   const workspace = '/home/user/workspace';
 
   it('allows resources that remain inside the workspace', () => {
-    expect(resolveRelativePath(`${workspace}/sub/index.html`, '../img.png', workspace)).toBe(
-      `${workspace}/img.png`
-    );
+    expect(resolveRelativePath(`${workspace}/sub/index.html`, '../img.png', workspace)).toBe(`${workspace}/img.png`);
   });
 
   it('blocks relative traversal outside the workspace', () => {
@@ -30,9 +28,9 @@ describe('HTML preview workspace path boundary', () => {
   });
 
   it('normalizes an absolute path before checking the boundary', () => {
-    expect(() =>
-      resolveRelativePath(`${workspace}/index.html`, `${workspace}/../../secret`, workspace)
-    ).toThrow('Path traversal blocked');
+    expect(() => resolveRelativePath(`${workspace}/index.html`, `${workspace}/../../secret`, workspace)).toThrow(
+      'Path traversal blocked'
+    );
     expect(resolveRelativePath(`${workspace}/index.html`, `${workspace}/sub/../img.png`, workspace)).toBe(
       `${workspace}/img.png`
     );

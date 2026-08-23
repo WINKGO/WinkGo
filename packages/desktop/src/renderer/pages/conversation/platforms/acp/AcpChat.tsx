@@ -113,8 +113,4 @@ const AcpChat: React.FC<{
   );
 };
 
-export default HOC.Wrapper(
-  MessageListProvider,
-  MessageListLoadingProvider,
-  MessagePaginationProvider
-)(AcpChat);
+export default HOC.Wrapper(MessageListProvider, MessageListLoadingProvider, MessagePaginationProvider)(AcpChat);

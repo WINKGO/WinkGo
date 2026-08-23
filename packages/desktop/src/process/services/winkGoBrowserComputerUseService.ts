@@ -27,9 +27,7 @@ const publish = (patch: Partial<BrowserComputerUseStatus>): BrowserComputerUseSt
 };
 
 export const getWinkGoBrowserComputerUseStatus = (): BrowserComputerUseStatus => snapshot();
-export const onWinkGoBrowserComputerUseStatus = (
-  listener: (next: BrowserComputerUseStatus) => void
-): (() => void) => {
+export const onWinkGoBrowserComputerUseStatus = (listener: (next: BrowserComputerUseStatus) => void): (() => void) => {
   listeners.add(listener);
   listener(snapshot());
   return () => listeners.delete(listener);
@@ -73,7 +71,10 @@ export const runWinkGoBrowserComputerUse = async (
   } catch (error) {
     return {
       ok: false,
-      status: publish({ phase: abort.signal.aborted ? 'cancelled' : 'failed', message: error instanceof Error ? error.message : String(error) }),
+      status: publish({
+        phase: abort.signal.aborted ? 'cancelled' : 'failed',
+        message: error instanceof Error ? error.message : String(error),
+      }),
     };
   } finally {
     if (activeAbort === abort) activeAbort = null;

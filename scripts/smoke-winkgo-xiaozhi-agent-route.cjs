@@ -6,7 +6,9 @@ const token = String(process.env.WINKGO_TEST_RUNTIME_TOKEN || '').trim();
 if (!token) throw new Error('WINKGO_TEST_RUNTIME_TOKEN is required');
 
 const source = String(process.env.WINKGO_QA_SOURCE || '').trim() || `xiaozhi_hardware:qa-agent-route-${Date.now()}`;
-const mode = String(process.env.WINKGO_QA_MODE || 'full').trim().toLowerCase();
+const mode = String(process.env.WINKGO_QA_MODE || 'full')
+  .trim()
+  .toLowerCase();
 const adHocCommand = String(process.env.WINKGO_QA_COMMAND || '').trim();
 const runtimeSocketUrl = String(process.env.WINKGO_QA_RUNTIME_WS || 'ws://127.0.0.1:8121/mcp').trim();
 const socket = new WebSocket(runtimeSocketUrl, {
@@ -83,9 +85,7 @@ const run = async () => {
     return;
   }
 
-  const submitted = await callCommand(
-    '小智，管家帮我查询明天珠海到长沙的机票；这是路由测试，只生成计划，不提交订单'
-  );
+  const submitted = await callCommand('小智，管家帮我查询明天珠海到长沙的机票；这是路由测试，只生成计划，不提交订单');
   if (submitted.routing_mode !== 'agent' || submitted.execution_status !== 'agent_task_accepted') {
     throw new Error(`Agent submission was misrouted: ${JSON.stringify(submitted)}`);
   }

@@ -1157,9 +1157,7 @@ try {
   });
   if (packedPrivacyAudit.error || packedPrivacyAudit.status !== 0) {
     throw new Error(
-      `Packed release privacy audit failed: ${
-        packedPrivacyAudit.error?.message || `exit ${packedPrivacyAudit.status}`
-      }`
+      `Packed release privacy audit failed: ${packedPrivacyAudit.error?.message || `exit ${packedPrivacyAudit.status}`}`
     );
   }
 

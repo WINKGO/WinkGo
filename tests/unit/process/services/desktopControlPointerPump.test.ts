@@ -11,10 +11,7 @@ describe('desktop Computer Use live pointer feedback', () => {
   it('publishes the real cursor while control is active and stops polling at the terminal state', () => {
     vi.useFakeTimers();
     const publish = vi.fn();
-    const getCursor = vi
-      .fn()
-      .mockReturnValueOnce({ x: 100, y: 120 })
-      .mockReturnValueOnce({ x: 140, y: 180 });
+    const getCursor = vi.fn().mockReturnValueOnce({ x: 100, y: 120 }).mockReturnValueOnce({ x: 140, y: 180 });
     const pump = new DesktopControlPointerPump({ getCursor, publish, intervalMs: 60 });
 
     pump.update({

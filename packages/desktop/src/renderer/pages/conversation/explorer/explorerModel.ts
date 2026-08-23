@@ -423,11 +423,7 @@ export function isTransferAllowed(source: DragPeRef, target: DirRef, op: Transfe
   if (isDescendantOrSelf(peKey(target.pe_id, target.relative_path), peKey(source.pe_id, source.relative_path))) {
     return false;
   }
-  return !(
-    op === 'move' &&
-    source.pe_id === target.pe_id &&
-    parentRel(source.relative_path) === target.relative_path
-  );
+  return !(op === 'move' && source.pe_id === target.pe_id && parentRel(source.relative_path) === target.relative_path);
 }
 
 export function buildTransferRequest(op: TransferOp, from: DirRef, toDir: DirRef): FsOpRequest {

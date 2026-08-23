@@ -39,9 +39,8 @@ const BrowserDataSection: React.FC = () => {
   const [loginSwitchLoading, setLoginSwitchLoading] = useState(false);
   const [consentVisible, setConsentVisible] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
-  const { data: loginPermission, isLoading: loginPermissionLoading } = useSWR(
-    'browser.login-permission',
-    () => ipcBridge.systemSettings.getBrowserLoginPermission.invoke()
+  const { data: loginPermission, isLoading: loginPermissionLoading } = useSWR('browser.login-permission', () =>
+    ipcBridge.systemSettings.getBrowserLoginPermission.invoke()
   );
 
   const status = cdpStatus?.data;

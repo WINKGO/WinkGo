@@ -250,9 +250,7 @@ const ChatConversation: React.FC<{
             conversation_id={conversation.id}
             workspace={conversation.extra?.workspace}
             backend={resolvedConversationBackend || 'claude'}
-            initialModelId={
-              (conversation.extra as { current_model_id?: string } | undefined)?.current_model_id
-            }
+            initialModelId={(conversation.extra as { current_model_id?: string } | undefined)?.current_model_id}
             session_mode={conversation.extra?.session_mode}
             agent_name={assistantDisplayName}
             cron_job_id={cronJobId}

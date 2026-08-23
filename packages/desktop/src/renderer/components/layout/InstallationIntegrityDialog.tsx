@@ -155,22 +155,22 @@ export function getInstallationIntegrityModalActions(
       diagnosticsKind === 'database_newer_than_app'
         ? undefined
         : diagnosticsKind === 'recoverable_database_corruption'
-        ? t('common.backendStartup.recoverableDatabaseCorruption.sendDiagnostics')
-        : diagnosticsKind === 'transient_concurrent_startup'
-          ? t('common.backendStartup.transientConcurrentStartup.sendDiagnostics')
-          : diagnosticsKind === 'startup_directory'
-            ? t('common.backendStartup.startupDirectory.sendDiagnostics')
-            : diagnosticsKind === 'backend_exited'
-              ? t('common.backendStartup.exited.sendDiagnostics')
-              : diagnosticsKind === 'port_report_timeout'
-                ? t('common.backendStartup.portReportTimeout.sendDiagnostics')
-                : diagnosticsKind === 'startup_failed'
-                  ? t('common.backendStartup.startupFailed.sendDiagnostics')
-                  : diagnosticsKind === 'local_data_repair'
-                    ? t('common.backendStartup.localDataRepair.sendDiagnostics')
-                    : diagnosticsKind === 'data_migration'
-                      ? t('common.backendStartup.dataMigration.sendDiagnostics')
-                      : getInstallationIntegritySendDiagnosticsText(t),
+          ? t('common.backendStartup.recoverableDatabaseCorruption.sendDiagnostics')
+          : diagnosticsKind === 'transient_concurrent_startup'
+            ? t('common.backendStartup.transientConcurrentStartup.sendDiagnostics')
+            : diagnosticsKind === 'startup_directory'
+              ? t('common.backendStartup.startupDirectory.sendDiagnostics')
+              : diagnosticsKind === 'backend_exited'
+                ? t('common.backendStartup.exited.sendDiagnostics')
+                : diagnosticsKind === 'port_report_timeout'
+                  ? t('common.backendStartup.portReportTimeout.sendDiagnostics')
+                  : diagnosticsKind === 'startup_failed'
+                    ? t('common.backendStartup.startupFailed.sendDiagnostics')
+                    : diagnosticsKind === 'local_data_repair'
+                      ? t('common.backendStartup.localDataRepair.sendDiagnostics')
+                      : diagnosticsKind === 'data_migration'
+                        ? t('common.backendStartup.dataMigration.sendDiagnostics')
+                        : getInstallationIntegritySendDiagnosticsText(t),
   };
 }
 

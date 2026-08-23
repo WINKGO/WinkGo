@@ -124,8 +124,7 @@ describe('classifyBackendStartupFailure — database newer than WINK GO', () => 
       details: {
         backendBoundaryCode: 'BOOTSTRAP_DATA_INIT_FAILED',
         backendBoundaryStage: 'database.newer_than_app',
-        stderrTail:
-          'BOOTSTRAP_DATA_INIT_FAILED stage=database.newer_than_app databasePath=/db/winkgo-backend.db',
+        stderrTail: 'BOOTSTRAP_DATA_INIT_FAILED stage=database.newer_than_app databasePath=/db/winkgo-backend.db',
       },
       message: 'WINK GO Core exited before health check passed',
       name: 'BackendStartupError',

@@ -201,42 +201,43 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
             }
           : {};
 
-      const dropProps = onImportFiles || onTransfer
-        ? {
-            onDragOver: (e: React.DragEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const source = dragSourceRef.current;
-              if (source && onTransfer) {
-                const target = { pe_id: peId, relative_path: dropTargetRel };
-                const op = resolveTransferOp(source.pe_id === peId, isCopyModifierPressed(e, isMacOS()));
-                const allowed = isTransferAllowed(source, target, op);
-                e.dataTransfer.dropEffect = allowed ? op : 'none';
-                setDragOverKey(allowed ? key : null);
-              } else if (onImportFiles) {
-                e.dataTransfer.dropEffect = 'copy';
-                if (dragOverKey !== key) setDragOverKey(key);
-              }
-            },
-            onDragLeave: () => setDragOverKey((prev) => (prev === key ? null : prev)),
-            onDrop: (e: React.DragEvent) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setDragOverKey(null);
-              const source = parsePeRef(e.dataTransfer.getData(PE_REF_DRAG_MIME));
-              if (source && onTransfer) {
-                const target = { pe_id: peId, relative_path: dropTargetRel };
-                const op = resolveTransferOp(source.pe_id === peId, isCopyModifierPressed(e, isMacOS()));
-                if (isTransferAllowed(source, target, op)) onTransfer(source, peId, dropTargetRel, op);
-                return;
-              }
-              const paths = getFilesFromDropEvent(e.nativeEvent)
-                .map((f) => f.path)
-                .filter(Boolean);
-              if (paths.length) onImportFiles(peId, dropTargetRel, paths);
-            },
-          }
-        : {};
+      const dropProps =
+        onImportFiles || onTransfer
+          ? {
+              onDragOver: (e: React.DragEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const source = dragSourceRef.current;
+                if (source && onTransfer) {
+                  const target = { pe_id: peId, relative_path: dropTargetRel };
+                  const op = resolveTransferOp(source.pe_id === peId, isCopyModifierPressed(e, isMacOS()));
+                  const allowed = isTransferAllowed(source, target, op);
+                  e.dataTransfer.dropEffect = allowed ? op : 'none';
+                  setDragOverKey(allowed ? key : null);
+                } else if (onImportFiles) {
+                  e.dataTransfer.dropEffect = 'copy';
+                  if (dragOverKey !== key) setDragOverKey(key);
+                }
+              },
+              onDragLeave: () => setDragOverKey((prev) => (prev === key ? null : prev)),
+              onDrop: (e: React.DragEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverKey(null);
+                const source = parsePeRef(e.dataTransfer.getData(PE_REF_DRAG_MIME));
+                if (source && onTransfer) {
+                  const target = { pe_id: peId, relative_path: dropTargetRel };
+                  const op = resolveTransferOp(source.pe_id === peId, isCopyModifierPressed(e, isMacOS()));
+                  if (isTransferAllowed(source, target, op)) onTransfer(source, peId, dropTargetRel, op);
+                  return;
+                }
+                const paths = getFilesFromDropEvent(e.nativeEvent)
+                  .map((f) => f.path)
+                  .filter(Boolean);
+                if (paths.length) onImportFiles(peId, dropTargetRel, paths);
+              },
+            }
+          : {};
 
       const title = (
         <span
@@ -359,46 +360,47 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
     if (onImportFiles && workspacePeId && filePaths.length) onImportFiles(workspacePeId, '', filePaths);
   };
 
-  const containerProps = onImportFiles || onTransfer
-    ? {
-        onDragOver: (e: React.DragEvent) => {
-          e.preventDefault();
-          const source = dragSourceRef.current;
-          if (source && onTransfer && workspacePeId) {
-            const op = resolveTransferOp(source.pe_id === workspacePeId, isCopyModifierPressed(e, isMacOS()));
-            e.dataTransfer.dropEffect = isTransferAllowed(source, { pe_id: workspacePeId, relative_path: '' }, op)
-              ? op
-              : 'none';
-          }
-        },
-        onDrop: (e: React.DragEvent) => {
-          e.preventDefault();
-          const source = parsePeRef(e.dataTransfer.getData(PE_REF_DRAG_MIME));
-          if (source && onTransfer && workspacePeId) {
-            const op = resolveTransferOp(source.pe_id === workspacePeId, isCopyModifierPressed(e, isMacOS()));
-            if (isTransferAllowed(source, { pe_id: workspacePeId, relative_path: '' }, op)) {
-              onTransfer(source, workspacePeId, '', op);
+  const containerProps =
+    onImportFiles || onTransfer
+      ? {
+          onDragOver: (e: React.DragEvent) => {
+            e.preventDefault();
+            const source = dragSourceRef.current;
+            if (source && onTransfer && workspacePeId) {
+              const op = resolveTransferOp(source.pe_id === workspacePeId, isCopyModifierPressed(e, isMacOS()));
+              e.dataTransfer.dropEffect = isTransferAllowed(source, { pe_id: workspacePeId, relative_path: '' }, op)
+                ? op
+                : 'none';
             }
-            return;
-          }
-          importToWorkspaceRoot(
-            getFilesFromDropEvent(e.nativeEvent)
-              .map((f) => f.path)
-              .filter(Boolean)
-          );
-        },
-        onPaste: (e: React.ClipboardEvent) => {
-          const files = e.clipboardData?.files;
-          if (!files?.length) return;
-          const paths: string[] = [];
-          for (let i = 0; i < files.length; i += 1) {
-            const p = (files[i] as File & { path?: string }).path;
-            if (p) paths.push(p);
-          }
-          if (paths.length) importToWorkspaceRoot(paths);
-        },
-      }
-    : {};
+          },
+          onDrop: (e: React.DragEvent) => {
+            e.preventDefault();
+            const source = parsePeRef(e.dataTransfer.getData(PE_REF_DRAG_MIME));
+            if (source && onTransfer && workspacePeId) {
+              const op = resolveTransferOp(source.pe_id === workspacePeId, isCopyModifierPressed(e, isMacOS()));
+              if (isTransferAllowed(source, { pe_id: workspacePeId, relative_path: '' }, op)) {
+                onTransfer(source, workspacePeId, '', op);
+              }
+              return;
+            }
+            importToWorkspaceRoot(
+              getFilesFromDropEvent(e.nativeEvent)
+                .map((f) => f.path)
+                .filter(Boolean)
+            );
+          },
+          onPaste: (e: React.ClipboardEvent) => {
+            const files = e.clipboardData?.files;
+            if (!files?.length) return;
+            const paths: string[] = [];
+            for (let i = 0; i < files.length; i += 1) {
+              const p = (files[i] as File & { path?: string }).path;
+              if (p) paths.push(p);
+            }
+            if (paths.length) importToWorkspaceRoot(paths);
+          },
+        }
+      : {};
 
   return (
     <div className='h-full' tabIndex={-1} ref={containerRef} {...containerProps}>

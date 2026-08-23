@@ -100,7 +100,8 @@ const ComputerUsePanel: React.FC<ComputerUsePanelProps> = ({ kind }) => {
     try {
       const result = await bridge.run.invoke({ goal: trimmedGoal, model, maxSteps: 12 });
       setStatus(result.status);
-      if (!result.ok) setFeedback(result.status.message || t('common.computerUse.failed', { defaultValue: '任务未完成' }));
+      if (!result.ok)
+        setFeedback(result.status.message || t('common.computerUse.failed', { defaultValue: '任务未完成' }));
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : String(error));
     }
@@ -131,7 +132,12 @@ const ComputerUsePanel: React.FC<ComputerUsePanelProps> = ({ kind }) => {
 
       <label className={styles.label}>
         <span>{t('common.computerUse.goal', { defaultValue: '要完成的任务' })}</span>
-        <Input.TextArea value={goal} onChange={setGoal} placeholder={placeholder} autoSize={{ minRows: 3, maxRows: 4 }} />
+        <Input.TextArea
+          value={goal}
+          onChange={setGoal}
+          placeholder={placeholder}
+          autoSize={{ minRows: 3, maxRows: 4 }}
+        />
       </label>
 
       <div className={styles.status} data-phase={status.phase}>
@@ -159,7 +165,12 @@ const ComputerUsePanel: React.FC<ComputerUsePanelProps> = ({ kind }) => {
             {t('common.computerUse.stop', { defaultValue: '停止' })}
           </Button>
         ) : (
-          <Button type='primary' icon={<PlayOne />} disabled={!goal.trim() || !readModelRef(modelValue)} onClick={start}>
+          <Button
+            type='primary'
+            icon={<PlayOne />}
+            disabled={!goal.trim() || !readModelRef(modelValue)}
+            onClick={start}
+          >
             {kind === 'desktop'
               ? t('common.desktopComputerUse.start', { defaultValue: '开始控制桌面' })
               : t('common.browserComputerUse.start', { defaultValue: '开始控制内置浏览器' })}

@@ -4,13 +4,8 @@
   "actions": [
     {
       "id": "open",
-      "phrases": [
-        "打开",
-        "启动"
-      ],
-      "tool_names": [
-        "music.station_open"
-      ],
+      "phrases": ["打开", "启动"],
+      "tool_names": ["music.station_open"],
       "default_arguments": {
         "player": "fizz",
         "minimize": false
@@ -18,205 +13,116 @@
     },
     {
       "id": "close",
-      "phrases": [
-        "关闭",
-        "退出"
-      ],
-      "tool_names": [
-        "music.station_close"
-      ],
+      "phrases": ["关闭", "退出"],
+      "tool_names": ["music.station_close"],
       "default_arguments": {
         "player": "fizz"
       }
     },
     {
       "id": "search_play",
-      "phrases": [
-        "搜索播放",
-        "播放",
-        "听"
-      ],
-      "tool_names": [
-        "music.fizz_search_play"
-      ],
+      "phrases": ["搜索播放", "播放", "听"],
+      "tool_names": ["music.fizz_search_play"],
       "default_arguments": {}
     },
     {
       "id": "favorites",
-      "phrases": [
-        "我喜欢",
-        "喜欢的音乐"
-      ],
-      "tool_names": [
-        "music.fizz_favorites_start"
-      ],
+      "phrases": ["我喜欢", "喜欢的音乐"],
+      "tool_names": ["music.fizz_favorites_start"],
       "default_arguments": {}
     },
     {
       "id": "favorites_open",
-      "phrases": [
-        "打开我喜欢",
-        "进入我喜欢的音乐"
-      ],
-      "tool_names": [
-        "music.fizz_favorites_now"
-      ],
+      "phrases": ["打开我喜欢", "进入我喜欢的音乐"],
+      "tool_names": ["music.fizz_favorites_now"],
       "default_arguments": {}
     },
     {
       "id": "like_current",
-      "phrases": [
-        "喜欢这首歌",
-        "收藏这首歌",
-        "点红心"
-      ],
-      "tool_names": [
-        "music.fizz_like_current_song"
-      ],
+      "phrases": ["喜欢这首歌", "收藏这首歌", "点红心"],
+      "tool_names": ["music.fizz_like_current_song"],
       "default_arguments": {}
     },
     {
       "id": "recommendation",
-      "phrases": [
-        "推荐音乐",
-        "推荐"
-      ],
-      "tool_names": [
-        "music.fizz_home_start"
-      ],
+      "phrases": ["推荐音乐", "推荐"],
+      "tool_names": ["music.fizz_home_start"],
       "default_arguments": {}
     },
     {
       "id": "recommendation_open",
-      "phrases": [
-        "打开推荐页",
-        "进入汽水推荐"
-      ],
-      "tool_names": [
-        "music.fizz_home_now"
-      ],
+      "phrases": ["打开推荐页", "进入汽水推荐"],
+      "tool_names": ["music.fizz_home_now"],
       "default_arguments": {}
     },
     {
       "id": "listen_mode",
-      "phrases": [
-        "听歌模式",
-        "听歌频道"
-      ],
-      "tool_names": [
-        "music.fizz_mode_start"
-      ],
+      "phrases": ["听歌模式", "听歌频道"],
+      "tool_names": ["music.fizz_mode_start"],
       "default_arguments": {}
     },
     {
       "id": "listen_mode_open",
-      "phrases": [
-        "打开听歌模式",
-        "进入听歌模式"
-      ],
-      "tool_names": [
-        "music.fizz_mode_now"
-      ],
+      "phrases": ["打开听歌模式", "进入听歌模式"],
+      "tool_names": ["music.fizz_mode_now"],
       "default_arguments": {}
     },
     {
       "id": "douyin_collection",
-      "phrases": [
-        "抖音收藏",
-        "抖音收藏的音乐"
-      ],
-      "tool_names": [
-        "music.fizz_douyin_start"
-      ],
+      "phrases": ["抖音收藏", "抖音收藏的音乐"],
+      "tool_names": ["music.fizz_douyin_start"],
       "default_arguments": {}
     },
     {
       "id": "douyin_collection_open",
-      "phrases": [
-        "打开抖音收藏",
-        "进入抖音收藏"
-      ],
-      "tool_names": [
-        "music.fizz_douyin_now"
-      ],
+      "phrases": ["打开抖音收藏", "进入抖音收藏"],
+      "tool_names": ["music.fizz_douyin_now"],
       "default_arguments": {}
     },
     {
       "id": "history",
-      "phrases": [
-        "历史播放",
-        "最近播放"
-      ],
-      "tool_names": [
-        "music.fizz_history_start"
-      ],
+      "phrases": ["历史播放", "最近播放"],
+      "tool_names": ["music.fizz_history_start"],
       "default_arguments": {}
     },
     {
       "id": "history_open",
-      "phrases": [
-        "打开历史播放",
-        "进入最近播放"
-      ],
-      "tool_names": [
-        "music.fizz_history_now"
-      ],
+      "phrases": ["打开历史播放", "进入最近播放"],
+      "tool_names": ["music.fizz_history_now"],
       "default_arguments": {}
     },
     {
       "id": "created_playlists",
-      "phrases": [
-        "创建歌单",
-        "创建的歌单"
-      ],
-      "tool_names": [
-        "music.fizz_created_start"
-      ],
+      "phrases": ["创建歌单", "创建的歌单"],
+      "tool_names": ["music.fizz_created_start"],
       "default_arguments": {}
     },
     {
       "id": "created_playlists_open",
-      "phrases": [
-        "打开创建的歌单",
-        "进入我的歌单"
-      ],
-      "tool_names": [
-        "music.fizz_created_now"
-      ],
+      "phrases": ["打开创建的歌单", "进入我的歌单"],
+      "tool_names": ["music.fizz_created_now"],
       "default_arguments": {}
     },
     {
       "id": "next_track",
-      "phrases": [
-        "下一首"
-      ],
-      "tool_names": [
-        "music.station_track_next"
-      ],
+      "phrases": ["下一首"],
+      "tool_names": ["music.station_track_next"],
       "default_arguments": {
         "player": "fizz"
       }
     },
     {
       "id": "previous_track",
-      "phrases": [
-        "上一首"
-      ],
-      "tool_names": [
-        "music.station_track_previous"
-      ],
+      "phrases": ["上一首"],
+      "tool_names": ["music.station_track_previous"],
       "default_arguments": {
         "player": "fizz"
       }
     },
     {
       "id": "pause",
-      "phrases": [
-        "暂停"
-      ],
-      "tool_names": [
-        "music.control_playback"
-      ],
+      "phrases": ["暂停"],
+      "tool_names": ["music.control_playback"],
       "default_arguments": {
         "action": "pause",
         "player": "fizz"
@@ -224,12 +130,8 @@
     },
     {
       "id": "resume",
-      "phrases": [
-        "继续播放"
-      ],
-      "tool_names": [
-        "music.control_playback"
-      ],
+      "phrases": ["继续播放"],
+      "tool_names": ["music.control_playback"],
       "default_arguments": {
         "action": "play",
         "player": "fizz"
@@ -237,62 +139,40 @@
     },
     {
       "id": "volume_set",
-      "phrases": [
-        "音量调到80"
-      ],
-      "tool_names": [
-        "music.system_volume_set"
-      ],
+      "phrases": ["音量调到80"],
+      "tool_names": ["music.system_volume_set"],
       "default_arguments": {
         "player": "fizz"
       }
     },
     {
       "id": "volume_raise",
-      "phrases": [
-        "调大音量"
-      ],
-      "tool_names": [
-        "music.system_volume_raise"
-      ],
+      "phrases": ["调大音量"],
+      "tool_names": ["music.system_volume_raise"],
       "default_arguments": {
         "player": "fizz"
       }
     },
     {
       "id": "volume_lower",
-      "phrases": [
-        "调小音量"
-      ],
-      "tool_names": [
-        "music.system_volume_lower"
-      ],
+      "phrases": ["调小音量"],
+      "tool_names": ["music.system_volume_lower"],
       "default_arguments": {
         "player": "fizz"
       }
     },
     {
       "id": "lyrics",
-      "phrases": [
-        "切换歌词",
-        "歌词"
-      ],
-      "tool_names": [
-        "music.station_lyrics_toggle"
-      ],
+      "phrases": ["切换歌词", "歌词"],
+      "tool_names": ["music.station_lyrics_toggle"],
       "default_arguments": {
         "player": "fizz"
       }
     },
     {
       "id": "play_mode",
-      "phrases": [
-        "单曲循环",
-        "列表循环"
-      ],
-      "tool_names": [
-        "music.fizz_play_mode_set"
-      ],
+      "phrases": ["单曲循环", "列表循环"],
+      "tool_names": ["music.fizz_play_mode_set"],
       "default_arguments": {}
     },
     {
@@ -306,9 +186,7 @@
         "放的什么歌",
         "播的什么歌"
       ],
-      "tool_names": [
-        "music.station_now_snapshot"
-      ],
+      "tool_names": ["music.station_now_snapshot"],
       "default_arguments": {
         "player": "fizz",
         "force_refresh": true
@@ -330,7 +208,7 @@
       "id": "toggle_playback",
       "phrases": ["播放暂停", "切换播放状态"],
       "tool_names": ["music.control_playback"],
-      "default_arguments": {"action": "play_pause", "player": "fizz"}
+      "default_arguments": { "action": "play_pause", "player": "fizz" }
     }
   ]
 }

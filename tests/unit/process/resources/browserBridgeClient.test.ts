@@ -13,10 +13,9 @@ describe('WINK GO browser bridge client', () => {
       .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: false, message: 'Unauthorized.' }), { status: 401 }))
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({ webSocketDebuggerUrl: 'ws://127.0.0.1:50311/winkgo-cdp?token=fresh-token' }),
-          { status: 200 }
-        )
+        new Response(JSON.stringify({ webSocketDebuggerUrl: 'ws://127.0.0.1:50311/winkgo-cdp?token=fresh-token' }), {
+          status: 200,
+        })
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, value: 'done' }), { status: 200 }));
     const client = createBrowserBridgeClient({

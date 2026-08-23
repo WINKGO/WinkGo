@@ -414,7 +414,8 @@ export const inspectWinkGoBrowserPage = async (
       /二维码|扫码登录|图形验证码|captcha|qr\s*(?:code|login)/i.test(
         [target.getURL(), target.getTitle(), cleanText(snapshot?.text, 2_000)].join(' ')
       );
-    const screenshot = options.includeScreenshot && !protectedPage ? await captureVisualSnapshot(target, viewport) : undefined;
+    const screenshot =
+      options.includeScreenshot && !protectedPage ? await captureVisualSnapshot(target, viewport) : undefined;
     return {
       ok: true,
       attached: true,

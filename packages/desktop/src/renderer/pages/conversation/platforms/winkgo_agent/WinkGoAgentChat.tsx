@@ -104,8 +104,4 @@ const WinkGoAgentChat: React.FC<{
   );
 };
 
-export default HOC.Wrapper(
-  MessageListProvider,
-  MessageListLoadingProvider,
-  MessagePaginationProvider
-)(WinkGoAgentChat);
+export default HOC.Wrapper(MessageListProvider, MessageListLoadingProvider, MessagePaginationProvider)(WinkGoAgentChat);

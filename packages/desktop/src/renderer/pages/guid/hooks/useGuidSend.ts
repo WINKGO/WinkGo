@@ -26,10 +26,7 @@ const mergeMcpIds = (selected: string[] | undefined, required: string[]): string
   ...new Set([...(selected ?? []), ...required]),
 ];
 
-const mergeSessionMcpServers = (
-  selected: ISessionMcpServer[],
-  required: ISessionMcpServer[]
-): ISessionMcpServer[] => {
+const mergeSessionMcpServers = (selected: ISessionMcpServer[], required: ISessionMcpServer[]): ISessionMcpServer[] => {
   const merged = new Map<string, ISessionMcpServer>();
   for (const server of [...selected, ...required]) {
     merged.set(server.id || server.name, server);
@@ -183,10 +180,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
             .map((server) => toSessionMcpServer(server)),
       requiredCoreMcpServers
     );
-    const selectedBuiltinSessionMcpServers = mergeSessionMcpServers(
-      selectedSessionMcpServers,
-      requiredCoreMcpServers
-    );
+    const selectedBuiltinSessionMcpServers = mergeSessionMcpServers(selectedSessionMcpServers, requiredCoreMcpServers);
 
     const assistantOverrideModel =
       selectedAcpModel || currentAcpCachedModelInfo?.current_model_id || current_model?.use_model || undefined;
@@ -233,9 +227,7 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
             selected_mcp_server_ids: selectedUserMcpServerIdsToSend,
             selected_session_mcp_servers: selectedSessionMcpServersToSend,
             pending_config_options:
-              selectedSpeedOptionId && selectedSpeedValue
-                ? { [selectedSpeedOptionId]: selectedSpeedValue }
-                : undefined,
+              selectedSpeedOptionId && selectedSpeedValue ? { [selectedSpeedOptionId]: selectedSpeedValue } : undefined,
           },
         });
 

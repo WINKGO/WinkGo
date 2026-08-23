@@ -227,11 +227,7 @@ function buildBuiltinDesktopComputerUseServer(): McpImportServer {
     enabled: true,
     builtin: true,
     transport: { type: 'stdio', command: serverConfig.command, args: serverConfig.args, env },
-    original_json: JSON.stringify(
-      { mcpServers: { [BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME]: serverConfig } },
-      null,
-      2
-    ),
+    original_json: JSON.stringify({ mcpServers: { [BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME]: serverConfig } }, null, 2),
   };
 }
 

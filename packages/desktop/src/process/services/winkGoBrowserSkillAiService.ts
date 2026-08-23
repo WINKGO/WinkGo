@@ -14,10 +14,7 @@ import type {
   WinkGoBrowserPageSnapshot,
 } from './winkGoBrowserControlService';
 import type { DesktopRepairCandidate, DesktopSkillStep } from '@/common/types/desktopAutomation';
-import {
-  getComputerUseModelCandidates,
-  selectDefaultWinkGoComputerUseModel,
-} from '@/common/utils/computerUseModel';
+import { getComputerUseModelCandidates, selectDefaultWinkGoComputerUseModel } from '@/common/utils/computerUseModel';
 
 const AI_TIMEOUT_MS = 45_000;
 const AGENT_TIMEOUT_MS = 75_000;
@@ -138,7 +135,10 @@ export const redactBrowserTraceText = (value: unknown, maximum = 500): string =>
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '<email>')
     .replace(/(?<!\d)(?:\+?86[- ]?)?1[3-9]\d{9}(?!\d)/g, '<phone>')
     .replace(/\b(?:sk|pk|sess|token)[-_][A-Za-z0-9_-]{8,}\b/gi, '<secret>')
-    .replace(/((?:密码|口令|验证码|动态码|安全码|password|passwd|passcode|otp|captcha)\s*[:：=]?\s*)[^\s,，;；]{4,}/gi, '$1<secret>')
+    .replace(
+      /((?:密码|口令|验证码|动态码|安全码|password|passwd|passcode|otp|captcha)\s*[:：=]?\s*)[^\s,，;；]{4,}/gi,
+      '$1<secret>'
+    )
     .replace(/\b\d{6}\b/g, '<verification-code>')
     .replace(/\b\d{8,}\b/g, '<number>');
 
@@ -166,9 +166,7 @@ const resolveConfiguredProvider = async (preferred?: {
   const providers = (await httpRequest<IProvider[]>('GET', '/api/providers')) || [];
   if (preferred?.providerId && preferred.model) {
     const exact = providers.find((provider) => provider.id === preferred.providerId);
-    const selected = exact
-      ? selectDefaultWinkGoComputerUseModel([{ ...exact, models: [preferred.model] }])
-      : null;
+    const selected = exact ? selectDefaultWinkGoComputerUseModel([{ ...exact, models: [preferred.model] }]) : null;
     if (!exact || providerScore(exact) < 0 || selected?.model !== preferred.model) return null;
     const { models: _models, ...providerFields } = exact;
     return {
@@ -647,9 +645,7 @@ const normalizeBrowserAgentAction = (
     ...(numberField('timeoutMs', 0, 30_000) !== undefined ? { timeoutMs: numberField('timeoutMs', 0, 30_000) } : {}),
     ...(numberField('deltaX', -20_000, 20_000) !== undefined ? { deltaX: numberField('deltaX', -20_000, 20_000) } : {}),
     ...(numberField('deltaY', -20_000, 20_000) !== undefined ? { deltaY: numberField('deltaY', -20_000, 20_000) } : {}),
-    ...(action === 'click' && viewportX !== undefined && viewportY !== undefined
-      ? { x: viewportX, y: viewportY }
-      : {}),
+    ...(action === 'click' && viewportX !== undefined && viewportY !== undefined ? { x: viewportX, y: viewportY } : {}),
   };
 };
 

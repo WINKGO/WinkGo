@@ -29,7 +29,8 @@ const resultMessage = (value: DesktopTaskResult): string =>
  * Keeps the MCP tool's public behavior independently testable from stdio and
  * delegates the complete visual loop to WINK GO's dedicated controller.
  */
-export const createRunDesktopTaskHandler = (request: DesktopTaskBridgeRequest) =>
+export const createRunDesktopTaskHandler =
+  (request: DesktopTaskBridgeRequest) =>
   async ({ goal, max_steps }: RunDesktopTaskInput) => {
     const value = await request<DesktopTaskResult>('/winkgo/desktop-computer-use/run', {
       method: 'POST',

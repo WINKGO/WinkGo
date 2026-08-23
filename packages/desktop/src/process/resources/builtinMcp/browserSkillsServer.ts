@@ -36,7 +36,9 @@ const main = async (): Promise<void> => {
         include_screenshot: z
           .boolean()
           .optional()
-          .describe('Include a current JPEG data URL and screenshot/viewport dimensions for canvas or pixel-only pages.'),
+          .describe(
+            'Include a current JPEG data URL and screenshot/viewport dimensions for canvas or pixel-only pages.'
+          ),
       },
     },
     async ({ maximum_elements, include_screenshot }) => {

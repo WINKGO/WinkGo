@@ -27,18 +27,12 @@ test.describe('Window Controls', () => {
     // also owns island, pet, and automation-overlay windows, so taking the
     // first BrowserWindow can assert against an unrelated transparent window.
     await expect
-      .poll(
-        () => invokeBridge<boolean>(page, 'window-controls:is-maximized', undefined, 10_000),
-        { timeout: 10_000 }
-      )
+      .poll(() => invokeBridge<boolean>(page, 'window-controls:is-maximized', undefined, 10_000), { timeout: 10_000 })
       .toBe(true);
 
     await invokeBridge<void>(page, 'window-controls:unmaximize', undefined, 10_000);
     await expect
-      .poll(
-        () => invokeBridge<boolean>(page, 'window-controls:is-maximized', undefined, 10_000),
-        { timeout: 10_000 }
-      )
+      .poll(() => invokeBridge<boolean>(page, 'window-controls:is-maximized', undefined, 10_000), { timeout: 10_000 })
       .toBe(false);
   });
 });

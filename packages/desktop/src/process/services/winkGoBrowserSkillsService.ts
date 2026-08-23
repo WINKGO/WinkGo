@@ -858,14 +858,8 @@ export const stopAndSaveWinkGoBrowserRecording = async (
   };
   let distillation: WinkGoBrowserSkillDistillation;
   try {
-    distillation = await resolveWithin(
-      distillWinkGoBrowserTrace(distillInput),
-      RECORDER_DISTILLATION_TIMEOUT_MS,
-      () =>
-        createLocalWinkGoBrowserSkillDistillation(
-          distillInput,
-          'AI 整理超过 10 秒，已先按原始有效步骤保存。'
-        )
+    distillation = await resolveWithin(distillWinkGoBrowserTrace(distillInput), RECORDER_DISTILLATION_TIMEOUT_MS, () =>
+      createLocalWinkGoBrowserSkillDistillation(distillInput, 'AI 整理超过 10 秒，已先按原始有效步骤保存。')
     );
   } catch (error) {
     return result(false, error instanceof Error ? error.message : 'WINK GO AI 技能生成失败。');

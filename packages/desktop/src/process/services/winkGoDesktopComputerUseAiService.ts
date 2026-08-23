@@ -9,10 +9,7 @@ import { ClientFactory } from '@/common/api';
 import { httpRequest } from '@/common/adapter/httpBridge';
 import type { IProvider, TProviderWithModel } from '@/common/config/storage';
 import type { ComputerUseModelRef } from '@/common/types/computerUse';
-import {
-  getComputerUseModelCandidates,
-  selectDefaultWinkGoComputerUseModel,
-} from '@/common/utils/computerUseModel';
+import { getComputerUseModelCandidates, selectDefaultWinkGoComputerUseModel } from '@/common/utils/computerUseModel';
 import type {
   DesktopComputerUseAction,
   DesktopComputerUseDecision,

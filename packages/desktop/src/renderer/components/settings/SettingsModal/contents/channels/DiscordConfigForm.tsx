@@ -21,11 +21,7 @@ interface DiscordConfigFormProps {
   onStatusChange: (status: IChannelPluginStatus | null) => void;
 }
 
-const DiscordConfigForm: React.FC<DiscordConfigFormProps> = ({
-  pluginStatus,
-  modelSelection,
-  onStatusChange,
-}) => {
+const DiscordConfigForm: React.FC<DiscordConfigFormProps> = ({ pluginStatus, modelSelection, onStatusChange }) => {
   const { t } = useTranslation();
   const [botToken, setBotToken] = useState('');
   const [testing, setTesting] = useState(false);
@@ -71,12 +67,7 @@ const DiscordConfigForm: React.FC<DiscordConfigFormProps> = ({
 
       <label className='flex flex-col gap-6px'>
         <span className='text-13px font-500 text-t-primary'>{t('settings.assistant.discordBotToken')}</span>
-        <Input.Password
-          value={botToken}
-          onChange={setBotToken}
-          placeholder='Bot Token'
-          autoComplete='off'
-        />
+        <Input.Password value={botToken} onChange={setBotToken} placeholder='Bot Token' autoComplete='off' />
         <span className='text-12px text-t-tertiary'>{t('settings.assistant.discordBotTokenDesc')}</span>
       </label>
 

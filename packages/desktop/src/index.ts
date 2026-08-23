@@ -756,8 +756,7 @@ const handleAppReady = async (): Promise<void> => {
         observeWinkGoDesktopForAgent,
         runWinkGoDesktopComputerUseForAgent,
         waitWinkGoDesktopForAgent,
-      } =
-        await import('./process/services/winkGoDesktopComputerUseRuntimeService');
+      } = await import('./process/services/winkGoDesktopComputerUseRuntimeService');
       const bridge = await startCdpBridge(
         {
           list: listWinkGoBrowserSkills,

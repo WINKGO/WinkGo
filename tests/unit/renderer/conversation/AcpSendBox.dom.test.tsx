@@ -272,12 +272,8 @@ describe('AcpSendBox', () => {
       />
     );
 
-    expect(acpModelSelectorMock).toHaveBeenCalledWith(
-      expect.objectContaining({ initialModelId: 'gpt-5.6-terra' })
-    );
-    expect(useAcpModelInfoMock).toHaveBeenCalledWith(
-      expect.objectContaining({ initialModelId: 'gpt-5.6-terra' })
-    );
+    expect(acpModelSelectorMock).toHaveBeenCalledWith(expect.objectContaining({ initialModelId: 'gpt-5.6-terra' }));
+    expect(useAcpModelInfoMock).toHaveBeenCalledWith(expect.objectContaining({ initialModelId: 'gpt-5.6-terra' }));
   });
 
   it('renders an honest context usage ring only when usage exists', () => {

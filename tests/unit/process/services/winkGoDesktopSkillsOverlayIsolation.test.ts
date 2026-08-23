@@ -107,9 +107,7 @@ describe('WINK GO desktop skills overlay isolation', () => {
       {},
       expect.objectContaining({ signal: expect.any(AbortSignal), timeoutMs: 30_000 })
     );
-    expect(mocks.syncOverlay).toHaveBeenCalledWith(
-      expect.objectContaining({ phase: 'arming', targetDisplayIds: [1] })
-    );
+    expect(mocks.syncOverlay).toHaveBeenCalledWith(expect.objectContaining({ phase: 'arming', targetDisplayIds: [1] }));
 
     await service.cancelWinkGoDesktopAutomation();
     service.disposeWinkGoDesktopAutomation();

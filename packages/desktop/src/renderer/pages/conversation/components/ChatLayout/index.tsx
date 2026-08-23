@@ -222,9 +222,7 @@ const ChatLayout: React.FC<{
           }
         />
       </FlexFullContainer>
-      <div className='flex items-center gap-12px shrink-0'>
-        {props.headerExtra}
-      </div>
+      <div className='flex items-center gap-12px shrink-0'>{props.headerExtra}</div>
     </ArcoLayout.Header>
   );
 

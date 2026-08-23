@@ -25,24 +25,23 @@ const {
   getBrowserLoginPermissionMock,
   setBrowserLoginPermissionMock,
   configServiceMock,
-} =
-  vi.hoisted(() => ({
-    systemInfoMock: vi.fn(),
-    updateSystemInfoMock: vi.fn(),
-    restartMock: vi.fn(),
-    showOpenMock: vi.fn(),
-    messageInfoMock: vi.fn(),
-    getCdpStatusMock: vi.fn(),
-    updateCdpConfigMock: vi.fn(),
-    clearBrowserDataMock: vi.fn(),
-    getBrowserLoginPermissionMock: vi.fn(),
-    setBrowserLoginPermissionMock: vi.fn(),
-    configServiceMock: {
-      get: vi.fn(() => undefined),
-      set: vi.fn(() => Promise.resolve()),
-      setLocal: vi.fn(),
-    },
-  }));
+} = vi.hoisted(() => ({
+  systemInfoMock: vi.fn(),
+  updateSystemInfoMock: vi.fn(),
+  restartMock: vi.fn(),
+  showOpenMock: vi.fn(),
+  messageInfoMock: vi.fn(),
+  getCdpStatusMock: vi.fn(),
+  updateCdpConfigMock: vi.fn(),
+  clearBrowserDataMock: vi.fn(),
+  getBrowserLoginPermissionMock: vi.fn(),
+  setBrowserLoginPermissionMock: vi.fn(),
+  configServiceMock: {
+    get: vi.fn(() => undefined),
+    set: vi.fn(() => Promise.resolve()),
+    setLocal: vi.fn(),
+  },
+}));
 const clientBusinessSettingsMocks = vi.hoisted(() => ({
   getClientBusinessSetting: vi.fn(),
   setClientBusinessSetting: vi.fn(() => Promise.resolve()),

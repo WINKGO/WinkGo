@@ -158,11 +158,7 @@ const DesktopSkillRecorder: React.FC<DesktopSkillRecorderProps> = ({ onRecording
 
   return (
     <div className='winkgo-desktop-recorder'>
-      <div
-        className='winkgo-desktop-recorder__status'
-        data-phase={status.phase}
-        data-step-count={status.stepCount}
-      >
+      <div className='winkgo-desktop-recorder__status' data-phase={status.phase} data-step-count={status.stepCount}>
         <i aria-hidden='true' />
         <span>
           <strong>

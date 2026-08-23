@@ -22,10 +22,30 @@ describe('desktop recorder target policy', () => {
     const result = filterDesktopRecorderTargets(
       [
         target({ pid: 628, title: 'WINK GO', processName: 'electron.exe' }),
-        target({ pid: 18048, title: 'Windows 输入体验', processName: 'TextInputHost.exe', rect: { x: 0, y: 0, width: 2560, height: 1440 } }),
-        target({ pid: 4640, title: 'Program Manager', processName: 'explorer.exe', rect: { x: 0, y: 0, width: 2560, height: 1440 } }),
-        target({ pid: 7384, title: 'NVIDIA GeForce Overlay', processName: 'NVIDIA Overlay.exe', rect: { x: 0, y: 0, width: 2559, height: 1440 } }),
-        target({ pid: 33616, title: 'Minimized Edge', processName: 'msedge.exe', rect: { x: -32000, y: -32000, width: 160, height: 28 } }),
+        target({
+          pid: 18048,
+          title: 'Windows 输入体验',
+          processName: 'TextInputHost.exe',
+          rect: { x: 0, y: 0, width: 2560, height: 1440 },
+        }),
+        target({
+          pid: 4640,
+          title: 'Program Manager',
+          processName: 'explorer.exe',
+          rect: { x: 0, y: 0, width: 2560, height: 1440 },
+        }),
+        target({
+          pid: 7384,
+          title: 'NVIDIA GeForce Overlay',
+          processName: 'NVIDIA Overlay.exe',
+          rect: { x: 0, y: 0, width: 2559, height: 1440 },
+        }),
+        target({
+          pid: 33616,
+          title: 'Minimized Edge',
+          processName: 'msedge.exe',
+          rect: { x: -32000, y: -32000, width: 160, height: 28 },
+        }),
         target({ pid: 9000, title: '今日要做.txt - Notepad', processName: 'Notepad.exe' }),
       ],
       { hostPid: 628, blockedPids: [628, 629, 630] }

@@ -4,40 +4,23 @@
   "actions": [
     {
       "id": "open",
-      "phrases": [
-        "打开",
-        "启动",
-        "进入"
-      ],
-      "tool_names": [
-        "desktop_agents.video_client_open"
-      ],
+      "phrases": ["打开", "启动", "进入"],
+      "tool_names": ["desktop_agents.video_client_open"],
       "default_arguments": {
         "client": "iqiyi"
       }
     },
     {
       "id": "search",
-      "phrases": [
-        "搜索",
-        "找",
-        "查找"
-      ],
-      "tool_names": [
-        "desktop_agents.video_client_search"
-      ],
+      "phrases": ["搜索", "找", "查找"],
+      "tool_names": ["desktop_agents.video_client_search"],
       "default_arguments": {
         "client": "iqiyi"
       }
     },
     {
       "id": "play_episode",
-      "phrases": [
-        "继续播放",
-        "第几集",
-        "第1集",
-        "第一集"
-      ],
+      "phrases": ["继续播放", "第几集", "第1集", "第一集"],
       "tool_names": [
         "desktop_agents.video_client_search_and_play_episode",
         "desktop_agents.video_client_search_and_play_latest_episode"
@@ -48,12 +31,7 @@
     },
     {
       "id": "episode",
-      "phrases": [
-        "下一集",
-        "上一集",
-        "跳到",
-        "最新一集"
-      ],
+      "phrases": ["下一集", "上一集", "跳到", "最新一集"],
       "tool_names": [
         "desktop_agents.video_client_jump_episode",
         "desktop_agents.video_client_jump_latest_episode",
@@ -65,60 +43,32 @@
     },
     {
       "id": "playback",
-      "phrases": [
-        "播放",
-        "暂停",
-        "快进",
-        "后退",
-        "全屏"
-      ],
-      "tool_names": [
-        "desktop_agents.video_client_playback_control",
-        "desktop_agents.video_client_jump_minute"
-      ],
+      "phrases": ["播放", "暂停", "快进", "后退", "全屏"],
+      "tool_names": ["desktop_agents.video_client_playback_control", "desktop_agents.video_client_jump_minute"],
       "default_arguments": {
         "client": "iqiyi"
       }
     },
     {
       "id": "volume_quality",
-      "phrases": [
-        "音量",
-        "清晰度",
-        "画质"
-      ],
-      "tool_names": [
-        "desktop_agents.video_client_volume",
-        "desktop_agents.video_client_quality"
-      ],
+      "phrases": ["音量", "清晰度", "画质"],
+      "tool_names": ["desktop_agents.video_client_volume", "desktop_agents.video_client_quality"],
       "default_arguments": {
         "client": "iqiyi"
       }
     },
     {
       "id": "read",
-      "phrases": [
-        "读取",
-        "看看页面",
-        "当前内容"
-      ],
-      "tool_names": [
-        "desktop_agents.video_client_read",
-        "desktop_agents.video_client_read_window"
-      ],
+      "phrases": ["读取", "看看页面", "当前内容"],
+      "tool_names": ["desktop_agents.video_client_read", "desktop_agents.video_client_read_window"],
       "default_arguments": {
         "client": "iqiyi"
       }
     },
     {
       "id": "close",
-      "phrases": [
-        "关闭",
-        "退出"
-      ],
-      "tool_names": [
-        "desktop_agents.video_client_close"
-      ],
+      "phrases": ["关闭", "退出"],
+      "tool_names": ["desktop_agents.video_client_close"],
       "default_arguments": {
         "client": "iqiyi"
       }
@@ -127,13 +77,13 @@
       "id": "skip_intro",
       "phrases": ["跳过片头", "跳过开场", "跳过前奏"],
       "tool_names": ["desktop_agents.video_client_skip_intro"],
-      "default_arguments": {"client": "iqiyi"}
+      "default_arguments": { "client": "iqiyi" }
     },
     {
       "id": "skip_ending",
       "phrases": ["跳过片尾", "跳过结尾", "跳到片尾之后"],
       "tool_names": ["desktop_agents.video_client_skip_ending"],
-      "default_arguments": {"client": "iqiyi"}
+      "default_arguments": { "client": "iqiyi" }
     }
   ]
 }

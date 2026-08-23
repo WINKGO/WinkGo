@@ -21,11 +21,7 @@ interface SlackConfigFormProps {
   onStatusChange: (status: IChannelPluginStatus | null) => void;
 }
 
-const SlackConfigForm: React.FC<SlackConfigFormProps> = ({
-  pluginStatus,
-  modelSelection,
-  onStatusChange,
-}) => {
+const SlackConfigForm: React.FC<SlackConfigFormProps> = ({ pluginStatus, modelSelection, onStatusChange }) => {
   const { t } = useTranslation();
   const [botToken, setBotToken] = useState('');
   const [appToken, setAppToken] = useState('');
@@ -85,23 +81,13 @@ const SlackConfigForm: React.FC<SlackConfigFormProps> = ({
 
       <label className='flex flex-col gap-6px'>
         <span className='text-13px font-500 text-t-primary'>{t('settings.assistant.slackBotToken')}</span>
-        <Input.Password
-          value={botToken}
-          onChange={setBotToken}
-          placeholder='xoxb-…'
-          autoComplete='off'
-        />
+        <Input.Password value={botToken} onChange={setBotToken} placeholder='xoxb-…' autoComplete='off' />
         <span className='text-12px text-t-tertiary'>{t('settings.assistant.slackBotTokenDesc')}</span>
       </label>
 
       <label className='flex flex-col gap-6px'>
         <span className='text-13px font-500 text-t-primary'>{t('settings.assistant.slackAppToken')}</span>
-        <Input.Password
-          value={appToken}
-          onChange={setAppToken}
-          placeholder='xapp-…'
-          autoComplete='off'
-        />
+        <Input.Password value={appToken} onChange={setAppToken} placeholder='xapp-…' autoComplete='off' />
         <span className='text-12px text-t-tertiary'>{t('settings.assistant.slackAppTokenDesc')}</span>
       </label>
 

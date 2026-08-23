@@ -177,9 +177,7 @@ describe('DesktopSkillRecorder', () => {
 
   it('starts recording in one click without asking the user to choose a window', async () => {
     const onRecordingStarted = vi.fn();
-    let finishStart:
-      | ((result: { ok: boolean; status: DesktopRecorderStatus; error?: string }) => void)
-      | undefined;
+    let finishStart: ((result: { ok: boolean; status: DesktopRecorderStatus; error?: string }) => void) | undefined;
     mocks.start.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -206,9 +204,7 @@ describe('DesktopSkillRecorder', () => {
 
   it('keeps the recorder panel open when one-click recording fails', async () => {
     const onRecordingStarted = vi.fn();
-    let finishStart:
-      | ((result: { ok: boolean; status: DesktopRecorderStatus; error?: string }) => void)
-      | undefined;
+    let finishStart: ((result: { ok: boolean; status: DesktopRecorderStatus; error?: string }) => void) | undefined;
     mocks.start.mockImplementation(
       () =>
         new Promise((resolve) => {

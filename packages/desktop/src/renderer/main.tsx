@@ -407,20 +407,20 @@ const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo
         : isDataMigrationFailure
           ? t('common.backendStartup.dataMigration.description')
           : isLocalDataRepairFailure
-          ? t('common.backendStartup.localDataRepair.description')
-          : isTransientConcurrentStartup
-            ? t('common.backendStartup.transientConcurrentStartup.description')
-            : isStartupExited
-              ? t('common.backendStartup.exited.description')
-              : isPortReportTimeout
-                ? t('common.backendStartup.portReportTimeout.description')
-                : isStartupFailed
-                  ? t('common.backendStartup.startupFailed.description')
-                  : isStartupDirectoryFailure
-                    ? t('common.backendStartup.startupDirectory.description')
-                    : isRecoverableDatabaseCorruption
-                      ? t('common.backendStartup.recoverableDatabaseCorruption.description')
-                      : getBackendStartupInstallationDescription(t);
+            ? t('common.backendStartup.localDataRepair.description')
+            : isTransientConcurrentStartup
+              ? t('common.backendStartup.transientConcurrentStartup.description')
+              : isStartupExited
+                ? t('common.backendStartup.exited.description')
+                : isPortReportTimeout
+                  ? t('common.backendStartup.portReportTimeout.description')
+                  : isStartupFailed
+                    ? t('common.backendStartup.startupFailed.description')
+                    : isStartupDirectoryFailure
+                      ? t('common.backendStartup.startupDirectory.description')
+                      : isRecoverableDatabaseCorruption
+                        ? t('common.backendStartup.recoverableDatabaseCorruption.description')
+                        : getBackendStartupInstallationDescription(t);
   const requiredVersions = failure.requiredVersions?.map((version) => `GLIBC_${version}`).join(', ');
 
   if (!isIncompatibleRuntime && !isPackageArchitectureMismatch) {

@@ -27,8 +27,7 @@ const DESKTOP_SKILL_TOOL_NAMES = new Set([DESKTOP_SKILL_LIST_TOOL, DESKTOP_SKILL
 // legacy Runtime tools operate the Windows/default browser and must never be
 // exposed to an Agent, even when an old enabled-skills.json or a broad
 // `windows.` prefix still contains them.
-const isLegacyExternalBrowserTool = (name) =>
-  name === 'windows.open_url' || name.startsWith('windows.browser_');
+const isLegacyExternalBrowserTool = (name) => name === 'windows.open_url' || name.startsWith('windows.browser_');
 const configPath = process.argv[2];
 
 if (!configPath) {
@@ -247,7 +246,9 @@ const validateRuntimeLaunch = (launch) => {
     configPath: configFile,
     workingDirectory,
     ownerPid: Number.isInteger(launch.ownerPid) && launch.ownerPid > 0 ? launch.ownerPid : process.ppid,
-    desktopSkillsRoot: path.resolve(launch.desktopSkillsRoot || path.join(process.env.LOCALAPPDATA || '', 'Wink Go', 'winkgo-desktop-skills')),
+    desktopSkillsRoot: path.resolve(
+      launch.desktopSkillsRoot || path.join(process.env.LOCALAPPDATA || '', 'Wink Go', 'winkgo-desktop-skills')
+    ),
   };
 };
 
@@ -652,7 +653,9 @@ const callDesktopSkillTool = async (name, rawArguments) => {
   });
   return {
     isError: value.ok !== true,
-    content: [{ type: 'text', text: value.message || (value.ok ? 'Desktop Skill completed.' : 'Desktop Skill failed.') }],
+    content: [
+      { type: 'text', text: value.message || (value.ok ? 'Desktop Skill completed.' : 'Desktop Skill failed.') },
+    ],
     structuredContent: value,
   };
 };

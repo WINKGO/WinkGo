@@ -174,5 +174,8 @@
 }
 
 @keyframes winkgo-desktop-recorder-pulse {
-  50% { opacity: 0.38; transform: scale(0.8); }
+  50% {
+    opacity: 0.38;
+    transform: scale(0.8);
+  }
 }

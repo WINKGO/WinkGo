@@ -49,9 +49,7 @@ describe('WINK GO renderer recovery policy', () => {
   });
 
   it('resets ordinary crash attempts after a quiet period', async () => {
-    const { createRendererRecoveryPolicy, RENDERER_CRASH_RESET_MS } = await import(
-      '@/process/utils/rendererRecovery'
-    );
+    const { createRendererRecoveryPolicy, RENDERER_CRASH_RESET_MS } = await import('@/process/utils/rendererRecovery');
     const policy = createRendererRecoveryPolicy(() => timestamp);
     policy.onCrash('crashed');
     policy.onCrash('crashed');

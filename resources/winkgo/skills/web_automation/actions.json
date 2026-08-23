@@ -4,61 +4,31 @@
   "actions": [
     {
       "id": "open_search",
-      "phrases": [
-        "打开网页",
-        "搜索网页",
-        "浏览器搜索"
-      ],
-      "tool_names": [
-        "windows.open_url",
-        "windows.browser_search"
-      ],
+      "phrases": ["打开网页", "搜索网页", "浏览器搜索"],
+      "tool_names": ["windows.open_url", "windows.browser_search"],
       "default_arguments": {}
     },
     {
       "id": "read",
-      "phrases": [
-        "读取页面",
-        "看看网页",
-        "结果列表"
-      ],
-      "tool_names": [
-        "windows.browser_read_page",
-        "windows.browser_list_results"
-      ],
+      "phrases": ["读取页面", "看看网页", "结果列表"],
+      "tool_names": ["windows.browser_read_page", "windows.browser_list_results"],
       "default_arguments": {}
     },
     {
       "id": "recommend",
-      "phrases": [
-        "推荐搜索结果",
-        "选择最合适结果",
-        "挑选网页结果"
-      ],
-      "tool_names": [
-        "windows.browser_recommend_result"
-      ],
+      "phrases": ["推荐搜索结果", "选择最合适结果", "挑选网页结果"],
+      "tool_names": ["windows.browser_recommend_result"],
       "default_arguments": {}
     },
     {
       "id": "smart_open",
-      "phrases": [
-        "搜索并打开最佳结果",
-        "打开最合适网页",
-        "智能打开搜索结果"
-      ],
-      "tool_names": [
-        "windows.browser_open_best_result"
-      ],
+      "phrases": ["搜索并打开最佳结果", "打开最合适网页", "智能打开搜索结果"],
+      "tool_names": ["windows.browser_open_best_result"],
       "default_arguments": {}
     },
     {
       "id": "interact",
-      "phrases": [
-        "点击",
-        "输入",
-        "打开结果"
-      ],
+      "phrases": ["点击", "输入", "打开结果"],
       "tool_names": [
         "windows.browser_click",
         "windows.browser_click_best",
@@ -70,16 +40,8 @@
     },
     {
       "id": "navigate",
-      "phrases": [
-        "后退",
-        "刷新",
-        "关闭标签"
-      ],
-      "tool_names": [
-        "windows.browser_go_back",
-        "windows.browser_refresh",
-        "windows.browser_close_tab"
-      ],
+      "phrases": ["后退", "刷新", "关闭标签"],
+      "tool_names": ["windows.browser_go_back", "windows.browser_refresh", "windows.browser_close_tab"],
       "default_arguments": {}
     },
     {
