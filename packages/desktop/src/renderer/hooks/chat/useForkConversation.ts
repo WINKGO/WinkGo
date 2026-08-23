@@ -10,7 +10,7 @@ import { Message } from '@arco-design/web-react';
 import type { TFunction } from 'i18next';
 import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 export function getForkErrorMessage(error: unknown, t: TFunction): string {
   const raw = parseError(error);
