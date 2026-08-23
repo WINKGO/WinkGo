@@ -35,6 +35,11 @@ export const getCurrentThoughtLevelLabel = (thoughtLevel: AcpDerivedOption | nul
   );
 };
 
+export const getCurrentRuntimeOptionLabel = (option: AcpDerivedOption | null | undefined): string => {
+  if (!option) return '';
+  return option.options.find((item) => item.value === option.currentValue)?.label || option.currentValue || '';
+};
+
 export const composeRuntimeSelectorLabel = ({
   modelLabel,
   thoughtLevel,
@@ -78,10 +83,22 @@ export const RuntimeSelectorCheckedItem: React.FC<{
  * so we must not add another chevron here.
  */
 export const RuntimeSelectorSubMenuTitle: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className='flex items-center justify-between gap-8px w-full min-w-0'>
-    <span className='shrink-0'>{label}</span>
-    <span className='min-w-0 truncate text-t-tertiary'>{value}</span>
+  <div className='runtime-selector-menu-row flex items-center justify-between gap-12px w-full min-w-0'>
+    <span className='runtime-selector-menu-label shrink-0'>{label}</span>
+    <span className='runtime-selector-menu-value min-w-0 truncate text-t-tertiary'>{value}</span>
   </div>
+);
+
+/**
+ * Stable first-level row for a runtime dimension which the active Agent has not
+ * advertised yet. Keeping the row visible prevents the selector from changing
+ * from the Codex-style grouped layout into a flat model list while a runtime is
+ * warming up (or when an older Agent only exposes model switching).
+ */
+export const RuntimeSelectorUnavailableRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <Menu.Item key={`unavailable-${label}`} disabled className='runtime-selector-unavailable-row cursor-default!'>
+    <RuntimeSelectorSubMenuTitle label={label} value={value} />
+  </Menu.Item>
 );
 
 /**

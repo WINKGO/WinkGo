@@ -31,6 +31,9 @@ type UseConversationActionsParams = {
   setSelectedConversationIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   toggleSelectedConversation: (conversation: TChatConversation) => void;
   markAsRead: (conversation_id: string) => void;
+  markManualUnread: (conversation_id: string) => void;
+  clearManualUnread: (conversation_id: string) => void;
+  isManualUnread: (conversation_id: string) => boolean;
 };
 
 export const useConversationActions = ({
@@ -41,6 +44,9 @@ export const useConversationActions = ({
   setSelectedConversationIds,
   toggleSelectedConversation,
   markAsRead,
+  markManualUnread,
+  clearManualUnread,
+  isManualUnread,
 }: UseConversationActionsParams) => {
   const [renameModalVisible, setRenameModalVisible] = useState(false);
   const [renameModalName, setRenameModalName] = useState<string>('');
@@ -235,6 +241,14 @@ export const useConversationActions = ({
     setDropdownVisibleId(visible ? conversation_id : null);
   }, []);
 
+  const handleToggleManualUnread = useCallback(
+    (conversation: TChatConversation) => {
+      if (isManualUnread(conversation.id)) clearManualUnread(conversation.id);
+      else markManualUnread(conversation.id);
+    },
+    [clearManualUnread, isManualUnread, markManualUnread]
+  );
+
   const handleOpenMenu = useCallback((conversation: TChatConversation) => {
     setDropdownVisibleId(conversation.id);
   }, []);
@@ -324,6 +338,7 @@ export const useConversationActions = ({
     handleTogglePin,
     handleMenuVisibleChange,
     handleOpenMenu,
+    handleToggleManualUnread,
     handleCreateCronTask,
     handleRemoveProject,
     removeProjectTarget,

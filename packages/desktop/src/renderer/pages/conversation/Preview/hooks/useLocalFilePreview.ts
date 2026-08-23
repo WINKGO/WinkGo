@@ -7,6 +7,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { localFileRef } from '@/common/types/chatFile';
 import type { PreviewContentType } from '@/common/types/office/preview';
 import type { LocalFileLinkReference } from '@/renderer/components/Markdown/markdownUtils';
 import {
@@ -39,17 +40,18 @@ export const useLocalFilePreview = (workspace?: string) => {
       const contentType = getContentTypeByExtension(fileName);
       let content = '';
       let isLargeTextTruncated = false;
+      const fileRef = localFileRef(file_path);
 
       try {
-        const metadata = await ipcBridge.fs.getFileMetadata.invoke({ path: file_path, workspace });
+        const metadata = await ipcBridge.fs.getContentMetadata.invoke({ file: fileRef });
         if (metadata == null) throw null;
 
         if (contentType === 'image') {
-          const imageContent = await ipcBridge.fs.getImageBase64.invoke({ path: file_path, workspace });
+          const imageContent = await ipcBridge.fs.readContent.invoke({ file: fileRef, encoding: 'dataurl' });
           if (imageContent == null) throw null;
           content = imageContent;
         } else if (shouldReadPreviewContent(contentType)) {
-          const textContent = await ipcBridge.fs.readFile.invoke({ path: file_path, workspace });
+          const textContent = await ipcBridge.fs.readContent.invoke({ file: fileRef, encoding: 'utf8' });
           if (textContent == null) throw null;
           content = textContent;
 
@@ -65,6 +67,7 @@ export const useLocalFilePreview = (workspace?: string) => {
           {
             title: fileName,
             file_name: fileName,
+            fileRef,
             file_path,
             workspace,
             language: getPreviewLanguage(fileName),
@@ -82,6 +85,7 @@ export const useLocalFilePreview = (workspace?: string) => {
           {
             title: fileName,
             file_name: fileName,
+            fileRef,
             file_path,
             workspace,
             language: getPreviewLanguage(fileName),

@@ -92,8 +92,8 @@ describe('useGuidSend', () => {
   });
 
   it('passes selected mode into assistant conversation overrides when creating a preset ACP conversation', async () => {
-    const deps = createDeps();
-    (deps as any).selectedThoughtLevelValue = 'high';
+    const deps = createDeps() as GuidSendDeps & { selectedThoughtLevelValue?: string };
+    deps.selectedThoughtLevelValue = 'high';
 
     const { result } = renderHook(() => useGuidSend(deps));
 
@@ -178,6 +178,49 @@ describe('useGuidSend', () => {
     expect(payload.assistant?.conversation_overrides?.mcp_ids).toEqual(['mcp-user', 'builtin-mcp']);
     expect(payload.extra.selected_mcp_server_ids).toEqual(['mcp-user']);
     expect(payload.extra.selected_session_mcp_servers).toEqual([expect.objectContaining({ id: 'builtin-mcp' })]);
+  });
+
+  it('always attaches the independent WINK GO browser and desktop Computer Use services', async () => {
+    const deps = createDeps();
+    deps.availableMcpServers = [
+      { id: 'mcp-user', name: 'User MCP', enabled: true, builtin: false } as IMcpServer,
+      {
+        id: 'winkgo-browser-id',
+        name: 'winkgo-browser',
+        enabled: true,
+        builtin: true,
+        transport: { type: 'stdio', command: 'node', args: ['builtin-mcp-browser-skills.js'] },
+      } as IMcpServer,
+      {
+        id: 'winkgo-desktop-computer-use-id',
+        name: 'winkgo-desktop-computer-use',
+        enabled: true,
+        builtin: true,
+        transport: { type: 'stdio', command: 'node', args: ['builtin-mcp-desktop-computer-use.js'] },
+      } as IMcpServer,
+    ];
+    deps.selectedMcpServerIds = ['mcp-user'];
+
+    const { result } = renderHook(() => useGuidSend(deps));
+
+    await act(async () => {
+      await result.current.handleSend();
+    });
+
+    const payload = createConversationInvokeMock.mock.calls[0][0];
+    expect(payload.assistant?.conversation_overrides?.mcp_ids).toEqual([
+      'mcp-user',
+      'winkgo-browser-id',
+      'winkgo-desktop-computer-use-id',
+    ]);
+    expect(payload.extra.selected_mcp_server_ids).toEqual(['mcp-user']);
+    expect(payload.extra.selected_session_mcp_servers).toEqual([
+      expect.objectContaining({ id: 'winkgo-browser-id', name: 'winkgo-browser' }),
+      expect.objectContaining({
+        id: 'winkgo-desktop-computer-use-id',
+        name: 'winkgo-desktop-computer-use',
+      }),
+    ]);
   });
 
   it('does not write legacy preset_assistant_id for preset assistant sends', async () => {

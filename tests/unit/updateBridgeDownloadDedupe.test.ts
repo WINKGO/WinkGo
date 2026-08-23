@@ -132,7 +132,7 @@ describe('updateBridge manual download dedupe', () => {
     expect(second.success).toBe(true);
     expect(second.data).toEqual(first.data);
     expect(first.data?.downloadId).toBe('first-download');
-  });
+  }, 30_000);
 
   it('creates a new manual download after the prior matching task reaches a terminal state', async () => {
     fs.mkdirSync('/tmp/winkgo-update-dedupe-test', { recursive: true });

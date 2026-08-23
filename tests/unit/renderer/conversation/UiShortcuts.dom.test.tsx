@@ -1,5 +1,5 @@
-// Modified from AionUI by WINK GO contributors in 2026.
 import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { NavigateFunction } from 'react-router';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const testState = vi.hoisted(() => ({
   pathname: '/conversation/conversation-1',
   desktop: true,
+  mac: true,
 }));
 
 const serviceMocks = vi.hoisted(() => ({
@@ -29,6 +30,7 @@ vi.mock('@/renderer/pages/conversation/GroupedHistory/hooks/useVisibleConversati
 
 vi.mock('@/renderer/utils/platform', () => ({
   isElectronDesktop: () => testState.desktop,
+  isMacOS: () => testState.mac,
 }));
 
 vi.mock('@/renderer/utils/chat/messagePagination', () => ({
@@ -91,6 +93,7 @@ describe('common desktop UI shortcuts', () => {
   beforeEach(() => {
     testState.pathname = '/conversation/conversation-1';
     testState.desktop = true;
+    testState.mac = true;
   });
 
   afterEach(() => {
@@ -99,16 +102,27 @@ describe('common desktop UI shortcuts', () => {
     vi.clearAllMocks();
   });
 
-  it.each([
-    ['Cmd', { metaKey: true }],
-    ['Ctrl', { ctrlKey: true }],
-  ])('toggles the sidebar with %s+B', (_label, modifiers) => {
+  it('uses Cmd+B and leaves Ctrl+B untouched on macOS', () => {
     const { toggleSider } = renderConversationShortcuts();
 
-    const event = dispatchShortcut(window, { key: 'b', ...modifiers });
+    const commandEvent = dispatchShortcut(window, { key: 'b', metaKey: true });
+    const controlEvent = dispatchShortcut(window, { key: 'b', ctrlKey: true });
 
     expect(toggleSider).toHaveBeenCalledTimes(1);
-    expect(event.defaultPrevented).toBe(true);
+    expect(commandEvent.defaultPrevented).toBe(true);
+    expect(controlEvent.defaultPrevented).toBe(false);
+  });
+
+  it('uses Ctrl+B and leaves Cmd+B untouched on non-macOS platforms', () => {
+    testState.mac = false;
+    const { toggleSider } = renderConversationShortcuts();
+
+    const controlEvent = dispatchShortcut(window, { key: 'b', ctrlKey: true });
+    const commandEvent = dispatchShortcut(window, { key: 'b', metaKey: true });
+
+    expect(toggleSider).toHaveBeenCalledTimes(1);
+    expect(controlEvent.defaultPrevented).toBe(true);
+    expect(commandEvent.defaultPrevented).toBe(false);
   });
 
   it('toggles the sidebar while the composer textarea is focused', () => {
@@ -126,10 +140,28 @@ describe('common desktop UI shortcuts', () => {
   it('keeps the existing new-conversation shortcut isolated from common UI actions', () => {
     const { navigate, toggleSider } = renderConversationShortcuts();
 
-    const event = dispatchShortcut(window, { key: 't', ctrlKey: true });
+    const event = dispatchShortcut(window, { key: 't', metaKey: true });
 
     expect(navigate).toHaveBeenCalledWith('/guid');
     expect(toggleSider).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('leaves Ctrl+T untouched on macOS', () => {
+    const { navigate } = renderConversationShortcuts();
+
+    const event = dispatchShortcut(window, { key: 't', ctrlKey: true });
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('keeps Ctrl+Tab as a cross-platform conversation cycling chord', () => {
+    const { navigate } = renderConversationShortcuts();
+
+    const event = dispatchShortcut(window, { key: 'Tab', ctrlKey: true });
+
+    expect(navigate).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(true);
   });
 
@@ -147,7 +179,7 @@ describe('common desktop UI shortcuts', () => {
       return workspace;
     });
 
-    const event = dispatchShortcut(window, { key: 'l', ctrlKey: true });
+    const event = dispatchShortcut(window, { key: 'l', metaKey: true });
 
     expect(result.current.rightSiderCollapsed).toBe(false);
     expect(event.defaultPrevented).toBe(true);
@@ -215,7 +247,7 @@ describe('common desktop UI shortcuts', () => {
       return workspace;
     });
 
-    const event = dispatchShortcut(editor, { key: 'l', ctrlKey: true });
+    const event = dispatchShortcut(editor, { key: 'l', metaKey: true });
 
     expect(result.current.rightSiderCollapsed).toBe(true);
     expect(event.defaultPrevented).toBe(false);
@@ -226,10 +258,10 @@ describe('common desktop UI shortcuts', () => {
     const ineligibleEvents: KeyboardEventInit[] = [
       { key: 'b' },
       { key: 'b', ctrlKey: true, metaKey: true },
-      { key: 'b', ctrlKey: true, altKey: true },
-      { key: 'b', ctrlKey: true, shiftKey: true },
-      { key: 'b', ctrlKey: true, repeat: true },
-      { key: 'b', ctrlKey: true, isComposing: true },
+      { key: 'b', metaKey: true, altKey: true },
+      { key: 'b', metaKey: true, shiftKey: true },
+      { key: 'b', metaKey: true, repeat: true },
+      { key: 'b', metaKey: true, isComposing: true },
     ];
 
     for (const init of ineligibleEvents) {
@@ -237,7 +269,7 @@ describe('common desktop UI shortcuts', () => {
     }
     const preventedEvent = new KeyboardEvent('keydown', {
       key: 'b',
-      ctrlKey: true,
+      metaKey: true,
       bubbles: true,
       cancelable: true,
     });
@@ -259,7 +291,7 @@ describe('common desktop UI shortcuts', () => {
 
     const events = targets.map((target) => {
       document.body.appendChild(target);
-      return dispatchShortcut(target, { key: 'b', ctrlKey: true });
+      return dispatchShortcut(target, { key: 'b', metaKey: true });
     });
 
     expect(toggleSider).not.toHaveBeenCalled();
@@ -274,7 +306,7 @@ describe('common desktop UI shortcuts', () => {
     wrapper.append(textTarget, svgTarget);
     document.body.appendChild(wrapper);
 
-    dispatchShortcut(textTarget, { key: 'b', ctrlKey: true });
+    dispatchShortcut(textTarget, { key: 'b', metaKey: true });
     dispatchShortcut(svgTarget, { key: 'b', metaKey: true });
 
     expect(toggleSider).toHaveBeenCalledTimes(2);
@@ -306,7 +338,7 @@ describe('common desktop UI shortcuts', () => {
     document.body.appendChild(frame);
     frame.focus();
 
-    const event = dispatchShortcut(window, { key: 'b', ctrlKey: true });
+    const event = dispatchShortcut(window, { key: 'b', metaKey: true });
 
     expect(document.activeElement).toBe(frame);
     expect(toggleSider).not.toHaveBeenCalled();
@@ -334,7 +366,7 @@ describe('common desktop UI shortcuts', () => {
     testState.desktop = false;
     const { toggleSider } = renderConversationShortcuts();
 
-    const event = dispatchShortcut(window, { key: 'b', ctrlKey: true });
+    const event = dispatchShortcut(window, { key: 'b', metaKey: true });
 
     expect(toggleSider).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(false);
@@ -359,7 +391,7 @@ describe('common desktop UI shortcuts', () => {
     });
 
     rerender({ toggleSider: secondToggle });
-    dispatchShortcut(window, { key: 'b', ctrlKey: true });
+    dispatchShortcut(window, { key: 'b', metaKey: true });
 
     expect(firstToggle).not.toHaveBeenCalled();
     expect(secondToggle).toHaveBeenCalledTimes(1);
@@ -368,6 +400,7 @@ describe('common desktop UI shortcuts', () => {
 
 describe('existing conversation search shortcuts', () => {
   beforeEach(() => {
+    testState.mac = true;
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
       value: globalThis.electronAPI,
@@ -389,13 +422,24 @@ describe('existing conversation search shortcuts', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it('leaves Ctrl+F untouched on macOS', () => {
+    const { result } = renderHook(() => useMinimapPanel('conversation-1'));
+    const input = document.createElement('textarea');
+    document.body.appendChild(input);
+
+    const event = dispatchShortcut(input, { key: 'f', ctrlKey: true });
+
+    expect(result.current.visible).toBe(false);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it('does not replace CodeMirror find with current-conversation search', () => {
     const { result } = renderHook(() => useMinimapPanel('conversation-1'));
     const editor = document.createElement('div');
     editor.className = 'cm-editor';
     document.body.appendChild(editor);
 
-    const event = dispatchShortcut(editor, { key: 'f', ctrlKey: true });
+    const event = dispatchShortcut(editor, { key: 'f', metaKey: true });
 
     expect(result.current.visible).toBe(false);
     expect(event.defaultPrevented).toBe(false);
@@ -406,7 +450,7 @@ describe('existing conversation search shortcuts', () => {
     const input = document.createElement('textarea');
     document.body.appendChild(input);
 
-    const event = dispatchShortcut(input, { key: 'f', ctrlKey: true });
+    const event = dispatchShortcut(input, { key: 'f', metaKey: true });
 
     expect(result.current.visible).toBe(true);
     expect(event.defaultPrevented).toBe(true);
@@ -415,7 +459,7 @@ describe('existing conversation search shortcuts', () => {
   it('does not consume current-conversation find when no conversation is active', () => {
     const { result } = renderHook(() => useMinimapPanel(undefined));
 
-    const event = dispatchShortcut(document.body, { key: 'f', ctrlKey: true });
+    const event = dispatchShortcut(document.body, { key: 'f', metaKey: true });
 
     expect(result.current.visible).toBe(false);
     expect(event.defaultPrevented).toBe(false);
@@ -428,7 +472,7 @@ describe('existing conversation search shortcuts', () => {
       />
     );
 
-    const event = dispatchShortcut(document.body, { key: 'f', ctrlKey: true, shiftKey: true });
+    const event = dispatchShortcut(document.body, { key: 'f', metaKey: true, shiftKey: true });
 
     expect(screen.getByTestId('global-search-state')).toHaveTextContent('true');
     expect(event.defaultPrevented).toBe(true);
@@ -459,7 +503,7 @@ describe('existing conversation search shortcuts', () => {
     const input = document.createElement('textarea');
     document.body.appendChild(input);
 
-    const event = dispatchShortcut(input, { key: 'f', ctrlKey: true, shiftKey: true });
+    const event = dispatchShortcut(input, { key: 'f', metaKey: true, shiftKey: true });
 
     expect(screen.getByTestId('global-search-state')).toHaveTextContent('true');
     expect(event.defaultPrevented).toBe(true);
@@ -486,7 +530,7 @@ describe('existing conversation search shortcuts', () => {
     });
     const { result } = renderHook(() => useMinimapPanel('conversation-1'));
 
-    const event = dispatchShortcut(document.body, { key: 'f', ctrlKey: true });
+    const event = dispatchShortcut(document.body, { key: 'f', metaKey: true });
 
     expect(result.current.visible).toBe(false);
     expect(event.defaultPrevented).toBe(false);
@@ -503,7 +547,7 @@ describe('existing conversation search shortcuts', () => {
       />
     );
 
-    const event = dispatchShortcut(document.body, { key: 'f', ctrlKey: true, shiftKey: true });
+    const event = dispatchShortcut(document.body, { key: 'f', metaKey: true, shiftKey: true });
 
     expect(screen.getByTestId('global-search-state')).toHaveTextContent('false');
     expect(event.defaultPrevented).toBe(false);
@@ -513,7 +557,7 @@ describe('existing conversation search shortcuts', () => {
     const { unmount } = renderHook(() => useMinimapPanel('conversation-1'));
     unmount();
 
-    const event = dispatchShortcut(document.body, { key: 'f', ctrlKey: true });
+    const event = dispatchShortcut(document.body, { key: 'f', metaKey: true });
 
     expect(event.defaultPrevented).toBe(false);
   });

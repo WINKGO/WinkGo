@@ -1,5 +1,6 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { spawn } from 'node:child_process';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 type RegisteredAgentProcess = {
@@ -20,6 +21,12 @@ type AgentProcessRegistry = {
 export const AGENT_PROCESS_REGISTRY_RELATIVE_PATH = path.join('runtime', 'agent-process-registry.json');
 
 const TERM_GRACE_MS = 1_000;
+let registryFileCounter = 0;
+
+function nextRegistryFileCounter(): number {
+  registryFileCounter += 1;
+  return registryFileCounter;
+}
 
 export function resolveAgentProcessRegistryPath(dataDir: string): string {
   return path.join(dataDir, AGENT_PROCESS_REGISTRY_RELATIVE_PATH);
@@ -28,6 +35,14 @@ export function resolveAgentProcessRegistryPath(dataDir: string): string {
 export async function cleanupRegisteredAgentProcesses(dataDir?: string): Promise<void> {
   if (!dataDir) return;
 
+  try {
+    await cleanupRegisteredAgentProcessesInner(dataDir);
+  } catch (error) {
+    console.warn('[web-host] agent process cleanup failed; continuing shutdown', error);
+  }
+}
+
+async function cleanupRegisteredAgentProcessesInner(dataDir: string): Promise<void> {
   const registryPath = resolveAgentProcessRegistryPath(dataDir);
   const registry = await readRegistry(registryPath);
   if (registry.processes.length === 0) return;
@@ -44,21 +59,21 @@ export async function cleanupRegisteredAgentProcesses(dataDir?: string): Promise
     }
   }
 
-  const survivors = registry.processes.filter((entry) => isRegisteredProcessTreeAlive(entry));
+  const attempted = new Set(registry.processes.map((entry) => entry.pid));
+  const latest = await readRegistry(registryPath);
+  const survivors = latest.processes.filter(
+    (entry) => !attempted.has(entry.pid) || isRegisteredProcessTreeAlive(entry)
+  );
   await writeRegistry(registryPath, {
-    version: registry.version,
+    version: latest.version,
     processes: survivors,
   });
 }
 
 async function readRegistry(registryPath: string): Promise<AgentProcessRegistry> {
+  let raw: string;
   try {
-    const raw = await readFile(registryPath, 'utf8');
-    const parsed = JSON.parse(raw) as Partial<AgentProcessRegistry>;
-    return {
-      version: parsed.version ?? 1,
-      processes: Array.isArray(parsed.processes) ? parsed.processes.filter(isRegisteredProcess) : [],
-    };
+    raw = await readFile(registryPath, 'utf8');
   } catch (error) {
     if (isNotFound(error)) {
       return {
@@ -68,14 +83,54 @@ async function readRegistry(registryPath: string): Promise<AgentProcessRegistry>
     }
     throw error;
   }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<AgentProcessRegistry>;
+    return {
+      version: parsed.version ?? 1,
+      processes: Array.isArray(parsed.processes) ? parsed.processes.filter(isRegisteredProcess) : [],
+    };
+  } catch (error) {
+    console.warn(`[web-host] agent process registry ${registryPath} is corrupt; quarantining`, error);
+    await quarantineCorruptRegistry(registryPath);
+    return { version: 1, processes: [] };
+  }
+}
+
+async function quarantineCorruptRegistry(registryPath: string): Promise<void> {
+  const quarantinePath = path.join(
+    path.dirname(registryPath),
+    `.${path.basename(registryPath)}.corrupt.${process.pid}.${nextRegistryFileCounter()}`
+  );
+  try {
+    await rename(registryPath, quarantinePath);
+  } catch (error) {
+    console.warn(`[web-host] failed to quarantine corrupt agent process registry ${registryPath}`, error);
+  }
 }
 
 async function writeRegistry(registryPath: string, registry: AgentProcessRegistry): Promise<void> {
   await mkdir(path.dirname(registryPath), { recursive: true });
-  const tmpPath = `${registryPath}.tmp`;
-  await writeFile(tmpPath, `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
-  await rm(registryPath, { force: true });
-  await rename(tmpPath, registryPath);
+  const tmpPath = `${registryPath}.${process.pid}.${nextRegistryFileCounter()}.tmp`;
+  const handle = await open(tmpPath, 'w');
+  try {
+    await handle.writeFile(`${JSON.stringify(registry, null, 2)}\n`, 'utf8');
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+
+  try {
+    await rename(tmpPath, registryPath);
+  } catch {
+    try {
+      await rm(registryPath, { force: true });
+      await rename(tmpPath, registryPath);
+    } catch (retryError) {
+      await rm(tmpPath, { force: true });
+      throw retryError;
+    }
+  }
 }
 
 async function terminateRegisteredProcess(entry: RegisteredAgentProcess, signal: 'SIGTERM' | 'SIGKILL'): Promise<void> {

@@ -28,6 +28,72 @@
   Pop $9
 !macroend
 
+; NSIS launches the copied updater with _?=$INSTDIR. On Windows that keeps the
+; installation root itself busy even when no application process or file is
+; locked, so renaming the root directory can never be a reliable update step.
+; Stage every top-level child instead. The root stays in place for the outer
+; installer, and a partial staging attempt is rolled back before returning.
+!macro WINKGO_STAGE_INSTALL_CONTENTS _RETURN
+  nsExec::Exec `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "& { \
+    $$ErrorActionPreference = 'Stop'; \
+    $$log = '$WinkGoSessionLogPath'; \
+    if (-not $$log) { $$log = Join-Path $$env:TEMP '${WINKGO_FALLBACK_LOG}' }; \
+    $$source = [System.IO.Path]::GetFullPath('$INSTDIR'); \
+    $$staging = [System.IO.Path]::GetFullPath('$WinkGoAtomicStagingDir'); \
+    $$failedFile = '$PLUGINSDIR\winkgo-stage-first-failed.txt'; \
+    $$moved = New-Object System.Collections.Generic.List[string]; \
+    $$failedPath = ''; \
+    [System.IO.File]::WriteAllText($$failedFile, '', (New-Object System.Text.UTF8Encoding $$false)); \
+    function Write-StageLog($$result, $$message) { \
+      $$payload = [ordered]@{ schemaVersion = 1; ts = (Get-Date -Format o); session = '$WinkGoSessionId'; version = '${VERSION}'; arch = '${WINKGO_TARGET_ARCH}'; updated = ('$WinkGoIsUpdated' -eq '1'); instDir = '$INSTDIR'; event = 'remove-stage-contents'; result = $$result; source = $$source; staging = $$staging; movedCount = $$moved.Count; failedPath = $$failedPath; message = $$message }; \
+      Add-Content -LiteralPath $$log -Encoding UTF8 -Value ($$payload | ConvertTo-Json -Compress -Depth 8) \
+    }; \
+    function Restore-StageTree($$from, $$to) { \
+      if (-not (Test-Path -LiteralPath $$from -PathType Container)) { return }; \
+      if (-not (Test-Path -LiteralPath $$to -PathType Container)) { [void][System.IO.Directory]::CreateDirectory($$to) }; \
+      foreach ($$child in @(Get-ChildItem -LiteralPath $$from -Force -ErrorAction Stop)) { \
+        $$destination = Join-Path $$to $$child.Name; \
+        if ($$child.PSIsContainer -and (Test-Path -LiteralPath $$destination -PathType Container)) { \
+          Restore-StageTree $$child.FullName $$destination; \
+          if (@(Get-ChildItem -LiteralPath $$child.FullName -Force -ErrorAction Stop).Count -eq 0) { [System.IO.Directory]::Delete($$child.FullName, $$false) } \
+        } elseif (-not (Test-Path -LiteralPath $$destination)) { \
+          Move-Item -LiteralPath $$child.FullName -Destination $$destination -Force -ErrorAction Stop \
+        } else { \
+          throw ('rollback destination already exists: ' + $$destination) \
+        } \
+      } \
+    }; \
+    try { \
+      if (-not (Test-Path -LiteralPath $$source -PathType Container)) { Write-StageLog 'ok' 'source-missing'; exit 0 }; \
+      if (Test-Path -LiteralPath $$staging) { \
+        $$stale = @(Get-ChildItem -LiteralPath $$staging -Force -ErrorAction Stop); \
+        if ($$stale.Count -gt 0) { throw 'staging directory is not empty' }; \
+      } else { \
+        [void][System.IO.Directory]::CreateDirectory($$staging) \
+      }; \
+      foreach ($$item in @(Get-ChildItem -LiteralPath $$source -Force -ErrorAction Stop)) { \
+        $$failedPath = $$item.FullName; \
+        $$destination = Join-Path $$staging $$item.Name; \
+        Move-Item -LiteralPath $$item.FullName -Destination $$destination -Force -ErrorAction Stop; \
+        $$moved.Add($$item.Name) \
+      }; \
+      $$failedPath = ''; \
+      Write-StageLog 'ok' 'all top-level entries staged'; \
+      exit 0 \
+    } catch { \
+      $$errorMessage = $$_.Exception.GetType().FullName + ': ' + $$_.Exception.Message; \
+      try { \
+        Restore-StageTree $$staging $$source; \
+        if ((Test-Path -LiteralPath $$staging -PathType Container) -and @(Get-ChildItem -LiteralPath $$staging -Force -ErrorAction Stop).Count -eq 0) { [System.IO.Directory]::Delete($$staging, $$false) } \
+      } catch { $$errorMessage += '; rollback: ' + $$_.Exception.Message }; \
+      if ($$failedPath) { [System.IO.File]::WriteAllText($$failedFile, $$failedPath, (New-Object System.Text.UTF8Encoding $$false)) }; \
+      Write-StageLog 'failed-rolled-back' $$errorMessage; \
+      exit 1 \
+    } \
+  }"`
+  Pop ${_RETURN}
+!macroend
+
 !macro WINKGO_LOG_REMOVE_FAILURE_JSON _PHASE _FATAL _FAILED_PATH _EXTRA_FIELDS
   !insertmacro WINKGO_LOG_JSON_EVENT "failure" "$$lockerText = '$WinkGoLockerList'; $$processes = @(); if ($$lockerText -and $$lockerText -notlike 'Windows did not identify*' -and $$lockerText -ne 'unknown process') { $$processes = @($$lockerText -split ',\s*' | Where-Object { $$_ } | ForEach-Object { if ($$_ -match '^(.*)\(([0-9]+)\)$$') { [ordered]@{ name = $$Matches[1]; pid = [int]$$Matches[2] } } else { [ordered]@{ name = $$_; pid = $$null } } }) }; $$payload.code = '${WINKGO_E_INSTALL_DIR_REMOVE_OR_LOCKED}'; $$payload.phase = '${_PHASE}'; $$payload.failedPath = '${_FAILED_PATH}'; $$payload.blockingProcesses = @($$processes); if ($$lockerText -like 'WINK GO installer(*)') { $$payload.fallbackReason = 'installer-self-lock'; $$payload.message = 'The installer process is using the install directory as its current output directory.' } elseif ($$processes.Count -eq 0) { $$payload.fallbackReason = 'restart-manager-no-process'; $$payload.message = 'Windows did not identify a specific locking process. Close terminals, editors, and file managers opened in the install folder.' } else { $$payload.fallbackReason = ''; $$payload.message = '' }; $$payload.fatal = ('${_FATAL}' -eq '1'); ${_EXTRA_FIELDS}"
 !macroend
@@ -110,12 +176,15 @@
   Var /GLOBAL WinkGoRemoveResidueRoot
   Var /GLOBAL WinkGoRemoveFirstFailedPath
   Var /GLOBAL WinkGoRemoveFirstFailedFile
+  Var /GLOBAL WinkGoAtomicRenameRetries
+  Var /GLOBAL WinkGoStageResult
   StrCpy $WinkGoAtomicFailedPath ""
   StrCpy $WinkGoAtomicRemoveSucceeded "0"
   StrCpy $WinkGoAtomicStagingDir ""
   StrCpy $WinkGoRemoveResidueCount "0"
   StrCpy $WinkGoRemoveResidueRoot "$INSTDIR"
   StrCpy $WinkGoRemoveFirstFailedPath ""
+  StrCpy $WinkGoAtomicRenameRetries "0"
 
   SetOutPath $TEMP
   StrCpy $WinkGoCurrentOutDir "$TEMP"
@@ -131,10 +200,30 @@
 
     winkgo_retry_atomic_rename:
       ClearErrors
-      Rename "$INSTDIR" "$WinkGoAtomicStagingDir"
-    ${if} ${Errors}
+      !insertmacro WINKGO_STAGE_INSTALL_CONTENTS $WinkGoStageResult
+    ${if} $WinkGoStageResult != 0
+      IntOp $WinkGoAtomicRenameRetries $WinkGoAtomicRenameRetries + 1
+      ${If} $WinkGoAtomicRenameRetries <= 3
+        ; A detached WINK GO child or a short-lived scanner can retain a directory
+        ; handle after the visible app exits. Reap the full owned process tree and
+        ; retry automatically before presenting a terminal failure to the customer.
+        !insertmacro WINKGO_LOG_EVENT "remove-atomic retry=$WinkGoAtomicRenameRetries action=stop-process-tree instDir=$INSTDIR"
+        !insertmacro WINKGO_STOP_APP_PROCESSES
+        Sleep 1000
+        Goto winkgo_retry_atomic_rename
+      ${EndIf}
+      SetDetailsPrint none
+      ClearErrors
+      FileOpen $WinkGoRemoveFirstFailedFile "$PLUGINSDIR\winkgo-stage-first-failed.txt" r
+      ${IfNot} ${Errors}
+        FileRead $WinkGoRemoveFirstFailedFile $WinkGoAtomicFailedPath
+        FileClose $WinkGoRemoveFirstFailedFile
+      ${EndIf}
+      SetDetailsPrint lastused
+      ${If} $WinkGoAtomicFailedPath == ""
+        StrCpy $WinkGoAtomicFailedPath "$INSTDIR"
+      ${EndIf}
       DetailPrint "Atomic update cleanup failed before replacing previous installation: $INSTDIR"
-      StrCpy $WinkGoAtomicFailedPath "$INSTDIR"
       !insertmacro WINKGO_LOG_ATOMIC_REMOVE_FAILURE
       !insertmacro WINKGO_CAPTURE_FAILED_PATH_LOCKERS "$WinkGoAtomicFailedPath"
       ${IfNot} ${Silent}

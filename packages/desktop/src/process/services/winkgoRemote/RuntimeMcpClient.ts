@@ -162,6 +162,23 @@ export class RuntimeMcpClient {
     return normalizeRuntimeCommandResult(result);
   }
 
+  /** Call one exact local Runtime tool without routing through natural-language intent matching. */
+  async callTool(
+    name: string,
+    arguments_: Record<string, unknown>,
+    options: { signal?: AbortSignal; timeoutMs?: number } = {}
+  ): Promise<unknown> {
+    const toolName = asText(name);
+    if (!/^[a-z0-9_.-]{1,120}$/i.test(toolName)) throw new Error('Runtime 工具名称不合法。');
+    await this.ensureConnected();
+    return this.request(
+      'tools/call',
+      { name: toolName, arguments: { ...arguments_ } },
+      options.timeoutMs ?? 60_000,
+      options.signal
+    );
+  }
+
   async ping(timeoutMs = 1_500): Promise<boolean> {
     try {
       await this.ensureConnected();

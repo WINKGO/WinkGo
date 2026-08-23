@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use crate::error::DbError;
 use crate::models::{MailboxMessageRow, TeamRow, TeamTaskRow};
 
@@ -75,6 +76,14 @@ pub trait ITeamRepository: Send + Sync {
         to_agent_id: &str,
         limit: Option<i64>,
     ) -> Result<Vec<MailboxMessageRow>, DbError>;
+
+    /// Returns mailbox history across all recipients in a team, optionally
+    /// limited. Messages are ordered by `created_at` ascending. This is a
+    /// read-only projection used by the team activity board.
+    async fn list_mailbox(&self, team_id: &str, limit: Option<i64>) -> Result<Vec<MailboxMessageRow>, DbError> {
+        let _ = (team_id, limit);
+        Ok(Vec::new())
+    }
 
     /// Deletes all mailbox messages belonging to a team.
     async fn delete_mailbox_by_team(&self, team_id: &str) -> Result<(), DbError>;

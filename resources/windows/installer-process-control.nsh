@@ -19,14 +19,24 @@ Var /GLOBAL WinkGoCurrentOutDir
     $$ownedPrefix = $$instDir.TrimEnd('\') + '\'; \
     $$psProc = @(Get-CimInstance -ClassName Win32_Process | Where-Object { $$_.ProcessId -eq $$PID })[0]; \
     $$installerPid = $$psProc.ParentProcessId; \
+    $$knownNames = @('WINK-GO.exe', 'WinkGo.exe', 'winkgo_core.exe', 'SparkBot-MCP-Hub-v1.1.0.exe'); \
+    $$driverNames = @('chromedriver.exe', 'msedgedriver.exe', 'geckodriver.exe'); \
+    $$all = @(Get-CimInstance -ClassName Win32_Process); \
+    $$allIds = @($$all | ForEach-Object { [int]$$_.ProcessId }); \
     function Test-WinkGoOwnedProcess($$proc) { \
+      $$id = [int]$$proc.ProcessId; \
+      if ($$id -eq $$installerPid -or $$id -eq $$PID) { return $$false }; \
+      $$name = [string]$$proc.Name; \
+      if ($$knownNames -contains $$name) { return $$true }; \
       $$path = $$proc.ExecutablePath; \
       if (-not $$path) { $$path = $$proc.Path } \
-      if (-not $$path) { return $$false } \
-      try { $$full = [System.IO.Path]::GetFullPath($$path) } catch { return $$false } \
-      return $$proc.ProcessId -ne $$installerPid -and $$full.StartsWith($$ownedPrefix, [System.StringComparison]::CurrentCultureIgnoreCase) \
+      if ($$path) { \
+        try { if ([System.IO.Path]::GetFullPath($$path).StartsWith($$ownedPrefix, [System.StringComparison]::CurrentCultureIgnoreCase)) { return $$true } } catch {} \
+      }; \
+      $$parentId = [int]$$proc.ParentProcessId; \
+      return ($$driverNames -contains $$name) -and $$parentId -gt 0 -and ($$allIds -notcontains $$parentId) \
     } \
-    $$hits = @(Get-CimInstance -ClassName Win32_Process | Where-Object { Test-WinkGoOwnedProcess $$_ }); \
+    $$hits = @($$all | Where-Object { Test-WinkGoOwnedProcess $$_ }); \
     $$payload = [ordered]@{ schemaVersion = 1; ts = (Get-Date -Format o); session = '$WinkGoSessionId'; version = '${VERSION}'; arch = '${WINKGO_TARGET_ARCH}'; updated = ('$WinkGoIsUpdated' -eq '1'); instDir = '$INSTDIR'; event = 'process-find'; ownedPrefix = $$ownedPrefix; installerPid = $$installerPid; hits = $$hits.Count; owned = ($$hits.Count -gt 0) }; \
     Add-Content -LiteralPath $$log -Encoding UTF8 -Value ($$payload | ConvertTo-Json -Compress -Depth 8); \
     if ($$hits.Count -gt 0) { $$hitPayload = [ordered]@{ schemaVersion = 1; ts = (Get-Date -Format o); session = '$WinkGoSessionId'; version = '${VERSION}'; arch = '${WINKGO_TARGET_ARCH}'; updated = ('$WinkGoIsUpdated' -eq '1'); instDir = '$INSTDIR'; event = 'process-find-hits'; processes = @($$hits | Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,Path,CommandLine) }; Add-Content -LiteralPath $$log -Encoding UTF8 -Value ($$hitPayload | ConvertTo-Json -Compress -Depth 10); exit 0 } \
@@ -45,30 +55,53 @@ Var /GLOBAL WinkGoCurrentOutDir
     $$ErrorActionPreference = 'SilentlyContinue'; \
     $$log = '$WinkGoSessionLogPath'; \
     if (-not $$log) { $$log = Join-Path $$env:TEMP '${WINKGO_FALLBACK_LOG}' }; \
-    $$names = @('WINK-GO.exe', 'WinkGo.exe'); \
+    $$names = @('WINK-GO.exe', 'WinkGo.exe', 'winkgo_core.exe', 'SparkBot-MCP-Hub-v1.1.0.exe'); \
+    $$driverNames = @('chromedriver.exe', 'msedgedriver.exe', 'geckodriver.exe'); \
     $$instDir = ''; \
     try { if ('$INSTDIR') { $$instDir = [System.IO.Path]::GetFullPath('$INSTDIR').TrimEnd('\') + '\' } } catch { $$instDir = '' }; \
     $$psProc = @(Get-CimInstance -ClassName Win32_Process | Where-Object { $$_.ProcessId -eq $$PID })[0]; \
     $$installerPid = if ($$psProc) { [int]$$psProc.ParentProcessId } else { 0 }; \
     function Get-WinkGoTargets { \
-      @((Get-CimInstance -ClassName Win32_Process) | Where-Object { \
+      $$all = @(Get-CimInstance -ClassName Win32_Process); \
+      $$allIds = @($$all | ForEach-Object { [int]$$_.ProcessId }); \
+      $$owned = @($$all | Where-Object { \
         $$proc = $$_; \
         $$path = if ($$proc.ExecutablePath) { [string]$$proc.ExecutablePath } else { [string]$$proc.Path }; \
         $$ownedPath = $$false; \
         if ($$instDir -and $$path) { try { $$ownedPath = [System.IO.Path]::GetFullPath($$path).StartsWith($$instDir, [System.StringComparison]::OrdinalIgnoreCase) } catch {} }; \
-        [int]$$proc.ProcessId -ne $$installerPid -and (($$names -contains [string]$$proc.Name) -or $$ownedPath) \
-      }) \
+        $$parentId = [int]$$proc.ParentProcessId; \
+        $$orphanedDriver = ($$driverNames -contains [string]$$proc.Name) -and $$parentId -gt 0 -and ($$allIds -notcontains $$parentId); \
+        [int]$$proc.ProcessId -ne $$installerPid -and [int]$$proc.ProcessId -ne $$PID -and (($$names -contains [string]$$proc.Name) -or $$ownedPath -or $$orphanedDriver) \
+      }); \
+      $$ids = @($$owned | ForEach-Object { [int]$$_.ProcessId }); \
+      $$frontier = @($$ids); \
+      while ($$frontier.Count -gt 0) { \
+        $$children = @($$all | Where-Object { $$frontier -contains [int]$$_.ParentProcessId -and [int]$$_.ProcessId -ne $$installerPid -and [int]$$_.ProcessId -ne $$PID }); \
+        $$childIds = @($$children | ForEach-Object { [int]$$_.ProcessId } | Where-Object { $$ids -notcontains $$_ }); \
+        $$ids = @($$ids + $$childIds | Select-Object -Unique); \
+        $$frontier = @($$childIds); \
+      }; \
+      @($$all | Where-Object { $$ids -contains [int]$$_.ProcessId }) \
     }; \
     $$targets = @(Get-WinkGoTargets); \
+    $$initialIds = @($$targets | ForEach-Object { [int]$$_.ProcessId }); \
     $$initial = @($$targets | ForEach-Object { [ordered]@{ pid = [int]$$_.ProcessId; name = [string]$$_.Name; path = [string]$$_.ExecutablePath } }); \
     foreach ($$target in $$targets) { \
       try { $$process = [System.Diagnostics.Process]::GetProcessById([int]$$target.ProcessId); [void]$$process.CloseMainWindow() } catch {} \
     }; \
     $$deadline = [DateTime]::UtcNow.AddSeconds(2); \
     do { Start-Sleep -Milliseconds 100; $$remaining = @(Get-WinkGoTargets) } while ($$remaining.Count -gt 0 -and [DateTime]::UtcNow -lt $$deadline); \
-    foreach ($$target in $$remaining) { $$id = [int]$$target.ProcessId; Stop-Process -Id $$id -Force -ErrorAction SilentlyContinue }; \
+    $$forceIds = @($$initialIds + @($$remaining | ForEach-Object { [int]$$_.ProcessId }) | Select-Object -Unique); \
+    foreach ($$id in ($$forceIds | Sort-Object -Descending)) { Stop-Process -Id $$id -Force -ErrorAction SilentlyContinue }; \
     $$deadline = [DateTime]::UtcNow.AddSeconds(3); \
-    do { Start-Sleep -Milliseconds 100; $$remaining = @(Get-WinkGoTargets) } while ($$remaining.Count -gt 0 -and [DateTime]::UtcNow -lt $$deadline); \
+    do { \
+      Start-Sleep -Milliseconds 100; \
+      $$remaining = @(Get-WinkGoTargets); \
+      $$recordedRemaining = @($$initialIds | Where-Object { Get-Process -Id $$_ -ErrorAction SilentlyContinue }); \
+    } while (($$remaining.Count -gt 0 -or $$recordedRemaining.Count -gt 0) -and [DateTime]::UtcNow -lt $$deadline); \
+    if ($$recordedRemaining.Count -gt 0) { \
+      $$remaining = @($$remaining + @(Get-CimInstance -ClassName Win32_Process | Where-Object { $$recordedRemaining -contains [int]$$_.ProcessId }) | Sort-Object ProcessId -Unique); \
+    }; \
     $$payload = [ordered]@{ schemaVersion = 1; ts = (Get-Date -Format o); session = '$WinkGoSessionId'; version = '${VERSION}'; arch = '${WINKGO_TARGET_ARCH}'; updated = ('$WinkGoIsUpdated' -eq '1'); instDir = '$INSTDIR'; event = 'install-preflight-close'; targets = $$initial; remaining = @($$remaining | Select-Object ProcessId,Name,ExecutablePath); result = if ($$remaining.Count -eq 0) { 'closed' } else { 'failed' } }; \
     Add-Content -LiteralPath $$log -Encoding UTF8 -Value ($$payload | ConvertTo-Json -Compress -Depth 8); \
     if ($$remaining.Count -eq 0) { exit 0 } else { exit 1 } \
@@ -88,19 +121,28 @@ Var /GLOBAL WinkGoCurrentOutDir
     $$ownedPrefix = $$instDir.TrimEnd('\') + '\'; \
     $$psProc = @(Get-CimInstance -ClassName Win32_Process | Where-Object { $$_.ProcessId -eq $$PID })[0]; \
     $$installerPid = $$psProc.ParentProcessId; \
+    $$knownNames = @('WINK-GO.exe', 'WinkGo.exe', 'winkgo_core.exe', 'SparkBot-MCP-Hub-v1.1.0.exe'); \
+    $$driverNames = @('chromedriver.exe', 'msedgedriver.exe', 'geckodriver.exe'); \
+    $$all = @(Get-CimInstance -ClassName Win32_Process); \
+    $$allIds = @($$all | ForEach-Object { [int]$$_.ProcessId }); \
     function Test-WinkGoOwnedProcess($$proc) { \
+      $$id = [int]$$proc.ProcessId; \
+      if ($$id -eq $$installerPid -or $$id -eq $$PID) { return $$false }; \
+      $$name = [string]$$proc.Name; \
+      if ($$knownNames -contains $$name) { return $$true }; \
       $$path = $$proc.ExecutablePath; \
       if (-not $$path) { $$path = $$proc.Path } \
-      if (-not $$path) { return $$false } \
-      try { $$full = [System.IO.Path]::GetFullPath($$path) } catch { return $$false } \
-      return $$proc.ProcessId -ne $$installerPid -and $$full.StartsWith($$ownedPrefix, [System.StringComparison]::CurrentCultureIgnoreCase) \
+      if ($$path) { \
+        try { if ([System.IO.Path]::GetFullPath($$path).StartsWith($$ownedPrefix, [System.StringComparison]::CurrentCultureIgnoreCase)) { return $$true } } catch {} \
+      }; \
+      $$parentId = [int]$$proc.ParentProcessId; \
+      return ($$driverNames -contains $$name) -and $$parentId -gt 0 -and ($$allIds -notcontains $$parentId) \
     } \
-    $$all = @(Get-CimInstance -ClassName Win32_Process); \
     $$owned = @($$all | Where-Object { Test-WinkGoOwnedProcess $$_ }); \
     $$ids = @($$owned | ForEach-Object { [int]$$_.ProcessId }); \
     $$frontier = @($$ids); \
     while ($$frontier.Count -gt 0) { \
-      $$children = @($$all | Where-Object { $$frontier -contains [int]$$_.ParentProcessId -and [int]$$_.ProcessId -ne [int]$$installerPid } | Where-Object { Test-WinkGoOwnedProcess $$_ }); \
+      $$children = @($$all | Where-Object { $$frontier -contains [int]$$_.ParentProcessId -and [int]$$_.ProcessId -ne [int]$$installerPid -and [int]$$_.ProcessId -ne $$PID }); \
       $$childIds = @($$children | ForEach-Object { [int]$$_.ProcessId }); \
       $$ids = @($$ids + $$childIds | Select-Object -Unique); \
       $$frontier = $$childIds; \

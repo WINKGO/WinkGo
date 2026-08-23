@@ -8,13 +8,37 @@ import React from 'react';
 import { act, render, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+type PreviewOpenRequest = {
+  content: string;
+  content_type: string;
+  metadata?: {
+    title?: string;
+    file_name?: string;
+    conversation_id?: string;
+  };
+};
+
+const previewIpc = vi.hoisted(() => ({
+  requestOpenHandler: null as null | ((data: PreviewOpenRequest) => { accepted: boolean }),
+}));
+
 // PreviewContext pulls ipcBridge (WS-backed emitters + fs IO). Stub the surface
 // it wires on mount so the provider mounts cleanly in jsdom and this test
 // exercises only the scope-reset behavior.
 vi.mock('@/common', () => ({
   ipcBridge: {
     fileStream: { contentUpdate: { on: () => () => {} } },
-    preview: { open: { on: () => () => {} } },
+    preview: {
+      open: { on: () => () => {} },
+      requestOpen: {
+        provider: (handler: (data: PreviewOpenRequest) => { accepted: boolean }) => {
+          previewIpc.requestOpenHandler = handler;
+          return () => {
+            if (previewIpc.requestOpenHandler === handler) previewIpc.requestOpenHandler = null;
+          };
+        },
+      },
+    },
     fs: {
       writeFile: { invoke: async () => true },
       getFileMetadata: { invoke: async () => null },
@@ -29,6 +53,10 @@ import {
   usePreviewContext,
   type PreviewContextValue,
 } from '@/renderer/pages/conversation/Preview/context/PreviewContext';
+import {
+  resetCurrentConversationForTest,
+  setCurrentConversation,
+} from '@/renderer/pages/conversation/explorer/currentConversationStore';
 
 /**
  * Capture the live context value on every render so assertions read the latest
@@ -58,10 +86,13 @@ const openADoc = (): void => {
 
 beforeEach(() => {
   localStorage.clear();
+  previewIpc.requestOpenHandler = null;
+  resetCurrentConversationForTest();
 });
 
 afterEach(() => {
   cleanup();
+  resetCurrentConversationForTest();
 });
 
 describe('PreviewContext scope isolation (closePreviewIfScopeChanged)', () => {
@@ -76,6 +107,37 @@ describe('PreviewContext scope isolation (closePreviewIfScopeChanged)', () => {
     act(() => ctx.closePreviewIfScopeChanged('/ws/a'));
     expect(ctx.isOpen).toBe(true);
     expect(ctx.tabs).toHaveLength(1);
+  });
+
+  it('opens an Agent browser request only after the routed conversation scope is ready', () => {
+    mount();
+    act(() => ctx.closePreviewIfScopeChanged('/ws/a'));
+    openADoc();
+
+    let acknowledgement: { accepted: boolean } | undefined;
+    act(() => {
+      acknowledgement = previewIpc.requestOpenHandler?.({
+        content: 'https://winkgo.top/',
+        content_type: 'browser',
+        metadata: { title: 'WINK GO Browser', conversation_id: 'conversation-b' },
+      });
+    });
+
+    expect(acknowledgement).toEqual({ accepted: true });
+    expect(ctx.tabs.some((tab) => tab.content_type === 'browser')).toBe(false);
+
+    act(() => {
+      ctx.closePreviewIfScopeChanged('/ws/b');
+      setCurrentConversation('conversation-b');
+    });
+
+    expect(ctx.isOpen).toBe(true);
+    expect(ctx.tabs).toHaveLength(1);
+    expect(ctx.tabs[0]).toMatchObject({
+      content: 'https://winkgo.top/',
+      content_type: 'browser',
+      title: 'WINK GO Browser',
+    });
   });
 
   it('closes the preview when the scope key changes to a scope with no saved state', () => {

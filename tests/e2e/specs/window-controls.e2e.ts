@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Window Controls – custom titlebar minimize/maximize/close buttons.
  *
@@ -20,16 +21,14 @@ test.describe('Window Controls', () => {
     expect(typeof isMaximized).toBe('boolean');
   });
 
-  test('maximize and unmaximize round-trip through the bridge', async ({ page, electronApp }) => {
+  test('maximize and unmaximize round-trip through the bridge', async ({ page }) => {
     await invokeBridge<void>(page, 'window-controls:maximize', undefined, 10_000);
-    // Poll the real BrowserWindow state from the main process.
+    // Read the same renderer-owned BrowserWindow through the bridge. WINK GO
+    // also owns island, pet, and automation-overlay windows, so taking the
+    // first BrowserWindow can assert against an unrelated transparent window.
     await expect
       .poll(
-        () =>
-          electronApp.evaluate(({ BrowserWindow }) => {
-            const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed());
-            return win?.isMaximized() ?? false;
-          }),
+        () => invokeBridge<boolean>(page, 'window-controls:is-maximized', undefined, 10_000),
         { timeout: 10_000 }
       )
       .toBe(true);
@@ -37,11 +36,7 @@ test.describe('Window Controls', () => {
     await invokeBridge<void>(page, 'window-controls:unmaximize', undefined, 10_000);
     await expect
       .poll(
-        () =>
-          electronApp.evaluate(({ BrowserWindow }) => {
-            const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed());
-            return win?.isMaximized() ?? true;
-          }),
+        () => invokeBridge<boolean>(page, 'window-controls:is-maximized', undefined, 10_000),
         { timeout: 10_000 }
       )
       .toBe(false);

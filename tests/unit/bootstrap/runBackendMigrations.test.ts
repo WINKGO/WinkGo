@@ -1,6 +1,8 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { IMAGE_GEN_ENV_KEYS } from '@/common/config/imageGenerationMcpEnv';
+import { BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME } from '@/common/config/constants';
 import { BUILTIN_IMAGE_GEN_NAME, type IMcpServer, type IProvider } from '@/common/config/storage';
 import { resolveImageGenerationMigrationConfig, runBackendMigrations } from '@/process/utils/runBackendMigrations';
 
@@ -148,6 +150,57 @@ describe('resolveImageGenerationMigrationConfig', () => {
 });
 
 describe('runBackendMigrations', () => {
+  it('bootstraps the independent desktop Computer Use MCP bundle', async () => {
+    listServersMock.mockResolvedValue([imageServer()]);
+
+    await runBackendMigrations(configFile as never);
+
+    expect(batchImportServersMock).toHaveBeenCalledWith({
+      servers: expect.arrayContaining([
+        expect.objectContaining({
+          name: BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME,
+          builtin: true,
+          transport: expect.objectContaining({
+            type: 'stdio',
+            command: 'node',
+            args: ['/mock/builtin-mcp-desktop-computer-use.js'],
+          }),
+        }),
+      ]),
+    });
+  });
+
+  it('persists the current desktop bridge environment for Agent MCP startup', async () => {
+    const previousPort = process.env.WINKGO_CDP_ACTIVE_PORT;
+    const previousToken = process.env.WINKGO_CDP_BRIDGE_TOKEN;
+    process.env.WINKGO_CDP_ACTIVE_PORT = '45231';
+    process.env.WINKGO_CDP_BRIDGE_TOKEN = 'desktop-bridge-token';
+    listServersMock.mockResolvedValue([imageServer()]);
+
+    try {
+      await runBackendMigrations(configFile as never);
+
+      expect(batchImportServersMock).toHaveBeenCalledWith({
+        servers: expect.arrayContaining([
+          expect.objectContaining({
+            name: BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME,
+            transport: expect.objectContaining({
+              env: {
+                WINKGO_CDP_ACTIVE_PORT: '45231',
+                WINKGO_CDP_BRIDGE_TOKEN: 'desktop-bridge-token',
+              },
+            }),
+          }),
+        ]),
+      });
+    } finally {
+      if (previousPort === undefined) delete process.env.WINKGO_CDP_ACTIVE_PORT;
+      else process.env.WINKGO_CDP_ACTIVE_PORT = previousPort;
+      if (previousToken === undefined) delete process.env.WINKGO_CDP_BRIDGE_TOKEN;
+      else process.env.WINKGO_CDP_BRIDGE_TOKEN = previousToken;
+    }
+  });
+
   it('does not write image generation business config back to local config storage', async () => {
     listServersMock.mockResolvedValue([imageServer()]);
     configFileGetMock.mockImplementation(async (key: string) => {

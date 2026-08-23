@@ -74,22 +74,56 @@ function summarizePreviewUrl(url?: string): string | undefined {
   return url;
 }
 
+/** Renderer-safe path boundary check (node:path is unavailable in this process). */
+function isWithinRoot(root: string, target: string): boolean {
+  if (!root) return true;
+  const rootParts = root.replace(/\\/g, '/').replace(/\/+$/, '').split('/').filter(Boolean);
+  const targetParts = target.replace(/\\/g, '/').split('/').filter(Boolean);
+  if (rootParts.length === 0) return true;
+  if (targetParts.length < rootParts.length) return false;
+  const windowsPath = /^[a-zA-Z]:$/.test(rootParts[0] ?? '');
+  return rootParts.every((part, index) => {
+    const candidate = targetParts[index] ?? '';
+    return windowsPath ? part.toLowerCase() === candidate.toLowerCase() : part === candidate;
+  });
+}
+
+/** Normalize dot segments before checking whether an absolute path stays in the workspace. */
+function normalizeAbsolute(filePath: string): string {
+  const unified = filePath.replace(/\\/g, '/');
+  const isWindowsDrive = /^[a-zA-Z]:/.test(unified);
+  const stack: string[] = [];
+  for (const segment of unified.split('/').filter(Boolean)) {
+    if (segment === '.') continue;
+    if (segment === '..') {
+      stack.pop();
+      continue;
+    }
+    stack.push(segment);
+  }
+  return isWindowsDrive ? stack.join('/') : '/' + stack.join('/');
+}
+
 /**
  * 解析相对路径为绝对路径 / Resolve relative path to absolute path
  * @param basePath 基础文件路径 / Base file path
  * @param relativePath 相对路径 / Relative path
  * @returns 绝对路径 / Absolute path
  */
-function resolveRelativePath(basePath: string, relativePath: string): string {
+export function resolveRelativePath(basePath: string, relativePath: string, workspace?: string): string {
   // 去除协议前缀 / Remove protocol prefix
   const cleanBasePath = basePath.replace(/^file:\/\//, '');
   const baseDir =
     cleanBasePath.substring(0, cleanBasePath.lastIndexOf('/') + 1) ||
     cleanBasePath.substring(0, cleanBasePath.lastIndexOf('\\') + 1);
 
-  // 如果相对路径已经是绝对路径，直接返回 / If relative path is already absolute, return directly
+  // Absolute paths must be normalized before the workspace-boundary check.
   if (relativePath.startsWith('/') || /^[a-zA-Z]:/.test(relativePath)) {
-    return relativePath;
+    const normalizedAbsolute = normalizeAbsolute(relativePath);
+    if (workspace && !isWithinRoot(workspace, normalizedAbsolute)) {
+      throw new Error(`Path traversal blocked: "${relativePath}" resolves outside workspace`);
+    }
+    return normalizedAbsolute;
   }
 
   // 处理 ./ 和 ../ / Handle ./ and ../
@@ -105,10 +139,11 @@ function resolveRelativePath(basePath: string, relativePath: string): string {
   }
 
   // 保留 Windows 盘符格式 / Preserve Windows drive letter format
-  if (/^[a-zA-Z]:/.test(baseDir)) {
-    return parts.join('/');
+  const result = /^[a-zA-Z]:/.test(baseDir) ? parts.join('/') : '/' + parts.join('/');
+  if (workspace && !isWithinRoot(workspace, result)) {
+    throw new Error(`Path traversal blocked: "${relativePath}" resolves outside workspace`);
   }
-  return '/' + parts.join('/');
+  return result;
 }
 
 /**
@@ -133,7 +168,7 @@ async function inlineRelativeResources(html: string, basePath: string, workspace
   for (const match of imgMatches) {
     const [fullMatch, before, src, after] = match;
     try {
-      const absolutePath = resolveRelativePath(basePath, src);
+      const absolutePath = resolveRelativePath(basePath, src, workspace);
       const dataUrl = await ipcBridge.fs.getImageBase64.invoke({ path: absolutePath, workspace });
       if (dataUrl) {
         // getImageBase64 已经返回完整的 data URL / getImageBase64 already returns complete data URL
@@ -155,7 +190,7 @@ async function inlineRelativeResources(html: string, basePath: string, workspace
     const isStylesheet = /rel=["']stylesheet["']/i.test(fullMatch) || href.endsWith('.css');
     if (isStylesheet) {
       try {
-        const absolutePath = resolveRelativePath(basePath, href);
+        const absolutePath = resolveRelativePath(basePath, href, workspace);
         const cssContent = await ipcBridge.fs.readFile.invoke({ path: absolutePath, workspace });
         if (cssContent) {
           // 替换 CSS 中的相对 url() 引用为 base64 / Replace relative url() references in CSS with base64
@@ -168,7 +203,7 @@ async function inlineRelativeResources(html: string, basePath: string, workspace
             try {
               // CSS 文件的基础路径 / Base path for CSS file
               const cssBasePath = absolutePath;
-              const resourcePath = resolveRelativePath(cssBasePath, urlPath);
+              const resourcePath = resolveRelativePath(cssBasePath, urlPath, workspace);
               const dataUrl = await ipcBridge.fs.getImageBase64.invoke({ path: resourcePath, workspace });
               if (dataUrl) {
                 // getImageBase64 已经返回完整的 data URL / getImageBase64 already returns complete data URL
@@ -195,7 +230,7 @@ async function inlineRelativeResources(html: string, basePath: string, workspace
   for (const match of scriptMatches) {
     const [fullMatch, before, src, after] = match;
     try {
-      const absolutePath = resolveRelativePath(basePath, src);
+      const absolutePath = resolveRelativePath(basePath, src, workspace);
       const scriptContent = await ipcBridge.fs.readFile.invoke({ path: absolutePath, workspace });
       if (scriptContent) {
         // 保留其他属性（如 type, defer, async 等，但 async/defer 对 inline 无效）

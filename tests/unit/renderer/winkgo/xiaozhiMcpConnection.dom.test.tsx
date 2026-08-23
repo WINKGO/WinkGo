@@ -167,6 +167,16 @@ describe('XiaozhiMcpConnection', () => {
     mocks.authorizeFirewall.mockResolvedValue({ success: true, data: snapshot });
   });
 
+  it('shows a neutral detection state before the first Runtime snapshot arrives', () => {
+    mocks.getSnapshot.mockImplementation(() => new Promise(() => undefined));
+
+    render(<XiaozhiMcpConnection />);
+
+    expect(screen.getByTestId('xiaozhi-flow-runtime')).toHaveAttribute('data-status', 'checking');
+    expect(screen.getByText('正在检测')).toBeInTheDocument();
+    expect(screen.queryByText('尚未安装')).toBeNull();
+  });
+
   it('loads the original dual-channel configuration without testing remote services on mount', async () => {
     render(<XiaozhiMcpConnection />);
 

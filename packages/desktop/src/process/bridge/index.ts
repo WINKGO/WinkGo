@@ -16,6 +16,8 @@ import { initWebuiBridge } from './webuiBridge';
 import { initThemeBridge } from './themeBridge';
 import {
   initWinkGoAuthBridge,
+  initWinkGoBrowserComputerUseBridge,
+  initWinkGoDesktopComputerUseBridge,
   initWinkGoFilesBridge,
   initWinkGoFormatBridge,
   initWinkGoImageBridge,
@@ -38,6 +40,8 @@ export function initAllBridges(_deps: BridgeDependencies = {}): void {
   initWebuiBridge();
   initThemeBridge();
   initWinkGoAuthBridge();
+  initWinkGoBrowserComputerUseBridge();
+  initWinkGoDesktopComputerUseBridge();
   initWinkGoSkillsBridge();
   initWinkGoFilesBridge();
   initWinkGoFormatBridge();
@@ -58,6 +62,8 @@ export {
   initWindowControlsBridge,
   initWebuiBridge,
   initWinkGoAuthBridge,
+  initWinkGoBrowserComputerUseBridge,
+  initWinkGoDesktopComputerUseBridge,
   initWinkGoFilesBridge,
   initWinkGoFormatBridge,
   initWinkGoImageBridge,

@@ -63,6 +63,22 @@ describe('conversationRuntimeViewStore', () => {
     });
   });
 
+  it('exposes the backend interjection mode without unlocking an unsupported send path', () => {
+    const { view } = hydrateSucceededConversationRuntimeView(
+      undefined,
+      conversation_id,
+      runtime({
+        state: 'running',
+        can_send_message: false,
+        is_processing: true,
+        interjection_mode: 'native',
+      })
+    );
+
+    expect(view.interjectionMode).toBe('native');
+    expect(view.canSendMessage).toBe(false);
+  });
+
   it('maps cancelling runtime as processing and not sendable', () => {
     const { view } = hydrateSucceededConversationRuntimeView(
       undefined,
@@ -478,6 +494,32 @@ describe('conversationRuntimeViewStore', () => {
         turn_id: 'turn-1',
       },
     });
+  });
+
+  it('ignores a stale completion for a turn that is no longer active', () => {
+    resetConversationRuntimeViewStoreForTest();
+    localSendStarted(conversation_id);
+    localSendAccepted(
+      conversation_id,
+      'turn-new',
+      runtime({
+        state: 'running',
+        can_send_message: false,
+        has_task: true,
+        task_status: 'running',
+        is_processing: true,
+        turn_id: 'turn-new',
+      }),
+      'message-1'
+    );
+
+    const logs = turnCompleted(conversation_id, 'turn-orphan', runtime({}));
+    const view = getConversationRuntimeViewSnapshot(conversation_id);
+
+    expect(view.activeTurnId).toBe('turn-new');
+    expect(view.isProcessing).toBe(true);
+    expect(view.canSendMessage).toBe(false);
+    expect(logs.map((log) => log.event)).toContain('turn_completed_ignored_for_other_turn');
   });
 
   it('defaults to an idle view before hydration', () => {

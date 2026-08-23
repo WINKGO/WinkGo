@@ -1,13 +1,15 @@
 // Modified from AionCore by WINK GO contributors in 2026.
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use chrono::{Datelike, Local};
+use tokio::sync::mpsc::UnboundedSender;
 use winkgo_common::generate_short_id;
 use winkgo_db::{FolderRow, IProjectStore, ProjectExplorerRow, ProjectKind, Role};
 
 use crate::canonical::{self, Canonical};
 use crate::containment;
+use crate::scm::ScmInbound;
 use crate::types::{
     AttachInput, FolderDto, ProjectDetail, ProjectError, ProjectExplorerEntry, ProjectExplorerView, ReferenceInput,
     ResolveOutput, ResolvedResource, RuntimeStatus,
@@ -20,11 +22,31 @@ use crate::types::{
 pub struct ProjectService {
     store: Arc<dyn IProjectStore>,
     temp_root: PathBuf,
+    scm_roots_tx: Arc<OnceLock<UnboundedSender<ScmInbound>>>,
 }
 
 impl ProjectService {
     pub fn new(store: Arc<dyn IProjectStore>, temp_root: PathBuf) -> Self {
-        Self { store, temp_root }
+        Self {
+            store,
+            temp_root,
+            scm_roots_tx: Arc::new(OnceLock::new()),
+        }
+    }
+
+    pub fn set_scm_roots_sender(&self, tx: UnboundedSender<ScmInbound>) {
+        let _ = self.scm_roots_tx.set(tx);
+    }
+
+    fn notify_roots_changed(&self, project_id: &str) {
+        if let Some(tx) = self.scm_roots_tx.get() {
+            let _ = tx.send(ScmInbound::RootsChanged {
+                project_id: project_id.to_owned(),
+                // WINK GO's current desktop database is local/single-user; the
+                // actor therefore resolves roots without a user scope.
+                user_id: String::new(),
+            });
+        }
     }
 
     // ── creation / backfill ────────────────────────────────────────────
@@ -144,15 +166,17 @@ impl ProjectService {
         }
 
         let order_index = entries.len() as i64;
-        self.store
+        let row = self
+            .store
             .insert_attached_entry(
                 &input.project_id,
                 &folder.folder_id,
                 input.display_name.as_deref(),
                 order_index,
             )
-            .await
-            .map_err(Into::into)
+            .await?;
+        self.notify_roots_changed(&input.project_id);
+        Ok(row)
     }
 
     /// Remove an attached entry. The workspace entry cannot be removed here.
@@ -170,6 +194,7 @@ impl ProjectService {
             });
         }
         self.store.remove_entry(pe_id).await?;
+        self.notify_roots_changed(&entry.project_id);
         Ok(())
     }
 
@@ -347,7 +372,7 @@ impl ProjectService {
         let default_display_name = canonical::canonicalize(&folder.resource_canonical)
             .ok()
             .map(|c| canonical::basename(&c))
-            .filter(|name| !name.is_empty());
+            .filter(|name| !name.trim().is_empty());
         let (runtime_status, runtime_error) = runtime_status_of(folder);
         FolderDto {
             folder_id: folder.folder_id.clone(),

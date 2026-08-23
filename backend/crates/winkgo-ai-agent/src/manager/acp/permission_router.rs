@@ -13,7 +13,13 @@ use tracing::{debug, info};
 use winkgo_api_types::TEAM_MCP_SERVER_NAME;
 use winkgo_common::Confirmation;
 
-const AUTO_APPROVE_MCP_SERVERS: &[&str] = &[TEAM_MCP_SERVER_NAME];
+const WINKGO_BROWSER_MCP_SERVER_NAME: &str = "winkgo-browser";
+
+// These are WINK GO-owned, in-process MCP bridges. Requiring a second
+// confirmation for every call makes third-party ACP agents stall after they
+// have correctly selected the in-app browser. External MCP servers continue
+// through the normal user-confirmation path.
+const AUTO_APPROVE_MCP_SERVERS: &[&str] = &[TEAM_MCP_SERVER_NAME, WINKGO_BROWSER_MCP_SERVER_NAME];
 
 struct PendingPermission {
     responder: oneshot::Sender<PermissionDecision>,
@@ -64,14 +70,32 @@ impl PermissionRouter {
 
                 let call_id = perm_req.request.tool_call.tool_call_id.to_string();
 
-                // Auto-approve team MCP tools without user interaction.
+                // Some third-party ACP agents ignore the injected browser routing
+                // rule and try to open an HTTP URL through `start`, `open`, or a
+                // similar OS launcher. Never let that escape to Chrome/Edge: reject
+                // the command at the permission boundary so the agent can retry via
+                // the already-loaded `winkgo-browser` MCP instead.
+                if is_external_browser_launch_request(&perm_req.request) {
+                    info!(
+                        conversation_id = %runtime.conversation_id(),
+                        call_id,
+                        "external browser launcher rejected; use WINK GO browser MCP"
+                    );
+                    let decision = select_reject_option_id(&perm_req.request)
+                        .map(|option_id| PermissionDecision::Selected { option_id })
+                        .unwrap_or(PermissionDecision::Cancelled);
+                    let _ = perm_req.response_tx.send(decision);
+                    continue;
+                }
+
+                // Auto-approve WINK GO-owned MCP tools without user interaction.
                 if let Some(option_id) = auto_approve_option_id(&perm_req.request) {
                     info!(
                         conversation_id = %runtime.conversation_id(),
                         call_id,
                         option_id = %option_id,
                         server_name = ?extract_mcp_server_name(&perm_req.request),
-                        "ACP team MCP permission auto-approved"
+                        "ACP built-in MCP permission auto-approved"
                     );
                     let _ = perm_req.response_tx.send(PermissionDecision::Selected { option_id });
                     continue;
@@ -200,6 +224,52 @@ fn select_allow_option_id(request: &agent_client_protocol::schema::RequestPermis
         .map(|option| option.option_id.to_string())
 }
 
+fn select_reject_option_id(request: &agent_client_protocol::schema::RequestPermissionRequest) -> Option<String> {
+    request
+        .options
+        .iter()
+        .find(|option| matches!(option.kind, SdkPermissionOptionKind::RejectOnce))
+        .or_else(|| {
+            request
+                .options
+                .iter()
+                .find(|option| matches!(option.kind, SdkPermissionOptionKind::RejectAlways))
+        })
+        .map(|option| option.option_id.to_string())
+}
+
+fn is_external_browser_launch_request(request: &agent_client_protocol::schema::RequestPermissionRequest) -> bool {
+    let Some(command) = request
+        .tool_call
+        .fields
+        .raw_input
+        .as_ref()
+        .and_then(|raw_input| raw_input.get("command"))
+        .and_then(serde_json::Value::as_str)
+    else {
+        return false;
+    };
+    let command = command.trim().to_ascii_lowercase();
+    if !command.contains("http://") && !command.contains("https://") {
+        return false;
+    }
+    [
+        "start ",
+        "start-process ",
+        "explorer ",
+        "explorer.exe ",
+        "open ",
+        "xdg-open ",
+        "cmd /c start ",
+        "cmd.exe /c start ",
+        "python -m webbrowser ",
+        "python3 -m webbrowser ",
+    ]
+    .iter()
+    .any(|prefix| command.starts_with(prefix))
+        || ((command.starts_with("powershell ") || command.starts_with("pwsh ")) && command.contains("start-process"))
+}
+
 fn extract_mcp_server_name(request: &agent_client_protocol::schema::RequestPermissionRequest) -> Option<String> {
     extract_mcp_server_from_raw_input(request).or_else(|| {
         request
@@ -289,6 +359,7 @@ mod tests {
             action: None,
             description: "Write /tmp/current_time.txt".to_owned(),
             command_type: Some("edit".to_owned()),
+            questions: None,
             options: vec![winkgo_common::ConfirmationOption {
                 label: "Allow".to_owned(),
                 value: json!("allow_once"),
@@ -362,6 +433,24 @@ mod tests {
         );
 
         assert!(is_auto_approve_tool(&request));
+    }
+
+    #[test]
+    fn auto_approve_matches_winkgo_browser_mcp() {
+        let request = permission_request_with_title_and_raw_input(
+            "mcp__winkgo-browser__browser_action",
+            Some(json!({
+                "tool_name": "mcp__winkgo-browser__browser_action",
+                "params": {
+                    "action": "navigate",
+                    "url": "https://www.baidu.com"
+                }
+            })),
+            vec![allow_once_option("approved"), reject_option("cancel")],
+        );
+
+        assert!(is_auto_approve_tool(&request));
+        assert_eq!(auto_approve_option_id(&request).as_deref(), Some("approved"));
     }
 
     #[test]
@@ -447,6 +536,71 @@ mod tests {
         );
 
         assert_eq!(auto_approve_option_id(&request), None);
+    }
+
+    #[test]
+    fn external_browser_launchers_are_detected_without_blocking_normal_network_commands() {
+        for command in [
+            "start https://www.baidu.com",
+            "cmd /c start \"\" https://example.com",
+            "explorer.exe https://example.com",
+            "open https://example.com",
+            "xdg-open https://example.com",
+            "powershell -NoProfile -Command Start-Process https://example.com",
+        ] {
+            let request = permission_request_with_title_and_raw_input(
+                "Open website",
+                Some(json!({ "command": command })),
+                vec![allow_once_option("allow"), reject_option("reject")],
+            );
+            assert!(is_external_browser_launch_request(&request), "must reject: {command}");
+            assert_eq!(select_reject_option_id(&request).as_deref(), Some("reject"));
+        }
+
+        for command in [
+            "curl https://example.com",
+            "git clone https://example.com/repo.git",
+            "npm view https://example.com",
+        ] {
+            let request = permission_request_with_title_and_raw_input(
+                "Network command",
+                Some(json!({ "command": command })),
+                vec![allow_once_option("allow"), reject_option("reject")],
+            );
+            assert!(
+                !is_external_browser_launch_request(&request),
+                "must allow normal command: {command}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn start_rejects_external_browser_launcher_before_it_reaches_the_user() {
+        let (permission_tx, permission_rx) = mpsc::channel(1);
+        let router = Arc::new(PermissionRouter::new(permission_rx));
+        let runtime = AgentRuntime::new("conv-1", "/tmp/workspace", 8);
+        router.start(runtime);
+
+        let request = permission_request_with_title_and_raw_input(
+            "Open Baidu in default browser",
+            Some(json!({ "command": "start https://www.baidu.com" })),
+            vec![allow_once_option("allow"), reject_option("reject")],
+        );
+        let (response_tx, response_rx) = oneshot::channel();
+        permission_tx
+            .send(PermissionRequest { request, response_tx })
+            .await
+            .expect("permission request should be accepted");
+
+        let decision = tokio::time::timeout(Duration::from_secs(1), response_rx)
+            .await
+            .expect("browser launcher rejection should respond")
+            .expect("permission responder should stay open");
+        assert!(matches!(
+            decision,
+            PermissionDecision::Selected { option_id } if option_id == "reject"
+        ));
+        assert!(router.get_confirmations().is_empty());
     }
 
     #[test]

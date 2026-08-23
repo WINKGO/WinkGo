@@ -118,6 +118,7 @@ mod tests {
             action: Some("edit_file".into()),
             description: "Edit main.rs".into(),
             command_type: None,
+            questions: None,
             options: vec![ConfirmationOption {
                 label: "Allow".into(),
                 value: json!("allow"),

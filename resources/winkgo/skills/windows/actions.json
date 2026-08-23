@@ -4,26 +4,57 @@
   "actions": [
     {
       "id": "application",
-      "phrases": ["打开应用", "启动软件", "关闭软件", "结束进程"],
-      "tool_names": ["windows.open_application", "windows.kill_process", "windows.list_processes"],
+      "phrases": [
+        "打开应用",
+        "启动软件",
+        "关闭软件",
+        "结束进程"
+      ],
+      "tool_names": [
+        "windows.open_application",
+        "windows.kill_process",
+        "windows.list_processes"
+      ],
       "default_arguments": {}
     },
     {
       "id": "file",
-      "phrases": ["打开文件", "读取文件", "创建文件", "搜索文件"],
-      "tool_names": ["windows.open_path", "windows.read_file", "windows.create_file", "windows.search_files"],
+      "phrases": [
+        "打开文件",
+        "读取文件",
+        "创建文件",
+        "搜索文件"
+      ],
+      "tool_names": [
+        "windows.open_path",
+        "windows.read_file",
+        "windows.create_file",
+        "windows.search_files"
+      ],
       "default_arguments": {}
     },
     {
       "id": "window",
-      "phrases": ["窗口", "当前窗口"],
-      "tool_names": ["windows.get_window_list"],
+      "phrases": [
+        "窗口",
+        "当前窗口"
+      ],
+      "tool_names": [
+        "windows.get_window_list"
+      ],
       "default_arguments": {}
     },
     {
       "id": "system",
-      "phrases": ["系统信息", "音量"],
-      "tool_names": ["windows.get_system_info", "windows.get_volume", "windows.set_volume"],
+      "phrases": [
+        "系统信息",
+        "音量"
+      ],
+      "tool_names": [
+        "windows.get_system_info",
+        "windows.get_volume",
+        "windows.set_volume"
+      ],
       "default_arguments": {}
     },
     {

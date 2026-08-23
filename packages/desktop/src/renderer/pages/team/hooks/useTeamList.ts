@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 // src/renderer/pages/team/hooks/useTeamList.ts
 import { ipcBridge } from '@/common';
 import { useAuth } from '@renderer/hooks/context/AuthContext';
@@ -6,16 +7,16 @@ import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { removeTeamWithCronCleanup } from '../utils/removeTeamAssistantWithCronCleanup';
+import { pruneOrphanTeamStorage } from '../utils/teamStorage';
 
 export function useTeamList() {
   const { user } = useAuth();
   const user_id = user?.id ?? 'system_default_user';
 
-  const { data: teams = [], mutate } = useSWR<TTeam[]>(
-    `teams/${user_id}`,
-    () => ipcBridge.team.list.invoke({ user_id }),
-    { revalidateOnFocus: false }
-  );
+  const { data, mutate } = useSWR<TTeam[]>(`teams/${user_id}`, () => ipcBridge.team.list.invoke({ user_id }), {
+    revalidateOnFocus: false,
+  });
+  const teams = data ?? [];
 
   // Refresh list when backend creates/removes a team (e.g. via MCP)
   useEffect(() => {
@@ -38,6 +39,13 @@ export function useTeamList() {
       unsubRenamed();
     };
   }, [mutate]);
+
+  // Only prune after the first successful list load; undefined is the SWR
+  // loading state and must never be interpreted as an empty team list.
+  useEffect(() => {
+    if (data === undefined) return;
+    pruneOrphanTeamStorage(data.map((team) => team.id));
+  }, [data]);
 
   const removeTeam = useCallback(
     async (id: string) => {

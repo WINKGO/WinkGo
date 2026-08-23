@@ -243,6 +243,17 @@ export function buildAgentRuntimeThoughtLevelOption(
   ]);
 }
 
+export function buildAgentRuntimeSpeedOption(
+  agent: AgentRuntimeCatalog | null | undefined
+): AgentRuntimeDerivedOption | null {
+  if (!agent) return null;
+  return buildSelectOptionFromConfigOptions(normalizeConfigOptions(agent.config_options), 'speed', [
+    'speed',
+    'response_speed',
+    'latency_mode',
+  ]);
+}
+
 export function buildAgentRuntimeSlashCommands(agent: AgentRuntimeCatalog | null | undefined): SlashCommandItem[] {
   if (!agent) return [];
 

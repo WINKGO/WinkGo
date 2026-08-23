@@ -377,6 +377,66 @@ async fn mkdir_then_remove_roundtrip() {
 }
 
 #[tokio::test]
+async fn create_file_makes_empty_file_without_overwriting_existing_content() {
+    let (mut actor, _rx, push, pe, dir, _db) = setup().await;
+    actor
+        .dispatch_frame(
+            "1",
+            request(14, "fs/createFile", json!({"file":dir_ref(&pe, "new-empty.txt")})),
+        )
+        .await;
+    assert!(push.last_for("1").unwrap()["result"].is_object());
+    assert_eq!(std::fs::read(dir.path().join("new-empty.txt")).unwrap(), b"");
+
+    std::fs::write(dir.path().join("existing.txt"), b"keep me").unwrap();
+    actor
+        .dispatch_frame(
+            "1",
+            request(15, "fs/createFile", json!({"file":dir_ref(&pe, "existing.txt")})),
+        )
+        .await;
+    let reply = push.last_for("1").unwrap();
+    assert_eq!(reply["error"]["code"], -32006);
+    assert_eq!(std::fs::read(dir.path().join("existing.txt")).unwrap(), b"keep me");
+}
+
+#[tokio::test]
+async fn copy_and_move_land_inside_the_requested_directory() {
+    let (mut actor, _rx, push, pe, dir, _db) = setup().await;
+    std::fs::write(dir.path().join("source.txt"), b"payload").unwrap();
+    actor
+        .dispatch_frame(
+            "1",
+            request(
+                16,
+                "fs/copy",
+                json!({"from":dir_ref(&pe, "source.txt"),"to_dir":dir_ref(&pe, "")}),
+            ),
+        )
+        .await;
+    assert_eq!(std::fs::read(dir.path().join("source copy.txt")).unwrap(), b"payload");
+    assert!(dir.path().join("source.txt").exists());
+
+    std::fs::create_dir(dir.path().join("dest")).unwrap();
+    actor
+        .dispatch_frame(
+            "1",
+            request(
+                17,
+                "fs/move",
+                json!({"from":dir_ref(&pe, "source.txt"),"to_dir":dir_ref(&pe, "dest")}),
+            ),
+        )
+        .await;
+    assert_eq!(std::fs::read(dir.path().join("dest/source.txt")).unwrap(), b"payload");
+    assert!(!dir.path().join("source.txt").exists());
+    assert_eq!(
+        push.last_for("1").unwrap()["result"]["to"]["relative_path"],
+        "dest/source.txt"
+    );
+}
+
+#[tokio::test]
 async fn rename_moves_entry() {
     let (mut actor, _rx, push, pe, dir, _db) = setup().await;
     std::fs::write(dir.path().join("old.txt"), b"x").unwrap();

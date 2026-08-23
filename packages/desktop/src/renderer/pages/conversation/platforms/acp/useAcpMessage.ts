@@ -467,6 +467,11 @@ export const useAcpMessage = (
           // the picker. No turn-state change here — must NOT fall through to the
           // default arm, which would setRunning(true) and light a spurious timer bar.
           break;
+        case 'acp_terminal_output':
+          // A final terminal frame may trail Finish; update only the card and
+          // never re-light the turn state.
+          mergeLiveMessage(transformedMessage);
+          break;
         case 'slash_commands_updated':
           // Slash commands became available (often during bootstrap when
           // agent_status events are suppressed). Update acpStatus so

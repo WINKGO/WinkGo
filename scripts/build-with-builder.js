@@ -39,6 +39,13 @@ function verifyWindowsExecutableIcon(executablePath) {
   }
 }
 
+function verifyPackagedWinkGoRuntime(packedExecutablePath) {
+  const runtimeRoot = path.join(path.dirname(packedExecutablePath), 'resources', 'winkgo-runtime');
+  const { readAndValidateIntegrity } = require('./prepare-winkgo-runtime-package.cjs');
+  const validation = readAndValidateIntegrity(runtimeRoot);
+  console.log(`✅ Packaged WINK GO Runtime verified: ${validation.files.length} sealed files.`);
+}
+
 function resolveWindowsUnpackedExecutable(outDir, targetArch) {
   const preferredDirectories = [`win-${targetArch}-unpacked`, 'win-unpacked'];
   const discoveredDirectories = fs.existsSync(outDir)
@@ -986,6 +993,17 @@ try {
   // 6. Prepare hub resources (index.json + extension zips for offline fallback)
   execSync('node scripts/prepareHubResources.js', { stdio: 'inherit', env: process.env });
 
+  const isWindowsBuild = builderArgs.includes('--win') || builderArgs.includes('--all');
+  if (isWindowsBuild) {
+    // A clean customer machine has no historical Runtime under LOCALAPPDATA.
+    // Stage and verify the exact signed Runtime payload before electron-builder
+    // copies it to resources/winkgo-runtime.
+    execSync('node scripts/prepare-winkgo-runtime-package.cjs', {
+      stdio: 'inherit',
+      env: process.env,
+    });
+  }
+
   // Privacy gate 1/2: inspect the exact Vite/static/backend inputs after every
   // generated release resource has been refreshed for this build.
   execSync('node scripts/audit-release-privacy.cjs --stage', {
@@ -1072,7 +1090,6 @@ try {
     }
   }
 
-  const isWindowsBuild = builderArgs.includes('--win') || builderArgs.includes('--all');
   if (isWindowsBuild) {
     patchElectronBuilderNsisInstaller();
     cleanupWindowsPackOutput();
@@ -1121,13 +1138,30 @@ try {
   }
 
   const packedWindowsExecutable = isWindowsBuild ? resolveWindowsUnpackedExecutable(outDir, targetArch) : '';
-  if (packedWindowsExecutable) verifyWindowsExecutableIcon(packedWindowsExecutable);
+  if (packedWindowsExecutable) {
+    verifyPackagedWinkGoRuntime(packedWindowsExecutable);
+    verifyWindowsExecutableIcon(packedWindowsExecutable);
+  }
 
   // Privacy gate 2/3: inspect electron-builder's unpacked application payload.
-  execSync('node scripts/audit-release-privacy.cjs --packed', {
+  const packedPrivacyAuditArgs = ['scripts/audit-release-privacy.cjs', '--packed'];
+  if (packedWindowsExecutable) {
+    // Audit only the payload produced by this build. Historical outputs for a
+    // different Windows architecture must not make a valid package fail.
+    packedPrivacyAuditArgs.push('--packed-root', path.join(path.dirname(packedWindowsExecutable), 'resources'));
+  }
+  const packedPrivacyAudit = spawnSync(process.execPath, packedPrivacyAuditArgs, {
     stdio: 'inherit',
     env: process.env,
+    windowsHide: true,
   });
+  if (packedPrivacyAudit.error || packedPrivacyAudit.status !== 0) {
+    throw new Error(
+      `Packed release privacy audit failed: ${
+        packedPrivacyAudit.error?.message || `exit ${packedPrivacyAudit.status}`
+      }`
+    );
+  }
 
   if (isWindowsBuild) {
     // Privacy gate 3/3: inspect the final NSIS archive and prove that its

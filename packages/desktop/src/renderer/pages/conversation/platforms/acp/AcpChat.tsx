@@ -32,6 +32,7 @@ const AcpChat: React.FC<{
   conversation_id: string;
   workspace?: string;
   backend: string;
+  initialModelId?: string;
   session_mode?: string;
   agent_name?: string;
   cron_job_id?: string;
@@ -43,10 +44,13 @@ const AcpChat: React.FC<{
   teamSendMessage?: (payload: { input: string; files: ChatFileRef[] }) => Promise<void>;
   teamRuntime?: TeamSendBoxRuntime;
   assistantId?: string;
+  promptCapability?: { image: boolean; audio: boolean };
+  forkCapability?: { at_turn: boolean };
 }> = ({
   conversation_id,
   workspace,
   backend,
+  initialModelId,
   session_mode,
   agent_name,
   cron_job_id,
@@ -58,6 +62,8 @@ const AcpChat: React.FC<{
   teamSendMessage,
   teamRuntime,
   assistantId,
+  promptCapability,
+  forkCapability,
 }) => {
   useMessageLstCache(conversation_id);
   usePendingConfirmationsRecovery(conversation_id);
@@ -79,6 +85,8 @@ const AcpChat: React.FC<{
         loadedMcpServers,
         loadedMcpStatuses,
         assistantId,
+        promptCapability,
+        forkCapability,
       }}
     >
       <ConversationArtifactProvider conversation_id={conversation_id}>
@@ -91,6 +99,7 @@ const AcpChat: React.FC<{
             <AcpSendBox
               conversation_id={conversation_id}
               backend={backend}
+              initialModelId={initialModelId}
               session_mode={session_mode}
               agent_name={agent_name}
               messageState={messageState}
@@ -104,4 +113,8 @@ const AcpChat: React.FC<{
   );
 };
 
-export default HOC.Wrapper(MessageListProvider, MessageListLoadingProvider, MessagePaginationProvider)(AcpChat);
+export default HOC.Wrapper(
+  MessageListProvider,
+  MessageListLoadingProvider,
+  MessagePaginationProvider
+)(AcpChat);

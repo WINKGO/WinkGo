@@ -16,7 +16,7 @@ use winkgo_common::ProviderWithModel;
 use winkgo_db::IMcpServerRepository;
 use winkgo_db::models::McpServerRow;
 use winkgo_realtime::EventBroadcaster;
-use winkgo_runtime::ensure_runtime_command_with_reporter;
+use winkgo_runtime::{ResolvedCommand, ensure_runtime_command_with_reporter};
 
 use crate::agent_task::AgentInstance;
 use crate::error::AgentError;
@@ -26,6 +26,10 @@ use crate::manager::winkgo_agent::{WinkGoAgentAgentManager, sanitize_session_mes
 use crate::runtime_status::conversation_runtime_reporter;
 use crate::session_context::WinkGoAgentSessionBuildContext;
 use crate::types::{WinkGoAgentCompatOverrides, WinkGoAgentResolvedConfig};
+const WINKGO_BROWSER_MCP_SERVER_NAME: &str = "winkgo-browser";
+const WINKGO_DESKTOP_COMPUTER_USE_MCP_SERVER_NAME: &str = "winkgo-desktop-computer-use";
+const WINKGO_CONVERSATION_ID_ENV: &str = "WINKGO_CONVERSATION_ID";
+
 pub(super) async fn build(
     deps: Arc<AgentFactoryDeps>,
     build_context: WinkGoAgentSessionBuildContext,
@@ -50,16 +54,34 @@ pub(super) async fn build(
     }
 
     let mut extra_mcp_servers = resolve_mcp_servers(&overrides);
+    let mut stdio_launch_cache = HashMap::new();
     if let Some(repo) = deps.mcp_server_repo.as_ref() {
         for (name, config) in load_user_mcp_servers(
             repo.as_ref(),
             overrides.mcp_server_ids.as_deref(),
             &ctx.conversation_id,
             deps.broadcaster.clone(),
+            &mut stdio_launch_cache,
         )
         .await
         {
             extra_mcp_servers.entry(name).or_insert(config);
+        }
+        for reserved_name in [
+            WINKGO_BROWSER_MCP_SERVER_NAME,
+            WINKGO_DESKTOP_COMPUTER_USE_MCP_SERVER_NAME,
+        ] {
+            if let Some((name, config)) = load_native_mcp_server(
+                repo.as_ref(),
+                reserved_name,
+                &ctx.conversation_id,
+                deps.broadcaster.clone(),
+                &mut stdio_launch_cache,
+            )
+            .await
+            {
+                extra_mcp_servers.entry(name).or_insert(config);
+            }
         }
     }
     merge_session_snapshot_mcp_servers(
@@ -67,6 +89,7 @@ pub(super) async fn build(
         &overrides.session_mcp_servers,
         &ctx.conversation_id,
         deps.broadcaster.clone(),
+        &mut stdio_launch_cache,
     )
     .await;
 
@@ -445,6 +468,7 @@ async fn load_user_mcp_servers(
     selected_ids: Option<&[String]>,
     conversation_id: &str,
     broadcaster: Arc<dyn EventBroadcaster>,
+    stdio_launch_cache: &mut HashMap<String, Result<ResolvedCommand, String>>,
 ) -> HashMap<String, McpServerConfig> {
     let rows_result = match selected_ids {
         Some(ids) => repo.list_by_ids_any(ids).await,
@@ -471,7 +495,7 @@ async fn load_user_mcp_servers(
             continue;
         }
 
-        match row_to_mcp_server_config(&row, conversation_id, broadcaster.clone()).await {
+        match row_to_mcp_server_config(&row, conversation_id, broadcaster.clone(), stdio_launch_cache).await {
             Ok(config) => {
                 servers.insert(row.name.clone(), config);
             }
@@ -490,10 +514,60 @@ async fn load_user_mcp_servers(
     servers
 }
 
+/// WINK GO Browser Computer Use is a core product capability rather than a
+/// user-installed MCP.  User MCP discovery intentionally skips every builtin,
+/// so inject this one reserved builtin explicitly (the ACP factory follows the
+/// same rule).  Other builtin MCPs remain excluded.
+async fn load_native_mcp_server(
+    repo: &dyn IMcpServerRepository,
+    reserved_name: &str,
+    conversation_id: &str,
+    broadcaster: Arc<dyn EventBroadcaster>,
+    stdio_launch_cache: &mut HashMap<String, Result<ResolvedCommand, String>>,
+) -> Option<(String, McpServerConfig)> {
+    let row = match repo.find_by_name(reserved_name).await {
+        Ok(Some(row)) if row.builtin => row,
+        Ok(Some(_)) => {
+            warn!(
+                conversation_id,
+                reserved_name, "native_mcp: refusing reserved non-builtin row"
+            );
+            return None;
+        }
+        Ok(None) => {
+            warn!(
+                conversation_id,
+                reserved_name, "native_mcp: builtin server row is missing"
+            );
+            return None;
+        }
+        Err(error) => {
+            warn!(conversation_id, reserved_name, error = %error, "native_mcp: lookup failed");
+            return None;
+        }
+    };
+    match row_to_mcp_server_config(&row, conversation_id, broadcaster, stdio_launch_cache).await {
+        Ok(mut config) => {
+            if config.transport == TransportType::Stdio {
+                config
+                    .env
+                    .get_or_insert_with(HashMap::new)
+                    .insert(WINKGO_CONVERSATION_ID_ENV.to_owned(), conversation_id.to_owned());
+            }
+            Some((row.name, config))
+        }
+        Err(error) => {
+            warn!(conversation_id, reserved_name, error = %error, "native_mcp: conversion failed");
+            None
+        }
+    }
+}
+
 async fn row_to_mcp_server_config(
     row: &McpServerRow,
     conversation_id: &str,
     broadcaster: Arc<dyn EventBroadcaster>,
+    stdio_launch_cache: &mut HashMap<String, Result<ResolvedCommand, String>>,
 ) -> Result<McpServerConfig, String> {
     let value: serde_json::Value =
         serde_json::from_str(&row.transport_config).map_err(|e| format!("invalid transport_config JSON: {e}"))?;
@@ -518,8 +592,15 @@ async fn row_to_mcp_server_config(
                         .collect()
                 })
                 .unwrap_or_default();
-            let (resolved_command, args, env) =
-                ensure_stdio_launch(command, &args, &env_entries, conversation_id, broadcaster).await?;
+            let (resolved_command, args, env) = ensure_stdio_launch(
+                command,
+                &args,
+                &env_entries,
+                conversation_id,
+                broadcaster,
+                stdio_launch_cache,
+            )
+            .await?;
 
             Ok(McpServerConfig {
                 transport: TransportType::Stdio,
@@ -592,6 +673,7 @@ async fn session_server_to_mcp_server_config(
     server: &SessionMcpServer,
     conversation_id: &str,
     broadcaster: Arc<dyn EventBroadcaster>,
+    stdio_launch_cache: &mut HashMap<String, Result<ResolvedCommand, String>>,
 ) -> Result<McpServerConfig, String> {
     match &server.transport {
         SessionMcpTransport::Stdio { command, args, env } => {
@@ -599,8 +681,15 @@ async fn session_server_to_mcp_server_config(
                 return Err("stdio: missing command".to_owned());
             }
             let entries: Vec<(String, String)> = env.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-            let (command, args, env) =
-                ensure_stdio_launch(command, args, &entries, conversation_id, broadcaster).await?;
+            let (command, args, env) = ensure_stdio_launch(
+                command,
+                args,
+                &entries,
+                conversation_id,
+                broadcaster,
+                stdio_launch_cache,
+            )
+            .await?;
             Ok(McpServerConfig {
                 transport: TransportType::Stdio,
                 command: Some(command),
@@ -665,9 +754,12 @@ async fn merge_session_snapshot_mcp_servers(
     session_mcp_servers: &[SessionMcpServer],
     conversation_id: &str,
     broadcaster: Arc<dyn EventBroadcaster>,
+    stdio_launch_cache: &mut HashMap<String, Result<ResolvedCommand, String>>,
 ) {
     for server in session_mcp_servers {
-        match session_server_to_mcp_server_config(server, conversation_id, broadcaster.clone()).await {
+        match session_server_to_mcp_server_config(server, conversation_id, broadcaster.clone(), stdio_launch_cache)
+            .await
+        {
             Ok(config) => {
                 if extra_mcp_servers.insert(server.name.clone(), config).is_some() {
                     debug!(
@@ -696,11 +788,18 @@ async fn ensure_stdio_launch(
     env: &[(String, String)],
     conversation_id: &str,
     broadcaster: Arc<dyn winkgo_realtime::EventBroadcaster>,
+    cache: &mut HashMap<String, Result<ResolvedCommand, String>>,
 ) -> Result<(String, Vec<String>, HashMap<String, String>), String> {
-    let reporter = conversation_runtime_reporter(broadcaster, conversation_id.to_owned());
-    let resolved = ensure_runtime_command_with_reporter(command, Some(reporter.as_ref()))
-        .await
-        .map_err(|error| error.to_string())?;
+    let resolved = if let Some(cached) = cache.get(command) {
+        cached.clone()
+    } else {
+        let reporter = conversation_runtime_reporter(broadcaster, conversation_id.to_owned());
+        let resolved = ensure_runtime_command_with_reporter(command, Some(reporter.as_ref()))
+            .await
+            .map_err(|error| error.to_string());
+        cache.insert(command.to_owned(), resolved.clone());
+        resolved
+    }?;
 
     let mut final_args: Vec<String> = resolved
         .args_prefix
@@ -952,11 +1051,100 @@ mod tests {
         let repo = MockMcpRepo { rows: vec![row] };
         let selected = vec!["mcp-docs".to_owned()];
 
-        let extra_mcp_servers =
-            load_user_mcp_servers(&repo, Some(&selected), "conv-frozen-mcp", test_broadcaster()).await;
+        let mut stdio_launch_cache = HashMap::new();
+        let extra_mcp_servers = load_user_mcp_servers(
+            &repo,
+            Some(&selected),
+            "conv-frozen-mcp",
+            test_broadcaster(),
+            &mut stdio_launch_cache,
+        )
+        .await;
 
         assert!(extra_mcp_servers.contains_key("mcp-docs"));
         assert_eq!(extra_mcp_servers["mcp-docs"].transport, TransportType::StreamableHttp);
+    }
+
+    #[tokio::test]
+    async fn winkgo_agent_always_loads_the_builtin_browser_mcp() {
+        let mut browser = make_row(
+            WINKGO_BROWSER_MCP_SERVER_NAME,
+            "stdio",
+            r#"{"command":"node","args":["browser.js"],"env":{"WINKGO_CDP_ACTIVE_PORT":"12345","WINKGO_CDP_BRIDGE_TOKEN":"token"}}"#,
+            false,
+            true,
+        );
+        browser.id = "mcp-browser".into();
+        let repo = MockMcpRepo { rows: vec![browser] };
+        let mut stdio_launch_cache = HashMap::new();
+
+        let (name, config) = load_native_mcp_server(
+            &repo,
+            WINKGO_BROWSER_MCP_SERVER_NAME,
+            "conv-browser",
+            test_broadcaster(),
+            &mut stdio_launch_cache,
+        )
+        .await
+        .expect("native browser MCP");
+
+        assert_eq!(name, WINKGO_BROWSER_MCP_SERVER_NAME);
+        assert_eq!(config.transport, TransportType::Stdio);
+        assert_eq!(
+            config.env.as_ref().and_then(|env| env.get(WINKGO_CONVERSATION_ID_ENV)),
+            Some(&"conv-browser".to_owned())
+        );
+    }
+
+    #[tokio::test]
+    async fn winkgo_agent_refuses_a_non_builtin_row_with_the_reserved_browser_name() {
+        let browser = make_row(
+            WINKGO_BROWSER_MCP_SERVER_NAME,
+            "http",
+            r#"{"url":"http://127.0.0.1:4444/mcp"}"#,
+            true,
+            false,
+        );
+        let repo = MockMcpRepo { rows: vec![browser] };
+        let mut stdio_launch_cache = HashMap::new();
+
+        let result = load_native_mcp_server(
+            &repo,
+            WINKGO_BROWSER_MCP_SERVER_NAME,
+            "conv-browser",
+            test_broadcaster(),
+            &mut stdio_launch_cache,
+        )
+        .await;
+
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn winkgo_agent_always_loads_the_builtin_desktop_computer_use_mcp() {
+        let mut desktop = make_row(
+            WINKGO_DESKTOP_COMPUTER_USE_MCP_SERVER_NAME,
+            "stdio",
+            r#"{"command":"node","args":["desktop.js"],"env":{"WINKGO_CDP_ACTIVE_PORT":"12345","WINKGO_CDP_BRIDGE_TOKEN":"token"}}"#,
+            false,
+            true,
+        );
+        desktop.id = "mcp-desktop".into();
+        let repo = MockMcpRepo { rows: vec![desktop] };
+        let mut stdio_launch_cache = HashMap::new();
+
+        let (name, config) = load_native_mcp_server(
+            &repo,
+            WINKGO_DESKTOP_COMPUTER_USE_MCP_SERVER_NAME,
+            "conv-desktop",
+            test_broadcaster(),
+            &mut stdio_launch_cache,
+        )
+        .await
+        .expect("native desktop Computer Use MCP");
+
+        assert_eq!(name, WINKGO_DESKTOP_COMPUTER_USE_MCP_SERVER_NAME);
+        assert_eq!(config.transport, TransportType::Stdio);
     }
 
     #[cfg(unix)]
@@ -975,7 +1163,8 @@ mod tests {
             false,
         );
 
-        let config = row_to_mcp_server_config(&row, "conv-row", test_broadcaster())
+        let mut stdio_launch_cache = HashMap::new();
+        let config = row_to_mcp_server_config(&row, "conv-row", test_broadcaster(), &mut stdio_launch_cache)
             .await
             .expect("convert");
         let command = config.command.as_deref().expect("resolved command");
@@ -1811,7 +2000,15 @@ mod tests {
             },
         }];
 
-        merge_session_snapshot_mcp_servers(&mut servers, &snapshot, "conv-override", test_broadcaster()).await;
+        let mut stdio_launch_cache = HashMap::new();
+        merge_session_snapshot_mcp_servers(
+            &mut servers,
+            &snapshot,
+            "conv-override",
+            test_broadcaster(),
+            &mut stdio_launch_cache,
+        )
+        .await;
 
         let server = servers.get("demo-mcp").expect("snapshot should remain");
         assert_eq!(server.transport, TransportType::Stdio);
@@ -1822,6 +2019,41 @@ mod tests {
             server.env.as_ref().and_then(|env| env.get("TOKEN")),
             Some(&"abc".to_owned())
         );
+    }
+
+    #[tokio::test]
+    async fn stdio_launch_resolution_is_reused_within_one_agent_build() {
+        let command = std::env::current_exe()
+            .expect("current test executable")
+            .to_string_lossy()
+            .into_owned();
+        let mut cache = HashMap::new();
+
+        let first = ensure_stdio_launch(
+            &command,
+            &["first".into()],
+            &[],
+            "conv-cache",
+            test_broadcaster(),
+            &mut cache,
+        )
+        .await
+        .expect("first resolution");
+        let second = ensure_stdio_launch(
+            &command,
+            &["second".into()],
+            &[],
+            "conv-cache",
+            test_broadcaster(),
+            &mut cache,
+        )
+        .await
+        .expect("cached resolution");
+
+        assert_eq!(cache.len(), 1);
+        assert_eq!(first.0, second.0);
+        assert_eq!(first.1, vec!["first".to_owned()]);
+        assert_eq!(second.1, vec!["second".to_owned()]);
     }
 
     #[test]

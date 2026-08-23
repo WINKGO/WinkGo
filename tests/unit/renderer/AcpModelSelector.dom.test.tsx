@@ -26,6 +26,7 @@ type MockAcpModelInfoResult = {
   isSetting: boolean;
   selectModel: (modelId: string) => void;
   thoughtLevel: AcpDerivedOption | null;
+  speed: AcpDerivedOption | null;
   setStatus: AcpConfigSetStatus;
   setConfigOption: (optionId: string, value: string) => Promise<unknown>;
 };
@@ -49,6 +50,16 @@ const thoughtLevel: AcpDerivedOption = {
   ],
 };
 
+const speed: AcpDerivedOption = {
+  id: 'response_speed',
+  category: 'speed',
+  currentValue: 'fast',
+  options: [
+    { value: 'balanced', label: 'Balanced', description: 'Prefer steady output' },
+    { value: 'fast', label: 'Fast', description: 'Prefer faster responses' },
+  ],
+};
+
 const makeResult = (overrides: Partial<MockAcpModelInfoResult> = {}): MockAcpModelInfoResult => ({
   model_info: modelInfo,
   canSwitch: true,
@@ -56,6 +67,7 @@ const makeResult = (overrides: Partial<MockAcpModelInfoResult> = {}): MockAcpMod
   isSetting: false,
   selectModel: vi.fn(),
   thoughtLevel,
+  speed,
   setStatus: { state: 'idle' },
   setConfigOption: vi.fn().mockResolvedValue(undefined),
   ...overrides,
@@ -98,6 +110,9 @@ vi.mock('react-i18next', () => ({
     t: (key: string, options?: { defaultValue?: string }) => {
       if (key === 'agent.thoughtLevel.label') return 'Thinking Level';
       if (key === 'agent.thoughtLevel.switchSuccess') return 'agent.thoughtLevel.switchSuccess';
+      if (key === 'agent.speed.label') return 'Speed';
+      if (key === 'agent.speed.switchSuccess') return 'agent.speed.switchSuccess';
+      if (key === 'agent.runtime.managedByAgent') return 'Managed by Agent';
       if (key === 'agent.config.commandAck') return 'agent.config.commandAck';
       if (key === 'common.model') return 'Model';
       if (key === 'common.defaultModel') return 'Default';
@@ -123,12 +138,14 @@ vi.mock('@arco-design/web-react', () => {
         children,
         className,
         onClick,
+        disabled,
       }: {
         children?: React.ReactNode;
         className?: string;
         onClick?: () => void;
+        disabled?: boolean;
       }) => (
-        <div role='menuitem' className={className} onClick={onClick}>
+        <div role='menuitem' aria-disabled={disabled || undefined} className={className} onClick={onClick}>
           {children}
         </div>
       ),
@@ -221,7 +238,7 @@ describe('AcpModelSelector runtime options', () => {
     expect(useAcpModelInfoMock).toHaveBeenCalledWith(expect.objectContaining({ prepareSetRuntime }));
   });
 
-  it('shows the model submenu before the thought level submenu, each with its current value', () => {
+  it('shows model, thought level, and speed submenus with their current values', () => {
     render(<AcpModelSelector conversation_id='conversation-1' backend='codex' />);
 
     const titles = screen.getAllByTestId('submenu-title');
@@ -230,6 +247,8 @@ describe('AcpModelSelector runtime options', () => {
     expect(titles[0]).toHaveTextContent('GPT-5.2');
     expect(titles[1]).toHaveTextContent('Thinking Level');
     expect(titles[1]).toHaveTextContent('High');
+    expect(titles[2]).toHaveTextContent('Speed');
+    expect(titles[2]).toHaveTextContent('Fast');
   });
 
   it('marks the current model with the leading check indicator', () => {
@@ -284,15 +303,19 @@ describe('AcpModelSelector runtime options', () => {
     );
   });
 
-  it('renders the model list directly (no submenu) when there is no thought option', () => {
-    useAcpModelInfoMock.mockReturnValue(makeResult({ thoughtLevel: null }));
+  it('keeps the grouped Codex-style layout while auxiliary runtime options are unavailable', () => {
+    useAcpModelInfoMock.mockReturnValue(makeResult({ thoughtLevel: null, speed: null }));
 
     render(<AcpModelSelector conversation_id='conversation-1' backend='codex' />);
 
     expect(screen.getByTestId('acp-model-selector')).toHaveTextContent('GPT-5.2');
-    // No submenu rows at all — the dropdown is the model list itself.
-    expect(screen.queryAllByTestId('submenu-title')).toHaveLength(0);
-    expect(screen.getByText('GPT-5.2 Mini')).toBeInTheDocument();
+    const titles = screen.getAllByTestId('submenu-title');
+    expect(titles).toHaveLength(1);
+    expect(titles[0]).toHaveTextContent('Model');
+    expect(screen.getByText('Thinking Level').closest('[role="menuitem"]')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText('Speed').closest('[role="menuitem"]')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getAllByText('Managed by Agent')).toHaveLength(2);
+    expect(within(screen.getByTestId('submenu-body')).getByText('GPT-5.2 Mini')).toBeInTheDocument();
   });
 
   it('does not show the search box when the model count is at or below the threshold', () => {
@@ -361,6 +384,20 @@ describe('AcpModelSelector runtime options', () => {
       expect(setConfigOption).toHaveBeenCalledWith('thought_level', 'low');
     });
     expect(messageSuccessMock).toHaveBeenCalledWith('agent.thoughtLevel.switchSuccess');
+  });
+
+  it('sets response speed through the existing config option setter', async () => {
+    const setConfigOption = vi.fn().mockResolvedValue(undefined);
+    useAcpModelInfoMock.mockReturnValue(makeResult({ setConfigOption }));
+
+    render(<AcpModelSelector conversation_id='conversation-1' backend='codex' />);
+
+    fireEvent.click(screen.getByText('Balanced'));
+
+    await waitFor(() => {
+      expect(setConfigOption).toHaveBeenCalledWith('response_speed', 'balanced');
+    });
+    expect(messageSuccessMock).toHaveBeenCalledWith('agent.speed.switchSuccess');
   });
 
   it('keeps the old thought value and shows an error when config update fails', async () => {

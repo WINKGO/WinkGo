@@ -1,0 +1,58 @@
+.trigger {
+  flex: 0 0 auto;
+  height: 30px;
+  border-radius: 10px;
+}
+
+.label {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-inline-start: 5px;
+  border-radius: 999px;
+}
+
+.ready {
+  background: var(--color-success-6);
+}
+
+.missing {
+  background: var(--color-neutral-5);
+}
+
+.recording {
+  background: var(--color-danger-6);
+  animation: browser-skill-toolbar-pulse 1.1s ease-in-out infinite;
+}
+
+.replaying {
+  background: rgb(var(--primary-6));
+  animation: browser-skill-toolbar-pulse 1.1s ease-in-out infinite;
+}
+
+.panel {
+  display: grid;
+  width: min(276px, calc(100vw - 24px));
+  max-height: min(320px, calc(100vh - 68px));
+  overflow: auto;
+  padding: 0;
+}
+
+@keyframes browser-skill-toolbar-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.8);
+  }
+}

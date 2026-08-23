@@ -50,6 +50,9 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     conversations,
     isConversationGenerating,
     hasCompletionUnread,
+    isManualUnread,
+    markManualUnread,
+    clearManualUnread,
     expandedWorkspaces,
     pinnedConversations,
     timelineSections,
@@ -119,6 +122,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     handleTogglePin,
     handleMenuVisibleChange,
     handleOpenMenu,
+    handleToggleManualUnread,
     handleCreateCronTask,
     handleRemoveProject,
     removeProjectTarget,
@@ -133,6 +137,9 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     setSelectedConversationIds,
     toggleSelectedConversation,
     markAsRead,
+    markManualUnread,
+    clearManualUnread,
+    isManualUnread,
   });
 
   const {
@@ -162,11 +169,22 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
     collapsed,
   });
 
+  const conversationNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const conversation of conversations) map.set(conversation.id, conversation.name);
+    return map;
+  }, [conversations]);
+  const resolveConversationName = useCallback(
+    (conversationId: string) => conversationNameById.get(conversationId),
+    [conversationNameById]
+  );
+
   const getConversationRowProps = useCallback(
     (conversation: TChatConversation): ConversationRowProps => ({
       conversation,
       isGenerating: isConversationGenerating(conversation.id),
-      hasCompletionUnread: hasCompletionUnread(conversation.id),
+      hasUnread: hasCompletionUnread(conversation.id) || isManualUnread(conversation.id),
+      isManualUnread: isManualUnread(conversation.id),
       collapsed,
       tooltipEnabled,
       batchMode,
@@ -185,7 +203,9 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
       // underlying handleExportConversation logic from useExport is kept for a
       // future per-platform re-enable.
       onTogglePin: handleTogglePin,
+      onToggleManualUnread: handleToggleManualUnread,
       getJobStatus,
+      resolveConversationName,
     }),
     [
       collapsed,
@@ -193,6 +213,7 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
       batchMode,
       isConversationGenerating,
       hasCompletionUnread,
+      isManualUnread,
       selectedConversationIds,
       id,
       dropdownVisibleId,
@@ -204,7 +225,9 @@ const WorkspaceGroupedHistory: React.FC<WorkspaceGroupedHistoryProps> = ({
       handleCreateCronTask,
       handleDeleteClick,
       handleTogglePin,
+      handleToggleManualUnread,
       getJobStatus,
+      resolveConversationName,
     ]
   );
 

@@ -1,7 +1,9 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { useCallback } from 'react';
 import type { FileMetadata } from '@/renderer/services/FileService';
 import { getCleanFileNames } from '@/renderer/services/FileService';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
+import { mergeFileSelectionItems } from '@/renderer/utils/file/fileSelection';
 
 /**
  * 创建通用的setUploadFile函数
@@ -63,11 +65,31 @@ export const useSendBoxFiles = ({ atPath, uploadFile, setAtPath, setUploadFile }
   // 处理拖拽或粘贴的文件
   const handleFilesAdded = useCallback(
     (files: FileMetadata[]) => {
-      const file_paths = files.map((file) => file.path);
-      // 使用函数式更新，基于最新状态而不是闭包中的状态
-      setUploadFile((prevUploadFile) => [...prevUploadFile, ...file_paths]);
+      const localSelections: FileOrFolderItem[] = [];
+      const managedUploadPaths: string[] = [];
+
+      for (const file of files) {
+        if (file.chatRef && file.chatRef.kind !== 'upload') {
+          localSelections.push({
+            path: file.path,
+            name: file.name,
+            isFile: true,
+            chatRef: file.chatRef,
+          });
+        } else {
+          managedUploadPaths.push(file.path);
+        }
+      }
+
+      if (localSelections.length > 0) {
+        setAtPath(mergeFileSelectionItems(atPath, localSelections));
+      }
+      if (managedUploadPaths.length > 0) {
+        // 使用函数式更新，基于最新状态而不是闭包中的状态
+        setUploadFile((prevUploadFile) => [...prevUploadFile, ...managedUploadPaths]);
+      }
     },
-    [setUploadFile]
+    [atPath, setAtPath, setUploadFile]
   );
 
   // 处理消息中的文件引用（@文件名 格式）

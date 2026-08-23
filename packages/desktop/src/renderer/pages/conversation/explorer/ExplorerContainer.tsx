@@ -17,7 +17,7 @@
  */
 
 import { Button, Input, Message, Modal, Spin } from '@arco-design/web-react';
-import { FolderPlus } from '@icon-park/react';
+import { Browser, FolderPlus } from '@icon-park/react';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -35,53 +35,48 @@ import { classifyPreviewError, previewErrorToI18nKey } from '@/renderer/utils/pr
 import type { PreviewContentType } from '@/common/types/office/preview';
 
 import { emitter } from '@/renderer/utils/emitter';
+import { copyText } from '@/renderer/utils/ui/clipboard';
 import { projectFileRef } from '@/common/types/chatFile';
+import type { ChatFileRef } from '@/common/types/chatFile';
 import type { FileOrFolderItem } from '@/renderer/utils/file/fileTypes';
 
 import { ExplorerPanel } from './ExplorerPanel';
-import { buildRemoveRequest, buildRenameRequest, parentRel, peKey, type RenameRequest } from './explorerModel';
+import {
+  buildCreateFileRequest,
+  buildMkdirRequest,
+  buildRemoveRequest,
+  buildRenameRequest,
+  buildTransferRequest,
+  joinRel,
+  parentRel,
+  peKey,
+  type RenameRequest,
+  type DragPeRef,
+  type TransferOp,
+} from './explorerModel';
 import { initExplorerRuntime } from './monitorTransport';
 import { toRootRefs } from './projectRoots';
 import { reveal, select } from './explorerStore';
 import { useCurrentConversation } from './currentConversationStore';
 import { SearchPanel } from './search/SearchPanel';
 import type { SearchHit } from './search/searchModel';
+import { ScmPanel } from '../SourceControl/ScmPanel';
 
 export type ExplorerContainerProps = {
   /** Owning project id — scopes the store's fact cache + localStorage UI state. */
   projectId: string;
 };
 
+type NameDialogState =
+  | ({ mode: 'rename' } & RenameRequest)
+  | { mode: 'newFile'; peId: string; targetDir: string }
+  | { mode: 'newDir'; peId: string; targetDir: string };
+
 /** A local absolute path → `file://` URI (normalize `\`, ensure leading slash, encode). */
 const pathToFileUri = (p: string): string => {
   const normalized = p.replace(/\\/g, '/');
   const withLeadingSlash = normalized.startsWith('/') ? normalized : `/${normalized}`;
   return `file://${encodeURI(withLeadingSlash)}`;
-};
-
-// PATCH(ELECTRON-3SZ): image file extension → data-URL MIME. The WS `fs/read`
-// base64 payload is bare (no `data:` prefix), but ImageViewer feeds `content`
-// straight into <img src>, so the Explorer open path must wrap it. Remove with
-// the rest of this patch once Preview consumes {pe_id, relative_path} directly.
-const IMAGE_MIME_BY_EXT: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  gif: 'image/gif',
-  svg: 'image/svg+xml',
-  webp: 'image/webp',
-  bmp: 'image/bmp',
-  ico: 'image/x-icon',
-  tif: 'image/tiff',
-  tiff: 'image/tiff',
-  avif: 'image/avif',
-};
-
-/** PATCH(ELECTRON-3SZ): wrap a bare base64 image body into a renderable data URL. */
-const imageDataUrl = (fileName: string, base64: string): string => {
-  const ext = fileName.slice(fileName.lastIndexOf('.') + 1).toLowerCase();
-  const mime = IMAGE_MIME_BY_EXT[ext] ?? 'image/png';
-  return `data:${mime};base64,${base64}`;
 };
 
 /** PATCH(ELECTRON-3SZ): minimal WS-RPC surface the preview payload builder needs. Remove with it. */
@@ -94,6 +89,7 @@ export type ExplorerPreviewPayload = {
   metadata: {
     title: string;
     file_name: string;
+    fileRef: ChatFileRef;
     file_path?: string;
     workspace?: string;
     language: string;
@@ -101,16 +97,10 @@ export type ExplorerPreviewPayload = {
   };
 };
 
-// PATCH(ELECTRON-3SZ): the Explorer tree only knows `{pe_id, relative_path}`, but
-// three viewer families can't render from the WS `fs/read` content alone, so this
-// builder special-cases them:
-//   - image: fs/read base64 is bare (no `data:` prefix); ImageViewer feeds
-//     `content` straight into <img src>, so wrap it into a data URL.
-//   - pdf/office: need a real local absolute path (PDF via file://, office via
-//     `officecli watch`), so resolve pe → absolute path with `fs/resolve`.
-// Exposing the absolute path to the renderer breaks the "front-end never sees
-// absolute paths" boundary — this whole helper is an emergency patch and MUST be
-// removed once Preview consumes `{pe_id, relative_path}` end-to-end.
+// Text and images use the official ChatFileRef-addressed content API. Office
+// viewers keep their existing resolve path until their renderer is migrated to
+// HTTP streaming; this preserves current WINK GO behavior without weakening the
+// new edit/save contract.
 export const buildExplorerPreviewPayload = async (
   client: PreviewRpcClient,
   peId: string,
@@ -118,26 +108,23 @@ export const buildExplorerPreviewPayload = async (
 ): Promise<ExplorerPreviewPayload> => {
   const name = relativePath.split('/').pop() || relativePath;
   const contentType = getContentTypeByExtension(name);
-  const file = { pe_id: peId, relative_path: relativePath };
+  const fileRef = projectFileRef(peId, relativePath);
 
   let content = '';
   let file_path: string | undefined;
   let workspace: string | undefined;
 
   if (contentType === 'image') {
-    const res = (await client.request('fs/read', { file, encoding: 'base64' })) as { content?: string };
-    const base64 = res.content ?? '';
-    content = base64 ? imageDataUrl(name, base64) : '';
+    content = await ipcBridge.fs.readContent.invoke({ file: fileRef, encoding: 'dataurl' });
   } else if (contentType === 'pdf' || contentType === 'word' || contentType === 'excel' || contentType === 'ppt') {
-    const res = (await client.request('fs/resolve', { file })) as {
+    const res = (await client.request('fs/resolve', { file: { pe_id: peId, relative_path: relativePath } })) as {
       absolute_path?: string;
       workspace_root?: string;
     };
     file_path = res.absolute_path;
     workspace = res.workspace_root;
   } else {
-    const res = (await client.request('fs/read', { file, encoding: 'utf-8' })) as { content?: string };
-    content = res.content ?? '';
+    content = await ipcBridge.fs.readContent.invoke({ file: fileRef, encoding: 'utf8' });
   }
 
   return {
@@ -146,6 +133,7 @@ export const buildExplorerPreviewPayload = async (
     metadata: {
       title: name,
       file_name: name,
+      fileRef,
       file_path,
       workspace,
       language: name.split('.').pop() || '',
@@ -156,23 +144,28 @@ export const buildExplorerPreviewPayload = async (
 
 export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId }) => {
   const { t } = useTranslation();
-  const { openPreview } = usePreviewContext();
+  const { openPreview, openBrowserTab } = usePreviewContext();
   const activeConversationId = useCurrentConversation();
-  const { data, isLoading, mutate } = useSWR(projectId ? `explorer-project/${projectId}` : null, () =>
-    ipcBridge.project.get.invoke({ project_id: projectId })
-  );
+  const { data, isLoading, mutate } = useSWR(projectId ? `explorer-project/${projectId}` : null, (key: string) => {
+    const id = key.slice('explorer-project/'.length);
+    return ipcBridge.project.get.invoke({ project_id: id });
+  });
+  // Never apply a response belonging to another project. A rapid switch may
+  // leave an older SWR request in flight; showing no roots briefly is safer than
+  // painting the wrong project's files.
+  const detail = data && data.project_id === projectId ? data : undefined;
 
   // Let the workspace-collapse hook (keyed per-project via workspacePreferenceKey)
   // read + restore this project's panel open/closed preference. The hook starts
   // collapsed and expands on this signal (pref takes priority); without it the
   // panel would stay collapsed on every conversation switch.
   useEffect(() => {
-    if (!projectId || !data) return;
-    dispatchWorkspaceHasFilesEvent(data.explorer.entries.length > 0, undefined, false);
-  }, [projectId, data]);
+    if (!projectId || !detail) return;
+    dispatchWorkspaceHasFilesEvent(detail.explorer.entries.length > 0, undefined, false);
+  }, [projectId, detail]);
 
   // Open a file in the preview panel. The tree only knows `{pe_id, relative_path}`,
-  // so content is read over the WS `fs/read` command (not an absolute path). Per-
+  // so text and image content is read through the ChatFileRef-addressed content API. Per-
   // project preview isolation is handled by the scope key (C5); opening a file
   // appends a new tab (dedup keeps an already-open file focused) so multiple
   // files can stay open at once.
@@ -228,28 +221,56 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
   // 'files' = the Explorer, 'changes' = source-control placeholder (that lane is
   // not built yet — the tab exists but shows an empty state).
   const [activeTab, setActiveTab] = useState<'files' | 'changes'>('files');
-  const [renameDialog, setRenameDialog] = useState<RenameRequest | null>(null);
+  const [nameDialog, setNameDialog] = useState<NameDialogState | null>(null);
   const [nameValue, setNameValue] = useState('');
   const [nameSubmitting, setNameSubmitting] = useState(false);
 
   const handleRename = (peId: string, rel: string, name: string): void => {
-    setRenameDialog({ peId, targetDir: parentRel(rel), origRel: rel });
+    setNameDialog({ mode: 'rename', peId, targetDir: parentRel(rel), origRel: rel });
     setNameValue(name);
   };
 
-  const submitRenameDialog = async (): Promise<void> => {
-    if (!renameDialog) return;
-    const request = buildRenameRequest(renameDialog, nameValue);
+  const handleNewFile = (peId: string, targetDir: string): void => {
+    setNameDialog({ mode: 'newFile', peId, targetDir });
+    setNameValue('');
+  };
+
+  const handleNewDir = (peId: string, targetDir: string): void => {
+    setNameDialog({ mode: 'newDir', peId, targetDir });
+    setNameValue('');
+  };
+
+  const submitNameDialog = async (): Promise<void> => {
+    if (!nameDialog) return;
+    const request =
+      nameDialog.mode === 'rename'
+        ? buildRenameRequest(nameDialog, nameValue)
+        : nameDialog.mode === 'newFile'
+          ? buildCreateFileRequest(nameDialog.peId, nameDialog.targetDir, nameValue)
+          : buildMkdirRequest(nameDialog.peId, nameDialog.targetDir, nameValue);
     if (!request) {
-      setRenameDialog(null); // empty name or no-op rename
+      setNameDialog(null);
       return;
     }
     setNameSubmitting(true);
     try {
       await initExplorerRuntime().request(request.method, request.params);
-      setRenameDialog(null);
+      if (nameDialog.mode !== 'rename') {
+        const newRel = joinRel(nameDialog.targetDir, nameValue.trim());
+        reveal({ pe_id: nameDialog.peId, relative_path: nameDialog.targetDir });
+        select(peKey(nameDialog.peId, newRel));
+      }
+      setNameDialog(null);
     } catch {
-      Message.error(t('conversation.explorer.renameFailed'));
+      Message.error(
+        t(
+          nameDialog.mode === 'rename'
+            ? 'conversation.explorer.renameFailed'
+            : nameDialog.mode === 'newFile'
+              ? 'conversation.explorer.newFileFailed'
+              : 'conversation.explorer.newDirFailed'
+        )
+      );
     } finally {
       setNameSubmitting(false);
     }
@@ -298,6 +319,19 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
     });
   };
 
+  const handleCopyRelativePath = (_peId: string, rel: string): void => {
+    void copyText(rel === '' ? '.' : rel)
+      .then(() => Message.success(t('conversation.explorer.pathCopied')))
+      .catch(() => Message.error(t('conversation.explorer.copyFailed')));
+  };
+
+  const handleCopyAbsolutePath = (peId: string, rel: string): void => {
+    void ipcBridge.fs.copyAbsolutePath
+      .invoke({ pe_id: peId, relative_path: rel })
+      .then(() => Message.success(t('conversation.explorer.pathCopied')))
+      .catch(() => Message.error(t('conversation.explorer.copyFailed')));
+  };
+
   // Search result default action: locate the hit in the tree — switch to the
   // files tab, expand its ancestor chain (reveal subscribes the parent dir), and
   // select it. Reuses the store's existing reveal path; does NOT open preview
@@ -338,19 +372,43 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
     }
   };
 
-  if (!projectId) return null;
-  if (isLoading && !data) return <Spin loading />;
+  const handleTransfer = async (
+    source: DragPeRef,
+    targetPeId: string,
+    targetRel: string,
+    op: TransferOp
+  ): Promise<void> => {
+    const request = buildTransferRequest(
+      op,
+      { pe_id: source.pe_id, relative_path: source.relative_path },
+      { pe_id: targetPeId, relative_path: targetRel }
+    );
+    try {
+      const result = (await initExplorerRuntime().request(request.method, request.params)) as {
+        to?: { pe_id?: string; relative_path?: string };
+      };
+      if (result.to?.pe_id && typeof result.to.relative_path === 'string') {
+        reveal({ pe_id: result.to.pe_id, relative_path: parentRel(result.to.relative_path) });
+        select(peKey(result.to.pe_id, result.to.relative_path));
+      }
+    } catch {
+      Message.error(t(op === 'copy' ? 'conversation.explorer.copyNodeFailed' : 'conversation.explorer.moveNodeFailed'));
+    }
+  };
 
-  const roots = data ? toRootRefs(data) : [];
+  if (!projectId) return null;
+  if (isLoading && !detail) return <Spin loading />;
+
+  const roots = detail ? toRootRefs(detail) : [];
   // Search roots = the project's pe roots (each folder root, rel=''). fs/search
   // spans all bound folders; the front-end ranks the merged hit stream.
   const searchRoots = roots.map((root) => ({ pe_id: root.pe_id, relative_path: '' }));
   // pe_id → folder name for the search result's `PE · REL` secondary label.
   const searchPeNames = Object.fromEntries(roots.map((root) => [root.pe_id, root.title]));
-  const workspacePeId = data?.explorer.workspace_pe_id;
+  const workspacePeId = detail?.explorer.workspace_pe_id;
   // Absolute path of the workspace root (derived display_path) for the
   // open-externally button.
-  const workspacePath = data?.explorer.entries.find((e) => e.pe_id === workspacePeId)?.display_path;
+  const workspacePath = detail?.explorer.entries.find((e) => e.pe_id === workspacePeId)?.display_path;
 
   const tabButton = (key: 'files' | 'changes', label: string) => (
     <Button
@@ -377,6 +435,15 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
           {tabButton('changes', t('conversation.explorer.tabs.changes'))}
         </div>
         <div className='flex items-center gap-2px flex-shrink-0'>
+          <Button
+            type='text'
+            size='mini'
+            icon={<Browser theme='outline' size='16' />}
+            aria-label={t('conversation.workspace.openWith.browser', { defaultValue: '浏览器' })}
+            title={t('conversation.workspace.openWith.browser', { defaultValue: '浏览器' })}
+            data-testid='conversation-browser-launcher'
+            onClick={() => openBrowserTab()}
+          />
           <Button
             type='text'
             size='mini'
@@ -410,23 +477,38 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
             onOpenFile={handleOpenFile}
             onRename={handleRename}
             onDelete={handleDelete}
+            onNewFile={handleNewFile}
+            onNewDir={handleNewDir}
             onAddToChat={activeConversationId ? handleAddToChat : undefined}
             onRevealInFolder={handleRevealInFolder}
+            onCopyRelativePath={handleCopyRelativePath}
+            onCopyAbsolutePath={handleCopyAbsolutePath}
             onImportFiles={handleImportFiles}
+            onTransfer={handleTransfer}
           />
         </SearchPanel>
       </div>
       {activeTab === 'changes' && (
-        <div className='flex-1 min-h-0 flex items-center justify-center px-16px text-center text-t-secondary text-13px'>
-          {t('conversation.explorer.changesPlaceholder')}
+        <div className='flex-1 min-h-0'>
+          <ScmPanel projectId={projectId} />
         </div>
       )}
       <Modal
-        title={t('conversation.explorer.contextMenu.rename')}
-        visible={renameDialog !== null}
-        onCancel={() => setRenameDialog(null)}
-        onOk={submitRenameDialog}
-        okText={t('common.save')}
+        title={
+          nameDialog
+            ? t(
+                nameDialog.mode === 'rename'
+                  ? 'conversation.explorer.contextMenu.rename'
+                  : nameDialog.mode === 'newFile'
+                    ? 'conversation.explorer.contextMenu.newFile'
+                    : 'conversation.explorer.contextMenu.newDir'
+              )
+            : ''
+        }
+        visible={nameDialog !== null}
+        onCancel={() => setNameDialog(null)}
+        onOk={submitNameDialog}
+        okText={t(nameDialog?.mode === 'rename' ? 'common.save' : 'common.create')}
         cancelText={t('common.cancel')}
         confirmLoading={nameSubmitting}
         autoFocus
@@ -436,7 +518,7 @@ export const ExplorerContainer: React.FC<ExplorerContainerProps> = ({ projectId 
           autoFocus
           value={nameValue}
           onChange={setNameValue}
-          onPressEnter={submitRenameDialog}
+          onPressEnter={submitNameDialog}
           placeholder={t('conversation.explorer.namePlaceholder')}
         />
       </Modal>

@@ -17,6 +17,7 @@
  */
 
 const { execFileSync } = require('child_process');
+const { createHash } = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -135,6 +136,19 @@ function resolveGitHubRepository(env = process.env) {
   return { owner, repo, repository };
 }
 
+function resolveLocalCargoTargetDir(projectRoot, platform, arch, env = process.env, tempRoot = os.tmpdir()) {
+  const explicitTarget = (env.WINKGO_BACKEND_CARGO_TARGET_DIR || '').trim() || (env.CARGO_TARGET_DIR || '').trim();
+  if (explicitTarget) return path.resolve(explicitTarget);
+
+  const projectTarget = path.join(projectRoot, 'out', 'cargo-target', 'winkgo-core');
+  if (platform !== 'win32' || !/[^\x00-\x7F]/u.test(projectTarget)) return projectTarget;
+
+  const systemTemp = path.join(env.SystemRoot || env.WINDIR || 'C:\\Windows', 'Temp');
+  const asciiTempRoot = !/[^\x00-\x7F]/u.test(tempRoot) ? tempRoot : systemTemp;
+  const projectKey = createHash('sha256').update(path.resolve(projectRoot)).digest('hex').slice(0, 12);
+  return path.join(asciiTempRoot, 'winkgo-cargo-target', projectKey, arch);
+}
+
 function buildLocalWinkGoCore(projectRoot, platform, arch) {
   if (platform !== process.platform || arch !== process.arch) {
     return null;
@@ -145,10 +159,7 @@ function buildLocalWinkGoCore(projectRoot, platform, arch) {
     return null;
   }
 
-  const cargoTargetDir =
-    (process.env.WINKGO_BACKEND_CARGO_TARGET_DIR || '').trim() ||
-    (process.env.CARGO_TARGET_DIR || '').trim() ||
-    path.join(projectRoot, 'out', 'cargo-target', 'winkgo-core');
+  const cargoTargetDir = resolveLocalCargoTargetDir(projectRoot, platform, arch);
 
   console.log(`  Building WINK GO Core from ${path.relative(projectRoot, backendManifest)}`);
   execFileSync(
@@ -693,6 +704,7 @@ module.exports = {
   getActionsArtifactName,
   getDownloadUrl,
   prepareWinkGoCore,
+  resolveLocalCargoTargetDir,
   resolveGitHubRepository,
   verifyPreparedWinkGoCoreBundle,
 };

@@ -72,6 +72,11 @@ function spliceToTcpEndpoint(client: Socket, targetPort: number, initialBytes: B
   client.setNoDelay(true);
   client.setKeepAlive(true);
   client.setTimeout(0);
+  // The peek listener left the socket in flowing mode. Pause before the
+  // asynchronous upstream connection is ready so upload body chunks cannot be
+  // dropped between removing that listener and wiring client.pipe(upstream).
+  // pipe() resumes the client after the upstream connection is established.
+  client.pause();
   const upstream = net.connect({ host: '127.0.0.1', port: targetPort });
   upstream.setNoDelay(true);
   upstream.setKeepAlive(true);

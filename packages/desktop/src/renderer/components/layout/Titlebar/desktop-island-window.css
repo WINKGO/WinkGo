@@ -69,7 +69,7 @@
   position: absolute;
   z-index: 3;
   top: 0;
-  right: 101px;
+  right: 145px;
   left: 46px;
   height: 38px;
   cursor: grab;
@@ -90,6 +90,7 @@
 .titlebar-dynamic-island--floating[data-panel='destination'] .titlebar-dynamic-island__capsule-drag-handle,
 .titlebar-dynamic-island--floating[data-panel='drop'] .titlebar-dynamic-island__capsule-drag-handle,
 .titlebar-dynamic-island--floating[data-panel='format'] .titlebar-dynamic-island__capsule-drag-handle,
+.titlebar-dynamic-island--floating[data-panel='desktopSkill'] .titlebar-dynamic-island__capsule-drag-handle,
 .titlebar-dynamic-island--floating[data-panel='toast'] .titlebar-dynamic-island__capsule-drag-handle {
   display: none;
 }
@@ -114,7 +115,7 @@
 
 .titlebar-dynamic-island--floating .titlebar-dynamic-island__capsule.arco-btn {
   display: grid !important;
-  width: calc(100% - 44px);
+  width: calc(100% - 88px);
   max-width: none;
   height: 38px;
   grid-template-columns: 30px minmax(0, 1fr) 34px;
@@ -129,6 +130,7 @@
   box-shadow: none;
 }
 
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__automation.arco-btn,
 .titlebar-dynamic-island--floating .titlebar-dynamic-island__alarm.arco-btn {
   width: 38px;
   height: 38px;
@@ -140,7 +142,13 @@
   overflow: hidden;
 }
 
+.titlebar-dynamic-island--floating .titlebar-dynamic-island__automation.arco-btn {
+  background: linear-gradient(145deg, #687bff 0%, #7555e8 100%);
+  color: #fff;
+}
+
 .titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__capsule.arco-btn,
+.titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__automation.arco-btn,
 .titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__alarm.arco-btn {
   background: #111317;
   color: #fff;
@@ -163,6 +171,11 @@
   color: #ff596c;
 }
 
+.titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__automation.arco-btn {
+  background: linear-gradient(145deg, #687bff 0%, #7658e8 100%);
+  color: #fff;
+}
+
 .titlebar-dynamic-island--floating .titlebar-dynamic-island__capsule.arco-btn:hover {
   border: 0;
   background: #fff;
@@ -171,9 +184,53 @@
 }
 
 .titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__capsule.arco-btn:hover,
+.titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__automation.arco-btn:hover,
 .titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__alarm.arco-btn:hover {
   background: #1a1d22;
   box-shadow: none;
+}
+
+.titlebar-dynamic-island--floating[data-island-theme='black'] > .titlebar-dynamic-island__automation.arco-btn:hover {
+  background: linear-gradient(145deg, #7183ff 0%, #805feb 100%);
+}
+
+.titlebar-dynamic-island--floating[data-panel='desktopSkill'] {
+  min-height: 0;
+  gap: 0;
+}
+
+.titlebar-dynamic-island--floating[data-panel='desktopSkill'] > .titlebar-dynamic-island__capsule,
+.titlebar-dynamic-island--floating[data-panel='desktopSkill'] > .titlebar-dynamic-island__automation,
+.titlebar-dynamic-island--floating[data-panel='desktopSkill'] > .titlebar-dynamic-island__alarm {
+  display: none !important;
+}
+
+.titlebar-dynamic-island--floating[data-panel='desktopSkill'] .titlebar-dynamic-island__panel--desktopSkill {
+  top: 0;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(80, 91, 120, 0.14);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 8% -16%, rgba(101, 124, 255, 0.16), transparent 42%),
+    rgba(252, 253, 255, 0.98);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.64);
+  transform: none;
+}
+
+.titlebar-dynamic-island--floating[data-panel='desktopSkill'] .titlebar-dynamic-island__panel-header {
+  grid-template-columns: 32px minmax(0, 1fr) 28px;
+  min-height: 54px;
+  padding: 8px 10px 6px;
+  border-bottom: 0;
+}
+
+.titlebar-dynamic-island--floating[data-panel='desktopSkill'] .titlebar-dynamic-island__panel-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  background: linear-gradient(145deg, rgba(102, 123, 255, 0.16), rgba(119, 82, 232, 0.18));
+  color: #5f67db;
 }
 
 .titlebar-dynamic-island--floating .titlebar-dynamic-island__alarm.arco-btn:hover {

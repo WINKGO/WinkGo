@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 const aliases = {
+  'uno.css': path.resolve(__dirname, './tests/fixtures/uno.css'),
   '@/': path.resolve(__dirname, './packages/desktop/src') + '/',
   '@process/': path.resolve(__dirname, './packages/desktop/src/process') + '/',
   '@renderer/': path.resolve(__dirname, './packages/desktop/src/renderer') + '/',
@@ -46,6 +47,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'dom',
+          pool: 'threads',
           environment: 'jsdom',
           include: ['tests/unit/**/*.dom.test.ts', 'tests/unit/**/*.dom.test.tsx'],
           setupFiles: ['./tests/vitest.dom.setup.ts'],

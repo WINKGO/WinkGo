@@ -1,5 +1,5 @@
 // Modified from AionUI by WINK GO contributors in 2026.
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -71,5 +71,29 @@ describe('cleanupRegisteredAgentProcesses', () => {
 
     expect(killSpy).toHaveBeenCalledWith(-6883, 'SIGTERM');
     expect(registry.processes).toEqual([]);
+  });
+
+  it('quarantines an empty registry instead of aborting cleanup', async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), 'winkgo-agent-registry-'));
+    const registryPath = resolveAgentProcessRegistryPath(dataDir);
+    await mkdir(path.dirname(registryPath), { recursive: true });
+    await writeFile(registryPath, '', 'utf8');
+
+    await expect(cleanupRegisteredAgentProcesses(dataDir)).resolves.toBeUndefined();
+
+    const entries = await readdir(path.dirname(registryPath));
+    expect(entries.filter((name) => name.includes('.corrupt.'))).toHaveLength(1);
+  });
+
+  it('quarantines malformed JSON instead of aborting cleanup', async () => {
+    const dataDir = await mkdtemp(path.join(os.tmpdir(), 'winkgo-agent-registry-'));
+    const registryPath = resolveAgentProcessRegistryPath(dataDir);
+    await mkdir(path.dirname(registryPath), { recursive: true });
+    await writeFile(registryPath, '{"version":', 'utf8');
+
+    await expect(cleanupRegisteredAgentProcesses(dataDir)).resolves.toBeUndefined();
+
+    const entries = await readdir(path.dirname(registryPath));
+    expect(entries.filter((name) => name.includes('.corrupt.'))).toHaveLength(1);
   });
 });

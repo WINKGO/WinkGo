@@ -2,20 +2,34 @@
 use std::sync::Arc;
 
 use tracing::debug;
+use winkgo_api_types::{TeamMailboxChangedPayload, TeamMailboxMessageResponse, WebSocketMessage};
 use winkgo_common::{generate_id, now_ms};
 use winkgo_db::ITeamRepository;
 use winkgo_db::models::MailboxMessageRow;
+use winkgo_realtime::EventBroadcaster;
 
 use crate::error::TeamError;
+use crate::events::TEAM_MAILBOX_CHANGED_EVENT;
 use crate::types::{MailboxMessage, MailboxMessageType};
 
 pub struct Mailbox {
     repo: Arc<dyn ITeamRepository>,
+    broadcaster: Option<Arc<dyn EventBroadcaster>>,
 }
 
 impl Mailbox {
     pub fn new(repo: Arc<dyn ITeamRepository>) -> Self {
-        Self { repo }
+        Self {
+            repo,
+            broadcaster: None,
+        }
+    }
+
+    pub fn new_with_broadcaster(repo: Arc<dyn ITeamRepository>, broadcaster: Arc<dyn EventBroadcaster>) -> Self {
+        Self {
+            repo,
+            broadcaster: Some(broadcaster),
+        }
     }
 
     pub async fn write(
@@ -68,8 +82,10 @@ impl Mailbox {
             "mailbox message written"
         );
 
-        MailboxMessage::from_row(&row)
-            .ok_or_else(|| TeamError::InvalidRequest(format!("invalid message type: {msg_type}")))
+        let message = MailboxMessage::from_row(&row)
+            .ok_or_else(|| TeamError::InvalidRequest(format!("invalid message type: {msg_type}")))?;
+        self.broadcast_changed(&message, "created");
+        Ok(message)
     }
 
     pub async fn read_unread(&self, team_id: &str, agent_id: &str) -> Result<Vec<MailboxMessage>, TeamError> {
@@ -77,7 +93,12 @@ impl Mailbox {
 
         debug!(team_id, agent_id, count = rows.len(), "mailbox unread messages read");
 
-        let messages = rows.iter().filter_map(MailboxMessage::from_row).collect();
+        let messages: Vec<_> = rows.iter().filter_map(MailboxMessage::from_row).collect();
+        for message in &messages {
+            let mut read_message = message.clone();
+            read_message.read = true;
+            self.broadcast_changed(&read_message, "read");
+        }
         Ok(messages)
     }
 
@@ -136,12 +157,56 @@ impl Mailbox {
         debug!(team_id, "mailbox messages deleted for team");
         Ok(())
     }
+
+    fn broadcast_changed(&self, message: &MailboxMessage, change: &str) {
+        let Some(broadcaster) = &self.broadcaster else {
+            return;
+        };
+        let payload = TeamMailboxChangedPayload {
+            team_id: message.team_id.clone(),
+            message: TeamMailboxMessageResponse {
+                id: message.id.clone(),
+                team_id: message.team_id.clone(),
+                from_agent_id: message.from_agent_id.clone(),
+                to_agent_id: message.to_agent_id.clone(),
+                msg_type: message.msg_type.to_string(),
+                content: message.content.clone(),
+                summary: message.summary.clone(),
+                files: message.files.clone().unwrap_or_default(),
+                read: message.read,
+                created_at: message.created_at,
+            },
+            change: change.to_owned(),
+        };
+        broadcaster.broadcast(WebSocketMessage::new(
+            TEAM_MAILBOX_CHANGED_EVENT,
+            serde_json::to_value(payload).expect("serialize mailbox changed payload"),
+        ));
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_utils::MockTeamRepo;
+
+    struct RecordingBroadcaster {
+        events: std::sync::Mutex<Vec<WebSocketMessage<serde_json::Value>>>,
+    }
+
+    impl RecordingBroadcaster {
+        fn new() -> Self {
+            Self {
+                events: std::sync::Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    impl EventBroadcaster for RecordingBroadcaster {
+        fn broadcast(&self, event: WebSocketMessage<serde_json::Value>) {
+            self.events.lock().unwrap().push(event);
+        }
+    }
 
     // -- Tests ----------------------------------------------------------------
 
@@ -166,6 +231,32 @@ mod tests {
 
         let unread_again = mailbox.read_unread("t1", "a1").await.unwrap();
         assert!(unread_again.is_empty());
+    }
+
+    #[tokio::test]
+    async fn write_and_read_broadcast_full_activity_payloads() {
+        let repo = Arc::new(MockTeamRepo::new());
+        let broadcaster = Arc::new(RecordingBroadcaster::new());
+        let mailbox = Mailbox::new_with_broadcaster(repo, broadcaster.clone());
+
+        let written = mailbox
+            .write("t1", "a1", "a2", MailboxMessageType::Message, "hello", None)
+            .await
+            .unwrap();
+        let unread = mailbox.read_unread("t1", "a1").await.unwrap();
+        assert_eq!(unread.len(), 1);
+
+        let events = broadcaster.events.lock().unwrap();
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0].name, TEAM_MAILBOX_CHANGED_EVENT);
+        let created: TeamMailboxChangedPayload = serde_json::from_value(events[0].data.clone()).unwrap();
+        assert_eq!(created.team_id, "t1");
+        assert_eq!(created.message.id, written.id);
+        assert_eq!(created.message.content, "hello");
+        assert_eq!(created.change, "created");
+        let read: TeamMailboxChangedPayload = serde_json::from_value(events[1].data.clone()).unwrap();
+        assert_eq!(read.change, "read");
+        assert!(read.message.read);
     }
 
     #[tokio::test]

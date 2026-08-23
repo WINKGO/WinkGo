@@ -1,6 +1,8 @@
 {
   "desktopPet": "桌面寵物",
   "enable": "啟用桌面寵物",
+  "butlerSetup": "讓管家協助設定",
+  "butlerSetupPrompt": "請為我建立一個桌面寵物。我會附上一張圖片，請將它製作成桌面寵物。",
   "size": "寵物大小",
   "sizeSmall": "小 ({{px}}px)",
   "sizeMedium": "中 ({{px}}px)",

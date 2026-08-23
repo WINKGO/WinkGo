@@ -65,6 +65,15 @@ function trimLookupText(text: string): string {
   return text.trim().slice(0, MAX_LOOKUP_TEXT_LENGTH);
 }
 
+function isSourceCheckoutRuntime(): boolean {
+  const electronProcess = process as NodeJS.Process & { defaultApp?: boolean };
+  return (
+    Boolean(process.env.ELECTRON_RENDERER_URL) ||
+    process.env.WINKGO_E2E_TEST === '1' ||
+    electronProcess.defaultApp === true
+  );
+}
+
 /**
  * Resolve the winkgo_core binary path.
  * Returns the absolute path to the binary, or throws if not found.
@@ -98,11 +107,12 @@ export function resolveBinaryPath(): string {
 
 /**
  * Allow a source checkout to run a freshly compiled Core without replacing the
- * repository's bundled binary. The renderer URL is injected by electron-vite,
- * so packaged applications never accept this development-only override.
+ * repository's bundled binary. The renderer URL is injected by electron-vite;
+ * Electron also sets process.defaultApp when a checkout is launched directly
+ * with `electron .`. Packaged applications never enter either source mode.
  */
 function developmentOverridePath(diagnostics: BackendBinaryResolveDiagnostics): string | null {
-  if (!process.env.ELECTRON_RENDERER_URL) return null;
+  if (!isSourceCheckoutRuntime()) return null;
   const configured = process.env.WINKGO_BACKEND_BIN?.trim();
   if (!configured) return null;
 
@@ -112,16 +122,17 @@ function developmentOverridePath(diagnostics: BackendBinaryResolveDiagnostics): 
 }
 
 /**
- * Resolve the repository-local runtime only while electron-vite is serving the
- * renderer. Packaged builds never enter this branch, so installation integrity
- * checks continue to require resources from process.resourcesPath.
+ * Resolve the repository-local runtime while electron-vite is serving the
+ * renderer or when Electron directly runs this checkout. Packaged builds never
+ * enter this branch, so installation integrity checks continue to require
+ * resources from process.resourcesPath.
  */
 function developmentBundledPath(
   runtimeKey: string,
   binaryName: string,
   diagnostics: BackendBinaryResolveDiagnostics
 ): string | null {
-  if (!process.env.ELECTRON_RENDERER_URL) return null;
+  if (!isSourceCheckoutRuntime()) return null;
 
   const bundledDir = join(process.cwd(), 'resources', 'bundled-winkgo-core');
   const runtimeDir = join(bundledDir, runtimeKey);

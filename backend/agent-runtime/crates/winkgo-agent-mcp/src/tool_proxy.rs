@@ -11,9 +11,67 @@ use winkgo_agent_protocol::events::ToolCategory;
 use winkgo_agent_tools::Tool;
 use winkgo_agent_types::tool::{JsonSchema, ToolResult};
 
+const MAX_PROVIDER_TOOL_NAME_LEN: usize = 64;
+
+fn normalize_provider_tool_name(name: &str) -> String {
+    let mut normalized = String::with_capacity(name.len());
+    let mut previous_was_separator = false;
+
+    for character in name.chars() {
+        let safe = character.is_ascii_alphanumeric() || matches!(character, '_' | '-');
+        if safe {
+            normalized.push(character);
+            previous_was_separator = false;
+        } else if !previous_was_separator {
+            normalized.push('_');
+            previous_was_separator = true;
+        }
+    }
+
+    let normalized = normalized.trim_matches('_');
+    if normalized.is_empty() {
+        "tool".to_string()
+    } else {
+        normalized.to_string()
+    }
+}
+
+fn stable_tool_name_hash(server_name: &str, tool_name: &str) -> u32 {
+    // FNV-1a keeps aliases deterministic across processes and Rust versions.
+    let mut hash = 0xcbf29ce484222325_u64;
+    for byte in server_name.bytes().chain([0]).chain(tool_name.bytes()) {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    (hash ^ (hash >> 32)) as u32
+}
+
+fn provider_safe_tool_name(server_name: &str, tool_name: &str, needs_disambiguation: bool) -> String {
+    let normalized_tool = normalize_provider_tool_name(tool_name);
+    let original_is_safe = tool_name.len() <= MAX_PROVIDER_TOOL_NAME_LEN
+        && tool_name
+            .bytes()
+            .all(|character| character.is_ascii_alphanumeric() || matches!(character, b'_' | b'-'));
+
+    if original_is_safe && !needs_disambiguation {
+        return tool_name.to_string();
+    }
+
+    if normalized_tool.len() <= MAX_PROVIDER_TOOL_NAME_LEN && !needs_disambiguation {
+        return normalized_tool;
+    }
+
+    let normalized_server = normalize_provider_tool_name(server_name);
+    let suffix = format!("__{:08x}", stable_tool_name_hash(server_name, tool_name));
+    let mut prefix = format!("mcp__{normalized_server}__{normalized_tool}");
+    prefix.truncate(MAX_PROVIDER_TOOL_NAME_LEN.saturating_sub(suffix.len()));
+    format!("{prefix}{suffix}")
+}
+
 /// Wraps an MCP server tool as a local Tool trait implementation.
-/// Uses naming convention "mcp__{server}__{tool}" when collisions exist,
-/// otherwise uses the tool's original name.
+/// Uses a provider-safe alias for MCP names containing dots, colons or other
+/// unsupported characters. The original server/tool identity is retained for
+/// execution, so this only changes the LLM-facing function name.
 pub struct McpToolProxy {
     /// Display name used for registration (may be prefixed)
     display_name: String,
@@ -121,16 +179,24 @@ pub fn register_mcp_tools(
         let original_name = &tool_def.name;
 
         // Check collision with built-in tools
-        let collides_builtin = builtin_names.iter().any(|n| n == original_name);
+        let normalized_name = normalize_provider_tool_name(original_name);
+        let collides_builtin = builtin_names
+            .iter()
+            .any(|name| name == original_name || normalize_provider_tool_name(name) == normalized_name);
 
         // Check collision with other MCP servers' tools
         let cross_server_collision = manager.tool_name_count(original_name) > 1;
+        let normalized_collision = all_tools
+            .iter()
+            .filter(|(_, candidate)| normalize_provider_tool_name(&candidate.name) == normalized_name)
+            .count()
+            > 1;
 
-        let display_name = if collides_builtin || cross_server_collision {
-            format!("mcp__{}_{}", server_name, original_name)
-        } else {
-            original_name.clone()
-        };
+        let display_name = provider_safe_tool_name(
+            server_name,
+            original_name,
+            collides_builtin || cross_server_collision || normalized_collision,
+        );
 
         // MCP tools are deferred by default; server config can override.
         let deferred = server_configs
@@ -166,14 +232,22 @@ pub fn register_single_server_tools(
 
     for (_, tool_def) in &server_tools {
         let original_name = &tool_def.name;
-        let collides_builtin = builtin_names.iter().any(|n| n == original_name);
+        let normalized_name = normalize_provider_tool_name(original_name);
+        let collides_builtin = builtin_names
+            .iter()
+            .any(|name| name == original_name || normalize_provider_tool_name(name) == normalized_name);
         let cross_server_collision = manager.tool_name_count(original_name) > 1;
+        let normalized_collision = all_tools
+            .iter()
+            .filter(|(_, candidate)| normalize_provider_tool_name(&candidate.name) == normalized_name)
+            .count()
+            > 1;
 
-        let display_name = if collides_builtin || cross_server_collision {
-            format!("mcp__{}_{}", server_name, original_name)
-        } else {
-            original_name.clone()
-        };
+        let display_name = provider_safe_tool_name(
+            server_name,
+            original_name,
+            collides_builtin || cross_server_collision || normalized_collision,
+        );
 
         let proxy = McpToolProxy::new(
             display_name,

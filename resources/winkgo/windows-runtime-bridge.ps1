@@ -669,6 +669,9 @@ $script:notificationAccess = [string]$script:listener.GetAccessStatus()
 $script:notificationCaptureStartedAt = Get-UnixMilliseconds
 $script:seenNotificationKeys = [System.Collections.Generic.HashSet[string]]::new()
 $script:seenNotificationOrder = [System.Collections.Generic.Queue[string]]::new()
+$script:notificationFailureCount = 0
+$script:notificationRetryAfter = [DateTime]::MinValue
+$script:lastNotificationWarningAt = [DateTime]::MinValue
 $script:latestMedia = $null
 $script:latestNotification = $null
 $script:activeMediaSession = $null
@@ -2365,6 +2368,11 @@ function Publish-NewNotifications {
     return
   }
 
+  $pollStartedAt = [DateTime]::UtcNow
+  if ($pollStartedAt -lt $script:notificationRetryAfter) {
+    return
+  }
+
   try {
     $script:notificationAccess = [string]$script:listener.GetAccessStatus()
     if ($script:notificationAccess -ne 'Allowed') {
@@ -2374,7 +2382,9 @@ function Publish-NewNotifications {
     $listType = [System.Collections.Generic.IReadOnlyList[Windows.UI.Notifications.UserNotification]]
     $notifications = Wait-WinRtOperation (
       $script:listener.GetNotificationsAsync([Windows.UI.Notifications.NotificationKinds]::Toast)
-    ) $listType
+    ) $listType 2500
+    $script:notificationFailureCount = 0
+    $script:notificationRetryAfter = [DateTime]::MinValue
     $orderedNotifications = @($notifications) | Sort-Object { $_.CreationTime.ToUnixTimeMilliseconds() }
     $delivered = 0
 
@@ -2425,10 +2435,27 @@ function Publish-NewNotifications {
       }
     }
   } catch {
-    Write-BridgeEvent @{
-      type = 'runtime-warning'
-      scope = 'notification'
-      message = Limit-Text $_.Exception.Message 240
+    $script:notificationFailureCount += 1
+    if ($script:notificationFailureCount -ge 4) {
+      $backoffSeconds = 300
+    } elseif ($script:notificationFailureCount -eq 3) {
+      $backoffSeconds = 60
+    } elseif ($script:notificationFailureCount -eq 2) {
+      $backoffSeconds = 15
+    } else {
+      $backoffSeconds = 5
+    }
+    $script:notificationRetryAfter = [DateTime]::UtcNow.AddSeconds($backoffSeconds)
+    $shouldReport =
+      $script:notificationFailureCount -eq 1 -or
+      ([DateTime]::UtcNow - $script:lastNotificationWarningAt).TotalSeconds -ge 300
+    if ($shouldReport) {
+      $script:lastNotificationWarningAt = [DateTime]::UtcNow
+      Write-BridgeEvent @{
+        type = 'runtime-warning'
+        scope = 'notification'
+        message = Limit-Text "$($_.Exception.Message); retrying in $backoffSeconds seconds" 240
+      }
     }
   }
 }

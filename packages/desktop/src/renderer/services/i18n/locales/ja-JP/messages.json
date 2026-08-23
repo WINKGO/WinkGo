@@ -2,6 +2,7 @@
   "fileChanges": "ファイル変更",
   "fileChangesCount": "{{count}} 件のファイル変更",
   "conversationInProgress": "現在、会話中です...",
+  "delivery": { "queued": "現在のタスクの完了待ち" },
   "confirm": "確認",
   "canceledExecution": "実行がキャンセルされました",
   "openLinkFailed": "リンクを開けませんでした",
@@ -62,6 +63,13 @@
   "processing": "Processing...",
   "responseSentSuccessfully": "応答が正常に送信されました",
   "permissionResponseFailed": "応答を送信できませんでした。もう一度お試しください。",
+  "askSubmit": "送信",
+  "askDecline": "スキップ",
+  "askAnswered": "回答済み",
+  "askDeclined": "スキップ済み",
+  "askOther": "その他",
+  "askOtherPlaceholder": "回答を入力",
+  "requestDetails": "リクエストの詳細：",
   "confirmation": {
     "applyChange": "この変更を適用しますか？",
     "allowExecution": "実行を許可しますか？",
@@ -72,5 +80,14 @@
     "yesAlwaysAllowTool": "はい、サーバー \"{{serverName}}\" のツール \"{{toolName}}\" を常に許可",
     "yesAlwaysAllowServer": "はい、サーバー \"{{serverName}}\" のすべてのツールを常に許可",
     "no": "いいえ (esc)"
+  },
+  "fork": {
+    "action": "ここから分岐",
+    "errorTurnInFlight": "現在の応答が完了してから分岐してください",
+    "errorParentUnbound": "この会話にはまだ分岐できるバックエンドセッションがありません",
+    "errorPointUnsupported": "このエージェントは最新メッセージからのみ分岐できます",
+    "errorUnsupported": "このエージェントは分岐をサポートしていません",
+    "errorGeneric": "分岐に失敗しました：{{message}}",
+    "errorTeamUnsupported": "Team member conversations must be managed from Team mode"
   }
 }

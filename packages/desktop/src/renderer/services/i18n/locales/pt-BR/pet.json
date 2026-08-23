@@ -1,6 +1,8 @@
 {
   "desktopPet": "Mascote de Mesa",
   "enable": "Habilitar Mascote de Mesa",
+  "butlerSetup": "Pedir ao assistente para configurar",
+  "butlerSetupPrompt": "Crie um pet de desktop para mim. Vou anexar uma imagem para você transformá-la no pet.",
   "size": "Tamanho do Mascote",
   "sizeSmall": "Pequeno ({{px}}px)",
   "sizeMedium": "Médio ({{px}}px)",

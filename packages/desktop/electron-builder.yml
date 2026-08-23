@@ -150,14 +150,19 @@ extraResources:
       - '**/*'
       - '!**/__pycache__/**'
       - '!**/*.pyc'
-  # Native OLE drop target adapted from Wry 0.55.1 for WINK GO.
-  # Required for WeChat virtual FileContents, which Chromium cannot expose as
-  # ordinary filesystem paths.
-  - from: packages/desktop/native/winkgo_native_drop.node
-    to: native/winkgo_native_drop.node
-  - from: packages/desktop/native/winkgo-native-drop/vendor/wry-0.55.1
-    to: legal/vendor/wry-0.55.1
 win:
+  extraResources:
+    # Native OLE drop target adapted from Wry 0.55.1 for WINK GO. This is a
+    # Windows PE/Node addon and must never enter a signed macOS application.
+    - from: packages/desktop/native/winkgo_native_drop.node
+      to: native/winkgo_native_drop.node
+    - from: packages/desktop/native/winkgo-native-drop/vendor/wry-0.55.1
+      to: legal/vendor/wry-0.55.1
+    # Full local Runtime prepared from its signed integrity manifest. The
+    # desktop resolver loads the executable from this exact packaged path on a
+    # clean customer machine before any user-data release exists.
+    - from: resources/winkgo-runtime
+      to: winkgo-runtime
   target:
     - nsis
     #    - msi
@@ -260,6 +265,9 @@ asarUnpack:
   - '**/node_modules/tree-sitter-bash/**/*'
   # Builtin MCP server scripts must be unpacked so external node processes can execute them
   - 'out/main/builtin-mcp-image-gen.js'
+  - 'out/main/builtin-mcp-browser.js'
+  - 'out/main/builtin-mcp-browser-skills.js'
+  - 'out/main/builtin-mcp-desktop-computer-use.js'
   - 'out/main/team-mcp-stdio.js'
 
 # Compression level: normal for faster builds, maximum for smallest size

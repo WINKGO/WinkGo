@@ -34,6 +34,15 @@ const isAgentDisconnectedError = (error: unknown): boolean => {
   );
 };
 
+const isLocalMcpTargetNotFoundError = (error: unknown, message: string): boolean => {
+  const backendMessage = isBackendHttpError(error) ? error.backendMessage : '';
+  const normalized = `${message}\n${backendMessage}`.toLowerCase();
+  return (
+    normalized.includes('mcp tool execution') &&
+    (normalized.includes('target-not-found') || normalized.includes('target not found'))
+  );
+};
+
 export const buildSendFailureError = (error: unknown, message: string): AgentStreamErrorInfo => {
   const workspacePathErrorCode = normalizeWorkspacePathErrorCode(error);
   if (workspacePathErrorCode) {
@@ -80,6 +89,17 @@ export const buildSendFailureError = (error: unknown, message: string): AgentStr
       retryable: true,
       feedback_recommended: false,
       resolution: { kind: 'reconnect_agent', target: 'agent_settings' },
+    };
+  }
+
+  if (isLocalMcpTargetNotFoundError(error, message)) {
+    return {
+      message,
+      code: 'USER_AGENT_RESOURCE_NOT_FOUND',
+      ownership: 'user_agent',
+      detail: message,
+      retryable: true,
+      feedback_recommended: false,
     };
   }
 

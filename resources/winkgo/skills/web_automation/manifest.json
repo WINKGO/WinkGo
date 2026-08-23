@@ -12,14 +12,36 @@
   "icon_key": "globe",
   "color": "linear-gradient(135deg, #00b894, #00cec9)",
   "description": "浏览器搜索、页面读取、点击、输入、导航与下载列表。",
-  "strong_aliases": ["网页自动化", "浏览器自动化", "浏览器RPA", "网页RPA"],
-  "weak_aliases": ["网页", "浏览器", "页面", "网站"],
-  "capability_labels": ["打开网页", "网页搜索", "页面读取", "智能选择结果", "点击与填表", "导航与下载", "浏览器 RPA"],
+  "strong_aliases": [
+    "网页自动化",
+    "浏览器自动化",
+    "浏览器RPA",
+    "网页RPA"
+  ],
+  "weak_aliases": [
+    "网页",
+    "浏览器",
+    "页面",
+    "网站"
+  ],
+  "capability_labels": [
+    "打开网页",
+    "网页搜索",
+    "页面读取",
+    "智能选择结果",
+    "点击与填表",
+    "导航与下载",
+    "浏览器 RPA"
+  ],
   "related_skill_ids": [],
   "legacy_route_prefix": "浏览器自动化",
   "tool_selectors": {
-    "prefixes": ["windows.browser_"],
-    "names": ["windows.open_url"],
+    "prefixes": [
+      "windows.browser_"
+    ],
+    "names": [
+      "windows.open_url"
+    ],
     "shared_names": []
   },
   "config_scope_id": "web_automation"

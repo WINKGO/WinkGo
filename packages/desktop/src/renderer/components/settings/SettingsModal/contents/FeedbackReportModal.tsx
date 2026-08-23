@@ -9,6 +9,7 @@
 import WinkGoModal from '@renderer/components/base/WinkGoModal';
 import { FEEDBACK_MODULES } from './feedbackModules';
 import { useTalkToButler } from '@/renderer/hooks/assistant/useTalkToButler';
+import { uploadFileRef } from '@/common/types/chatFile';
 import { uploadFileViaHttp } from '@/renderer/services/FileService';
 import { Button, Input, Select, Message, Upload } from '@arco-design/web-react';
 import type { UploadItem } from '@arco-design/web-react/es/Upload';
@@ -195,7 +196,7 @@ const FeedbackReportModal: React.FC<FeedbackReportModalProps> = ({
         description: description.trim(),
       });
 
-      await talkToButler({ prompt, files });
+      await talkToButler({ prompt, files: files.map(uploadFileRef) });
       resetForm();
       onCancel();
     } catch {

@@ -11,7 +11,7 @@ use crate::protocol::send_error::AgentSendError;
 use crate::shared_kernel::SessionId as DomainSessionId;
 use crate::types::SendMessageData;
 use agent_client_protocol::schema::{
-    AuthMethod, ContentBlock, LoadSessionRequest, PromptRequest, SessionId, StopReason,
+    AudioContent, AuthMethod, ContentBlock, ImageContent, LoadSessionRequest, PromptRequest, SessionId, StopReason,
 };
 use serde_json::Value;
 use tokio::sync::broadcast::error::TryRecvError;
@@ -148,6 +148,11 @@ impl AcpAgentManager {
                     session.apply_advertised_config_options(config_options);
                 }
                 session.set_session_id(DomainSessionId::new(new_sid.clone()));
+                // A resumed third-party CLI may keep an older system context that
+                // predates newly-added WINK GO routing and safety rules. ACP has no
+                // system-prompt update method, so refresh the current preset once
+                // on the first prompt after every process/session reattachment.
+                session.mark_pending_session_new_prelude();
                 self.commit_session_changes(&mut session).await;
             }
             self.emit_snapshot_events().await;
@@ -202,6 +207,7 @@ impl AcpAgentManager {
                     session.apply_advertised_config_options(config_options);
                 }
                 session.set_session_id(DomainSessionId::new(session_id.to_owned()));
+                session.mark_pending_session_new_prelude();
                 self.commit_session_changes(&mut session).await;
             }
             self.emit_snapshot_events().await;
@@ -219,6 +225,7 @@ impl AcpAgentManager {
         {
             let mut session = self.session.write().await;
             session.set_session_id(DomainSessionId::new(session_id.to_owned()));
+            session.mark_pending_session_new_prelude();
             self.commit_session_changes(&mut session).await;
         }
         self.emit_snapshot_events().await;
@@ -240,7 +247,10 @@ impl AcpAgentManager {
             .ok_or_else(|| AgentError::internal("Cannot prompt: no session ID available"))
             .map_err(AcpSendFailure::from)?;
 
-        let content = data.content.clone();
+        let prompt_blocks = {
+            use crate::agent_task::IAgentTask as _;
+            build_prompt_blocks(data, self.prompt_media_caps()).await
+        };
 
         // Subscribe BEFORE emitting Start so we can observe every event
         // produced during this turn. Used after `prompt()` returns to detect
@@ -259,10 +269,7 @@ impl AcpAgentManager {
 
         let prompt_response = self
             .protocol
-            .prompt(PromptRequest::new(
-                SessionId::new(sid),
-                vec![ContentBlock::from(content)],
-            ))
+            .prompt(PromptRequest::new(SessionId::new(sid), prompt_blocks))
             .await
             .map_err(AcpSendFailure::from)?;
 
@@ -370,6 +377,55 @@ impl AcpAgentManager {
 ///
 /// `Lagged` is treated as non-empty: the broadcast buffer overflowed,
 /// meaning many events flew by — definitely not an empty turn.
+async fn build_prompt_blocks(data: &SendMessageData, caps: crate::types::PromptMediaCaps) -> Vec<ContentBlock> {
+    use base64::Engine as _;
+
+    let partition = crate::media::partition_media(&data.content, &data.files, caps);
+    if partition.media.is_empty() {
+        return vec![ContentBlock::from(partition.content)];
+    }
+
+    let mut media_blocks = Vec::with_capacity(partition.media.len());
+    for attachment in &partition.media {
+        let Some(bytes) = crate::media::read_media_bytes(attachment).await else {
+            warn!(path = %attachment.path, "native media read failed; using path-only prompt");
+            return vec![ContentBlock::from(data.content.clone())];
+        };
+        let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+        media_blocks.push(match attachment.kind {
+            crate::media::MediaKind::Image => {
+                let image = ImageContent::new(encoded, attachment.mime.clone())
+                    .uri(Some(format!("file://{}", attachment.path)));
+                ContentBlock::Image(image)
+            }
+            crate::media::MediaKind::Audio => ContentBlock::Audio(AudioContent::new(encoded, attachment.mime.clone())),
+        });
+    }
+
+    let (images, audios) = partition
+        .media
+        .iter()
+        .fold((0usize, 0usize), |(images, audios), item| match item.kind {
+            crate::media::MediaKind::Image => (images + 1, audios),
+            crate::media::MediaKind::Audio => (images, audios + 1),
+        });
+    tracing::info!(
+        msg_id = %data.msg_id,
+        images,
+        audios,
+        path_files = partition.path_files.len(),
+        "ACP prompt carries native media blocks"
+    );
+
+    let mut blocks = Vec::with_capacity(media_blocks.len() + 1);
+    blocks.push(ContentBlock::from(crate::media::content_with_all_paths(
+        &data.content,
+        &data.files,
+    )));
+    blocks.extend(media_blocks);
+    blocks
+}
+
 fn is_empty_turn(rx: &mut tokio::sync::broadcast::Receiver<AgentStreamEvent>) -> bool {
     loop {
         match rx.try_recv() {
@@ -942,5 +998,54 @@ mod tests {
         assert_eq!(error.code, Some(AgentErrorCode::UserLlmProviderBillingRequired));
         assert_eq!(error.retryable, Some(false));
         assert_eq!(error.feedback_recommended, Some(false));
+    }
+
+    #[tokio::test]
+    async fn capable_agent_receives_audio_as_native_prompt_block() {
+        use crate::types::{PromptMediaCaps, SendMessageData};
+        use agent_client_protocol::schema::ContentBlock;
+
+        let directory = std::env::temp_dir().join("winkgo-acp-media-tests");
+        std::fs::create_dir_all(&directory).unwrap();
+        let audio = directory.join("voice.mp3");
+        std::fs::write(&audio, b"audio-bytes").unwrap();
+        let audio = audio.to_string_lossy().into_owned();
+        let content = format!(
+            "transcribe\n\n{}\n{audio}",
+            winkgo_common::constants::WINKGO_FILES_MARKER
+        );
+        let data = SendMessageData {
+            content,
+            msg_id: "audio-message".into(),
+            turn_id: None,
+            files: vec![audio],
+            inject_skills: Vec::new(),
+        };
+
+        let blocks = super::build_prompt_blocks(
+            &data,
+            PromptMediaCaps {
+                image: false,
+                audio: true,
+            },
+        )
+        .await;
+        assert_eq!(blocks.len(), 2);
+        let ContentBlock::Text(text) = &blocks[0] else {
+            panic!("expected text block")
+        };
+        assert_eq!(
+            text.text,
+            format!(
+                "transcribe\n\n{}\n{}",
+                winkgo_common::constants::WINKGO_FILES_MARKER,
+                data.files[0]
+            )
+        );
+        let ContentBlock::Audio(audio) = &blocks[1] else {
+            panic!("expected native audio block")
+        };
+        assert_eq!(audio.mime_type, "audio/mpeg");
+        assert!(!audio.data.is_empty());
     }
 }

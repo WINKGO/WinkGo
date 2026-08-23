@@ -6,6 +6,7 @@ import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import { isSideQuestionSupported } from '@/common/chat/sideQuestion';
 import { parseError, uuid } from '@/common/utils';
 import AgentModeSelector from '@/renderer/components/agent/AgentModeSelector';
+import AcpModelSelector from '@/renderer/components/agent/AcpModelSelector';
 import ContextUsageIndicator from '@/renderer/components/agent/ContextUsageIndicator';
 import CommandQueuePanel from '@/renderer/components/chat/CommandQueuePanel';
 import MobileActionSheet, {
@@ -39,7 +40,7 @@ import { getConversationRuntimeWorkspaceErrorMessage } from '@/renderer/pages/co
 import { getChatSurfaceWidthClass } from '@/renderer/pages/conversation/utils/chatSurfaceWidth';
 import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import type { TeamSendBoxRuntime } from '@/renderer/pages/team/components/teamSendRuntime';
-import { allSupportedExts } from '@/renderer/services/FileService';
+import { allSupportedExts, audioExts, getFileExtension, imageExts } from '@/renderer/services/FileService';
 import { iconColors } from '@/renderer/styles/colors';
 import { emitter, useAddEventListener } from '@/renderer/utils/emitter';
 import { localSelectionItems, mergeFileSelectionItems } from '@/renderer/utils/file/fileSelection';
@@ -106,12 +107,22 @@ const useSendBoxDraft = (conversation_id: string) => {
 const AcpSendBox: React.FC<{
   conversation_id: string;
   backend: string;
+  initialModelId?: string;
   session_mode?: string;
   agent_name?: string;
   messageState: UseAcpMessageReturn;
   teamSendMessage?: (payload: { input: string; files: ChatFileRef[] }) => Promise<void>;
   teamRuntime?: TeamSendBoxRuntime;
-}> = ({ conversation_id, backend, session_mode, agent_name, messageState, teamSendMessage, teamRuntime }) => {
+}> = ({
+  conversation_id,
+  backend,
+  initialModelId,
+  session_mode,
+  agent_name,
+  messageState,
+  teamSendMessage,
+  teamRuntime,
+}) => {
   const {
     aiProcessing,
     setAiProcessing,
@@ -140,6 +151,19 @@ const AcpSendBox: React.FC<{
       name,
       status: 'loaded',
     }));
+  const promptCapability = conversationContext?.promptCapability;
+  const mediaPathHintFor = useCallback(
+    (path: string): string | undefined => {
+      const extension = getFileExtension(path).toLowerCase();
+      const nativeImage = extension !== '.svg' && imageExts.includes(extension);
+      const nativeAudio = audioExts.includes(extension);
+      if (!nativeImage && !nativeAudio) return undefined;
+      const supported = nativeImage ? promptCapability?.image : promptCapability?.audio;
+      if (supported) return undefined;
+      return t('conversation.sendbox.mediaPathFallback');
+    },
+    [promptCapability, t]
+  );
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   const [currentMode, setCurrentMode] = useState<string | undefined>(session_mode);
   const prepareRuntimeConfig = useCallback(async () => {
@@ -167,6 +191,7 @@ const AcpSendBox: React.FC<{
   } = useAcpModelInfo({
     conversation_id,
     backend,
+    initialModelId,
     prepareRuntime: prepareRuntimeConfig,
     prepareSetRuntime: teamPermission?.warmupSession,
     loadConfigOptions: teamPermission?.loadConfigOptions,
@@ -387,7 +412,6 @@ Please check your local CLI tool authentication status`,
     enqueue,
     remove,
     prioritize,
-    sendNow,
     clear,
     reorder,
     toggleMode,
@@ -699,6 +723,8 @@ Please check your local CLI tool authentication status`,
           setAtPath(items);
         }}
         loading={teamRuntime?.loading ?? isBusy}
+        active={teamRuntime?.isActive}
+        onFocused={teamRuntime?.onFocus}
         disabled={false}
         placeholder={t('acp.sendbox.placeholder', {
           backend: agent_name || backend,
@@ -721,6 +747,14 @@ Please check your local CLI tool authentication status`,
         }
         rightTools={
           <div className='flex items-center gap-8px min-w-0'>
+            <AcpModelSelector
+              conversation_id={conversation_id}
+              backend={backend}
+              initialModelId={initialModelId}
+              prepareRuntime={prepareRuntimeConfig}
+              prepareSetRuntime={teamPermission?.warmupSession}
+              loadConfigOptions={teamPermission?.loadConfigOptions}
+            />
             {showModeSelector && (
               <AgentModeSelector
                 backend={backend}
@@ -747,6 +781,7 @@ Please check your local CLI tool authentication status`,
                   <FilePreview
                     key={path}
                     path={path}
+                    hint={mediaPathHintFor(path)}
                     onRemove={() => setUploadFile(uploadFile.filter((v) => v !== path))}
                   />
                 ))}

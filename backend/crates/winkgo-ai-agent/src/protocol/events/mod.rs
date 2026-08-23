@@ -39,6 +39,8 @@ pub enum AgentStreamEvent {
     Plan(PlanEventData),
     Permission(serde_json::Value),
     AcpPermission(AcpPermissionEventData),
+    /// Structured question card; answered through the dedicated ask endpoint.
+    Ask(serde_json::Value),
     SkillSuggest(SkillSuggestEventData),
     CronTrigger(CronTriggerEventData),
     AcpModelInfo(serde_json::Value),
@@ -46,6 +48,8 @@ pub enum AgentStreamEvent {
     AcpConfigOption(serde_json::Value),
     AcpSessionInfo(serde_json::Value),
     AcpContextUsage(serde_json::Value),
+    /// Live snapshot of a WINK GO-hosted ACP terminal command.
+    AcpTerminalOutput(serde_json::Value),
     AcpPromptHookWarning(serde_json::Value),
     SlashCommandsUpdated(serde_json::Value),
     AvailableCommands(AvailableCommandsEventData),

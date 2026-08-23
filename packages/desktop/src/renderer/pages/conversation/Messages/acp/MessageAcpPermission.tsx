@@ -60,8 +60,23 @@ const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ 
   }
 
   const title = tool_call.title || tool_call.raw_input?.description || t('messages.permissionRequest');
-  const detail = tool_call.raw_input?.command || tool_call.title;
   const description = tool_call.raw_input?.description;
+  const command =
+    typeof tool_call.raw_input?.command === 'string' && tool_call.raw_input.command
+      ? tool_call.raw_input.command
+      : undefined;
+  let rawDump: string | undefined;
+  if (!command && tool_call.raw_input && typeof tool_call.raw_input === 'object') {
+    const rest = Object.fromEntries(Object.entries(tool_call.raw_input).filter(([key]) => key !== 'description'));
+    if (Object.keys(rest).length > 0) {
+      try {
+        rawDump = JSON.stringify(rest, null, 2);
+      } catch {
+        rawDump = undefined;
+      }
+    }
+  }
+  const detail = command ?? rawDump;
 
   return (
     <PermissionRequestPanel
@@ -71,6 +86,7 @@ const MessageAcpPermission: React.FC<MessageAcpPermissionProps> = React.memo(({ 
       description={description && description !== title ? description : undefined}
       operationKind={normalizePermissionOperationKind(tool_call.kind)}
       detail={detail}
+      detailLabelKey={command ? undefined : 'messages.requestDetails'}
       options={panelOptions}
       onConfirm={handleConfirm}
     />

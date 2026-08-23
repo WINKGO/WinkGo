@@ -14,6 +14,7 @@ import {
   buildAgentRuntimeModeState,
   buildAgentRuntimeModelInfo,
   buildAgentRuntimeSlashCommands,
+  buildAgentRuntimeSpeedOption,
   buildAgentRuntimeThoughtLevelOption,
   type AgentRuntimeCatalog,
   type AgentRuntimeDerivedOption,
@@ -46,11 +47,14 @@ export type GuidAssistantSelectionResult = {
   currentAgentAvailableCommands: SlashCommandItem[];
   currentAgentModeOptions: AgentModeOption[];
   currentThoughtLevelOption: AgentRuntimeDerivedOption | null;
+  currentSpeedOption: AgentRuntimeDerivedOption | null;
   selectedThoughtLevelValue: string;
+  selectedSpeedValue: string;
   setSelectedThoughtLevelValue: (
     value: React.SetStateAction<string>,
     options?: { persistPreference?: boolean }
   ) => void;
+  setSelectedSpeedValue: (value: React.SetStateAction<string>, options?: { persistPreference?: boolean }) => void;
 };
 
 export function resolveInitialAssistantModel(models: string[]): string | null {
@@ -127,6 +131,7 @@ export const useGuidAssistantSelection = ({
   const [selectedMode, _setSelectedMode] = useState<string>('default');
   const [selectedAcpModel, _setSelectedAcpModel] = useState<string | null>(null);
   const [selectedThoughtLevelValue, _setSelectedThoughtLevelValue] = useState<string>('');
+  const [selectedSpeedValue, _setSelectedSpeedValue] = useState<string>('');
   const { assistants } = useCustomAgentsLoader();
   const managedAgentRuntimeCatalog = useManagedAgentRuntimeCatalog();
 
@@ -156,6 +161,13 @@ export const useGuidAssistantSelection = ({
         const nextValue = typeof value === 'function' ? value(prev) : value;
         return nextValue;
       });
+    },
+    []
+  );
+
+  const setSelectedSpeedValue = useCallback(
+    (value: React.SetStateAction<string>, _options?: { persistPreference?: boolean }) => {
+      _setSelectedSpeedValue((prev) => (typeof value === 'function' ? value(prev) : value));
     },
     []
   );
@@ -239,6 +251,10 @@ export const useGuidAssistantSelection = ({
     () => buildAgentRuntimeThoughtLevelOption(selectedManagedAgentRuntimeCatalog),
     [selectedManagedAgentRuntimeCatalog]
   );
+  const selectedAgentRuntimeSpeedOption = useMemo(
+    () => buildAgentRuntimeSpeedOption(selectedManagedAgentRuntimeCatalog),
+    [selectedManagedAgentRuntimeCatalog]
+  );
   const currentThoughtLevelOption = useMemo<AgentRuntimeDerivedOption | null>(() => {
     if (!selectedAgentRuntimeThoughtLevelOption) return null;
     return {
@@ -246,6 +262,13 @@ export const useGuidAssistantSelection = ({
       currentValue: selectedThoughtLevelValue || selectedAgentRuntimeThoughtLevelOption.currentValue,
     };
   }, [selectedAgentRuntimeThoughtLevelOption, selectedThoughtLevelValue]);
+  const currentSpeedOption = useMemo<AgentRuntimeDerivedOption | null>(() => {
+    if (!selectedAgentRuntimeSpeedOption) return null;
+    return {
+      ...selectedAgentRuntimeSpeedOption,
+      currentValue: selectedSpeedValue || selectedAgentRuntimeSpeedOption.currentValue,
+    };
+  }, [selectedAgentRuntimeSpeedOption, selectedSpeedValue]);
   const currentAgentModeOptions = selectedAgentRuntimeModeState.options;
 
   const selectedAssistantAvailable = useMemo(() => {
@@ -311,6 +334,22 @@ export const useGuidAssistantSelection = ({
     });
   }, [selectedAgentRuntimeThoughtLevelOption, selectedAssistantId]);
 
+  const speedSelectionScopeRef = useRef<string | null>(null);
+  useEffect(() => {
+    const optionValues = new Set(selectedAgentRuntimeSpeedOption?.options.map((option) => option.value) ?? []);
+    const fallbackSpeed =
+      selectedAgentRuntimeSpeedOption?.currentValue || selectedAgentRuntimeSpeedOption?.options[0]?.value || '';
+    const selectionScope = selectedAssistantId ?? '';
+
+    _setSelectedSpeedValue((previousValue) => {
+      const scopeChanged = speedSelectionScopeRef.current !== selectionScope;
+      speedSelectionScopeRef.current = selectionScope;
+      if (!selectedAgentRuntimeSpeedOption) return '';
+      if (!scopeChanged && previousValue && optionValues.has(previousValue)) return previousValue;
+      return fallbackSpeed;
+    });
+  }, [selectedAgentRuntimeSpeedOption, selectedAssistantId]);
+
   const currentAcpCachedModelInfo = useMemo(() => {
     if (selectedAgentRuntimeModelInfo) {
       return selectedAgentRuntimeModelInfo;
@@ -337,7 +376,10 @@ export const useGuidAssistantSelection = ({
     currentAgentAvailableCommands,
     currentAgentModeOptions,
     currentThoughtLevelOption,
+    currentSpeedOption,
     selectedThoughtLevelValue,
+    selectedSpeedValue,
     setSelectedThoughtLevelValue,
+    setSelectedSpeedValue,
   };
 };

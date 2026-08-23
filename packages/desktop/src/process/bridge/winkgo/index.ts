@@ -1,4 +1,6 @@
 export { initWinkGoAuthBridge } from './authBridge';
+export { initWinkGoBrowserComputerUseBridge } from './browserComputerUseBridge';
+export { initWinkGoDesktopComputerUseBridge } from './desktopComputerUseBridge';
 export { initWinkGoFilesBridge } from './filesBridge';
 export { initWinkGoFormatBridge } from './formatBridge';
 export { initWinkGoImageBridge } from './imageBridge';

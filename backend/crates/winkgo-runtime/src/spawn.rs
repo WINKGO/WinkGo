@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! Opinionated wrapper around [`tokio::process::Command`] that centralises
 //! cross-cutting concerns of child-process spawning across the workspace.
 //!
@@ -82,7 +83,22 @@ impl std::fmt::Debug for Builder {
 /// comes for free from `std::process::Command`'s `Debug` impl.
 impl std::fmt::Display for Builder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self.inner.as_std(), f)
+        let command = self.inner.as_std();
+        if let Some(current_dir) = command.get_current_dir() {
+            write!(f, "cd {current_dir:?} && ")?;
+        }
+        write!(f, "env")?;
+        for (key, value) in command.get_envs() {
+            match value {
+                Some(value) => write!(f, " {}={value:?}", key.to_string_lossy())?,
+                None => write!(f, " -u {}", key.to_string_lossy())?,
+            }
+        }
+        write!(f, " {:?}", command.get_program())?;
+        for argument in command.get_args() {
+            write!(f, " {argument:?}")?;
+        }
+        Ok(())
     }
 }
 

@@ -4,88 +4,145 @@
   "actions": [
     {
       "id": "open",
-      "phrases": ["打开", "启动"],
-      "tool_names": ["music.station_open"],
+      "phrases": [
+        "打开",
+        "启动"
+      ],
+      "tool_names": [
+        "music.station_open"
+      ],
       "default_arguments": {
         "player": "qq"
       }
     },
     {
       "id": "close",
-      "phrases": ["关闭", "退出"],
-      "tool_names": ["music.station_close"],
+      "phrases": [
+        "关闭",
+        "退出"
+      ],
+      "tool_names": [
+        "music.station_close"
+      ],
       "default_arguments": {
         "player": "qq"
       }
     },
     {
       "id": "favorites",
-      "phrases": ["我喜欢", "喜欢的音乐"],
-      "tool_names": ["music.qq_favorites_start"],
+      "phrases": [
+        "我喜欢",
+        "喜欢的音乐"
+      ],
+      "tool_names": [
+        "music.qq_favorites_start"
+      ],
       "default_arguments": {}
     },
     {
       "id": "history",
-      "phrases": ["最近播放", "历史播放"],
-      "tool_names": ["music.qq_history_start"],
+      "phrases": [
+        "最近播放",
+        "历史播放"
+      ],
+      "tool_names": [
+        "music.qq_history_start"
+      ],
       "default_arguments": {}
     },
     {
       "id": "search_play",
-      "phrases": ["搜索播放", "播放", "听"],
-      "tool_names": ["music.track_resolve_and_start"],
+      "phrases": [
+        "搜索播放",
+        "播放",
+        "听"
+      ],
+      "tool_names": [
+        "music.track_resolve_and_start"
+      ],
       "default_arguments": {
         "player": "qq"
       }
     },
     {
       "id": "recommended_playlists",
-      "phrases": ["推荐歌单"],
-      "tool_names": ["music.qq_recommended_playlists_start"],
+      "phrases": [
+        "推荐歌单"
+      ],
+      "tool_names": [
+        "music.qq_recommended_playlists_start"
+      ],
       "default_arguments": {}
     },
     {
       "id": "created_playlists",
-      "phrases": ["自建歌单", "创建歌单"],
-      "tool_names": ["music.qq_sidebar_playlist_inventory"],
+      "phrases": [
+        "自建歌单",
+        "创建歌单"
+      ],
+      "tool_names": [
+        "music.qq_sidebar_playlist_inventory"
+      ],
       "default_arguments": {
         "section": "created"
       }
     },
     {
       "id": "collected_playlists",
-      "phrases": ["收藏歌单", "收藏的歌单"],
-      "tool_names": ["music.qq_sidebar_playlist_inventory"],
+      "phrases": [
+        "收藏歌单",
+        "收藏的歌单"
+      ],
+      "tool_names": [
+        "music.qq_sidebar_playlist_inventory"
+      ],
       "default_arguments": {
         "section": "collected"
       }
     },
     {
       "id": "music_hall",
-      "phrases": ["打开音乐馆", "音乐馆"],
-      "tool_names": ["music.qq_music_hall_open"],
+      "phrases": [
+        "打开音乐馆",
+        "音乐馆"
+      ],
+      "tool_names": [
+        "music.qq_music_hall_open"
+      ],
       "default_arguments": {}
     },
     {
       "id": "next_track",
-      "phrases": ["下一首"],
-      "tool_names": ["music.station_track_next"],
+      "phrases": [
+        "下一首"
+      ],
+      "tool_names": [
+        "music.station_track_next"
+      ],
       "default_arguments": {
         "player": "qq"
       }
     },
     {
       "id": "previous_track",
-      "phrases": ["上一首"],
-      "tool_names": ["music.station_track_previous"],
+      "phrases": [
+        "上一首"
+      ],
+      "tool_names": [
+        "music.station_track_previous"
+      ],
       "default_arguments": {
         "player": "qq"
       }
     },
     {
       "id": "pause",
-      "phrases": ["暂停"],
-      "tool_names": ["music.control_playback"],
+      "phrases": [
+        "暂停"
+      ],
+      "tool_names": [
+        "music.control_playback"
+      ],
       "default_arguments": {
         "action": "pause",
         "player": "qq"
@@ -93,8 +150,12 @@
     },
     {
       "id": "resume",
-      "phrases": ["继续播放"],
-      "tool_names": ["music.control_playback"],
+      "phrases": [
+        "继续播放"
+      ],
+      "tool_names": [
+        "music.control_playback"
+      ],
       "default_arguments": {
         "action": "play",
         "player": "qq"
@@ -102,8 +163,13 @@
     },
     {
       "id": "volume_set",
-      "phrases": ["QQ音乐进程音量调到80", "QQ音乐音量调到80"],
-      "tool_names": ["music.system_volume_set"],
+      "phrases": [
+        "QQ音乐进程音量调到80",
+        "QQ音乐音量调到80"
+      ],
+      "tool_names": [
+        "music.system_volume_set"
+      ],
       "default_arguments": {
         "player": "qq"
       },
@@ -111,8 +177,13 @@
     },
     {
       "id": "volume_raise",
-      "phrases": ["调大QQ音乐进程音量", "调大QQ音乐音量"],
-      "tool_names": ["music.system_volume_raise"],
+      "phrases": [
+        "调大QQ音乐进程音量",
+        "调大QQ音乐音量"
+      ],
+      "tool_names": [
+        "music.system_volume_raise"
+      ],
       "default_arguments": {
         "player": "qq"
       },
@@ -120,8 +191,13 @@
     },
     {
       "id": "volume_lower",
-      "phrases": ["调小QQ音乐进程音量", "调小QQ音乐音量"],
-      "tool_names": ["music.system_volume_lower"],
+      "phrases": [
+        "调小QQ音乐进程音量",
+        "调小QQ音乐音量"
+      ],
+      "tool_names": [
+        "music.system_volume_lower"
+      ],
       "default_arguments": {
         "player": "qq"
       },
@@ -129,14 +205,26 @@
     },
     {
       "id": "lyrics",
-      "phrases": ["切换歌词", "歌词"],
-      "tool_names": ["music.qq_lyrics_toggle"],
+      "phrases": [
+        "切换歌词",
+        "歌词"
+      ],
+      "tool_names": [
+        "music.qq_lyrics_toggle"
+      ],
       "default_arguments": {}
     },
     {
       "id": "play_mode",
-      "phrases": ["单曲循环", "顺序播放", "列表循环", "随机播放"],
-      "tool_names": ["music.qq_play_mode_set"],
+      "phrases": [
+        "单曲循环",
+        "顺序播放",
+        "列表循环",
+        "随机播放"
+      ],
+      "tool_names": [
+        "music.qq_play_mode_set"
+      ],
       "default_arguments": {}
     },
     {
@@ -150,7 +238,9 @@
         "放的什么歌",
         "播的什么歌"
       ],
-      "tool_names": ["music.station_now_snapshot"],
+      "tool_names": [
+        "music.station_now_snapshot"
+      ],
       "default_arguments": {
         "player": "qq",
         "force_refresh": true
@@ -220,7 +310,7 @@
       "id": "toggle_playback",
       "phrases": ["播放暂停", "切换播放状态"],
       "tool_names": ["music.control_playback"],
-      "default_arguments": { "action": "play_pause", "player": "qq" }
+      "default_arguments": {"action": "play_pause", "player": "qq"}
     }
   ]
 }

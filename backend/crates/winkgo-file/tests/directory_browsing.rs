@@ -5,6 +5,7 @@
 //! including path validation, .gitignore handling, and caching behavior.
 
 use std::fs;
+use std::path::Path;
 use std::sync::Arc;
 
 use winkgo_api_types::WebSocketMessage;
@@ -77,7 +78,7 @@ async fn get_files_by_dir_subdirectory() {
 
     assert_eq!(items.len(), 2);
     // Relative paths should be relative to root, not to sub
-    assert!(items[0].relative_path.starts_with("src/"));
+    assert!(Path::new(&items[0].relative_path).starts_with(Path::new("src")));
 }
 
 #[tokio::test]
@@ -246,7 +247,7 @@ async fn list_workspace_files_relative_paths() {
     let files = svc.list_workspace_files(dir.path().to_str().unwrap()).await.unwrap();
 
     let helper = files.iter().find(|f| f.name == "helper.ts").unwrap();
-    assert_eq!(helper.relative_path, "src/utils/helper.ts");
+    assert_eq!(Path::new(&helper.relative_path), Path::new("src/utils/helper.ts"));
 }
 
 #[cfg(unix)]

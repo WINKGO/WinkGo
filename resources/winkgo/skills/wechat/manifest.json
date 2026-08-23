@@ -12,13 +12,29 @@
   "icon_key": "message",
   "color": "linear-gradient(135deg, #2ecc71, #27ae60)",
   "description": "联系人搜索、会话打开、消息收发、文件发送与桌面微信状态检测。",
-  "strong_aliases": ["微信", "WeChat", "文件传输助手"],
-  "weak_aliases": ["联系人", "发消息", "聊天", "会话"],
-  "capability_labels": ["会话打开", "联系人搜索", "消息收发", "运行状态"],
+  "strong_aliases": [
+    "微信",
+    "WeChat",
+    "文件传输助手"
+  ],
+  "weak_aliases": [
+    "联系人",
+    "发消息",
+    "聊天",
+    "会话"
+  ],
+  "capability_labels": [
+    "会话打开",
+    "联系人搜索",
+    "消息收发",
+    "运行状态"
+  ],
   "related_skill_ids": [],
   "legacy_route_prefix": "微信",
   "tool_selectors": {
-    "prefixes": ["wechat."],
+    "prefixes": [
+      "wechat."
+    ],
     "names": [],
     "shared_names": []
   },

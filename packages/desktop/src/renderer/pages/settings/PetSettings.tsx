@@ -19,10 +19,12 @@ import WinkGoScrollArea from '@/renderer/components/base/WinkGoScrollArea';
 import { useSettingsViewMode } from '@/renderer/components/settings/SettingsModal/settingsViewContext';
 import { useTalkToButler } from '@/renderer/hooks/assistant/useTalkToButler';
 
+const DEFAULT_PET_SIZE = 200;
+
 const PetSettings: React.FC = () => {
   const [enabled, setEnabled] = useState(false);
   const [enabledResolved, setEnabledResolved] = useState(false);
-  const [size, setSize] = useState(280);
+  const [size, setSize] = useState(DEFAULT_PET_SIZE);
   const [dnd, setDnd] = useState(false);
   const [confirmEnabled, setConfirmEnabled] = useState(true);
   const { t } = useTranslation();
@@ -32,7 +34,7 @@ const PetSettings: React.FC = () => {
   const isDesktop = isElectronDesktop();
 
   useEffect(() => {
-    setSize(configService.get('pet.size') ?? 280);
+    setSize(configService.get('pet.size') ?? DEFAULT_PET_SIZE);
     setDnd(configService.get('pet.dnd') ?? false);
     setConfirmEnabled(configService.get('pet.confirmEnabled') ?? true);
 

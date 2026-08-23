@@ -218,15 +218,22 @@ const XiaozhiMcpConnection: React.FC = () => {
             : '等待启动';
   const cloudChannelOk =
     (!config.hardwareEnabled || hardwareOk) && (!config.mobileEnabled || mobileOk) && (hardwareOk || mobileOk);
+  const runtimePending = !snapshot || loading || testing || starting;
   const connectionSteps = useMemo<ConnectionStep[]>(
     () => [
       {
         id: 'runtime',
         title: 'Runtime',
-        status: snapshot?.runtime.ok ? '已就绪' : snapshot?.runtimeInstalled ? '等待启动' : '尚未安装',
+        status: snapshot?.runtime.ok
+          ? '已就绪'
+          : runtimePending
+            ? '正在检测'
+            : snapshot?.runtimeInstalled
+              ? '等待启动'
+              : '尚未安装',
         detail: snapshot?.runtime.detail || '等待检测本机 8121',
         icon: <Server theme='outline' size='18' />,
-        tone: snapshot?.runtime.ok ? 'success' : testing ? 'checking' : 'error',
+        tone: snapshot?.runtime.ok ? 'success' : runtimePending ? 'checking' : 'error',
       },
       {
         id: 'host',
@@ -289,7 +296,18 @@ const XiaozhiMcpConnection: React.FC = () => {
         tone: !config.mobileEnabled ? 'muted' : mobileOk ? 'success' : testing ? 'checking' : 'warning',
       },
     ],
-    [cloudChannelOk, config, firewallBusy, hardwareOk, mobileOk, relayOk, relayStatus, snapshot, testing]
+    [
+      cloudChannelOk,
+      config,
+      firewallBusy,
+      hardwareOk,
+      mobileOk,
+      relayOk,
+      relayStatus,
+      runtimePending,
+      snapshot,
+      testing,
+    ]
   );
 
   const connectionIssue = !snapshot

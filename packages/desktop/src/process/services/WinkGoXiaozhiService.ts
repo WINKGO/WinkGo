@@ -6,7 +6,8 @@
 
 import { app } from 'electron';
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { isIP } from 'node:net';
 import { networkInterfaces } from 'node:os';
@@ -23,7 +24,20 @@ import type {
 } from '@/common/adapter/ipcBridge';
 import { getWinkGoCredentialStatus, readWinkGoCredential, writeWinkGoCredential } from './WinkGoCredentialService';
 import { winkGoCloudAuthService } from './WinkGoCloudAuthService';
-import { WinkGoRemoteGatewayService, type WinkGoRemoteGatewayConfig } from './winkgoRemote';
+import {
+  createWinkGoAgentBridgeRuntimeEnv,
+  winkGoAgentTaskBridgeService,
+  WinkGoRemoteGatewayService,
+  type WinkGoRemoteGatewayConfig,
+} from './winkgoRemote';
+import { RuntimeMcpClient } from './winkgoRemote/RuntimeMcpClient';
+import {
+  resolvePreferredWinkGoRuntimeExecutable,
+  resolvePreferredWinkGoRuntimeIdentity,
+  shouldRestartWinkGoRuntimeForUpgrade,
+} from './winkGoRuntimeExecutablePolicy';
+import { loadOptionalWinkGoRuntimeGateways } from './winkGoRuntimeGatewayCompatibility';
+import { recoverStaleWinkGoRuntimeLock } from './winkGoRuntimeLockRecovery';
 
 const CONFIG_DIRECTORY = 'com.winkgo.desktop';
 const CONFIG_FILENAME = 'mcp-channels.json';
@@ -49,8 +63,26 @@ const remoteGateway = new WinkGoRemoteGatewayService({
 });
 const remoteStatusListeners = new Set<(snapshot: WinkGoXiaozhiSnapshot) => void>();
 let cachedSnapshot: WinkGoXiaozhiSnapshot | null = null;
+let localRuntimeToolClient: RuntimeMcpClient | null = null;
+let runtimeAccessTokenPromise: Promise<string> | null = null;
 
 const credentialTarget = (kind: WinkGoXiaozhiSecretKind | 'runtime'): string => `${CREDENTIAL_PREFIX}.${kind}.token`;
+
+const ensureRuntimeAccessToken = async (): Promise<string> => {
+  if (runtimeAccessTokenPromise) return runtimeAccessTokenPromise;
+  runtimeAccessTokenPromise = (async () => {
+    const existing = await readWinkGoCredential(credentialTarget('runtime'));
+    if (existing?.trim()) return existing.trim();
+    const generated = randomBytes(32).toString('base64url');
+    await writeWinkGoCredential(credentialTarget('runtime'), generated);
+    return generated;
+  })();
+  try {
+    return await runtimeAccessTokenPromise;
+  } finally {
+    runtimeAccessTokenPromise = null;
+  }
+};
 
 const now = (): number => Date.now();
 const bounded = (value: unknown, max: number): string =>
@@ -309,6 +341,7 @@ const probeRuntime = async (runtimeApi: string): Promise<WinkGoXiaozhiLocalProbe
       running?: boolean;
       version?: string;
       tools_count?: number;
+      build_info?: { built_at_utc?: string };
     };
     if (!['ready', 'ok'].includes(payload.status || '') && payload.running !== true) {
       throw new Error(`Runtime 尚未就绪（${payload.status || 'unknown'}）`);
@@ -320,6 +353,7 @@ const probeRuntime = async (runtimeApi: string): Promise<WinkGoXiaozhiLocalProbe
       label: 'Runtime 8121',
       detail: `Runtime${version ? ` ${version}` : ''} 已就绪${count}`,
       elapsedMs: now() - started,
+      buildTimestampMs: Date.parse(payload.build_info?.built_at_utc || '') || 0,
     };
   } catch (error) {
     return {
@@ -363,6 +397,29 @@ const runHiddenPowerShell = async (args: string[]): Promise<number> =>
     child.once('error', reject);
     child.once('exit', (code) => resolve(code ?? 1));
   });
+
+const stopRunningWinkGoRuntimeForUpgrade = async (): Promise<void> => {
+  if (process.platform !== 'win32') return;
+  const exitCode = await new Promise<number>((resolve, reject) => {
+    const child = spawn('taskkill.exe', ['/F', '/T', '/IM', 'SparkBot-MCP-Hub-v1.1.0.exe'], {
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+    child.once('error', reject);
+    child.once('exit', (code) => resolve(code ?? 1));
+  });
+  if (exitCode !== 0 && exitCode !== 128) {
+    throw new Error(`旧 Runtime 无法停止（taskkill ${exitCode}）。`);
+  }
+};
+
+const waitForWinkGoRuntimeToStop = async (runtimeApi: string, attemptsRemaining = 40): Promise<void> => {
+  const probe = await probeRuntime(runtimeApi);
+  if (!probe.ok) return;
+  if (attemptsRemaining <= 1) throw new Error('旧 Runtime 停止超时，未启动新版。');
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  return waitForWinkGoRuntimeToStop(runtimeApi, attemptsRemaining - 1);
+};
 
 const firewallRulesAuthorized = async (runtimePort: number, bridgePort: number): Promise<boolean> => {
   if (process.platform !== 'win32') return false;
@@ -413,28 +470,28 @@ const ensureFirewallRules = async (runtimePort: number, bridgePort: number): Pro
 };
 
 const findRuntimeExecutable = (): string | null => {
-  const root = process.env.LOCALAPPDATA || '';
-  const executableName = 'SparkBot-MCP-Hub-v1.1.0.exe';
-  const candidates = [
-    path.join(root, 'Wink Go', 'winkgo-runtime', executableName),
-    path.join(process.resourcesPath, 'winkgo-runtime', executableName),
-  ];
-  const releasesRoot = path.join(root, 'Wink Go', 'data', 'runtime', 'xiaozhi');
-  if (existsSync(releasesRoot)) {
-    for (const directory of readdirSync(releasesRoot).toSorted((left, right) => right.localeCompare(left))) {
-      candidates.push(path.join(releasesRoot, directory, executableName));
-    }
-  }
-  return candidates.find(existsSync) ?? null;
+  return resolvePreferredWinkGoRuntimeExecutable({
+    localAppData: process.env.LOCALAPPDATA || '',
+    resourcesPath: process.resourcesPath,
+    explicitRuntimeRoot: process.env.WINKGO_E2E_TEST === '1' ? process.env.WINKGO_BUNDLED_RUNTIME_DIR : undefined,
+  });
 };
 
+const findRuntimeIdentity = () =>
+  resolvePreferredWinkGoRuntimeIdentity({
+    localAppData: process.env.LOCALAPPDATA || '',
+    resourcesPath: process.resourcesPath,
+    explicitRuntimeRoot: process.env.WINKGO_E2E_TEST === '1' ? process.env.WINKGO_BUNDLED_RUNTIME_DIR : undefined,
+  });
+
 export const resolveWinkGoXiaozhiRuntimeLogPath = (): string | null => {
-  const executable = findRuntimeExecutable();
-  return executable ? path.join(path.dirname(executable), 'logs', 'sparkbot.log') : null;
+  const identity = findRuntimeIdentity();
+  return identity.installed ? identity.logPath : null;
 };
 
 const buildSnapshot = async (config: WinkGoXiaozhiConfig): Promise<WinkGoXiaozhiSnapshot> => {
   const runtimePort = resolveRuntimePort(config.runtimeApi);
+  const runtimeIdentity = findRuntimeIdentity();
   const targets = ['runtime', 'bridge', 'hardware', 'mobile'].map((kind) =>
     credentialTarget(kind as WinkGoXiaozhiSecretKind | 'runtime')
   );
@@ -462,7 +519,8 @@ const buildSnapshot = async (config: WinkGoXiaozhiConfig): Promise<WinkGoXiaozhi
     bridgeTokenConfigured: statuses[credentialTarget('bridge')] === true,
     hardwareSecretConfigured: statuses[credentialTarget('hardware')] === true,
     mobileSecretConfigured: statuses[credentialTarget('mobile')] === true,
-    runtimeInstalled: findRuntimeExecutable() !== null,
+    runtimeInstalled: runtimeIdentity.installed,
+    runtimeIdentity,
     configPath: configPath(),
     legacyCompatible: true,
   };
@@ -685,12 +743,35 @@ export const authorizeWinkGoXiaozhiFirewall = async (): Promise<WinkGoXiaozhiSna
 };
 
 export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionResult> => {
+  const runtimeToken = await ensureRuntimeAccessToken();
+  const agentBridgeEndpoint = await winkGoAgentTaskBridgeService.start().catch((error): null => {
+    console.warn('[WINK GO Agent Bridge] Could not start; fixed Runtime skills remain available.', error);
+    return null;
+  });
   const config = await loadConfigFile();
-  const current = await probeRuntime(config.runtimeApi);
+  let current = await probeRuntime(config.runtimeApi);
   if (current.ok) {
-    await syncRemoteGateway(config);
-    const loaded = await reconfigureRuntimeGateways(config);
-    return { snapshot: await buildSnapshot(config), message: [current.detail, ...loaded].join('；') };
+    const preferredRuntime = findRuntimeIdentity();
+    const requiresUpgradeRestart = shouldRestartWinkGoRuntimeForUpgrade({
+      runningBuildAtMs: current.buildTimestampMs || 0,
+      preferredRuntimeModifiedAtMs: preferredRuntime.modifiedAtMs,
+    });
+    if (!requiresUpgradeRestart) {
+      await syncRemoteGateway(config);
+      const loaded = await loadOptionalWinkGoRuntimeGateways(() => reconfigureRuntimeGateways(config));
+      return { snapshot: await buildSnapshot(config), message: [current.detail, ...loaded].join('；') };
+    }
+    console.info('[WINK GO Runtime] Restarting stale Runtime so the packaged upgrade can take effect.');
+    localRuntimeToolClient?.close('Runtime 正在升级重启。');
+    localRuntimeToolClient = null;
+    await stopRunningWinkGoRuntimeForUpgrade();
+    await waitForWinkGoRuntimeToStop(config.runtimeApi);
+    current = {
+      ok: false,
+      label: current.label,
+      detail: '旧 Runtime 已停止，正在启动包内新版。',
+      elapsedMs: current.elapsedMs,
+    };
   }
   const executable = findRuntimeExecutable();
   if (!executable) throw new Error('没有找到已安装的 WINK GO Runtime。');
@@ -703,6 +784,10 @@ export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionRe
   ];
   const runtimeConfig = runtimeConfigCandidates.find(existsSync);
   if (!runtimeConfig) throw new Error('没有找到 Runtime 配置文件。');
+  const lockRecovery = await recoverStaleWinkGoRuntimeLock(executable);
+  if (lockRecovery.removed) {
+    console.warn(`[WINK GO Runtime] Removed stale runtime.lock from exited pid ${lockRecovery.pid}.`);
+  }
   const bridgeToken = (await readWinkGoCredential(credentialTarget('bridge'))) || '';
   const hardwareEndpoint = config.hardwareEnabled
     ? await endpointWithStoredToken('hardware', config.hardwareEndpoint)
@@ -710,7 +795,6 @@ export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionRe
   const mobileEndpoint = config.mobileEnabled
     ? await endpointWithStoredToken('mobile', config.mobileEndpoint)
     : config.mobileEndpoint;
-  const runtimeToken = await readWinkGoCredential(credentialTarget('runtime'));
   const child = spawn(executable, ['--all', '--port', String(port), '--config', runtimeConfig], {
     detached: true,
     windowsHide: true,
@@ -729,9 +813,11 @@ export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionRe
       WINKGO_RUNTIME_ROOT: path.dirname(executable),
       WINKGO_SKILLS_ROOT: path.join(path.dirname(executable), 'skills'),
       SPARKBOT_SKILLS_ROOT: path.join(path.dirname(executable), 'skills'),
+      WINKGO_DESKTOP_SKILLS_ROOT: path.join(app.getPath('userData'), 'winkgo-desktop-skills'),
       PYTHONUTF8: '1',
       PYTHONIOENCODING: 'utf-8',
       ...(runtimeToken ? { WINKGO_RUNTIME_ACCESS_TOKEN: runtimeToken } : {}),
+      ...(agentBridgeEndpoint ? createWinkGoAgentBridgeRuntimeEnv(agentBridgeEndpoint) : {}),
     },
   });
   child.unref();
@@ -743,10 +829,28 @@ export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionRe
   };
   const probe = await waitForRuntime(90);
   if (!probe.ok) throw new Error(`Runtime 启动后仍未就绪：${probe.detail}`);
-  const loaded = await reconfigureRuntimeGateways(config);
+  const loaded = await loadOptionalWinkGoRuntimeGateways(() => reconfigureRuntimeGateways(config));
   await syncRemoteGateway(config);
   return {
     snapshot: await buildSnapshot(config),
     message: [probe.detail, ...loaded].join('；'),
   };
+};
+
+/** Exact local Runtime tool boundary used by deterministic desktop automation. */
+export const callWinkGoRuntimeTool = async (
+  name: string,
+  arguments_: Record<string, unknown>,
+  options: { signal?: AbortSignal; timeoutMs?: number } = {}
+): Promise<unknown> => {
+  const token = await ensureRuntimeAccessToken();
+  const config = await loadConfigFile();
+  const current = await probeRuntime(config.runtimeApi);
+  if (!current.ok) await startWinkGoXiaozhiRuntime();
+  if (!localRuntimeToolClient) {
+    localRuntimeToolClient = new RuntimeMcpClient({ runtimeApi: config.runtimeApi, token });
+  } else {
+    localRuntimeToolClient.updateConfig({ runtimeApi: config.runtimeApi, token });
+  }
+  return localRuntimeToolClient.callTool(name, arguments_, options);
 };

@@ -26,6 +26,16 @@ pub struct SendMessageData {
     pub inject_skills: Vec<String>,
 }
 
+/// Native media blocks accepted by a target agent prompt.
+///
+/// Capability is opt-in: unknown agents keep receiving attachments as local
+/// file paths so an unsupported binary block can never break a conversation.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PromptMediaCaps {
+    pub image: bool,
+    pub audio: bool,
+}
+
 /// Options for building (creating or resuming) an Agent task.
 #[derive(Debug, Clone)]
 pub struct BuildTaskOptions {

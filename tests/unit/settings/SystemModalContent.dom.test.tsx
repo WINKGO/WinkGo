@@ -13,13 +13,30 @@ import userEvent from '@testing-library/user-event';
 import { ConfigProvider } from '@arco-design/web-react';
 import { SWRConfig } from 'swr';
 
-const { systemInfoMock, updateSystemInfoMock, restartMock, showOpenMock, messageInfoMock, configServiceMock } =
+const {
+  systemInfoMock,
+  updateSystemInfoMock,
+  restartMock,
+  showOpenMock,
+  messageInfoMock,
+  getCdpStatusMock,
+  updateCdpConfigMock,
+  clearBrowserDataMock,
+  getBrowserLoginPermissionMock,
+  setBrowserLoginPermissionMock,
+  configServiceMock,
+} =
   vi.hoisted(() => ({
     systemInfoMock: vi.fn(),
     updateSystemInfoMock: vi.fn(),
     restartMock: vi.fn(),
     showOpenMock: vi.fn(),
     messageInfoMock: vi.fn(),
+    getCdpStatusMock: vi.fn(),
+    updateCdpConfigMock: vi.fn(),
+    clearBrowserDataMock: vi.fn(),
+    getBrowserLoginPermissionMock: vi.fn(),
+    setBrowserLoginPermissionMock: vi.fn(),
     configServiceMock: {
       get: vi.fn(() => undefined),
       set: vi.fn(() => Promise.resolve()),
@@ -73,10 +90,15 @@ vi.mock('@/common', () => ({
       restart: { invoke: restartMock },
       getStartOnBootStatus: { invoke: vi.fn(() => Promise.resolve({ success: false })) },
       getGpuStatus: { invoke: vi.fn(() => Promise.resolve({ success: false })) },
+      getCdpStatus: { invoke: getCdpStatusMock },
+      updateCdpConfig: { invoke: updateCdpConfigMock },
+      clearBrowserData: { invoke: clearBrowserDataMock },
     },
     systemSettings: {
       getCloseToTray: { invoke: vi.fn(() => Promise.resolve(false)) },
       setCloseToTray: { invoke: vi.fn(() => Promise.resolve()) },
+      getBrowserLoginPermission: { invoke: getBrowserLoginPermissionMock },
+      setBrowserLoginPermission: { invoke: setBrowserLoginPermissionMock },
     },
     dialog: {
       showOpen: { invoke: showOpenMock },
@@ -94,6 +116,8 @@ vi.mock('@arco-design/web-react', async (importOriginal) => {
     Message: {
       ...actual.Message,
       info: messageInfoMock,
+      success: vi.fn(),
+      error: vi.fn(),
     },
     Modal: {
       ...actual.Modal,
@@ -157,6 +181,15 @@ describe('SystemModalContent directory settings', () => {
     updateSystemInfoMock.mockResolvedValue(undefined);
     restartMock.mockResolvedValue({ restarted: true, manualRestartRequired: false });
     showOpenMock.mockResolvedValue(['/new-logs']);
+    getCdpStatusMock.mockResolvedValue({ success: true, data: { enabled: true, configEnabled: true } });
+    updateCdpConfigMock.mockResolvedValue({ success: true });
+    clearBrowserDataMock.mockResolvedValue({ success: true });
+    getBrowserLoginPermissionMock.mockResolvedValue({ enabled: false });
+    setBrowserLoginPermissionMock.mockResolvedValue({
+      enabled: true,
+      consentVersion: 'browser-login-automation-v1',
+      consentAt: '2026-08-20T00:00:00.000Z',
+    });
   });
 
   it('persists a selected log directory and restarts with the updated directory config', async () => {
@@ -262,6 +295,25 @@ describe('SystemModalContent directory settings', () => {
     await user.unhover(workDirButton);
     await user.hover(logDirButton);
     expect(await screen.findByText('settings.changeLogDir')).toBeInTheDocument();
+  });
+
+  it('requires an explicit disclaimer acceptance before enabling browser login automation', async () => {
+    const user = userEvent.setup();
+    renderContent();
+
+    const label = await screen.findByText('settings.browserData.loginPermissionLabel');
+    const row = label.closest('.flex.items-center.justify-between') || label.parentElement?.parentElement;
+    expect(row).not.toBeNull();
+    await user.click(within(row as HTMLElement).getByRole('switch'));
+
+    expect(await screen.findByText('settings.browserData.loginDisclaimerTitle')).toBeInTheDocument();
+    expect(setBrowserLoginPermissionMock).not.toHaveBeenCalled();
+    await user.click(screen.getByText('settings.browserData.loginDisclaimerCheckbox'));
+    await user.click(screen.getByRole('button', { name: 'settings.browserData.loginDisclaimerAccept' }));
+
+    await waitFor(() => {
+      expect(setBrowserLoginPermissionMock).toHaveBeenCalledWith({ enabled: true, consentAccepted: true });
+    });
   });
 
   it('loads ACP timeouts from backend client settings', async () => {

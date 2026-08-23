@@ -7546,6 +7546,29 @@ OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHE
  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
+SHA-256: 1ea4646aa1951cfea62ddd5aaac4dc3dbb84fa31feb66a8b3a51fc0cd395d0e9
+Files: LICENSE.txt
+Packages:
+- cargo:trash@5.2.6
+
+Copyright 2019 Artúr Barnabás Kovács
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+================================================================================
 SHA-256: 1ecdd8e8977af83c07c5f97bec87b47d27059b7ea323ca3160fbfa2314f5d99c
 Files: LICENSE
 Packages:
@@ -13745,13 +13768,17 @@ SOFTWARE.
 SHA-256: 3d4ada4e04d153d74f5bc4e5e6aebd12ef20077716529c36089dc07f14fd0dcf
 Files: LICENSE, license-mit
 Packages:
+- cargo:windows-core@0.56.0
 - cargo:windows-core@0.58.0
 - cargo:windows-core@0.62.2
+- cargo:windows-implement@0.56.0
 - cargo:windows-implement@0.58.0
 - cargo:windows-implement@0.60.2
+- cargo:windows-interface@0.56.0
 - cargo:windows-interface@0.58.0
 - cargo:windows-interface@0.59.3
 - cargo:windows-link@0.2.1
+- cargo:windows-result@0.1.2
 - cargo:windows-result@0.2.0
 - cargo:windows-result@0.4.1
 - cargo:windows-strings@0.1.0
@@ -13763,6 +13790,7 @@ Packages:
 - cargo:windows-targets@0.48.5
 - cargo:windows-targets@0.52.6
 - cargo:windows-targets@0.53.5
+- cargo:windows@0.56.0
 - cargo:windows@0.58.0
 - cargo:windows_aarch64_msvc@0.48.5
 - cargo:windows_aarch64_msvc@0.52.6
@@ -15743,6 +15771,33 @@ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
+
+================================================================================
+SHA-256: 4383cb2c3608397ce7a4159502614ed66890f8999c2a9c056dd3b1024d6721f0
+Files: LICENSE
+Packages:
+- npm:nanoid@5.1.16
+
+The MIT License (MIT)
+
+Copyright 2017 Andrey Sitnik <andrey@sitnik.es>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
 SHA-256: 43b0d13a8c15c1b0c2a1ffd7aaf6ee6444e16769ed221449ee02e47340601701
@@ -18199,7 +18254,7 @@ Packages:
 - npm:@opentelemetry/semantic-conventions@1.40.0
 - npm:@pkgjs/parseargs@0.11.0
 - npm:baseline-browser-mapping@2.10.8
-- npm:dompurify@3.4.12
+- npm:dompurify@3.4.13
 - npm:ejs@3.1.10
 - npm:gaxios@7.1.3
 - npm:gcp-metadata@8.1.2
@@ -35685,9 +35740,8 @@ SHA-256: a07bc24468b9654ce76a547d47a2db282d07733b715db4c73a98bd63961f9550
 Files: LICENSE
 Packages:
 - npm:js-yaml@3.14.2
-- npm:js-yaml@3.15.0
+- npm:js-yaml@3.15.1
 - npm:js-yaml@4.1.1
-- npm:js-yaml@4.3.0
 
 (The MIT License)
 
@@ -36669,7 +36723,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 SHA-256: a6ab98e5c77b9070c443eaff2ff81034a6f8cc05a7524d5098eb0f24defa0115
 Files: LICENSE
 Packages:
-- npm:hono@4.12.32
+- npm:hono@4.13.1
 
 MIT License
 
@@ -36733,8 +36787,7 @@ Packages:
 - npm:undici-types@6.21.0
 - npm:undici-types@7.16.0
 - npm:undici-types@7.18.2
-- npm:undici@6.27.0
-- npm:undici@7.29.0
+- npm:undici@6.28.0
 
 MIT License
 
@@ -45495,13 +45548,17 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 SHA-256: cb3b46a575dd9b39f881706288addc2e61e94c54658993da30cee083c0bb336f
 Files: license-apache-2.0
 Packages:
+- cargo:windows-core@0.56.0
 - cargo:windows-core@0.58.0
 - cargo:windows-core@0.62.2
+- cargo:windows-implement@0.56.0
 - cargo:windows-implement@0.58.0
 - cargo:windows-implement@0.60.2
+- cargo:windows-interface@0.56.0
 - cargo:windows-interface@0.58.0
 - cargo:windows-interface@0.59.3
 - cargo:windows-link@0.2.1
+- cargo:windows-result@0.1.2
 - cargo:windows-result@0.2.0
 - cargo:windows-result@0.4.1
 - cargo:windows-strings@0.1.0
@@ -45513,6 +45570,7 @@ Packages:
 - cargo:windows-targets@0.48.5
 - cargo:windows-targets@0.52.6
 - cargo:windows-targets@0.53.5
+- cargo:windows@0.56.0
 - cargo:windows@0.58.0
 - cargo:windows_aarch64_msvc@0.48.5
 - cargo:windows_aarch64_msvc@0.52.6
@@ -48222,8 +48280,6 @@ SHA-256: da4db1480d9beea3483a2eda5c53b22238d0827d57da162b48f122e04d2d9987
 Files: LICENSE
 Packages:
 - npm:nanoid@3.3.11
-- npm:nanoid@3.3.16
-- npm:nanoid@5.1.7
 
 The MIT License (MIT)
 
@@ -49237,7 +49293,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 SHA-256: df7464922225c9b286167fa692d305e5ba98bf71613525d4d031649a344a3f3f
 Files: LICENSE
 Packages:
-- npm:fast-uri@3.1.4
+- npm:fast-uri@3.1.5
 
 Copyright (c) 2011-2021, Gary Court until https://github.com/garycourt/uri-js/commit/a1acf730b4bba3f1097c9f52e7d9d3aba8cdcaae
 Copyright (c) 2021-present The Fastify team <https://github.com/fastify/fastify#team>
@@ -50991,7 +51047,7 @@ IN THE SOFTWARE.
 SHA-256: ec9fb67dcb25eccc416ed56e1aab819222c805a2a4bfe4cb19e7556bf2ffde80
 Files: LICENSE
 Packages:
-- npm:mermaid@11.16.0
+- npm:mermaid@11.16.1
 
 The MIT License (MIT)
 
@@ -52592,7 +52648,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 SHA-256: f8d791359a50cbcac82c29cb7b0b1b889b28be76fdd35b8ee33f0f7c8704702a
 Files: LICENSE
 Packages:
-- npm:ip-address@10.1.0
 - npm:ip-address@10.4.0
 
 Copyright (C) 2011 by Beau Gunderson
@@ -53472,7 +53527,7 @@ THIS SOFTWARE.
 SHA-256: fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85
 Files: LICENSE-MPL
 Packages:
-- npm:dompurify@3.4.12
+- npm:dompurify@3.4.13
 
 Mozilla Public License Version 2.0
 ==================================

@@ -86,11 +86,14 @@ type CompatibilityToolAlias = {
 type RuntimeSkillBridgeConfig = {
   schemaVersion: 1;
   runtimeApi: string;
+  localBrowserSkillsEnabled: boolean;
+  localDesktopSkillsEnabled: boolean;
   runtimeLaunch?: {
     executablePath: string;
     configPath: string;
     workingDirectory: string;
     ownerPid: number;
+    desktopSkillsRoot: string;
   };
   enabledSkillIds: string[];
   allowedToolNames: string[];
@@ -105,6 +108,8 @@ type RuntimeSkillBridgeConfig = {
 const excludedSkillIds = new Set(['desktop_agents', 'feishu']);
 const RUNTIME_SKILLS_SERVER_NAME = 'WINK GO Runtime Skills';
 const DEFAULT_RUNTIME_API = 'http://127.0.0.1:8121';
+const LOCAL_BROWSER_SKILL_TOOL_NAMES = ['winkgo.browser_skill.list', 'winkgo.browser_skill.run'] as const;
+const LOCAL_DESKTOP_SKILL_TOOL_NAMES = ['winkgo.desktop_skill.list', 'winkgo.desktop_skill.run'] as const;
 const EMPTY_WECHAT_PREFERENCES: WinkGoWechatPreferences = {
   favoriteContacts: [],
   favoriteGroups: [],
@@ -189,6 +194,7 @@ const resolveManagedRuntimeLaunch = (): RuntimeSkillBridgeConfig['runtimeLaunch'
     configPath,
     workingDirectory,
     ownerPid: process.pid,
+    desktopSkillsRoot: path.join(app.getPath('userData'), 'winkgo-desktop-skills'),
   };
 };
 
@@ -559,6 +565,13 @@ export const syncWinkGoSkillBridge = (requestedSkillIds: string[]): WinkGoSkillB
   const directActionToolOwners = new Map<string, Set<string>>();
   const compatibilityAliasOwners = new Map<string, Set<string>>();
 
+  // Browser Skills are a local WINK GO capability rather than an imported
+  // Runtime package. Always expose their two narrow tools through this bridge
+  // so the desktop Agent, Dynamic Island, and ESP32 route to the same visible
+  // in-app browser runner.
+  LOCAL_BROWSER_SKILL_TOOL_NAMES.forEach((name) => allowedToolNames.add(name));
+  LOCAL_DESKTOP_SKILL_TOOL_NAMES.forEach((name) => allowedToolNames.add(name));
+
   for (const skillId of enabledSkillIds) {
     const sourcePath = findSourceSkillPath(skillId);
     if (!sourcePath) continue;
@@ -622,6 +635,8 @@ export const syncWinkGoSkillBridge = (requestedSkillIds: string[]): WinkGoSkillB
   const config: RuntimeSkillBridgeConfig = {
     schemaVersion: 1,
     runtimeApi: readConfiguredRuntimeApi(),
+    localBrowserSkillsEnabled: true,
+    localDesktopSkillsEnabled: true,
     runtimeLaunch: resolveManagedRuntimeLaunch(),
     enabledSkillIds,
     allowedToolNames: [...allowedToolNames].toSorted(),
@@ -658,7 +673,7 @@ export const syncWinkGoSkillBridge = (requestedSkillIds: string[]): WinkGoSkillB
 
   return {
     serverName: RUNTIME_SKILLS_SERVER_NAME,
-    enabled: enabledSkillIds.length > 0,
+    enabled: enabledSkillIds.length > 0 || config.localBrowserSkillsEnabled || config.localDesktopSkillsEnabled,
     enabledSkillIds,
     selectorCount: allowedToolNames.size + allowedToolPrefixes.size,
     transport,

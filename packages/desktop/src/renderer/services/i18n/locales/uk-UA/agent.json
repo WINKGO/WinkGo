@@ -27,6 +27,9 @@
     "configureFirst": "Будь ласка, спочатку налаштуйте агента в Налаштуваннях.",
     "switching": "Переключення агента..."
   },
+  "runtime": {
+    "managedByAgent": "Керується агентом"
+  },
   "model": {
     "switchSuccess": "Модель успішно змінено",
     "switchFailed": "Не вдалося змінити модель",
@@ -47,5 +50,31 @@
     "label": "Рівень міркування",
     "switchSuccess": "Рівень міркування змінено",
     "switchFailed": "Не вдалося змінити рівень міркування"
+  },
+  "speed": {
+    "label": "Швидкість",
+    "switchSuccess": "Швидкість відповіді оновлено",
+    "switchFailed": "Не вдалося оновити швидкість відповіді"
+  },
+  "voiceTask": {
+    "emptyCommand": "Завдання порожнє і не було надіслане Agent.",
+    "noAgent": "Немає доступного WINK GO Agent або вказану навичку настільного Agent виведено з експлуатації.",
+    "noModel": "Для WINK GO CLI немає доступної моделі. Спочатку налаштуйте та ввімкніть модель на сторінці «Моделі».",
+    "conversationName": "XiaoZhi: {{command}}",
+    "createFailed": "Не вдалося створити діалог WINK GO Agent.",
+    "queued": "Завдання додано до черги {{assistant}} і буде автоматично виконано після поточного.",
+    "accepted": "Завдання надіслано {{assistant}}. Хід виконання можна переглянути у WINK GO.",
+    "none": "Наразі немає завдання асистента.",
+    "waitingConfirmation": "{{assistant}} очікує вашого підтвердження.",
+    "queuedStatus": "{{assistant}} отримав завдання в черзі та виконає його після поточного.",
+    "running": "{{assistant}} виконує завдання.",
+    "finishedWithResult": "{{assistant}} завершив завдання: {{result}}",
+    "finishedNoResult": "{{assistant}} завершив завдання, але остаточну відповідь не знайдено.",
+    "failed": "Помилка {{assistant}}: {{error}}",
+    "acceptedStatus": "{{assistant}} прийняв завдання.",
+    "noCancelable": "Немає поточного завдання асистента, яке можна скасувати.",
+    "cancelling": "{{assistant}} ще зупиняє завдання. Спробуйте ще раз згодом.",
+    "cancelled": "Поточне завдання {{assistant}} скасовано.",
+    "history": "Нещодавніх завдань Agent: {{count}} — {{tasks}}."
   }
 }

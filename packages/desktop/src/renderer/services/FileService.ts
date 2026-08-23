@@ -7,6 +7,7 @@
  */
 
 import { getBaseUrl } from '@/common/adapter/httpBridge';
+import { localFileRef, type ChatFileRef } from '@/common/types/chatFile';
 import { trackUpload, type UploadSource } from '@/renderer/hooks/file/useUploadState';
 
 /** Sentinel error message used when an upload is cancelled by the caller. */
@@ -139,6 +140,9 @@ function formatBytes(bytes: number, decimals = 2): string {
 /** 支持的图片文件扩展名 */
 export const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
 
+/** 支持附加到会话的音频文件扩展名 */
+export const audioExts = ['.mp3', '.wav', '.m4a', '.ogg', '.flac'];
+
 /** 支持的文档文件扩展名 */
 export const documentExts = ['.pdf', '.doc', '.docx', '.pptx', '.xlsx', '.odt', '.odp', '.ods'];
 
@@ -173,7 +177,7 @@ export const textExts = [
 ];
 
 /** 所有支持的文件扩展名（预先设计，当前实际接受所有文件类型） */
-export const allSupportedExts = [...imageExts, ...documentExts, ...textExts];
+export const allSupportedExts = [...imageExts, ...audioExts, ...documentExts, ...textExts];
 
 // 文件元数据接口
 export interface FileMetadata {
@@ -182,6 +186,12 @@ export interface FileMetadata {
   size: number;
   type: string;
   lastModified: number;
+  /**
+   * Stable source identity for chat attachments. Native Electron drops point
+   * at a user-selected host file and must stay `local`; managed multipart
+   * uploads omit this field and continue through the `upload` lane.
+   */
+  chatRef?: ChatFileRef;
 }
 
 /**
@@ -322,11 +332,14 @@ class FileServiceClass {
       // webUtils in the preload bridge, while retaining the legacy fallback.
       const electronFile = file as File & { path?: string };
       let file_path = '';
+      let isHostFile = false;
       try {
         file_path = window.electronAPI?.getPathForFile?.(file) || electronFile.path || '';
+        isHostFile = Boolean(file_path);
       } catch (error) {
         console.warn('[FileService] Failed to resolve dropped file path:', error);
         file_path = electronFile.path || '';
+        isHostFile = Boolean(file_path);
       }
 
       // If no valid path (WebUI or some dragged files may not have paths), upload via HTTP multipart
@@ -367,6 +380,7 @@ class FileServiceClass {
         size: file.size,
         type: file.type,
         lastModified: file.lastModified,
+        chatRef: isHostFile ? localFileRef(file_path) : undefined,
       });
     }
 

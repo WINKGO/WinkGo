@@ -15,7 +15,10 @@ import { fixZoomForWindow } from '@process/utils/zoom';
 import { shouldReleaseIslandSurfaceBeforeResize } from './desktopIslandResizePolicy';
 
 const ISLAND_TOP_MARGIN = 10;
-const COLLAPSED_WIDTH = 250;
+// The collapsed island now keeps the computer-automation launcher outside the
+// media capsule, next to the utility launcher. Keep the native transparent
+// surface in sync with the renderer width or Windows clips the separate button.
+const COLLAPSED_WIDTH = 294;
 const COLLAPSED_HEIGHT = 38;
 const MIN_WIDTH = 250;
 const MAX_WIDTH = 620;
@@ -26,13 +29,23 @@ const RESIZE_STEPS = 8;
 
 const allowedMainRoutes = new Set([
   '/guid',
+  '/assistants',
   '/scheduled',
   '/format-studio',
   '/mcp',
   '/inspiration',
+  '/knowledge-canvas',
   '/skills',
+  '/settings/agent',
+  '/settings/model',
+  '/settings/skills',
+  '/settings/tools',
+  '/settings/appearance',
+  '/settings/webui',
+  '/settings/pet',
   '/settings/island-files',
   '/settings/system',
+  '/settings/about',
 ]);
 
 type DesktopIslandWindowOptions = {
@@ -58,6 +71,19 @@ let preferredIslandPosition: { centerX: number; y: number } | null = null;
 let suppressPositionTrackingUntil = 0;
 let nativeDropPoller: NodeJS.Timeout | null = null;
 let nativeFileDragActive = false;
+let pendingOpenPanel: 'browserComputerUse' | 'desktopComputerUse' | null = null;
+
+const isComputerUsePanel = (value: unknown): value is 'browserComputerUse' | 'desktopComputerUse' =>
+  value === 'browserComputerUse' || value === 'desktopComputerUse';
+
+const publishOpenPanel = (panel: 'browserComputerUse' | 'desktopComputerUse'): boolean => {
+  pendingOpenPanel = panel;
+  if (!islandWindow || islandWindow.isDestroyed() || islandWindow.webContents.isLoading()) return false;
+  islandWindow.webContents.send('winkgo-desktop-island:open-panel', panel);
+  if (islandVisible) islandWindow.showInactive();
+  pendingOpenPanel = null;
+  return true;
+};
 
 type NativeDropEvent =
   | { kind: 'enter'; names: string[]; position: [number, number] }
@@ -304,6 +330,9 @@ const showMainWindowAtRoute = async (route: string): Promise<boolean> => {
   return true;
 };
 
+/** Safely navigate the visible WINK GO window from an authenticated local service. */
+export const navigateWinkGoMainWindow = (route: string): Promise<boolean> => showMainWindowAtRoute(route);
+
 const registerHandlers = (): void => {
   if (handlersRegistered) return;
   handlersRegistered = true;
@@ -345,6 +374,12 @@ const registerHandlers = (): void => {
     }
     islandWindow.setOpacity(islandOpacity / 100);
     if (islandVisible) islandWindow.showInactive();
+    if (pendingOpenPanel) publishOpenPanel(pendingOpenPanel);
+    return true;
+  });
+  ipcMain.handle('winkgo-desktop-island:open-panel', (event, panel: unknown) => {
+    if (!isTrustedIpcSender(event, ['main', 'island']) || !isComputerUsePanel(panel)) return false;
+    publishOpenPanel(panel);
     return true;
   });
   ipcMain.handle('winkgo-desktop-island:apply-settings', (event, settings: DesktopIslandSettings) => {
@@ -437,6 +472,7 @@ export const createDesktopIslandWindow = (options: DesktopIslandWindowOptions): 
     // did-finish-load. Re-apply the original WINK GO/Wry target during that
     // short stabilization window so WeChat virtual FILECONTENTS reaches us.
     scheduleNativeDropTargetInstall(islandWindow);
+    if (pendingOpenPanel) publishOpenPanel(pendingOpenPanel);
   });
 
   const rendererUrl = trustedRendererUrl;

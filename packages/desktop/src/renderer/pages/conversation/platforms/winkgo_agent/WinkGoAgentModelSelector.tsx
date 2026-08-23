@@ -10,7 +10,9 @@ import type { WinkGoAgentModelSelection } from './useWinkGoAgentModelSelection';
 import type { AcpConfigSetStatus, AcpDerivedOption } from '@/renderer/hooks/agent/useAcpConfigOptions';
 import {
   composeRuntimeSelectorLabel,
+  getCurrentRuntimeOptionLabel,
   getCurrentThoughtLevelLabel,
+  isConfigSetting,
   RUNTIME_SUBMENU_TRIGGER_PROPS,
   RuntimeSelectorCheckedItem,
   RuntimeSelectorModelList,
@@ -35,10 +37,12 @@ const WinkGoAgentModelSelector: React.FC<{
   selection?: WinkGoAgentModelSelection;
   disabled?: boolean;
   thoughtLevel?: AcpDerivedOption | null;
+  speed?: AcpDerivedOption | null;
   /** Kept for call-site compatibility; the two-level submenu no longer gates on set status here. */
   setStatus?: AcpConfigSetStatus;
   onSetThoughtLevel?: (optionId: string, value: string) => Promise<unknown>;
-}> = ({ selection, disabled = false, thoughtLevel = null, onSetThoughtLevel }) => {
+  onSetSpeed?: (optionId: string, value: string) => Promise<unknown>;
+}> = ({ selection, disabled = false, thoughtLevel = null, speed = null, setStatus, onSetThoughtLevel, onSetSpeed }) => {
   const { t } = useTranslation();
   const { isOpen: isPreviewOpen } = usePreviewContext();
   const layout = useLayoutContext();
@@ -84,8 +88,13 @@ const WinkGoAgentModelSelector: React.FC<{
   });
   const combinedLabel = composeRuntimeSelectorLabel({ modelLabel: label, thoughtLevel });
   const handleThoughtLevelSelect = (value: string) => {
-    if (!thoughtLevel || value === thoughtLevel.currentValue || !onSetThoughtLevel) return;
+    if (!thoughtLevel || value === thoughtLevel.currentValue || !onSetThoughtLevel || isConfigSetting(setStatus))
+      return;
     void onSetThoughtLevel(thoughtLevel.id, value);
+  };
+  const handleSpeedSelect = (value: string) => {
+    if (!speed || value === speed.currentValue || !onSetSpeed || isConfigSetting(setStatus)) return;
+    void onSetSpeed(speed.id, value);
   };
 
   // winkgo_agent models are grouped by provider. Use a composite id (see compositeId)
@@ -124,8 +133,8 @@ const WinkGoAgentModelSelector: React.FC<{
       // Desktop: leave default container so click events reach Menu.Item normally.
       {...(isMobileHeaderCompact ? { getPopupContainer: () => document.body } : {})}
       droplist={
-        <Menu>
-          {thoughtLevel ? (
+        <Menu className='winkgo-runtime-menu' data-testid='winkgo-runtime-settings-menu'>
+          {thoughtLevel || speed ? (
             <>
               <Menu.SubMenu
                 key='model'
@@ -136,31 +145,60 @@ const WinkGoAgentModelSelector: React.FC<{
               >
                 {modelListNode}
               </Menu.SubMenu>
-              <Menu.SubMenu
-                key='thought-level'
-                triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
-                title={
-                  <RuntimeSelectorSubMenuTitle
-                    label={t('agent.thoughtLevel.label')}
-                    value={getCurrentThoughtLevelLabel(thoughtLevel)}
-                  />
-                }
-              >
-                {thoughtLevel.options.map((item) => (
-                  <Menu.Item
-                    key={item.value}
-                    className={item.value === thoughtLevel.currentValue ? '!bg-2' : ''}
-                    onClick={() => handleThoughtLevelSelect(item.value)}
-                  >
-                    <RuntimeSelectorCheckedItem
-                      selected={item.value === thoughtLevel.currentValue}
-                      description={item.description}
+              {thoughtLevel ? (
+                <Menu.SubMenu
+                  key='thought-level'
+                  triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+                  title={
+                    <RuntimeSelectorSubMenuTitle
+                      label={t('agent.thoughtLevel.label')}
+                      value={getCurrentThoughtLevelLabel(thoughtLevel)}
+                    />
+                  }
+                >
+                  {thoughtLevel.options.map((item) => (
+                    <Menu.Item
+                      key={item.value}
+                      className={item.value === thoughtLevel.currentValue ? '!bg-2' : ''}
+                      onClick={() => handleThoughtLevelSelect(item.value)}
                     >
-                      {item.label}
-                    </RuntimeSelectorCheckedItem>
-                  </Menu.Item>
-                ))}
-              </Menu.SubMenu>
+                      <RuntimeSelectorCheckedItem
+                        selected={item.value === thoughtLevel.currentValue}
+                        description={item.description}
+                      >
+                        {item.label}
+                      </RuntimeSelectorCheckedItem>
+                    </Menu.Item>
+                  ))}
+                </Menu.SubMenu>
+              ) : null}
+              {speed ? (
+                <Menu.SubMenu
+                  key='speed'
+                  triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+                  title={
+                    <RuntimeSelectorSubMenuTitle
+                      label={t('agent.speed.label', { defaultValue: 'Speed' })}
+                      value={getCurrentRuntimeOptionLabel(speed)}
+                    />
+                  }
+                >
+                  {speed.options.map((item) => (
+                    <Menu.Item
+                      key={item.value}
+                      className={item.value === speed.currentValue ? '!bg-2' : ''}
+                      onClick={() => handleSpeedSelect(item.value)}
+                    >
+                      <RuntimeSelectorCheckedItem
+                        selected={item.value === speed.currentValue}
+                        description={item.description}
+                      >
+                        {item.label}
+                      </RuntimeSelectorCheckedItem>
+                    </Menu.Item>
+                  ))}
+                </Menu.SubMenu>
+              ) : null}
             </>
           ) : (
             modelListNode

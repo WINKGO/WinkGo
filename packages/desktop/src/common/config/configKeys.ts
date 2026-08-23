@@ -1,10 +1,8 @@
-import type { ICssTheme } from '@/common/config/storage';
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { Theme } from '@/common/theme/types';
 
 export type ConfigKeyMap = {
   language: string;
-  theme: string;
-  colorScheme: string;
   'ui.zoomFactor': number | undefined;
   'ui.fontSize.chat': number | undefined;
   'ui.fontSize.markdown': number | undefined;
@@ -13,9 +11,6 @@ export type ConfigKeyMap = {
   'webui.desktop.enabled': boolean | undefined;
   'webui.desktop.allowRemote': boolean | undefined;
   'webui.desktop.port': number | undefined;
-  customCss: string;
-  'css.themes': ICssTheme[];
-  'css.activeThemeId': string;
   'theme.activeId': string;
   'theme.userThemes': Theme[];
   'workspace.pasteConfirm': boolean | undefined;
@@ -28,6 +23,9 @@ export type ConfigKeyMap = {
   'system.cronNotificationEnabled': boolean | undefined;
   'system.keepAwake': boolean | undefined;
   'system.autoPreviewOfficeFiles': boolean | undefined;
+  'browser.loginAutomationEnabled': boolean | undefined;
+  'browser.loginAutomationConsentVersion': string | undefined;
+  'browser.loginAutomationConsentAt': string | undefined;
   'skillsMarket.enabled': boolean | undefined;
   'pet.enabled': boolean | undefined;
   'pet.size': number | undefined;

@@ -34,6 +34,7 @@
     { "version": 30, "file": "030_restore_builtin_agent_logos.sql", "sha384": "2c4a07aa642204d09e37bfa4701463bd6fc87912f743c50d616957c5a9935e9cd5055b2ffc7caa9dc08b1939d1185a53" },
     { "version": 31, "file": "031_add_mimo_code_builtin_acp_agent.sql", "sha384": "63d30e2df834a0860781224291b0b1472a84282b80805bfc946a54cffad54fd13717e0dbcef7587e7b86c6629d1d610a" },
     { "version": 32, "file": "032_add_omp_builtin_acp_agent.sql", "sha384": "731e556603af25339c379f5c577eacc3111dc2630136342fef4b7a6e3b0cf04e05abb9fea3f91dbc75f799a1371bc475" },
-    { "version": 34, "file": "034_add_antigravity_builtin_agent.sql", "sha384": "28b32d9ffd30d9301a9cf1b6e075e7bc7ce37372ae719476654e18bdb5ebf5cbc4b314cdb19483caa41d093470d6cb57" }
+    { "version": 34, "file": "034_add_antigravity_builtin_agent.sql", "sha384": "28b32d9ffd30d9301a9cf1b6e075e7bc7ce37372ae719476654e18bdb5ebf5cbc4b314cdb19483caa41d093470d6cb57" },
+    { "version": 35, "file": "035_direct_agent_prompt_capabilities.sql", "sha384": "e5af03ca8b161724a0b1089aa3e9864dddff1f691eb8a722576bd648c773b2618749a476e86b6a1312a79ff6a4c01393" }
   ]
 }

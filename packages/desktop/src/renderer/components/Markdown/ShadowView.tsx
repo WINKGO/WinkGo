@@ -15,7 +15,7 @@ import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 /**
  * Create the base style element for Shadow DOM with CSS variables, theme styles, and optional custom CSS.
  */
-const createInitStyle = (
+export const createInitStyle = (
   currentTheme = 'light',
   cssVars?: Record<string, string>,
   customCss?: string,
@@ -167,6 +167,11 @@ const createInitStyle = (
   strong {
     font-weight: 600;
     color: var(--text-primary);
+  }
+  :is(h1, h2, h3, h4, h5, h6) * {
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: inherit;
   }
   .markdown-shadow-body code:not(pre code) {
     background: var(--bg-3);

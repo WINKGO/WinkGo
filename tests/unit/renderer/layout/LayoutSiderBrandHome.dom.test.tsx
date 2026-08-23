@@ -27,6 +27,12 @@ const shortcutMocks = vi.hoisted(() => ({
 const featureMocks = vi.hoisted(() => ({
   teamModeEnabled: false,
 }));
+const previewMocks = vi.hoisted(() => ({
+  state: {
+    isOpen: false,
+    tabs: [] as Array<{ content_type: string }>,
+  },
+}));
 vi.mock('react-router', () => ({
   useNavigate: () => navigate,
   useLocation: () => ({ pathname: currentPathname, search: '', hash: '' }),
@@ -68,8 +74,13 @@ vi.mock('@renderer/hooks/ui/useConversationShortcuts', () => ({
   },
 }));
 vi.mock('@renderer/utils/platform', () => ({ isElectronDesktop: platformMocks.isElectronDesktopMock }));
-vi.mock('@renderer/pages/conversation/Preview/context/PreviewContext', () => ({
-  usePreviewContext: () => ({ closePreview: () => {} }),
+vi.mock('@renderer/pages/conversation/Preview', () => ({
+  PreviewPanel: () => <div data-testid='layout-preview-panel' />,
+  usePreviewContext: () => ({
+    closePreview: () => {},
+    isOpen: previewMocks.state.isOpen,
+    tabs: previewMocks.state.tabs,
+  }),
 }));
 
 import Layout from '@renderer/components/layout/Layout';
@@ -98,6 +109,8 @@ describe('Layout sider brand Home button', () => {
     platformMocks.isElectronDesktopMock.mockReturnValue(false);
     shortcutMocks.params = undefined;
     featureMocks.teamModeEnabled = false;
+    previewMocks.state.isOpen = false;
+    previewMocks.state.tabs = [];
     sessionStorage.clear();
     currentPathname = '/guid';
   });
@@ -164,6 +177,17 @@ describe('Layout sider brand Home button', () => {
     const wordmark = screen.getByText('WINK GO');
     fireEvent.click(wordmark);
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('mounts an active browser preview on the guide page without requiring a project', () => {
+    currentPathname = '/guid';
+    previewMocks.state.isOpen = true;
+    previewMocks.state.tabs = [{ content_type: 'browser' }];
+
+    const { container } = renderLayout();
+
+    expect(container.querySelector('[data-project-preview-region]')).not.toBeNull();
+    expect(screen.getByTestId('layout-preview-panel')).toBeInTheDocument();
   });
 
   it('does not navigate when the wordmark is clicked in a non-settings route', () => {

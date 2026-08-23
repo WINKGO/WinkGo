@@ -32,9 +32,10 @@ export type ProjectSearchRoots = {
 
 export const useProjectSearchRoots = (): ProjectSearchRoots => {
   const projectId = useCurrentProject();
-  const { data } = useSWR(projectId ? `explorer-project/${projectId}` : null, () =>
-    ipcBridge.project.get.invoke({ project_id: projectId as string })
-  );
+  const { data } = useSWR(projectId ? `explorer-project/${projectId}` : null, (key: string) => {
+    const id = key.slice('explorer-project/'.length);
+    return ipcBridge.project.get.invoke({ project_id: id });
+  });
 
   return useMemo<ProjectSearchRoots>(() => {
     if (!data) return { roots: [], peNames: {} };

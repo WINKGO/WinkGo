@@ -38,6 +38,15 @@
   "closeTabMessage": "Der aktuelle Inhalt wurde nicht gespeichert. Vor dem Schließen speichern?",
   "saveAndClose": "Speichern und schließen",
   "closeWithoutSave": "Nicht speichern",
+  "saveConflictTitle": "Datei außerhalb von WINK GO geändert",
+  "saveConflictMessage": "Die Datei auf dem Datenträger wurde nach dem Öffnen geändert. Lade vor dem Fortfahren den neuesten Inhalt, damit andere Änderungen nicht überschrieben werden.",
+  "reloadFile": "Datei neu laden",
+  "reloadSuccess": "Neuester Inhalt vom Datenträger geladen",
+  "reloadFailed": "Datei konnte nicht neu geladen werden",
+  "save": {
+    "tooltip": "Änderungen speichern (Strg/Cmd+S)",
+    "clean": "Keine ungespeicherten Änderungen"
+  },
   "pptTitle": "PowerPoint-Präsentation",
   "pptOpenHint": "Klicke auf die Schaltfläche unten, um es in der Systemanwendung zu öffnen und den vollständigen Inhalt anzuzeigen",
   "pptOpenFile": "Datei öffnen",
@@ -133,6 +142,15 @@
     "inspectElement": "Element inspizieren",
     "inspectElementEnable": "Element-Inspektor aktivieren",
     "inspectElementDisable": "Element-Inspektor deaktivieren"
+  },
+  "browser": {
+    "newTab": "Neuer Tab",
+    "addressPlaceholder": "URL eingeben oder suchen",
+    "agentActiveTooltip": "Der Agent bedient diesen Tab",
+    "tabLimitReached": "Tab-Limit erreicht ({{count}}). Der älteste Tab wurde wiederverwendet.",
+    "agentFirstUseTitle": "Der Agent nutzt den integrierten Browser",
+    "agentFirstUseContent": "Er kann in diesem Bereich Seiten öffnen, klicken und Inhalte lesen. Deine Anmeldung bleibt erhalten.",
+    "agentFirstUseAction": "Einstellungen öffnen"
   },
   "ppt": {
     "loading": "PPT-Vorschau wird gestartet...",

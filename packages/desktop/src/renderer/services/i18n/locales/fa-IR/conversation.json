@@ -60,6 +60,8 @@
     "unpin": "برداشتن سنجاق",
     "pinned": "سنجاق‌شده",
     "pinFailed": "عملیات سنجاق ناموفق بود",
+    "markAsUnread": "علامت‌گذاری به عنوان خوانده‌نشده",
+    "markAsRead": "علامت‌گذاری به عنوان خوانده‌شده",
     "pinnedSection": "سنجاق‌شده",
     "deleteSuccess": "با موفقیت حذف شد",
     "deleteFailed": "حذف ناموفق بود",
@@ -74,7 +76,9 @@
     "removeProjectConfirm": "پروژه «{{name}}» حذف شود؟ {{count}} مکالمه مرتبط نیز حذف خواهند شد.",
     "newConversationInProject": "چت جدید در این پروژه",
     "deleting": "در حال حذف...",
-    "reorderPinned": "برای تغییر ترتیب گفتگوی سنجاق‌شده بکشید"
+    "reorderPinned": "برای تغییر ترتیب گفتگوی سنجاق‌شده بکشید",
+    "forkedFrom": "انشعاب از «{{name}}»",
+    "forkedConversation": "گفتگوی منشعب"
   },
   "historySearch": {
     "tooltip": "جستجوی پیام‌ها",
@@ -369,6 +373,8 @@
       "deleteSuccess": "با موفقیت حذف شد",
       "deleteFailed": "حذف ناموفق بود",
       "rename": "تغییر نام",
+      "newFile": "فایل جدید",
+      "newDir": "پوشه جدید",
       "renameTitle": "تغییر نام",
       "renamePlaceholder": "نام جدید را وارد کنید",
       "renameSuccess": "نام با موفقیت تغییر کرد",
@@ -416,7 +422,8 @@
     "openWith": {
       "vscode": "VS Code",
       "terminal": "ترمینال",
-      "explorer": "فایل اکسپلورر"
+      "explorer": "فایل اکسپلورر",
+      "browser": "مرورگر"
     }
   },
   "minimap": {
@@ -563,7 +570,8 @@
     "sendboxHint": "در حال آماده‌سازی محیط اجرا. اولین راه‌اندازی ممکن است کمی بیشتر طول بکشد."
   },
   "sendbox": {
-    "hint": "برای دستورات /، برای ارجاع فایل‌ها @ و برای تاریخچه پیام‌ها ↑/↓ را بزنید"
+    "hint": "برای دستورات /، برای ارجاع فایل‌ها @ و برای تاریخچه پیام‌ها ↑/↓ را بزنید",
+    "mediaPathFallback": "این ایجنت از این نوع فایل به‌صورت بومی پشتیبانی نمی‌کند؛ به‌صورت مسیر فایل ارسال خواهد شد."
   },
   "agentTip": {
     "codes": {
@@ -606,16 +614,98 @@
     "removeFailed": "Couldn't remove the folder",
     "contextMenu": {
       "rename": "تغییر نام",
-      "addToChat": "افزودن به گفتگو"
+      "addToChat": "افزودن به گفتگو",
+      "copyRelativePath": "Copy relative path",
+      "copyAbsolutePath": "Copy absolute path"
     },
     "namePlaceholder": "نام",
     "deleteConfirm": "«{{name}}» حذف شود؟ این عمل قابل بازگردانی نیست.",
     "renameFailed": "تغییر نام ناموفق بود",
+    "newFileFailed": "ایجاد فایل ناموفق بود",
+    "newDirFailed": "ایجاد پوشه ناموفق بود",
+    "copyNodeFailed": "کپی ناموفق بود",
+    "moveNodeFailed": "انتقال ناموفق بود",
     "tabs": {
       "files": "پرونده‌ها",
       "changes": "تغییرات"
     },
     "changesPlaceholder": "کنترل نسخه در بخشی جداگانه — به‌زودی.",
+    "scm": {
+      "notARepository": "این پوشه تحت کنترل نسخه نیست",
+      "noChanges": "تغییری وجود ندارد",
+      "loading": "در حال بارگیری تغییرات…",
+      "loadFailed": "بارگیری تغییرات ممکن نشد",
+      "refresh": "به‌روزرسانی",
+      "groups": {
+        "staged": "تغییرات آماده‌شده",
+        "unstaged": "تغییرات",
+        "changes": "تغییرات",
+        "blocked": "نیازمند رفع"
+      },
+      "sections": {
+        "repositories": "مخازن",
+        "changes": "تغییرات"
+      },
+      "viewAsTree": "نمایش درختی",
+      "viewAsList": "نمایش فهرستی",
+      "worktree": "درخت‌کاری",
+      "expandWorktrees": "نمایش درخت‌کاری‌ها",
+      "collapseWorktrees": "پنهان کردن درخت‌کاری‌ها",
+      "state": {
+        "created": "افزوده‌شده",
+        "modified": "تغییریافته",
+        "deleted": "حذف‌شده",
+        "renamed": "تغییر نام یافته",
+        "conflicted": "تضاد",
+        "unknown": "وضعیت ناشناخته"
+      },
+      "badge": {
+        "created": "A",
+        "modified": "M",
+        "deleted": "D",
+        "renamed": "R",
+        "conflicted": "!",
+        "unknown": "?"
+      },
+      "conflictedHint": "نخست این تضاد را بیرون از WINK GO برطرف کنید",
+      "opaqueHint": "این وضعیت از یک بک‌اند جدیدتر آمده — فقط برای مشاهده",
+      "degraded": "به‌روزرسانی در حالت کندتر اجرا می‌شود چون نمایه git قابل نوشتن نیست",
+      "truncated": "تغییرات بیش از حد زیاد است — تنها بخش نخست نمایش داده می‌شود",
+      "renamedFrom": "{{from}} → {{to}}",
+      "diff": {
+        "loading": "در حال بارگیری تفاوت‌ها…",
+        "failed": "بارگیری تفاوت‌ها ممکن نشد",
+        "binary": "پرونده دودویی — تفاوت متنی ندارد",
+        "truncated": "تفاوت‌ها کوتاه شد (پرونده بزرگ)",
+        "empty": "تغییر متنی وجود ندارد",
+        "close": "بستن تفاوت‌ها"
+      },
+      "actions": {
+        "stage": "آماده‌سازی تغییرات",
+        "unstage": "لغو آماده‌سازی",
+        "discard": "دور ریختن تغییرات",
+        "stageAll": "آماده‌سازی همه",
+        "unstageAll": "لغو آماده‌سازی همه",
+        "blockedHint": "پیش از آماده‌سازی یا دور ریختن، تضاد را بیرون از WINK GO برطرف کنید",
+        "confirmDiscardTitle": "تغییرات دور ریخته شود؟",
+        "confirmDiscardTracked": "ویرایش {{count}} پرونده از دست می‌رود و بازگردانی‌پذیر نیست.",
+        "confirmDiscardUntracked": "{{count}} پرونده تازه به زباله‌دان منتقل می‌شوند.",
+        "confirmDiscardMixed": "ویرایش {{tracked}} پرونده به‌طور برگشت‌ناپذیر از دست می‌رود؛ {{untracked}} پرونده تازه به زباله‌دان می‌رود.",
+        "discardConfirmButton": "دور ریختن",
+        "okStage": "{{count}} پرونده آماده شد",
+        "okUnstage": "آماده‌سازی {{count}} پرونده لغو شد",
+        "okDiscard": "{{count}} پرونده دور ریخته شد",
+        "partial": "{{succeeded}} از {{total}} انجام شد —— {{failed}} کامل نشد",
+        "partialDetail": "کامل‌نشده: {{files}}",
+        "rejectedBlocked": "چیزی تغییر نکرد —— نخست تضاد را برطرف کنید",
+        "rejectedUnsupported": "این مخزن از این عمل پشتیبانی نمی‌کند",
+        "rejectedFailed": "انجام این عمل ممکن نشد",
+        "retry": "تلاش دوباره",
+        "notSent": "درخواست به بک‌اند نرسید و چیزی تغییر نکرد. می‌توانید دوباره تلاش کنید.",
+        "outcomeUnknown": "پیش از رسیدن پاسخ، اتصال بازنشانی شد — این عمل ممکن است کامل شده باشد یا نه. پیش از تلاش دوباره، بازخوانی کنید و فهرست پرونده‌ها را بررسی کنید.",
+        "allFailed": "هیچ‌یک از {{count}} پرونده پردازش نشد"
+      }
+    },
     "addedToChat": "{{name}} به گفتگو افزوده شد",
     "imported": "{{count}} فایل وارد شد",
     "importPartialFailed": "{{copied}} کپی شد، {{failed}} ناموفق (تداخل نام یا پشتیبانی‌نشده)",
@@ -625,6 +715,15 @@
       "searching": "در حال جستجو…",
       "empty": "هیچ فایلی مطابقت ندارد",
       "limitReached": "نمایش {{count}} مورد اول — جستجو را محدود کنید"
-    }
+    },
+    "pathCopied": "Path copied",
+    "copyFailed": "Failed to copy path"
+  },
+  "terminal": {
+    "running": "در حال اجرا",
+    "stopped": "متوقف شد",
+    "exited": "کد خروج {{code}}",
+    "stop": "توقف",
+    "truncated": "(خروجی قبلی کوتاه شد)"
   }
 }

@@ -1,11 +1,12 @@
 #![allow(clippy::disallowed_types)]
 // Modified from AionCore by WINK GO contributors in 2026.
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use axum::Router;
 use axum::extract::rejection::JsonRejection;
-use axum::extract::{Extension, Json, Path, State};
+use axum::extract::{Extension, Json, Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 
@@ -13,8 +14,8 @@ use winkgo_ai_agent::ActiveLeaseRegistry;
 use winkgo_api_types::{
     AddAgentRequest, ApiResponse, CancelTeamChildTurnRequest, CancelTeamRunRequest, CreateTeamRequest,
     GetConfigOptionsResponse, PauseTeamSlotRequest, RenameAgentRequest, RenameTeamRequest, SendAgentMessageRequest,
-    SendTeamMessageRequest, SetModeRequest, TeamAgentResponse, TeamListResponse, TeamResponse, TeamRunAckResponse,
-    TeamRunStateResponse,
+    SendTeamMessageRequest, SetModeRequest, TeamActivityPageResponse, TeamAgentResponse, TeamListResponse,
+    TeamMailboxMessageResponse, TeamResponse, TeamRunAckResponse, TeamRunStateResponse, TeamTaskResponse,
 };
 use winkgo_auth::CurrentUser;
 use winkgo_common::ApiError;
@@ -93,6 +94,9 @@ pub fn team_routes(state: TeamRouterState) -> Router {
         .route("/api/teams", post(create_team).get(list_teams))
         .route("/api/teams/{id}", get(get_team).delete(remove_team))
         .route("/api/teams/{id}/run-state", get(get_run_state))
+        .route("/api/teams/{id}/mailbox", get(list_mailbox))
+        .route("/api/teams/{id}/tasks", get(list_tasks))
+        .route("/api/teams/{id}/activity", get(list_activity))
         .route("/api/teams/{id}/name", axum::routing::patch(rename_team))
         .route("/api/teams/{id}/agents", post(add_agent))
         .route("/api/teams/{id}/agents/{slot_id}", axum::routing::delete(remove_agent))
@@ -156,6 +160,96 @@ async fn get_run_state(
 ) -> Result<Json<ApiResponse<TeamRunStateResponse>>, ApiError> {
     let run_state = state.service.get_run_state(&user.id, &id).await?;
     Ok(Json(ApiResponse::ok(run_state)))
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
+struct ListMailboxQuery {
+    limit: Option<usize>,
+}
+
+async fn list_mailbox(
+    State(state): State<TeamRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    Path(id): Path<String>,
+    Query(query): Query<ListMailboxQuery>,
+) -> Result<Json<ApiResponse<Vec<TeamMailboxMessageResponse>>>, ApiError> {
+    let limit = query.limit.unwrap_or(500).clamp(1, 1_000);
+    let messages = state.service.list_mailbox(&user.id, &id, limit).await?;
+    Ok(Json(ApiResponse::ok(messages)))
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
+struct ListTasksQuery {
+    limit: Option<usize>,
+    ids: Option<String>,
+}
+
+async fn list_tasks(
+    State(state): State<TeamRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    Path(id): Path<String>,
+    Query(query): Query<ListTasksQuery>,
+) -> Result<Json<ApiResponse<Vec<TeamTaskResponse>>>, ApiError> {
+    let ids = query.ids.as_deref().map(|value| {
+        value
+            .split(',')
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+            .collect::<HashSet<_>>()
+    });
+    let limit = query.limit.unwrap_or(500).clamp(1, 1_000);
+    let tasks = state
+        .service
+        .list_activity_tasks(&user.id, &id, limit, ids.as_ref())
+        .await?;
+    Ok(Json(ApiResponse::ok(tasks)))
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
+struct ListActivityQuery {
+    limit: Option<usize>,
+    cursor_ts: Option<i64>,
+    cursor_id: Option<String>,
+    direction: Option<String>,
+    kind: Option<String>,
+}
+
+async fn list_activity(
+    State(state): State<TeamRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    Path(id): Path<String>,
+    Query(query): Query<ListActivityQuery>,
+) -> Result<Json<ApiResponse<TeamActivityPageResponse>>, ApiError> {
+    let direction = query.direction.as_deref().unwrap_or("desc");
+    if !matches!(direction, "asc" | "desc") {
+        return Err(ApiError::BadRequest("direction must be asc or desc".into()));
+    }
+    let kind = query.kind.as_deref().unwrap_or("all");
+    if !matches!(kind, "all" | "message" | "task") {
+        return Err(ApiError::BadRequest("kind must be all, message, or task".into()));
+    }
+    let cursor = match (query.cursor_ts, query.cursor_id) {
+        (Some(ts), Some(cursor_id)) => Some((ts, cursor_id)),
+        (None, None) => None,
+        _ => {
+            return Err(ApiError::BadRequest(
+                "cursor_ts and cursor_id must be supplied together".into(),
+            ));
+        }
+    };
+    let page = state
+        .service
+        .list_activity(
+            &user.id,
+            &id,
+            query.limit.unwrap_or(100).clamp(1, 500),
+            cursor,
+            direction,
+            kind,
+        )
+        .await?;
+    Ok(Json(ApiResponse::ok(page)))
 }
 
 async fn remove_team(

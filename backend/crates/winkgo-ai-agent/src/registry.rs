@@ -246,10 +246,11 @@ impl AgentRegistry {
             .await
             .map_err(|e| AgentError::internal(format!("load agent_metadata: {e}")))?;
 
-        let candidates: Vec<_> = rows
-            .into_iter()
-            .filter_map(|row| decode_row(row, AvailabilityProjection::Probe))
-            .collect();
+        // PATH probing is blocking on Windows and can be especially slow when
+        // PATH contains stale or network-backed directories.  Probe the 43
+        // builtin rows through a bounded blocking pool instead of serializing
+        // every filesystem lookup on the async startup thread.
+        let candidates = decode_probe_rows(rows).await;
         let validated = validate_cli_candidates(candidates, self.probe_policy).await;
 
         let mut map = HashMap::with_capacity(validated.len());
@@ -859,6 +860,23 @@ async fn validate_cli_candidates(
     futures_util::stream::iter(candidates)
         .map(|(meta, reason)| validate_cli_availability(meta, reason, policy))
         .buffer_unordered(CLI_PROBE_CONCURRENCY)
+        .collect()
+        .await
+}
+
+async fn decode_probe_rows(rows: Vec<AgentMetadataRow>) -> Vec<(AgentMetadata, Option<UnavailableReason>)> {
+    futures_util::stream::iter(rows)
+        .map(|row| tokio::task::spawn_blocking(move || decode_row(row, AvailabilityProjection::Probe)))
+        .buffer_unordered(CLI_PROBE_CONCURRENCY)
+        .filter_map(|result| async move {
+            match result {
+                Ok(decoded) => decoded,
+                Err(error) => {
+                    warn!(%error, "agent PATH probe worker failed");
+                    None
+                }
+            }
+        })
         .collect()
         .await
 }

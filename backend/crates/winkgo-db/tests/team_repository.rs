@@ -342,6 +342,33 @@ async fn get_history_no_limit() {
 }
 
 #[tokio::test]
+async fn list_mailbox_includes_all_team_recipients_and_excludes_other_teams() {
+    let (repo, _db) = repo().await;
+    repo.create_team(&make_team("t1", "Team1")).await.unwrap();
+    repo.create_team(&make_team("t2", "Team2")).await.unwrap();
+
+    repo.write_message(&make_mailbox_msg("m1", "t1", "a1", "user", "message"))
+        .await
+        .unwrap();
+    repo.write_message(&make_mailbox_msg("m2", "t1", "a2", "a1", "message"))
+        .await
+        .unwrap();
+    repo.write_message(&make_mailbox_msg("m3", "t2", "a1", "user", "message"))
+        .await
+        .unwrap();
+
+    let history = repo.list_mailbox("t1", None).await.unwrap();
+    assert_eq!(history.len(), 2);
+    assert_eq!(
+        history.iter().map(|row| row.id.as_str()).collect::<Vec<_>>(),
+        ["m1", "m2"]
+    );
+
+    let limited = repo.list_mailbox("t1", Some(1)).await.unwrap();
+    assert_eq!(limited.len(), 1);
+}
+
+#[tokio::test]
 async fn get_history_empty() {
     let (repo, _db) = repo().await;
     repo.create_team(&make_team("t1", "Team")).await.unwrap();

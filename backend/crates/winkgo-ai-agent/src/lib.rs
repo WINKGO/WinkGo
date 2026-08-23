@@ -19,6 +19,7 @@ pub mod manager;
 /// conversation's configured MCP servers into the SDK-free `SessionMcpServer`
 /// shape the `SessionBackend` stack carries in `SessionConfig.init.mcp_servers`.
 pub(crate) mod mcp_resolve;
+pub mod media;
 pub(crate) mod persistence;
 pub mod protocol;
 pub mod registry;
@@ -30,13 +31,14 @@ pub mod session_agent;
 pub mod session_context;
 pub mod shared_kernel;
 pub mod task_manager;
+pub mod terminal;
 pub mod types;
 
 pub use active_lease::{ACTIVE_LEASE_TTL_MS, ActiveLeaseRegistry};
 pub use agent_runtime::AgentRuntime;
 #[cfg(any(test, feature = "test-support"))]
 pub use agent_task::IMockAgent;
-pub use agent_task::{AgentInstance, IAgentTask};
+pub use agent_task::{AgentInstance, IAgentTask, MidturnDeliveryError};
 pub use capability::skill_manager::{
     AcpSkillManager, SkillDefinition, SkillIndex, build_skills_index_text, build_system_instructions,
     build_system_instructions_with_skills_index, detect_skill_load_request, prepare_first_message,

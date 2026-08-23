@@ -27,6 +27,9 @@
     "configureFirst": "Primero configura un agente en Configuración.",
     "switching": "Cambiando agente..."
   },
+  "runtime": {
+    "managedByAgent": "Gestionado por el Agent"
+  },
   "model": {
     "switchSuccess": "Modelo cambiado correctamente",
     "switchFailed": "Error al cambiar el modelo",
@@ -47,5 +50,31 @@
     "label": "Nivel de razonamiento",
     "switchSuccess": "Nivel de razonamiento cambiado",
     "switchFailed": "Error al cambiar el nivel de razonamiento"
+  },
+  "speed": {
+    "label": "Velocidad",
+    "switchSuccess": "Velocidad de respuesta actualizada",
+    "switchFailed": "No se pudo actualizar la velocidad de respuesta"
+  },
+  "voiceTask": {
+    "emptyCommand": "La tarea está vacía y no se envió al Agent.",
+    "noAgent": "No hay ningún WINK GO Agent disponible o la habilidad de Agent de escritorio indicada se ha retirado.",
+    "noModel": "WINK GO CLI no tiene un modelo disponible. Configura y activa uno en la página Modelos.",
+    "conversationName": "XiaoZhi: {{command}}",
+    "createFailed": "No se pudo crear la conversación de WINK GO Agent.",
+    "queued": "La tarea se puso en la cola de {{assistant}} y se ejecutará al terminar la tarea actual.",
+    "accepted": "La tarea se envió a {{assistant}}. Puedes seguir el progreso en WINK GO.",
+    "none": "No hay ninguna tarea actual del asistente.",
+    "waitingConfirmation": "{{assistant}} está esperando tu confirmación.",
+    "queuedStatus": "{{assistant}} recibió la tarea en cola y la ejecutará después de la tarea actual.",
+    "running": "{{assistant}} está ejecutando la tarea.",
+    "finishedWithResult": "{{assistant}} completó la tarea: {{result}}",
+    "finishedNoResult": "{{assistant}} completó la tarea, pero no se encontró una respuesta final.",
+    "failed": "{{assistant}} falló: {{error}}",
+    "acceptedStatus": "{{assistant}} aceptó la tarea.",
+    "noCancelable": "No hay ninguna tarea actual del asistente que cancelar.",
+    "cancelling": "{{assistant}} todavía está deteniendo la tarea. Inténtalo de nuevo en unos instantes.",
+    "cancelled": "Se canceló la tarea actual de {{assistant}}.",
+    "history": "Hay {{count}} tareas recientes del Agent: {{tasks}}."
   }
 }

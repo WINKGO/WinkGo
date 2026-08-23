@@ -18,15 +18,22 @@ use base64::engine::general_purpose::STANDARD;
 use serde_json::{Value, json};
 
 use crate::canonical;
-use crate::runtime::{Budget, CancellationToken, Command, MatchMode, NameMatcher, ShardOutput, Subscriber};
+use crate::runtime::{Budget, CancellationToken, Command, Kind, MatchMode, NameMatcher, ShardOutput, Subscriber};
 use crate::types::{FileOp, ReferenceInput, ResolvedResource};
 
 use super::actor::FsMonitorActor;
 use super::search::{self, ActiveSearch, SearchRoot};
 use super::wire::{
-    self, Encoding, InitializeParams, MkdirParams, ReadParams, RemoveParams, RenameParams, ResolveParams, ResourceRef,
-    SearchCancelParams, SearchParams, SubscribeParams, UnsubscribeParams, WriteParams,
+    self, CreateFileParams, Encoding, InitializeParams, MkdirParams, ReadParams, RemoveParams, RenameParams,
+    ResolveParams, ResourceRef, SearchCancelParams, SearchParams, SubscribeParams, TransferParams, UnsubscribeParams,
+    WriteParams,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Transfer {
+    Copy,
+    Move,
+}
 
 impl FsMonitorActor {
     /// Decode one inbound frame and route it by method. Malformed frames get a
@@ -54,8 +61,11 @@ impl FsMonitorActor {
             "fs/resolve" => self.handle_resolve(session, id, params).await,
             "fs/write" => self.handle_write(session, id, params).await,
             "fs/mkdir" => self.handle_mkdir(session, id, params).await,
+            "fs/createFile" => self.handle_create_file(session, id, params).await,
             "fs/remove" => self.handle_remove(session, id, params).await,
             "fs/rename" => self.handle_rename(session, id, params).await,
+            "fs/copy" => self.handle_transfer(session, id, params, Transfer::Copy).await,
+            "fs/move" => self.handle_transfer(session, id, params, Transfer::Move).await,
             "fs/search" => self.handle_search(session, id, params).await,
             "fs/searchCancel" => self.handle_search_cancel(session, params),
             other => {
@@ -325,6 +335,24 @@ impl FsMonitorActor {
         self.reply_unit(session, id, "mkdir", &p.dir, outcome);
     }
 
+    /// Create a brand-new empty file. The provider uses create_new semantics,
+    /// so an existing file is rejected and never truncated.
+    async fn handle_create_file(&mut self, session: &str, id: Option<Value>, params: Value) {
+        let Ok(p) = serde_json::from_value::<CreateFileParams>(params) else {
+            self.push(session, invalid_params(id));
+            return;
+        };
+        let resolved = match self.resolve_guarded(&p.file, FileOp::Write).await {
+            Ok(resource) => resource,
+            Err((code, message)) => {
+                self.push(session, wire::error(id, code, message, ref_data(&p.file)));
+                return;
+            }
+        };
+        let outcome = self.runtime().provider().create_file(&resolved.resource_uri).await;
+        self.reply_unit(session, id, "createFile", &p.file, outcome);
+    }
+
     async fn handle_remove(&mut self, session: &str, id: Option<Value>, params: Value) {
         let Ok(p) = serde_json::from_value::<RemoveParams>(params) else {
             self.push(session, invalid_params(id));
@@ -370,6 +398,132 @@ impl FsMonitorActor {
             .rename(&from.resource_uri, &to.resource_uri)
             .await;
         self.reply_unit(session, id, "rename", &p.from, outcome);
+    }
+
+    async fn handle_transfer(&mut self, session: &str, id: Option<Value>, params: Value, mode: Transfer) {
+        let Ok(p) = serde_json::from_value::<TransferParams>(params) else {
+            self.push(session, invalid_params(id));
+            return;
+        };
+        if p.from.relative_path.is_empty() {
+            self.push(session, invalid_params(id));
+            return;
+        }
+        let source_op = if mode == Transfer::Copy {
+            FileOp::Read
+        } else {
+            FileOp::Rename
+        };
+        let from = match self.resolve_guarded(&p.from, source_op).await {
+            Ok(resource) => resource,
+            Err((code, message)) => {
+                self.push(session, wire::error(id, code, message, ref_data(&p.from)));
+                return;
+            }
+        };
+        let to_dir = match self.resolve_guarded(&p.to_dir, FileOp::Write).await {
+            Ok(resource) => resource,
+            Err((code, message)) => {
+                self.push(session, wire::error(id, code, message, ref_data(&p.to_dir)));
+                return;
+            }
+        };
+        let is_dir = match self.runtime().provider().stat(&from.resource_uri).await {
+            Ok(Some(fact)) => matches!(fact.kind, Kind::Dir),
+            Ok(None) => {
+                self.push(
+                    session,
+                    wire::error(
+                        id,
+                        wire::CODE_RESOURCE_NOT_FOUND,
+                        "resource_not_found",
+                        ref_data(&p.from),
+                    ),
+                );
+                return;
+            }
+            Err(error) => {
+                let (code, message) = wire::fs_error_to_rpc(&error);
+                self.push(session, wire::error(id, code, message, ref_data(&p.from)));
+                return;
+            }
+        };
+        if is_dir && uri_within_or_equal(&to_dir.resource_uri, &from.resource_uri) {
+            self.push(session, invalid_params(id));
+            return;
+        }
+        let base = basename_of(&from);
+        if mode == Transfer::Move && parent_uri(&from.resource_uri).as_deref() == Some(to_dir.resource_uri.as_str()) {
+            self.push(
+                session,
+                wire::success(id, transfer_result(&p.from.pe_id, &p.from.relative_path, &base)),
+            );
+            return;
+        }
+        let dest = match self.resolve_free_dest(&p.to_dir, &base, is_dir).await {
+            Ok(Some(resource)) => resource,
+            Ok(None) => {
+                self.push(
+                    session,
+                    wire::error(
+                        id,
+                        wire::CODE_PROVIDER_UNAVAILABLE,
+                        "provider_unavailable",
+                        ref_data(&p.to_dir),
+                    ),
+                );
+                return;
+            }
+            Err((code, message)) => {
+                self.push(session, wire::error(id, code, message, ref_data(&p.to_dir)));
+                return;
+            }
+        };
+        let provider = self.runtime().provider();
+        let outcome = match mode {
+            Transfer::Copy => provider.copy(&from.resource_uri, &dest.resource_uri, is_dir).await,
+            Transfer::Move if from.root_resource_canonical == to_dir.root_resource_canonical => {
+                provider.rename(&from.resource_uri, &dest.resource_uri).await
+            }
+            Transfer::Move => match provider.copy(&from.resource_uri, &dest.resource_uri, is_dir).await {
+                Ok(()) => provider.remove(&from.resource_uri, is_dir).await,
+                Err(error) => Err(error),
+            },
+        };
+        match outcome {
+            Ok(()) => {
+                let name = last_segment(&dest.relative_path);
+                self.push(
+                    session,
+                    wire::success(id, transfer_result(&p.to_dir.pe_id, &dest.relative_path, name)),
+                );
+            }
+            Err(error) => {
+                let (code, message) = wire::fs_error_to_rpc(&error);
+                self.push(session, wire::error(id, code, message, ref_data(&p.from)));
+            }
+        }
+    }
+
+    async fn resolve_free_dest(
+        &self,
+        to_dir: &ResourceRef,
+        base: &str,
+        is_dir: bool,
+    ) -> Result<Option<ResolvedResource>, (i64, &'static str)> {
+        for attempt in 0..10_000 {
+            let candidate = ResourceRef {
+                pe_id: to_dir.pe_id.clone(),
+                relative_path: join_rel(&to_dir.relative_path, &candidate_name(base, attempt, is_dir)),
+            };
+            let resolved = self.resolve_guarded(&candidate, FileOp::Write).await?;
+            match self.runtime().provider().stat(&resolved.resource_uri).await {
+                Ok(None) => return Ok(Some(resolved)),
+                Ok(Some(_)) => continue,
+                Err(error) => return Err(wire::fs_error_to_rpc(&error)),
+            }
+        }
+        Ok(None)
     }
 
     // ── filename search ───────────────────────────────────────────────────
@@ -503,6 +657,58 @@ fn invalid_params(id: Option<Value>) -> Value {
 /// `error.data` context for a reference.
 fn ref_data(target: &ResourceRef) -> Value {
     json!({ "pe_id": target.pe_id, "relative_path": target.relative_path })
+}
+
+fn transfer_result(pe_id: &str, relative_path: &str, name: &str) -> Value {
+    json!({ "to": { "pe_id": pe_id, "relative_path": relative_path }, "name": name })
+}
+
+fn join_rel(dir: &str, name: &str) -> String {
+    if dir.is_empty() {
+        name.to_owned()
+    } else {
+        format!("{dir}/{name}")
+    }
+}
+
+fn last_segment(relative_path: &str) -> &str {
+    relative_path.rsplit('/').next().unwrap_or(relative_path)
+}
+
+fn basename_of(resource: &ResolvedResource) -> String {
+    resource
+        .absolute_path
+        .as_deref()
+        .and_then(|path| Path::new(path).file_name())
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| last_segment(&resource.relative_path).to_owned())
+}
+
+fn parent_uri(uri: &str) -> Option<String> {
+    uri.rfind('/').map(|index| uri[..index].to_owned())
+}
+
+fn uri_within_or_equal(inner: &str, outer: &str) -> bool {
+    inner == outer || inner.starts_with(&format!("{outer}/"))
+}
+
+fn candidate_name(base: &str, attempt: usize, is_dir: bool) -> String {
+    if attempt == 0 {
+        return base.to_owned();
+    }
+    let (stem, extension) = if is_dir { (base, "") } else { split_ext(base) };
+    if attempt == 1 {
+        format!("{stem} copy{extension}")
+    } else {
+        format!("{stem} copy {attempt}{extension}")
+    }
+}
+
+fn split_ext(name: &str) -> (&str, &str) {
+    match name.rfind('.') {
+        Some(index) if index > 0 => (&name[..index], &name[index..]),
+        _ => (name, ""),
+    }
 }
 
 /// Encode file bytes for the wire, honoring the requested encoding. A utf-8

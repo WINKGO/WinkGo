@@ -27,6 +27,9 @@
     "configureFirst": "まず設定でエージェントを設定してください。",
     "switching": "エージェントを切り替え中..."
   },
+  "runtime": {
+    "managedByAgent": "エージェントが管理"
+  },
   "model": {
     "switchSuccess": "モデルを切り替えました",
     "switchFailed": "モデルの切り替えに失敗しました",
@@ -47,5 +50,31 @@
     "label": "思考レベル",
     "switchSuccess": "思考レベルを切り替えました",
     "switchFailed": "思考レベルの切り替えに失敗しました"
+  },
+  "speed": {
+    "label": "速度",
+    "switchSuccess": "応答速度を更新しました",
+    "switchFailed": "応答速度の更新に失敗しました"
+  },
+  "voiceTask": {
+    "emptyCommand": "タスク内容が空のため、Agent に送信されませんでした。",
+    "noAgent": "利用可能な WINK GO Agent がないか、指定されたデスクトップ Agent スキルは廃止されています。",
+    "noModel": "WINK GO CLI で利用可能なモデルがありません。先にモデルページで設定して有効にしてください。",
+    "conversationName": "XiaoZhi：{{command}}",
+    "createFailed": "WINK GO Agent の会話を作成できませんでした。",
+    "queued": "タスクは {{assistant}} のキューに追加され、現在のタスク完了後に自動実行されます。",
+    "accepted": "タスクを {{assistant}} に送信しました。WINK GO で進行状況を確認できます。",
+    "none": "現在、アシスタントタスクはありません。",
+    "waitingConfirmation": "{{assistant}} が確認を待っています。",
+    "queuedStatus": "{{assistant}} はキュー済みタスクを受信し、現在のタスク完了後に実行します。",
+    "running": "{{assistant}} がタスクを実行中です。",
+    "finishedWithResult": "{{assistant}} がタスクを完了しました：{{result}}",
+    "finishedNoResult": "{{assistant}} はタスクを完了しましたが、最終応答を取得できませんでした。",
+    "failed": "{{assistant}} の実行に失敗しました：{{error}}",
+    "acceptedStatus": "{{assistant}} がタスクを受け付けました。",
+    "noCancelable": "キャンセルできるアシスタントタスクはありません。",
+    "cancelling": "{{assistant}} はまだタスクを終了中です。少し待ってから再試行してください。",
+    "cancelled": "{{assistant}} の現在のタスクをキャンセルしました。",
+    "history": "最近の Agent タスクは {{count}} 件です：{{tasks}}。"
   }
 }

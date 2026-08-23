@@ -189,6 +189,16 @@ describe('RotatingApiClient', () => {
       // Blacklist should still be empty because it's the last attempt
       expect(status.blacklisted.length).toBe(0);
     });
+
+    it('still performs the initial request when retries are disabled', async () => {
+      const client = new TestRotatingApiClient('key', AuthType.USE_OPENAI, { maxRetries: 0 });
+      const operation = vi.fn().mockResolvedValue('success');
+
+      const result = await client.executeWithRetry(operation);
+
+      expect(result).toBe('success');
+      expect(operation).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('options', () => {

@@ -31,7 +31,7 @@ import { useTypewriterPlaceholder } from './hooks/useTypewriterPlaceholder';
 import { ensureBackendMcpCatalog } from '@/renderer/hooks/mcp/catalog';
 import { resolveGuidAssistantDefaults } from './utils/assistantDefaults';
 import SpeechInputButton from '@/renderer/components/chat/SpeechInputButton';
-import { chatFileRefPath, uploadFileRef } from '@/common/types/chatFile';
+import { type ChatFileRef, chatFileRefPath, isChatFileRef, localFileRef } from '@/common/types/chatFile';
 import { useOpenFileSelector } from '@/renderer/hooks/file/useOpenFileSelector';
 import { appendSpeechTranscript } from '@/renderer/hooks/system/useSpeechInput';
 import { useLiveTranscriptInsertion } from '@/renderer/hooks/system/useLiveTranscriptInsertion';
@@ -47,7 +47,7 @@ type GuidNavigationState = {
   resetAssistant?: boolean;
   selectedAssistantId?: string;
   prefillPrompt?: string;
-  prefillFiles?: string[];
+  prefillFiles?: Array<ChatFileRef | string>;
   preservePrefillDraft?: boolean;
   focusPrefill?: boolean;
   workspace?: string;
@@ -81,6 +81,8 @@ const GuidPage: React.FC = () => {
   const [guidEnabledSkills, setGuidEnabledSkills] = useState<string[] | undefined>(undefined);
   const [availableMcpServers, setAvailableMcpServers] = useState<IMcpServer[]>([]);
   const [guidSelectedMcpServerIds, setGuidSelectedMcpServerIds] = useState<string[] | undefined>(undefined);
+  const manualMcpSelectionAssistantRef = useRef<string | null>(null);
+  const previousMcpSelectionAssistantRef = useRef<string | null>(null);
 
   useEffect(() => {
     ipcBridge.fs.listAvailableSkills
@@ -122,13 +124,6 @@ const GuidPage: React.FC = () => {
     }
   }, []);
 
-  const handleToggleMcpServer = useCallback((serverId: string) => {
-    setGuidSelectedMcpServerIds((prev) => {
-      const current = prev ?? [];
-      return current.includes(serverId) ? current.filter((id) => id !== serverId) : [...current, serverId];
-    });
-  }, []);
-
   // --- Hooks ---
   // Only winkgo_agent uses this provider-based model picker now (Gemini runs as a
   // regular ACP backend with its own model selector).
@@ -161,6 +156,21 @@ const GuidPage: React.FC = () => {
 
   const selectedAssistantId = agentSelection.selectedAssistantId;
   const hasSelectedAssistant = selectedAssistantId !== null;
+  const handleToggleMcpServer = useCallback(
+    (serverId: string) => {
+      manualMcpSelectionAssistantRef.current = selectedAssistantId;
+      setGuidSelectedMcpServerIds((prev) => {
+        const current = prev ?? [];
+        return current.includes(serverId) ? current.filter((id) => id !== serverId) : [...current, serverId];
+      });
+    },
+    [selectedAssistantId]
+  );
+  useEffect(() => {
+    if (previousMcpSelectionAssistantRef.current === selectedAssistantId) return;
+    previousMcpSelectionAssistantRef.current = selectedAssistantId;
+    manualMcpSelectionAssistantRef.current = null;
+  }, [selectedAssistantId]);
   const { data: selectedAssistantDetail } = useSWR(
     selectedAssistantId ? `guid.assistant.detail.${selectedAssistantId}.${localeKey}` : null,
     async (): Promise<AssistantDetail | null> =>
@@ -262,6 +272,8 @@ const GuidPage: React.FC = () => {
     selectedMode: agentSelection.selectedMode,
     selectedAcpModel: agentSelection.selectedAcpModel,
     selectedThoughtLevelValue: agentSelection.selectedThoughtLevelValue,
+    selectedSpeedOptionId: agentSelection.currentSpeedOption?.id,
+    selectedSpeedValue: agentSelection.selectedSpeedValue,
     currentAcpCachedModelInfo: agentSelection.currentAcpCachedModelInfo,
     current_model: modelSelection.current_model,
 
@@ -357,13 +369,16 @@ const GuidPage: React.FC = () => {
   }, [selectedAssistantDetail, selectedAssistantId]);
 
   const appliedAssistantDefaultsKeyRef = useRef<string | null>(null);
+  const appliedAssistantMcpDefaultsKeyRef = useRef<string | null>(null);
   const manualModelSelectionAssistantRef = useRef<string | null>(null);
   const manualThoughtLevelSelectionAssistantRef = useRef<string | null>(null);
   useEffect(() => {
     if (!selectedAssistantId || !selectedAssistantDetail) {
       appliedAssistantDefaultsKeyRef.current = null;
+      appliedAssistantMcpDefaultsKeyRef.current = null;
       manualModelSelectionAssistantRef.current = null;
       manualThoughtLevelSelectionAssistantRef.current = null;
+      manualMcpSelectionAssistantRef.current = null;
       return;
     }
 
@@ -452,7 +467,20 @@ const GuidPage: React.FC = () => {
           agentSelection.setSelectedThoughtLevelValue(fallbackThoughtLevel, { persistPreference: false });
         }
       }
-      setGuidSelectedMcpServerIds(resolvedDefaults.mcpIds);
+      // MCP choices are conversation-local user intent. Agent capability/model
+      // metadata can arrive in several waves and re-run this effect; only seed
+      // MCP defaults when the assistant/default MCP set actually changes.
+      const mcpDefaultsKey = JSON.stringify({
+        assistantId: selectedAssistantId,
+        mcpIds: [...resolvedDefaults.mcpIds].sort(),
+      });
+      if (
+        manualMcpSelectionAssistantRef.current !== selectedAssistantId &&
+        appliedAssistantMcpDefaultsKeyRef.current !== mcpDefaultsKey
+      ) {
+        appliedAssistantMcpDefaultsKeyRef.current = mcpDefaultsKey;
+        setGuidSelectedMcpServerIds(resolvedDefaults.mcpIds);
+      }
     };
 
     void applyAssistantDefaults().catch((error) => {
@@ -493,6 +521,12 @@ const GuidPage: React.FC = () => {
     },
     [agentSelection, hasSelectedAssistant, selectedAssistantId]
   );
+  const setGuidSelectedSpeed = useCallback(
+    (value: string) => {
+      agentSelection.setSelectedSpeedValue(value, { persistPreference: !hasSelectedAssistant });
+    },
+    [agentSelection, hasSelectedAssistant]
+  );
   const setGuidCurrentModel = useCallback(
     (model: TProviderWithModel) => {
       manualModelSelectionAssistantRef.current = selectedAssistantId;
@@ -530,9 +564,14 @@ const GuidPage: React.FC = () => {
         guidInput.setInput((draft) => appendPromptToDraft(draft, prefillPrompt));
       } else {
         guidInput.setInput(prefillPrompt);
-        // Prefill attachments (e.g. "via chat" screenshots) arrive as bare paths
-        // with no source tag; treat them as uploads to preserve prior behavior.
-        guidInput.setFiles(prefillFiles && prefillFiles.length > 0 ? prefillFiles.map(uploadFileRef) : []);
+        // Navigation-prefilled bare paths refer to files already present on the
+        // backend machine. Preserve explicit source tags and treat legacy strings
+        // as local refs so desktop files are never mistaken for managed uploads.
+        guidInput.setFiles(
+          prefillFiles && prefillFiles.length > 0
+            ? prefillFiles.map((file) => (isChatFileRef(file) ? file : localFileRef(file)))
+            : []
+        );
       }
     } else if (skipNextClearRef.current) {
       // This pass is the state-clearing replace() right after a prefill — keep
@@ -598,6 +637,8 @@ const GuidPage: React.FC = () => {
       setSelectedAcpModel={setGuidSelectedAcpModel}
       thoughtLevelOption={isGeminiMode ? null : agentSelection.currentThoughtLevelOption}
       onThoughtLevelSelect={setGuidSelectedThoughtLevel}
+      speedOption={isGeminiMode ? null : agentSelection.currentSpeedOption}
+      onSpeedSelect={setGuidSelectedSpeed}
     />
   );
 
@@ -625,6 +666,8 @@ const GuidPage: React.FC = () => {
       setSelectedAcpModel={setGuidSelectedAcpModel}
       thoughtLevelOption={isGeminiMode ? null : agentSelection.currentThoughtLevelOption}
       onThoughtLevelSelect={setGuidSelectedThoughtLevel}
+      speedOption={isGeminiMode ? null : agentSelection.currentSpeedOption}
+      onSpeedSelect={setGuidSelectedSpeed}
       modeBackend={agentSelection.selectedAssistantBackend}
       selectedMode={agentSelection.selectedMode}
       dynamicModes={agentSelection.currentAgentModeOptions}

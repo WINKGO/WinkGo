@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 export const PET_STATES = [
   'idle',
   'thinking',
@@ -27,6 +28,12 @@ export type PetState = (typeof PET_STATES)[number];
 export type StateChangeCallback = (state: PetState, prev: PetState) => void;
 
 export type PetSize = 200 | 280 | 360;
+
+export const DEFAULT_PET_SIZE: PetSize = 200;
+
+export function resolvePetSize(value: unknown): PetSize {
+  return value === 200 || value === 280 || value === 360 ? value : DEFAULT_PET_SIZE;
+}
 
 export type HitBounds = {
   x: number;

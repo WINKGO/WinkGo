@@ -309,7 +309,7 @@ mod tests {
         );
         let nvm_bins: Vec<_> = bins
             .iter()
-            .filter(|p| p.to_string_lossy().contains(".nvm/versions/node/"))
+            .filter(|p| p.to_string_lossy().replace('\\', "/").contains(".nvm/versions/node/"))
             .collect();
         assert_eq!(nvm_bins.len(), 2);
         assert!(

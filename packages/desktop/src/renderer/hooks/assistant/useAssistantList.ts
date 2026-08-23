@@ -5,6 +5,7 @@ import type { Assistant } from '@/common/types/agent/assistantTypes';
 import { reorderAssistantList } from '@/renderer/pages/settings/AssistantSettings/assistantUtils';
 import { selectableAssistants } from '@/renderer/utils/model/assistantSelection';
 import { brandAssistantsForDisplay } from '@/renderer/utils/model/winkGoBranding';
+import { isRetiredWinkGoAgentIdentity } from '@/renderer/utils/model/agentTypeSupportPolicy';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAssistantOrder } from './useAssistantOrder';
@@ -24,7 +25,10 @@ export const useAssistantList = () => {
 
   const loadAssistants = useCallback(async () => {
     try {
-      const list = brandAssistantsForDisplay(await ipcBridge.assistants.list.invoke());
+      const list = brandAssistantsForDisplay(await ipcBridge.assistants.list.invoke()).filter(
+        (assistant) =>
+          !isRetiredWinkGoAgentIdentity(assistant.agent?.acp_backend, assistant.agent?.type, assistant.name)
+      );
       setAssistants(list);
       setActiveAssistantId((prev) => {
         if (prev && list.some((a) => a.id === prev)) return prev;

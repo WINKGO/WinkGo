@@ -1,6 +1,8 @@
 {
   "desktopPet": "Mascotte de bureau",
   "enable": "Activer la mascotte de bureau",
+  "butlerSetup": "Demander à l'assistant de la configurer",
+  "butlerSetupPrompt": "Crée une mascotte de bureau pour moi. Je joindrai une image afin que tu la transformes en cette mascotte.",
   "size": "Taille de la mascotte",
   "sizeSmall": "Petite ({{px}}px)",
   "sizeMedium": "Moyenne ({{px}}px)",

@@ -11,7 +11,7 @@ use ignore::WalkBuilder;
 use tracing::warn;
 
 use crate::error::FileError;
-use winkgo_api_types::WebSocketMessage;
+use winkgo_api_types::{ContentEncoding, WebSocketMessage};
 use winkgo_realtime::EventBroadcaster;
 
 use crate::path_safety::{has_traversal, validate_path_for_write, validate_path_with_extra_root};
@@ -460,6 +460,48 @@ fn get_image_base64_sync(path: &Path) -> Result<String, FileError> {
     Ok(format!("data:{mime};base64,{encoded}"))
 }
 
+/// Encode content for the ChatFileRef-addressed content API. The absolute
+/// path has already passed ProjectService identity and containment checks.
+fn read_resolved_content_sync(path: &Path, encoding: ContentEncoding) -> Result<String, FileError> {
+    let result = (|| match encoding {
+        ContentEncoding::Utf8 => {
+            read_file_sync(path)?.ok_or_else(|| FileError::NotFound("The requested file no longer exists.".to_owned()))
+        }
+        ContentEncoding::Base64 => {
+            if validate_file_for_read(path)?.is_none() {
+                return Err(FileError::NotFound("The requested file no longer exists.".to_owned()));
+            }
+            let bytes = std::fs::read(path)
+                .map_err(|_| FileError::Internal("Unable to read the requested file.".to_owned()))?;
+            Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
+        }
+        ContentEncoding::DataUrl => {
+            if validate_file_for_read(path)?.is_none() {
+                return Err(FileError::NotFound("The requested file no longer exists.".to_owned()));
+            }
+            let bytes = std::fs::read(path)
+                .map_err(|_| FileError::Internal("Unable to read the requested file.".to_owned()))?;
+            let mime = mime_guess::from_path(path)
+                .first()
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "application/octet-stream".to_owned());
+            Ok(format!(
+                "data:{mime};base64,{}",
+                base64::engine::general_purpose::STANDARD.encode(bytes)
+            ))
+        }
+    })();
+
+    result.map_err(|error| {
+        tracing::warn!(error = %error, "could not read resolved file content");
+        match error {
+            FileError::NotFound(_) => FileError::NotFound("The requested file no longer exists.".to_owned()),
+            FileError::BadRequest(_) => FileError::BadRequest("The requested file cannot be read.".to_owned()),
+            _ => FileError::Internal("Unable to read the requested file.".to_owned()),
+        }
+    })
+}
+
 /// Build a placeholder SVG Data URL for failed remote image fetches.
 fn placeholder_svg_data_url() -> String {
     let encoded = base64::engine::general_purpose::STANDARD.encode(PLACEHOLDER_SVG);
@@ -582,6 +624,41 @@ fn write_zip_entries(
 
 #[async_trait::async_trait]
 impl crate::traits::IFileService for FileService {
+    async fn read_resolved_content(
+        &self,
+        absolute_path: &Path,
+        encoding: ContentEncoding,
+    ) -> Result<String, FileError> {
+        let path = absolute_path.to_path_buf();
+        tokio::task::spawn_blocking(move || read_resolved_content_sync(&path, encoding))
+            .await
+            .map_err(|e| FileError::Internal(format!("read content task failed: {e}")))?
+    }
+
+    async fn write_resolved_content(&self, absolute_path: &Path, data: &[u8]) -> Result<(), FileError> {
+        let path = absolute_path.to_path_buf();
+        let data = data.to_vec();
+        tokio::task::spawn_blocking(move || write_file_sync(&path, &data))
+            .await
+            .map_err(|e| FileError::Internal(format!("write content task failed: {e}")))?
+            .map_err(|error| {
+                tracing::warn!(error = %error, "could not write resolved file content");
+                FileError::Internal("Unable to write the requested file.".to_owned())
+            })?;
+        Ok(())
+    }
+
+    async fn resolved_metadata(&self, absolute_path: &Path) -> Result<FileMetadata, FileError> {
+        let path = absolute_path.to_path_buf();
+        tokio::task::spawn_blocking(move || get_file_metadata_sync(&path))
+            .await
+            .map_err(|e| FileError::Internal(format!("metadata task failed: {e}")))?
+            .map_err(|error| {
+                tracing::warn!(error = %error, "could not read resolved file metadata");
+                FileError::NotFound("The requested file no longer exists.".to_owned())
+            })
+    }
+
     async fn get_files_by_dir(&self, dir: &str, root: &str) -> Result<Vec<DirOrFile>, FileError> {
         let roots = self.allowed_roots_refs();
         let extra_root = Path::new(root);
@@ -1213,7 +1290,10 @@ mod tests {
         let result = build_dir_tree_sync(dir.path(), dir.path()).unwrap();
 
         assert_eq!(result[0].relative_path, "folder");
-        assert_eq!(result[0].children[0].relative_path, "folder/file.txt");
+        assert_eq!(
+            Path::new(&result[0].children[0].relative_path),
+            Path::new("folder/file.txt")
+        );
     }
 
     #[test]
@@ -1277,7 +1357,7 @@ mod tests {
         let files = list_workspace_files_sync(dir.path()).unwrap();
         let main_file = files.iter().find(|f| f.name == "main.rs").unwrap();
 
-        assert_eq!(main_file.relative_path, "src/main.rs");
+        assert_eq!(Path::new(&main_file.relative_path), Path::new("src/main.rs"));
     }
 
     #[cfg(unix)]
@@ -1406,6 +1486,39 @@ mod tests {
         let err = read_file_sync(&folder).unwrap_err();
         assert!(matches!(err, FileError::BadRequest(_)));
         assert!(err.to_string().contains("is a directory"));
+    }
+
+    #[test]
+    fn resolved_content_supports_utf8_base64_and_data_url() {
+        let dir = tempfile::tempdir().unwrap();
+        let text = dir.path().join("hello.txt");
+        let image = dir.path().join("pixel.png");
+        fs::write(&text, "你好 WINK GO").unwrap();
+        fs::write(&image, [0x89, 0x50, 0x4e, 0x47]).unwrap();
+
+        assert_eq!(
+            read_resolved_content_sync(&text, ContentEncoding::Utf8).unwrap(),
+            "你好 WINK GO"
+        );
+        assert_eq!(
+            read_resolved_content_sync(&image, ContentEncoding::Base64).unwrap(),
+            "iVBORw=="
+        );
+        assert_eq!(
+            read_resolved_content_sync(&image, ContentEncoding::DataUrl).unwrap(),
+            "data:image/png;base64,iVBORw=="
+        );
+    }
+
+    #[test]
+    fn resolved_content_errors_do_not_expose_absolute_paths() {
+        let dir = tempfile::tempdir().unwrap();
+        let private_path = dir.path().join("private-folder");
+        fs::create_dir(&private_path).unwrap();
+
+        let error = read_resolved_content_sync(&private_path, ContentEncoding::Utf8).unwrap_err();
+        assert!(!error.to_string().contains(&private_path.to_string_lossy().to_string()));
+        assert!(error.to_string().contains("cannot be read"));
     }
 
     // -- validate_file_for_read tests --

@@ -12,9 +12,24 @@
   "icon_key": "tv",
   "color": "linear-gradient(135deg, #ff6a10, #ff9f43)",
   "description": "独立控制 腾讯视频 桌面客户端，支持搜索、选集、播放和窗口读取。",
-  "strong_aliases": ["腾讯视频", "TencentVideo", "腾讯影视"],
-  "weak_aliases": ["视频", "追剧", "下一集", "上一集", "播放"],
-  "capability_labels": ["搜索视频", "分集跳转", "播放控制", "页面读取"],
+  "strong_aliases": [
+    "腾讯视频",
+    "TencentVideo",
+    "腾讯影视"
+  ],
+  "weak_aliases": [
+    "视频",
+    "追剧",
+    "下一集",
+    "上一集",
+    "播放"
+  ],
+  "capability_labels": [
+    "搜索视频",
+    "分集跳转",
+    "播放控制",
+    "页面读取"
+  ],
   "related_skill_ids": [],
   "legacy_route_prefix": "腾讯视频",
   "tool_selectors": {

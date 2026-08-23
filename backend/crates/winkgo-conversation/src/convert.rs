@@ -76,6 +76,7 @@ pub fn row_to_response_with_extra(
         channel_chat_id: row.channel_chat_id,
         assistant: None,
         project_id: row.project_id,
+        prompt_capability: None,
         created_at: row.created_at,
         modified_at: row.updated_at,
         extra,
@@ -145,8 +146,11 @@ pub fn row_to_message_response(row: MessageRow) -> Result<MessageResponse, Conve
 
     let status: Option<MessageStatus> = row.status.as_deref().map(string_to_enum).transpose()?;
 
-    let content: serde_json::Value = serde_json::from_str(&row.content)
+    let mut content: serde_json::Value = serde_json::from_str(&row.content)
         .map_err(|e| ConversationError::internal(format!("Invalid message content JSON: {e}")))?;
+    if let Some(object) = content.as_object_mut() {
+        object.remove("_winkgo_delivery");
+    }
 
     Ok(MessageResponse {
         id: row.id,
@@ -254,7 +258,10 @@ fn extract_preview_text(raw_content: &str) -> String {
                 }
             }
             serde_json::Value::Object(map) => {
-                for item in map.values() {
+                for (key, item) in map {
+                    if key == "_winkgo_delivery" {
+                        continue;
+                    }
                     collect_strings(item, bucket);
                 }
             }
@@ -360,6 +367,28 @@ mod tests {
         assert_eq!(resp.model.unwrap().model, "m1");
         assert_eq!(resp.extra["workspace"], "/project");
         assert_eq!(resp.modified_at, 2000);
+    }
+
+    #[test]
+    fn row_to_message_response_hides_internal_delivery_metadata() {
+        let row = MessageRow {
+            id: "msg-1".into(),
+            conversation_id: "conv-1".into(),
+            msg_id: Some("msg-1".into()),
+            r#type: "text".into(),
+            content: json!({
+                "content": "hello",
+                "_winkgo_delivery": { "kind": "boundary_queue", "version": 1 }
+            })
+            .to_string(),
+            position: Some("right".into()),
+            status: Some("pending".into()),
+            hidden: false,
+            created_at: 1,
+        };
+
+        let response = row_to_message_response(row).unwrap();
+        assert_eq!(response.content, json!({ "content": "hello" }));
     }
 
     #[test]
@@ -559,6 +588,22 @@ mod tests {
         let content = r#"{"content":"  hello   world  "}"#;
         let result = extract_preview_text(content);
         assert_eq!(result, "hello world");
+    }
+
+    #[test]
+    fn test_extract_preview_text_ignores_internal_delivery_metadata() {
+        let content = serde_json::json!({
+            "content": "visible request",
+            "_winkgo_delivery": {
+                "kind": "boundary_queue",
+                "user_id": "private-user",
+                "files": ["C:/private/report.docx"],
+                "inject_skills": ["secret-skill"]
+            }
+        })
+        .to_string();
+
+        assert_eq!(extract_preview_text(&content), "visible request");
     }
 
     // ── search_row_to_item ─────────────────────────────────────────────

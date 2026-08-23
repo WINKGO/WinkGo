@@ -13,19 +13,43 @@
   "icon_key": "music",
   "color": "linear-gradient(135deg, #f1c40f, #f39c12)",
   "description": "独立控制 QQ 音乐，支持打开已有收藏、历史、音乐馆、推荐歌单与播放控制；音量通过 Windows 的 QQ 音乐进程音频会话调节。",
-  "strong_aliases": ["QQ音乐", "扣扣音乐", "腾讯音乐客户端"],
-  "weak_aliases": ["音乐", "播放器", "听歌", "下一首", "上一首", "暂停", "歌单"],
-  "capability_labels": ["已有收藏与历史", "歌单与音乐馆", "播放控制", "Windows 应用音量"],
+  "strong_aliases": [
+    "QQ音乐",
+    "扣扣音乐",
+    "腾讯音乐客户端"
+  ],
+  "weak_aliases": [
+    "音乐",
+    "播放器",
+    "听歌",
+    "下一首",
+    "上一首",
+    "暂停",
+    "歌单"
+  ],
+  "capability_labels": [
+    "已有收藏与历史",
+    "歌单与音乐馆",
+    "播放控制",
+    "Windows 应用音量"
+  ],
   "capability_notes": [
     "“我喜欢”用于打开或播放账号中已有的收藏，不代表支持给当前歌曲点喜欢或点红心。",
     "音量能力调节 Windows 中 QQ 音乐进程的音频会话，不操作 QQ 音乐播放器底部的内部音量滑块。"
   ],
-  "unsupported_capabilities": ["喜欢当前歌曲", "给当前歌曲点红心"],
+  "unsupported_capabilities": [
+    "喜欢当前歌曲",
+    "给当前歌曲点红心"
+  ],
   "related_skill_ids": [],
   "legacy_route_prefix": "QQ音乐",
   "tool_selectors": {
-    "prefixes": ["music.qq_"],
-    "names": ["music.launch_qq_music"],
+    "prefixes": [
+      "music.qq_"
+    ],
+    "names": [
+      "music.launch_qq_music"
+    ],
     "shared_names": [
       "music.cancel_current",
       "music.control_playback",
@@ -51,52 +75,52 @@
   "compatibility_tool_aliases": {
     "music.launch_qq_music": {
       "canonical_tool_name": "music.station_open",
-      "default_arguments": { "player": "qq" },
-      "argument_renames": { "minimize_window": "minimize" }
+      "default_arguments": {"player": "qq"},
+      "argument_renames": {"minimize_window": "minimize"}
     },
     "music.open_music_app": {
       "canonical_tool_name": "music.station_open",
-      "default_arguments": { "player": "qq" },
+      "default_arguments": {"player": "qq"},
       "argument_transforms": {
-        "visible": { "target": "minimize", "operation": "not" }
+        "visible": {"target": "minimize", "operation": "not"}
       }
     },
     "music.qq_app_close": {
       "canonical_tool_name": "music.station_close",
-      "default_arguments": { "player": "qq" }
+      "default_arguments": {"player": "qq"}
     },
     "music.qq_app_open": {
       "canonical_tool_name": "music.station_open",
-      "default_arguments": { "player": "qq" },
-      "argument_renames": { "minimize_window": "minimize" }
+      "default_arguments": {"player": "qq"},
+      "argument_renames": {"minimize_window": "minimize"}
     },
     "music.qq_next_now": {
       "canonical_tool_name": "music.station_track_next",
-      "default_arguments": { "player": "qq" }
+      "default_arguments": {"player": "qq"}
     },
     "music.qq_play_pause": {
       "canonical_tool_name": "music.control_playback",
-      "default_arguments": { "action": "play_pause", "player": "qq" }
+      "default_arguments": {"action": "play_pause", "player": "qq"}
     },
     "music.qq_previous_now": {
       "canonical_tool_name": "music.station_track_previous",
-      "default_arguments": { "player": "qq" }
+      "default_arguments": {"player": "qq"}
     },
     "music.qq_volume_lower": {
       "canonical_tool_name": "music.system_volume_lower",
-      "default_arguments": { "player": "qq" }
+      "default_arguments": {"player": "qq"}
     },
     "music.qq_volume_raise": {
       "canonical_tool_name": "music.system_volume_raise",
-      "default_arguments": { "player": "qq" }
+      "default_arguments": {"player": "qq"}
     },
     "music.qq_volume_set": {
       "canonical_tool_name": "music.system_volume_set",
-      "default_arguments": { "player": "qq" }
+      "default_arguments": {"player": "qq"}
     },
     "music.search_and_play": {
       "canonical_tool_name": "music.track_resolve_and_start",
-      "default_arguments": { "player": "qq" },
+      "default_arguments": {"player": "qq"},
       "drop_arguments": ["minimize_window"]
     },
     "music.station_lyrics_toggle": {
@@ -105,7 +129,7 @@
     },
     "music.station_play_toggle": {
       "canonical_tool_name": "music.control_playback",
-      "default_arguments": { "action": "play", "player": "qq" },
+      "default_arguments": {"action": "play", "player": "qq"},
       "drop_arguments": ["player"]
     },
     "music.toggle_lyrics": {

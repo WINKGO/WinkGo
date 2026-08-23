@@ -7,10 +7,8 @@
  */
 
 import { app } from 'electron';
-import http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
-import os from 'os';
 import { configureBrandedAppPaths } from '@/common/platform';
 import { applyGpuRecoveryFlags } from './gpuRecovery';
 
@@ -72,41 +70,22 @@ if (isWebUI || isResetPassword) {
 }
 
 // ---------------------------------------------------------------------------
-// Chrome DevTools Protocol (CDP) — enable remote debugging
-// so chrome-devtools-mcp and other CDP clients can connect to this Electron app.
+// Agent browser control (CDP) — persisted user switch only.
 //
-// Default port: 9230 (avoids conflict with common CDP ports).
-// Override via WINKGO_CDP_PORT env variable. Set to "0" to disable.
-//
-// Configuration file: userData/cdp.config.json
-// - enabled: boolean - whether CDP is enabled (default: true in dev mode, false in production)
-// - port: number - preferred port (will find available port if occupied)
-//
-// Multi-instance support: a file-based registry tracks all active instances
-// so each one gets a unique port and MCP tools can discover them all.
-// Registry file: ~/.winkgo-cdp-registry.json
+// The bridge no longer enables Chromium's application-wide remote debugging
+// port. A random localhost port is opened later by cdpBridge.ts and exposes only
+// the active browser webview. WINKGO_CDP_PORT remains a compatibility switch:
+// "0"/"false" disables, any other non-empty value enables.
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_CDP_PORT = 9230;
-export const CDP_PORT_RANGE_START = 9230;
-export const CDP_PORT_RANGE_END = 9250;
-const CDP_REGISTRY_FILE = path.join(os.homedir(), '.winkgo-cdp-registry.json');
 const CDP_CONFIG_FILE = 'cdp.config.json';
 
 /** CDP configuration stored in userData directory */
 export interface CdpConfig {
-  /** Whether CDP is enabled (default: true in dev mode, false in production) */
+  /** Whether browser control is enabled. */
   enabled?: boolean;
-  /** Preferred port number (default: 9230) */
+  /** Legacy field retained so older configuration remains readable. */
   port?: number;
-}
-
-/** CDP registry entry for multi-instance tracking */
-interface CdpRegistryEntry {
-  pid: number;
-  port: number;
-  cwd: string;
-  startTime: number;
 }
 
 /** CDP status information exposed to renderer */
@@ -119,103 +98,8 @@ export interface CdpStatus {
   startupEnabled: boolean;
   /** Whether CDP is enabled in the persisted config file (may differ from runtime) */
   configEnabled: boolean;
-  /** All active CDP instances from registry */
-  instances: CdpRegistryEntry[];
   /** Whether the app is running in development mode */
   isDevMode: boolean;
-}
-
-/** Read the CDP registry file, returning an empty array on any error. */
-function readRegistry(): CdpRegistryEntry[] {
-  try {
-    if (!fs.existsSync(CDP_REGISTRY_FILE)) return [];
-    const raw = fs.readFileSync(CDP_REGISTRY_FILE, 'utf-8');
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-/** Write the CDP registry file atomically. */
-function writeRegistry(entries: CdpRegistryEntry[]): void {
-  try {
-    fs.writeFileSync(CDP_REGISTRY_FILE, JSON.stringify(entries, null, 2), 'utf-8');
-  } catch {
-    // Non-critical — log but don't crash
-    console.warn('[CDP] Failed to write CDP registry file');
-  }
-}
-
-/** Check if a process is still alive by sending signal 0. */
-function isProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Remove dead-process entries from the registry and return live ones. */
-function pruneRegistry(): CdpRegistryEntry[] {
-  const entries = readRegistry();
-  const alive = entries.filter((e) => isProcessAlive(e.pid));
-  if (alive.length !== entries.length) {
-    writeRegistry(alive);
-  }
-  return alive;
-}
-
-/** Find the first available port not occupied by a live registry entry. */
-function findAvailablePort(preferredPort: number): number {
-  const liveEntries = pruneRegistry();
-  const usedPorts = new Set(liveEntries.map((e) => e.port));
-
-  if (!usedPorts.has(preferredPort)) {
-    return preferredPort;
-  }
-
-  console.log(
-    `[CDP] Port ${preferredPort} is occupied by another WinkGo instance, scanning range ${CDP_PORT_RANGE_START}-${CDP_PORT_RANGE_END}`
-  );
-
-  for (let p = CDP_PORT_RANGE_START; p <= CDP_PORT_RANGE_END; p++) {
-    if (!usedPorts.has(p)) {
-      console.log(`[CDP] Found available port from registry: ${p}`);
-      return p;
-    }
-  }
-
-  console.warn(
-    `[CDP] All ports in range ${CDP_PORT_RANGE_START}-${CDP_PORT_RANGE_END} are used by active WinkGo instances, trying ${preferredPort}`
-  );
-  return preferredPort;
-}
-
-/** Register the current process in the CDP registry. */
-function registerInstance(port: number): void {
-  const entries = pruneRegistry();
-  // Remove any stale entry for our own PID (e.g. from a previous crash)
-  const filtered = entries.filter((e) => e.pid !== process.pid);
-  filtered.push({
-    pid: process.pid,
-    port,
-    cwd: process.cwd(),
-    startTime: Date.now(),
-  });
-  writeRegistry(filtered);
-}
-
-/** Remove the current process from the CDP registry. */
-export function unregisterInstance(): void {
-  try {
-    const entries = readRegistry();
-    const filtered = entries.filter((e) => e.pid !== process.pid);
-    writeRegistry(filtered);
-  } catch {
-    // Best-effort cleanup
-  }
 }
 
 /**
@@ -257,31 +141,13 @@ export function saveCdpConfig(config: CdpConfig): void {
 }
 
 /**
- * Resolve CDP port from environment variable.
- * Returns null if explicitly disabled via env.
- */
-function resolveCdpPortFromEnv(): number | null | undefined {
-  const envVal = process.env.WINKGO_CDP_PORT;
-  if (envVal === '0' || envVal === 'false') return null;
-  if (envVal) {
-    const parsed = Number(envVal);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  }
-  return undefined;
-}
-
-/**
  * Determine if CDP should be enabled at startup.
- * Priority: env variable > config file > default (dev mode: true, production: false)
+ * Priority: env variable > config file > default enabled.
  */
 function shouldEnableCdp(config: CdpConfig): boolean {
   const envVal = process.env.WINKGO_CDP_PORT;
   if (envVal === '0' || envVal === 'false') return false;
   if (envVal) return true;
-
-  if (app.isPackaged) {
-    return false;
-  }
 
   if (config.enabled !== undefined) {
     return config.enabled;
@@ -290,27 +156,12 @@ function shouldEnableCdp(config: CdpConfig): boolean {
   return true;
 }
 
-/**
- * Determine preferred CDP port.
- * Priority: env variable > config file > default (9230)
- */
-function getPreferredPort(config: CdpConfig): number {
-  // Environment variable takes highest priority
-  const envPort = resolveCdpPortFromEnv();
-  if (envPort !== null && envPort !== undefined) {
-    return envPort;
-  }
-
-  // Config file setting
-  if (config.port && Number.isFinite(config.port) && config.port > 0) {
-    return config.port;
-  }
-
-  return DEFAULT_CDP_PORT;
-}
-
-/** The active CDP port, or null if remote debugging is disabled. */
+/** The random localhost bridge port, backfilled once the bridge is listening. */
 export let cdpPort: number | null = null;
+
+export function setActiveCdpPort(port: number | null): void {
+  cdpPort = port;
+}
 
 /** Whether CDP was enabled at startup (requires restart to change). */
 export let cdpStartupEnabled: boolean = false;
@@ -320,63 +171,9 @@ const cdpConfig = loadCdpConfig();
 cdpStartupEnabled = shouldEnableCdp(cdpConfig);
 
 if (cdpStartupEnabled) {
-  const preferredPort = getPreferredPort(cdpConfig);
-  const port = findAvailablePort(preferredPort);
-  app.commandLine.appendSwitch('remote-debugging-port', String(port));
-  cdpPort = port;
-  registerInstance(port);
-
-  // Log CDP initialization
-  console.log('[CDP] Chrome DevTools Protocol enabled');
-  console.log(`[CDP] Remote debugging port: ${port}`);
-  console.log(`[CDP] DevTools URL: http://127.0.0.1:${port}`);
-  console.log('[CDP] MCP chrome-devtools connection: --browser-url=http://127.0.0.1:' + port);
-
-  // Clean up registry on exit - handle multiple exit signals
-  const cleanup = () => unregisterInstance();
-  process.on('exit', cleanup);
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
-  // Handle Windows specific signals
-  if (process.platform === 'win32') {
-    process.on('SIGBREAK', cleanup);
-  }
+  console.log('[CDP] WINK GO browser control enabled (single-target bridge)');
 } else {
-  console.log('[CDP] Chrome DevTools Protocol disabled');
-}
-
-/**
- * Verify CDP remote debugging is actually accessible after app starts.
- * Retries several times with delay to account for startup time.
- */
-export async function verifyCdpReady(port: number, maxRetries = 5, retryDelay = 800): Promise<boolean> {
-  for (let i = 0; i < maxRetries; i++) {
-    const ok = await new Promise<boolean>((resolve) => {
-      const req = http.get(`http://127.0.0.1:${port}/json/version`, { timeout: 2000 }, (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => resolve(res.statusCode === 200 && data.length > 0));
-      });
-      req.on('error', () => resolve(false));
-      req.on('timeout', () => {
-        req.destroy();
-        resolve(false);
-      });
-    });
-    if (ok) return true;
-    if (i < maxRetries - 1) {
-      await new Promise((r) => setTimeout(r, retryDelay));
-    }
-  }
-  return false;
-}
-
-/**
- * Get all live CDP instances from the registry.
- * Prunes dead entries automatically.
- */
-export function getActiveCdpInstances(): CdpRegistryEntry[] {
-  return pruneRegistry();
+  console.log('[CDP] WINK GO browser control disabled');
 }
 
 /**
@@ -389,7 +186,6 @@ export function getCdpStatus(): CdpStatus {
     port: cdpPort,
     startupEnabled: cdpStartupEnabled,
     configEnabled: config.enabled ?? cdpStartupEnabled,
-    instances: getActiveCdpInstances(),
     isDevMode: !app.isPackaged,
   };
 }

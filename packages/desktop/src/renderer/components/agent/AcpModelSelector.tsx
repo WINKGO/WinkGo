@@ -19,12 +19,14 @@ import { useTranslation } from 'react-i18next';
 import RuntimeSelectorPill, { RuntimeSelectorLoadingIndicator } from './RuntimeSelectorPill';
 import {
   composeRuntimeSelectorLabel,
+  getCurrentRuntimeOptionLabel,
   getCurrentThoughtLevelLabel,
   isConfigSetting,
   RUNTIME_SUBMENU_TRIGGER_PROPS,
   RuntimeSelectorCheckedItem,
   RuntimeSelectorModelList,
   RuntimeSelectorSubMenuTitle,
+  RuntimeSelectorUnavailableRow,
 } from './runtimeSelectorOptions';
 
 /** Runtime state of one team member. Kept local to avoid importing team-domain types here. */
@@ -69,7 +71,7 @@ const AcpModelSelector: React.FC<{
   const isMobileHeaderCompact = Boolean(layout?.isMobile);
   const [modelMenuVisible, setModelMenuVisible] = useState(false);
   useEffect(() => addTitlebarQuickActionVisibilityListener('model', setModelMenuVisible), []);
-  const { model_info, canSwitch, isLoading, isSetting, selectModel, thoughtLevel, setStatus, setConfigOption } =
+  const { model_info, canSwitch, isLoading, isSetting, selectModel, thoughtLevel, speed, setStatus, setConfigOption } =
     useAcpModelInfo({
       conversation_id,
       backend,
@@ -108,7 +110,20 @@ const AcpModelSelector: React.FC<{
     },
     [isRuntimeSetting, setConfigOption, thoughtLevel, t]
   );
+  const handleSpeedSelect = useCallback(
+    async (value: string) => {
+      if (!speed || value === speed.currentValue || isRuntimeSetting) return;
+      try {
+        await setConfigOption(speed.id, value);
+        Message.success(t('agent.speed.switchSuccess', { defaultValue: 'Response speed updated' }));
+      } catch (error) {
+        Message.error(t(configErrorMessageKey(error)));
+      }
+    },
+    [isRuntimeSetting, setConfigOption, speed, t]
+  );
   const tooltipContent = combinedLabel;
+  const runtimeManagedLabel = t('agent.runtime.managedByAgent', { defaultValue: 'Managed by Agent' });
 
   const renderLogo = () => <Brain theme='outline' size='14' fill={iconColors.secondary} className='shrink-0' />;
 
@@ -178,28 +193,29 @@ const AcpModelSelector: React.FC<{
       // Desktop: leave default container so click events reach Menu.Item normally.
       {...(isMobileHeaderCompact ? { getPopupContainer: () => document.body } : {})}
       droplist={
-        <Menu>
-          {thoughtLevel ? (
-            <>
-              {/* Two-level layout: first level shows model + thought-level rows;
-                  each expands into a left-side submenu with the full option list. */}
-              <Menu.SubMenu
-                key='model'
-                triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
-                title={
-                  <RuntimeSelectorSubMenuTitle
-                    label={t('common.model', { defaultValue: 'Model' })}
-                    value={display_label}
-                  />
-                }
-              >
-                <RuntimeSelectorModelList
-                  models={model_info.available_models}
-                  currentModelId={model_info.current_model_id}
-                  disabled={isRuntimeSetting}
-                  onSelect={selectModel}
+        <Menu className='winkgo-runtime-menu' data-testid='acp-runtime-settings-menu'>
+          <>
+            {/* The first level is deliberately stable. A cold runtime may initially
+                advertise only models and publish reasoning/speed moments later; the
+                menu must not collapse into an unrelated flat list during that window. */}
+            <Menu.SubMenu
+              key='model'
+              triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+              title={
+                <RuntimeSelectorSubMenuTitle
+                  label={t('common.model', { defaultValue: 'Model' })}
+                  value={display_label}
                 />
-              </Menu.SubMenu>
+              }
+            >
+              <RuntimeSelectorModelList
+                models={model_info.available_models}
+                currentModelId={model_info.current_model_id}
+                disabled={isRuntimeSetting}
+                onSelect={selectModel}
+              />
+            </Menu.SubMenu>
+            {thoughtLevel ? (
               <Menu.SubMenu
                 key='thought-level'
                 triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
@@ -227,16 +243,44 @@ const AcpModelSelector: React.FC<{
                   </Menu.Item>
                 ))}
               </Menu.SubMenu>
-            </>
-          ) : (
-            /* No thought level: the dropdown is the model list directly. */
-            <RuntimeSelectorModelList
-              models={model_info.available_models}
-              currentModelId={model_info.current_model_id}
-              disabled={isRuntimeSetting}
-              onSelect={selectModel}
-            />
-          )}
+            ) : (
+              <RuntimeSelectorUnavailableRow label={t('agent.thoughtLevel.label')} value={runtimeManagedLabel} />
+            )}
+            {speed ? (
+              <Menu.SubMenu
+                key='speed'
+                triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+                title={
+                  <RuntimeSelectorSubMenuTitle
+                    label={t('agent.speed.label', { defaultValue: 'Speed' })}
+                    value={getCurrentRuntimeOptionLabel(speed)}
+                  />
+                }
+              >
+                {speed.options.map((item) => (
+                  <Menu.Item
+                    key={item.value}
+                    className={item.value === speed.currentValue ? 'bg-2!' : ''}
+                    onClick={() => {
+                      if (!isRuntimeSetting) void handleSpeedSelect(item.value);
+                    }}
+                  >
+                    <RuntimeSelectorCheckedItem
+                      selected={item.value === speed.currentValue}
+                      description={item.description}
+                    >
+                      {item.label}
+                    </RuntimeSelectorCheckedItem>
+                  </Menu.Item>
+                ))}
+              </Menu.SubMenu>
+            ) : (
+              <RuntimeSelectorUnavailableRow
+                label={t('agent.speed.label', { defaultValue: 'Speed' })}
+                value={runtimeManagedLabel}
+              />
+            )}
+          </>
         </Menu>
       }
     >

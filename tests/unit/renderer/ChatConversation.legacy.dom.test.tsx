@@ -10,15 +10,30 @@ const usePresetAssistantInfoMock = vi.fn();
 const acpChatMock = vi.fn(() => <div data-testid='mock-acp-chat'>acp chat</div>);
 const acpModelSelectorMock = vi.fn(() => <div data-testid='mock-acp-model-selector'>model selector</div>);
 
-vi.mock('@/renderer/pages/conversation/Messages/MessageList', () => ({
-  default: ({ className }: { className?: string }) => <div className={className}>message history</div>,
-}));
+vi.mock('@/renderer/pages/conversation/Messages/MessageList', async () => {
+  const { useConversationContextSafe } = await import('@/renderer/hooks/context/ConversationContext');
+  return {
+    default: ({ className }: { className?: string }) => {
+      const context = useConversationContextSafe();
+      return (
+        <div className={className}>
+          message history
+          <span data-testid='fork-capability-probe'>{JSON.stringify(context?.forkCapability ?? null)}</span>
+        </div>
+      );
+    },
+  };
+});
 
 vi.mock('@/renderer/pages/conversation/Messages/hooks', () => ({
   MessageListLoadingProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   MessageListProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   MessagePaginationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useMessageLstCache: vi.fn(),
+}));
+
+vi.mock('@/renderer/pages/conversation/Messages/usePendingConfirmationsRecovery', () => ({
+  usePendingConfirmationsRecovery: vi.fn(),
 }));
 
 vi.mock('@/renderer/pages/conversation/Messages/artifacts', () => ({
@@ -37,6 +52,24 @@ vi.mock('@/renderer/pages/conversation/components/ChatLayout', () => ({
 vi.mock('@/renderer/pages/conversation/platforms/acp/AcpChat', () => ({
   __esModule: true,
   default: (props: unknown) => acpChatMock(props),
+}));
+
+vi.mock('@/renderer/pages/conversation/platforms/winkgo_agent/WinkGoAgentSendBox', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+vi.mock('@/renderer/pages/conversation/platforms/winkgo_agent/useWinkGoAgentModelSelection', () => ({
+  useWinkGoAgentModelSelection: () => ({
+    selectedProvider: undefined,
+    selectedModel: undefined,
+    setSelectedProvider: vi.fn(),
+    setSelectedModel: vi.fn(),
+  }),
+}));
+
+vi.mock('@/renderer/pages/conversation/runtime/useConversationRuntimeView', () => ({
+  useConversationRuntimeView: () => ({ activeTurnId: undefined, markStopAcknowledged: vi.fn() }),
 }));
 
 vi.mock('@/renderer/components/agent/AcpModelSelector', () => ({
@@ -143,7 +176,7 @@ describe('ChatConversation legacy runtime rendering', () => {
     );
   });
 
-  it('passes the resolved assistant backend to the ACP model selector for ACP conversations', () => {
+  it('passes the resolved assistant backend to the ACP composer for model selection', () => {
     usePresetAssistantInfoMock.mockReturnValue({
       info: {
         name: 'Research Assistant',
@@ -175,14 +208,39 @@ describe('ChatConversation legacy runtime rendering', () => {
       />
     );
 
-    expect(screen.getByTestId('mock-acp-model-selector')).toBeInTheDocument();
-    expect(acpModelSelectorMock).toHaveBeenCalledWith(
+    expect(screen.getByTestId('mock-acp-chat')).toBeInTheDocument();
+    expect(acpChatMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        conversation_id: 'conv-acp',
         backend: 'codex',
+        conversation_id: 'conv-acp',
         initialModelId: 'model-1',
-        waitForWarmup: true,
       })
     );
+    expect(acpModelSelectorMock).not.toHaveBeenCalled();
+  });
+
+  it('exposes WINK GO conversation fork capability to the shared message actions', () => {
+    render(
+      <ChatConversation
+        conversation={
+          {
+            id: 'conv-winkgo-agent',
+            user_id: 'user-1',
+            name: 'WINK GO conversation',
+            type: 'winkgo_agent',
+            model: {},
+            extra: { workspace: '/tmp/winkgo-project' },
+            status: 'finished',
+            source: 'winkgo',
+            created_at: 1,
+            modified_at: 1,
+            pinned: false,
+            fork_capability: { at_turn: false },
+          } as TChatConversation
+        }
+      />
+    );
+
+    expect(screen.getByTestId('fork-capability-probe')).toHaveTextContent('{"at_turn":false}');
   });
 });

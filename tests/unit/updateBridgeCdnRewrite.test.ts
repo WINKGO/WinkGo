@@ -73,7 +73,7 @@ const makeWinkGoManifest = (version = '1.9.22') => ({
   productName: 'WINK GO',
   notes: 'release notes',
   generatedAt: '2026-04-29T00:00:00Z',
-  officialSite: 'https://github.com/WINKGO/wink-go/releases',
+  officialSite: 'https://winkgo.top/',
 });
 
 const getCheckHandler = async () => {
@@ -135,7 +135,7 @@ describe('updateBridge official WINK GO manifest', () => {
         version: '1.9.22',
         name: 'WINK GO',
         body: 'release notes',
-        htmlUrl: 'https://github.com/WINKGO/wink-go/releases',
+        htmlUrl: 'https://winkgo.top/',
         assets: [],
       });
       expect(fetchMock).toHaveBeenCalledWith(

@@ -171,12 +171,23 @@ describe('permission message adapters', () => {
     expect(await screen.findByTestId('message-acp-permission-status')).toBeInTheDocument();
   });
 
-  it('uses the ACP title as operation detail when no raw command is available', () => {
+  it('shows the title once and no detail block when no raw command is available', () => {
     const message = makeAcpMessage();
     message.content.tool_call.raw_input = undefined;
     render(<MessageAcpPermission message={message} />);
 
-    expect(screen.getAllByText('Edit package.json')).toHaveLength(2);
+    expect(screen.getAllByText('Edit package.json')).toHaveLength(1);
+  });
+
+  it('renders raw_input as readable JSON when it carries no command', () => {
+    const message = makeAcpMessage();
+    message.content.tool_call.raw_input = {
+      questions: [{ question: 'Which style?', options: [{ label: 'Tabs' }] }],
+    } as never;
+    render(<MessageAcpPermission message={message} />);
+
+    expect(screen.getAllByText('Edit package.json')).toHaveLength(1);
+    expect(screen.getByText(/Which style\?/)).toBeInTheDocument();
   });
 
   it('uses the localized ACP fallback title when title and description are absent', () => {

@@ -5,6 +5,7 @@
  */
 
 export * from './core';
+export * from './AgentTaskBridge';
 export * from './RuntimeMcpClient';
 export * from './SpeechProxy';
 export * from './WinkGoRemoteGatewayService';

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; base-uri 'none'; script-src 'self'; style-src 'self'; object-src 'none'; img-src 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WINK GO Control Border</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="control-border" data-phase="idle" hidden aria-hidden="true">
+      <div class="control-status" role="status" aria-live="polite" aria-atomic="true">
+        <span class="control-status__mark" aria-hidden="true"></span>
+        <span class="control-status__copy">
+          <span class="control-status__label" data-role="automation-status-label"></span>
+          <span class="control-status__action" data-role="automation-action-label"></span>
+          <span class="control-status__stop-hint">Esc 停止</span>
+        </span>
+        <span class="control-status__waves" aria-hidden="true"><i></i><i></i><i></i></span>
+      </div>
+      <span class="control-pointer" data-role="automation-pointer" hidden aria-hidden="true">
+        <span class="control-pointer__halo" aria-hidden="true"></span>
+        <span class="control-pointer__ripple" aria-hidden="true"></span>
+      </span>
+    </div>
+    <script type="module" src="./index.ts"></script>
+  </body>
+</html>

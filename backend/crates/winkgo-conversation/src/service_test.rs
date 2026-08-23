@@ -16,7 +16,7 @@ use winkgo_ai_agent::types::{
 };
 use winkgo_ai_agent::{
     AcpError, AgentAvailabilityFeedbackPort, AgentError, AgentSendError, AgentSessionKind, IWorkerTaskManager,
-    RuntimeTokenService,
+    MidturnDeliveryError, RuntimeTokenService,
 };
 
 use serde_json::json;
@@ -27,8 +27,8 @@ use winkgo_api_types::{
     SetConfigOptionRequest, SetConfigOptionResponse,
 };
 use winkgo_api_types::{
-    CloneConversationRequest, CreateConversationRequest, ListConversationsQuery, SearchMessagesQuery,
-    SendMessageRequest, UpdateConversationRequest, WebSocketMessage,
+    CloneConversationRequest, CreateConversationRequest, ForkConversationRequest, ListConversationsQuery,
+    SearchMessagesQuery, SendMessageRequest, UpdateConversationRequest, WebSocketMessage,
 };
 use winkgo_common::{
     AgentKillReason, AgentType, Confirmation, ConversationSource, ConversationStatus, PaginatedResult,
@@ -51,7 +51,7 @@ use winkgo_db::{MessagePageCursor, MessagePageDirection, MessagePageParams, Mess
 use winkgo_extension::{AssistantRuleDispatcher, ExtensionError};
 use winkgo_realtime::EventBroadcaster;
 
-use crate::service::ConversationService;
+use crate::service::{ConversationService, MAX_BOUNDARY_QUEUED_MESSAGES};
 use crate::skill_resolver::{FixedSkillResolver, ResolvedAgentSkill, SkillResolver};
 use crate::{ConversationAgentTurnRequest, ConversationAgentTurnStatus, ConversationError};
 
@@ -210,6 +210,9 @@ struct MockRepo {
     messages: Mutex<Vec<MessageRow>>,
     artifacts: Mutex<Vec<ConversationArtifactRow>>,
     assistant_snapshots: Mutex<Vec<ConversationAssistantSnapshotRow>>,
+    insert_message_gate: Mutex<Option<Arc<tokio::sync::Semaphore>>>,
+    message_update_calls: AtomicUsize,
+    fail_message_update_at: AtomicUsize,
 }
 
 impl MockRepo {
@@ -219,7 +222,20 @@ impl MockRepo {
             messages: Mutex::new(vec![]),
             artifacts: Mutex::new(vec![]),
             assistant_snapshots: Mutex::new(vec![]),
+            insert_message_gate: Mutex::new(None),
+            message_update_calls: AtomicUsize::new(0),
+            fail_message_update_at: AtomicUsize::new(0),
         }
+    }
+
+    fn set_insert_message_gate(&self, gate: Arc<tokio::sync::Semaphore>) {
+        *self.insert_message_gate.lock().unwrap() = Some(gate);
+    }
+
+    fn fail_message_update_after(&self, successful_updates_before_failure: usize) {
+        let current = self.message_update_calls.load(Ordering::SeqCst);
+        self.fail_message_update_at
+            .store(current + successful_updates_before_failure + 1, Ordering::SeqCst);
     }
 }
 
@@ -482,12 +498,20 @@ impl IConversationRepository for MockRepo {
     }
 
     async fn insert_message(&self, message: &MessageRow) -> Result<(), winkgo_db::DbError> {
+        let gate = self.insert_message_gate.lock().unwrap().clone();
+        if let Some(gate) = gate {
+            let _permit = gate.acquire().await.unwrap();
+        }
         let mut messages = self.messages.lock().unwrap();
         messages.push(message.clone());
         Ok(())
     }
 
     async fn update_message(&self, id: &str, updates: &MessageRowUpdate) -> Result<(), winkgo_db::DbError> {
+        let call = self.message_update_calls.fetch_add(1, Ordering::SeqCst) + 1;
+        if self.fail_message_update_at.load(Ordering::SeqCst) == call {
+            return Err(winkgo_db::DbError::Init("injected message update failure".into()));
+        }
         let mut messages = self.messages.lock().unwrap();
         let message = messages
             .iter_mut()
@@ -542,6 +566,21 @@ impl IConversationRepository for MockRepo {
             })
             .cloned()
             .collect())
+    }
+
+    async fn list_pending_boundary_messages(&self) -> Result<Vec<MessageRow>, winkgo_db::DbError> {
+        let messages = self.messages.lock().unwrap();
+        let mut rows = messages
+            .iter()
+            .filter(|message| {
+                message.position.as_deref() == Some("right")
+                    && matches!(message.status.as_deref(), Some("pending" | "work"))
+                    && message.r#type == "text"
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        rows.sort_by_key(|row| (row.created_at, row.id.clone()));
+        Ok(rows)
     }
 
     async fn search_messages(
@@ -1539,6 +1578,7 @@ fn create_team_temp_workspace_uses_date_partition() {
 }
 
 #[tokio::test]
+#[cfg(not(windows))]
 async fn create_rejects_unavailable_workspace_with_trailing_whitespace_in_request() {
     let (svc, _broadcaster, _repo, _task_mgr) = make_service();
     let dir = std::env::temp_dir().join(format!("winkgo-test-{}", winkgo_common::generate_short_id()));
@@ -3303,6 +3343,10 @@ struct ScriptedAgent {
     scripts: Mutex<VecDeque<Vec<AgentStreamEvent>>>,
     sent_contents: Mutex<Vec<String>>,
     send_error: Option<AgentSendError>,
+    supports_midturn: bool,
+    midturn_contents: Mutex<Vec<String>>,
+    midturn_error: Option<MidturnDeliveryError>,
+    confirmations: Vec<Confirmation>,
 }
 
 impl ScriptedAgent {
@@ -3316,6 +3360,10 @@ impl ScriptedAgent {
             scripts: Mutex::new(VecDeque::from(scripts)),
             sent_contents: Mutex::new(vec![]),
             send_error: None,
+            supports_midturn: false,
+            midturn_contents: Mutex::new(vec![]),
+            midturn_error: None,
+            confirmations: Vec::new(),
         }
     }
 
@@ -3334,8 +3382,34 @@ impl ScriptedAgent {
         self
     }
 
+    fn with_native_midturn(mut self) -> Self {
+        self.supports_midturn = true;
+        self
+    }
+
+    fn with_midturn_error(mut self, error: AgentSendError) -> Self {
+        self.supports_midturn = true;
+        self.midturn_error = Some(MidturnDeliveryError::Rejected(error));
+        self
+    }
+
+    fn with_uncertain_midturn_error(mut self, error: AgentSendError) -> Self {
+        self.supports_midturn = true;
+        self.midturn_error = Some(MidturnDeliveryError::Uncertain(error));
+        self
+    }
+
+    fn with_confirmations(mut self, confirmations: Vec<Confirmation>) -> Self {
+        self.confirmations = confirmations;
+        self
+    }
+
     fn sent_contents(&self) -> Vec<String> {
         self.sent_contents.lock().unwrap().clone()
+    }
+
+    fn midturn_contents(&self) -> Vec<String> {
+        self.midturn_contents.lock().unwrap().clone()
     }
 }
 
@@ -3365,6 +3439,18 @@ impl IAgentTask for ScriptedAgent {
         self.event_tx.subscribe()
     }
 
+    fn supports_midturn_delivery(&self) -> bool {
+        self.supports_midturn
+    }
+
+    async fn deliver_midturn(&self, data: SendMessageData) -> Result<(), MidturnDeliveryError> {
+        self.midturn_contents.lock().unwrap().push(data.content);
+        if let Some(error) = &self.midturn_error {
+            return Err(error.clone());
+        }
+        Ok(())
+    }
+
     async fn send_message(&self, data: SendMessageData) -> Result<(), AgentSendError> {
         self.sent_contents.lock().unwrap().push(data.content);
         let script = self
@@ -3391,7 +3477,11 @@ impl IAgentTask for ScriptedAgent {
     }
 }
 
-impl IMockAgent for ScriptedAgent {}
+impl IMockAgent for ScriptedAgent {
+    fn get_confirmations(&self) -> Vec<Confirmation> {
+        self.confirmations.clone()
+    }
+}
 
 // ── send_message tests ──────────────────────────────────────────
 
@@ -3451,6 +3541,451 @@ async fn send_message_returns_accepted() {
     assert_eq!(response.msg_id.len(), 8, "msg_id should be an 8-char short hex ID");
     assert!(response.turn_id.starts_with("turn_"), "turn_id must use turn_ prefix");
     assert_ne!(response.msg_id, response.turn_id, "turn_id must not reuse msg_id");
+}
+
+#[tokio::test]
+async fn running_conversation_accepts_follow_up_into_the_boundary_queue() {
+    let (svc, broadcaster, repo, task_mgr) = make_service();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let _active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+
+    let response = svc
+        .send_message("user_1", &conv.id, make_send_req(), &task_mgr)
+        .await
+        .expect("follow-up should be queued instead of returning 409");
+
+    assert_eq!(response.turn_id, "turn-active");
+    assert!(!response.delivered_midturn);
+    assert!(response.queued_at_boundary);
+    assert_eq!(
+        response.runtime.interjection_mode,
+        winkgo_api_types::InterjectionMode::BoundaryQueue
+    );
+    let stored = repo.messages.lock().unwrap();
+    assert_eq!(stored.last().and_then(|row| row.status.as_deref()), Some("pending"));
+    let stored_content: serde_json::Value = serde_json::from_str(&stored.last().expect("queued row").content).unwrap();
+    assert_eq!(stored_content["_winkgo_delivery"]["kind"], "boundary_queue");
+    assert_eq!(stored_content["_winkgo_delivery"]["version"], 1);
+    let event = broadcaster
+        .take_events()
+        .into_iter()
+        .find(|event| event.name == "message.userCreated")
+        .expect("queued message must be visible immediately");
+    assert_eq!(event.data["status"], "pending");
+}
+
+#[tokio::test]
+async fn boundary_queue_starts_the_follow_up_after_the_active_turn_releases() {
+    let (svc, broadcaster, repo, task_mgr) = make_service();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let mut active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+    let response = svc
+        .send_message("user_1", &conv.id, make_send_req(), &task_mgr)
+        .await
+        .unwrap();
+
+    let was_deleting = active.release();
+    svc.complete_released_turn(&conv.id, "turn-active", was_deleting).await;
+
+    tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            let finished = repo
+                .messages
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|row| row.id == response.msg_id)
+                .and_then(|row| row.status.as_deref())
+                == Some("finish");
+            if finished {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("queued follow-up should start at the next turn boundary");
+
+    assert!(broadcaster.take_events().into_iter().any(|event| {
+        event.name == "message.statusChanged"
+            && event.data["msg_id"] == response.msg_id
+            && event.data["status"] == "finish"
+    }));
+}
+
+#[tokio::test]
+async fn boundary_queue_rejects_overflow_without_persisting_an_extra_message() {
+    let (svc, _broadcaster, repo, task_mgr) = make_service();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let _active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+
+    for index in 0..MAX_BOUNDARY_QUEUED_MESSAGES {
+        let req: SendMessageRequest =
+            serde_json::from_value(json!({ "content": format!("follow up {index}") })).unwrap();
+        svc.send_message("user_1", &conv.id, req, &task_mgr).await.unwrap();
+    }
+    let overflow: SendMessageRequest = serde_json::from_value(json!({ "content": "one too many" })).unwrap();
+    let error = svc
+        .send_message("user_1", &conv.id, overflow, &task_mgr)
+        .await
+        .expect_err("the bounded queue must reject overflow");
+
+    assert!(matches!(error, ConversationError::Busy { .. }));
+    assert_eq!(repo.messages.lock().unwrap().len(), MAX_BOUNDARY_QUEUED_MESSAGES);
+}
+
+#[tokio::test]
+async fn concurrent_boundary_sends_cannot_exceed_the_queue_limit() {
+    let (svc, _broadcaster, repo, task_mgr) = make_service();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let _active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+
+    for index in 0..(MAX_BOUNDARY_QUEUED_MESSAGES - 1) {
+        let req: SendMessageRequest = serde_json::from_value(json!({ "content": format!("prefill {index}") })).unwrap();
+        svc.send_message("user_1", &conv.id, req, &task_mgr).await.unwrap();
+    }
+
+    let insert_gate = Arc::new(tokio::sync::Semaphore::new(0));
+    repo.set_insert_message_gate(insert_gate.clone());
+    let send_one = {
+        let svc = svc.clone();
+        let task_mgr = task_mgr.clone();
+        let conversation_id = conv.id.clone();
+        tokio::spawn(async move {
+            let req = serde_json::from_value(json!({ "content": "concurrent one" })).unwrap();
+            svc.send_message("user_1", &conversation_id, req, &task_mgr).await
+        })
+    };
+    let send_two = {
+        let svc = svc.clone();
+        let task_mgr = task_mgr.clone();
+        let conversation_id = conv.id.clone();
+        tokio::spawn(async move {
+            let req = serde_json::from_value(json!({ "content": "concurrent two" })).unwrap();
+            svc.send_message("user_1", &conversation_id, req, &task_mgr).await
+        })
+    };
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    insert_gate.add_permits(2);
+    let results = [send_one.await.unwrap(), send_two.await.unwrap()];
+
+    assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
+    assert_eq!(
+        results
+            .iter()
+            .filter(|result| matches!(result, Err(ConversationError::Busy { .. })))
+            .count(),
+        1
+    );
+    assert_eq!(repo.messages.lock().unwrap().len(), MAX_BOUNDARY_QUEUED_MESSAGES);
+}
+
+#[tokio::test]
+async fn boundary_send_that_finishes_persisting_after_release_still_runs() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let (svc, _broadcaster, repo) = make_service_with_mock_task_manager(task_mgr.clone());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let agent = Arc::new(ScriptedAgent::new(
+        &conv.id,
+        vec![vec![AgentStreamEvent::Finish(FinishEventData::default())]],
+    ));
+    task_mgr.insert_agent(&conv.id, AgentInstance::Mock(agent.clone()));
+    let mut active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+    let insert_gate = Arc::new(tokio::sync::Semaphore::new(0));
+    repo.set_insert_message_gate(insert_gate.clone());
+
+    let pending_send = {
+        let svc = svc.clone();
+        let conversation_id = conv.id.clone();
+        let task_mgr = task_mgr_dyn.clone();
+        tokio::spawn(async move {
+            svc.send_message("user_1", &conversation_id, make_send_req(), &task_mgr)
+                .await
+        })
+    };
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    let was_deleting = active.release();
+    svc.complete_released_turn(&conv.id, "turn-active", was_deleting).await;
+    insert_gate.add_permits(1);
+
+    let response = pending_send.await.unwrap().expect("follow-up should remain accepted");
+    assert!(response.queued_at_boundary);
+    tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            if agent.sent_contents() == vec!["Hello"] {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("the post-release enqueue must wake itself without waiting for restart");
+}
+
+#[tokio::test]
+async fn boundary_delivery_retries_a_transient_work_status_failure() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let (svc, _broadcaster, repo) = make_service_with_mock_task_manager(task_mgr.clone());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let agent = Arc::new(ScriptedAgent::new(&conv.id, vec![]));
+    task_mgr.insert_agent(&conv.id, AgentInstance::Mock(agent.clone()));
+    let mut active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+    svc.send_message("user_1", &conv.id, make_send_req(), &task_mgr_dyn)
+        .await
+        .unwrap();
+    repo.fail_message_update_after(0);
+
+    let was_deleting = active.release();
+    svc.complete_released_turn(&conv.id, "turn-active", was_deleting).await;
+
+    tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            if agent.sent_contents() == vec!["Hello"] {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("a one-off persistence failure should retry without requiring restart");
+}
+
+#[tokio::test]
+async fn running_conversation_delivers_follow_up_natively_when_supported() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let (svc, broadcaster, repo) = make_service_with_mock_task_manager(task_mgr.clone());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let _active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+    let agent = Arc::new(ScriptedAgent::new(&conv.id, vec![]).with_native_midturn());
+    task_mgr.insert_agent(&conv.id, AgentInstance::Mock(agent.clone()));
+
+    let response = svc
+        .send_message("user_1", &conv.id, make_send_req(), &task_mgr_dyn)
+        .await
+        .expect("native follow-up should be accepted by the active agent");
+
+    assert_eq!(response.turn_id, "turn-active");
+    assert!(response.delivered_midturn);
+    assert!(!response.queued_at_boundary);
+    assert_eq!(agent.midturn_contents(), vec!["Hello"]);
+    let stored = repo.messages.lock().unwrap();
+    assert_eq!(
+        stored
+            .iter()
+            .find(|row| row.id == response.msg_id)
+            .and_then(|row| row.status.as_deref()),
+        Some("finish")
+    );
+    assert!(broadcaster.take_events().into_iter().any(|event| {
+        event.name == "message.statusChanged"
+            && event.data["msg_id"] == response.msg_id
+            && event.data["status"] == "finish"
+    }));
+}
+
+#[tokio::test]
+async fn pending_confirmation_temporarily_reports_boundary_queue_mode() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let (svc, _broadcaster, _repo) = make_service_with_mock_task_manager(task_mgr.clone());
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let agent = ScriptedAgent::new(&conv.id, vec![])
+        .with_native_midturn()
+        .with_confirmations(make_test_confirmations());
+    task_mgr.insert_agent(&conv.id, AgentInstance::Mock(Arc::new(agent)));
+
+    let runtime = svc.runtime_summary_for(&conv.id).await;
+    assert_eq!(runtime.pending_confirmations, 2);
+    assert_eq!(
+        runtime.interjection_mode,
+        winkgo_api_types::InterjectionMode::BoundaryQueue
+    );
+}
+
+#[tokio::test]
+async fn native_midturn_failure_falls_back_to_the_boundary_queue() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let (svc, _broadcaster, repo) = make_service_with_mock_task_manager(task_mgr.clone());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let mut active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+    let agent = Arc::new(
+        ScriptedAgent::new(
+            &conv.id,
+            vec![vec![AgentStreamEvent::Finish(FinishEventData::default())]],
+        )
+        .with_midturn_error(AgentSendError::from_agent_error(AgentError::bad_gateway(
+            "native interjection temporarily unavailable",
+        ))),
+    );
+    task_mgr.insert_agent(&conv.id, AgentInstance::Mock(agent.clone()));
+
+    let response = svc
+        .send_message("user_1", &conv.id, make_send_req(), &task_mgr_dyn)
+        .await
+        .expect("native failure should degrade to the boundary queue");
+
+    assert!(!response.delivered_midturn);
+    assert!(response.queued_at_boundary);
+    assert_eq!(agent.midturn_contents(), vec!["Hello"]);
+    assert_eq!(
+        repo.messages
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|row| row.id == response.msg_id)
+            .and_then(|row| row.status.as_deref()),
+        Some("pending")
+    );
+
+    let was_deleting = active.release();
+    svc.complete_released_turn(&conv.id, "turn-active", was_deleting).await;
+    tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            if agent.sent_contents() == vec!["Hello"] {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("fallback message should run at the next turn boundary");
+}
+
+#[tokio::test]
+async fn uncertain_native_midturn_result_is_not_replayed_automatically() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let (svc, _broadcaster, repo) = make_service_with_mock_task_manager(task_mgr.clone());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let mut active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+    let agent = Arc::new(ScriptedAgent::new(&conv.id, vec![]).with_uncertain_midturn_error(
+        AgentSendError::from_agent_error(AgentError::timeout("turn/steer acknowledgement timed out")),
+    ));
+    task_mgr.insert_agent(&conv.id, AgentInstance::Mock(agent.clone()));
+
+    let error = svc
+        .send_message("user_1", &conv.id, make_send_req(), &task_mgr_dyn)
+        .await
+        .expect_err("an uncertain delivery must be surfaced instead of replayed");
+    assert!(matches!(error, ConversationError::Timeout { .. }));
+    assert_eq!(
+        repo.messages
+            .lock()
+            .unwrap()
+            .last()
+            .and_then(|row| row.status.as_deref()),
+        Some("error")
+    );
+
+    let was_deleting = active.release();
+    svc.complete_released_turn(&conv.id, "turn-active", was_deleting).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert!(
+        agent.sent_contents().is_empty(),
+        "uncertain delivery must never be auto-replayed"
+    );
+}
+
+#[tokio::test]
+async fn native_midturn_does_not_dispatch_when_delivering_status_cannot_be_persisted() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let (svc, _broadcaster, repo) = make_service_with_mock_task_manager(task_mgr.clone());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let _active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+    let agent = Arc::new(ScriptedAgent::new(&conv.id, vec![]).with_native_midturn());
+    task_mgr.insert_agent(&conv.id, AgentInstance::Mock(agent.clone()));
+    repo.fail_message_update_after(0);
+
+    svc.send_message("user_1", &conv.id, make_send_req(), &task_mgr_dyn)
+        .await
+        .expect_err("delivery must not start when the work state cannot be persisted");
+
+    assert!(agent.midturn_contents().is_empty());
+    assert_eq!(
+        repo.messages
+            .lock()
+            .unwrap()
+            .last()
+            .and_then(|row| row.status.as_deref()),
+        Some("pending")
+    );
+}
+
+#[tokio::test]
+async fn native_ack_with_finish_persistence_failure_is_never_replayed_on_restart() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let (svc, _broadcaster, repo) = make_service_with_mock_task_manager(task_mgr.clone());
+    let task_mgr_dyn: Arc<dyn IWorkerTaskManager> = task_mgr.clone();
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let _active = svc
+        .runtime_state()
+        .try_claim_turn(&conv.id, "turn-active")
+        .expect("fixture active turn");
+    let agent = Arc::new(ScriptedAgent::new(&conv.id, vec![]).with_native_midturn());
+    task_mgr.insert_agent(&conv.id, AgentInstance::Mock(agent.clone()));
+    repo.fail_message_update_after(1);
+
+    svc.send_message("user_1", &conv.id, make_send_req(), &task_mgr_dyn)
+        .await
+        .expect_err("a failed final status write must be reported");
+    assert_eq!(agent.midturn_contents(), vec!["Hello"]);
+    assert_eq!(
+        repo.messages
+            .lock()
+            .unwrap()
+            .last()
+            .and_then(|row| row.status.as_deref()),
+        Some("work")
+    );
+
+    svc.recover_stale_runtime_state_on_startup().await;
+    assert_eq!(
+        repo.messages
+            .lock()
+            .unwrap()
+            .last()
+            .and_then(|row| row.status.as_deref()),
+        Some("error")
+    );
+    assert_eq!(
+        agent.midturn_contents(),
+        vec!["Hello"],
+        "restart recovery must not replay an acknowledged action"
+    );
 }
 
 #[tokio::test]
@@ -4839,7 +5374,7 @@ async fn send_message_allows_stale_db_running_without_runtime_claim() {
 }
 
 #[tokio::test]
-async fn send_message_rejects_active_runtime_claim() {
+async fn send_message_queues_during_active_runtime_claim() {
     let (svc, _broadcaster, _repo, _task_mgr) = make_service();
     let task_mgr: Arc<dyn IWorkerTaskManager> = Arc::new(MockTaskManager::new());
 
@@ -4849,11 +5384,13 @@ async fn send_message_rejects_active_runtime_claim() {
         .try_claim_turn(&conv.id, "turn-test")
         .expect("test claim should be created");
 
-    let err = svc
+    let response = svc
         .send_message("user_1", &conv.id, make_send_req(), &task_mgr)
         .await
-        .unwrap_err();
-    assert!(matches!(err, ConversationError::Busy { .. }));
+        .expect("active turns accept a bounded follow-up");
+    assert_eq!(response.turn_id, "turn-test");
+    assert!(response.queued_at_boundary);
+    assert!(!response.delivered_midturn);
 }
 
 #[tokio::test]
@@ -5030,6 +5567,195 @@ async fn startup_recovery_closes_stale_runtime_messages_without_failure_tip() {
     assert!(
         messages.iter().all(|message| message.r#type != "tips"),
         "startup recovery must not write failure tips"
+    );
+}
+
+#[tokio::test]
+async fn startup_recovery_requeues_only_marked_boundary_messages() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let (svc, _broadcaster, repo) = make_service_with_mock_task_manager(task_mgr.clone());
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    let agent = Arc::new(ScriptedAgent::new(
+        &conv.id,
+        vec![vec![AgentStreamEvent::Finish(FinishEventData::default())]],
+    ));
+    task_mgr.insert_agent(&conv.id, AgentInstance::Mock(agent.clone()));
+
+    repo.insert_message(&MessageRow {
+        id: "recover-boundary".into(),
+        conversation_id: conv.id.clone(),
+        msg_id: Some("recover-boundary".into()),
+        r#type: "text".into(),
+        content: json!({
+            "content": "resume me",
+            "_winkgo_delivery": {
+                "version": 1,
+                "kind": "boundary_queue",
+                "user_id": "user_1",
+                "files": [],
+                "inject_skills": []
+            }
+        })
+        .to_string(),
+        position: Some("right".into()),
+        status: Some("pending".into()),
+        hidden: false,
+        created_at: 10,
+    })
+    .await
+    .unwrap();
+    repo.insert_message(&MessageRow {
+        id: "ordinary-pending".into(),
+        conversation_id: conv.id.clone(),
+        msg_id: Some("ordinary-pending".into()),
+        r#type: "text".into(),
+        content: json!({ "content": "do not execute" }).to_string(),
+        position: Some("right".into()),
+        status: Some("pending".into()),
+        hidden: false,
+        created_at: 11,
+    })
+    .await
+    .unwrap();
+
+    svc.recover_stale_runtime_state_on_startup().await;
+
+    tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            if agent.sent_contents() == vec!["resume me"] {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("persisted boundary message should execute after restart recovery");
+    wait_for_turn_released(&svc, &conv.id).await;
+
+    let messages = repo.messages.lock().unwrap();
+    assert_eq!(
+        messages
+            .iter()
+            .find(|row| row.id == "recover-boundary")
+            .and_then(|row| row.status.as_deref()),
+        Some("finish")
+    );
+    assert_eq!(
+        messages
+            .iter()
+            .find(|row| row.id == "ordinary-pending")
+            .and_then(|row| row.status.as_deref()),
+        Some("pending")
+    );
+}
+
+#[tokio::test]
+async fn startup_recovery_marks_boundary_overflow_error_instead_of_leaving_it_pending() {
+    let task_mgr = Arc::new(MockTaskManager::new());
+    let (svc, _broadcaster, repo) = make_service_with_mock_task_manager(task_mgr.clone());
+    let conv = svc.create("user_1", make_create_req()).await.unwrap();
+    task_mgr.insert_agent(
+        &conv.id,
+        AgentInstance::Mock(Arc::new(ScriptedAgent::new(&conv.id, vec![]))),
+    );
+
+    for index in 0..=MAX_BOUNDARY_QUEUED_MESSAGES {
+        let id = format!("recovered-{index:02}");
+        repo.insert_message(&MessageRow {
+            id: id.clone(),
+            conversation_id: conv.id.clone(),
+            msg_id: Some(id),
+            r#type: "text".into(),
+            content: json!({
+                "content": format!("recover {index}"),
+                "_winkgo_delivery": {
+                    "version": 1,
+                    "kind": "boundary_queue",
+                    "user_id": "user_1",
+                    "files": [],
+                    "inject_skills": []
+                }
+            })
+            .to_string(),
+            position: Some("right".into()),
+            status: Some("pending".into()),
+            hidden: false,
+            created_at: index as i64,
+        })
+        .await
+        .unwrap();
+    }
+
+    svc.recover_stale_runtime_state_on_startup().await;
+
+    assert_eq!(
+        repo.messages
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|row| row.id == "recovered-20")
+            .and_then(|row| row.status.as_deref()),
+        Some("error"),
+        "the first item beyond the recovery capacity must be terminal, not stuck pending"
+    );
+}
+
+#[tokio::test]
+async fn fork_converts_boundary_queue_rows_into_inert_history() {
+    let (svc, _broadcaster, repo, _task_mgr) = make_service();
+    let parent = svc.create("user_1", make_create_req()).await.unwrap();
+    repo.insert_message(&MessageRow {
+        id: "queued-anchor".into(),
+        conversation_id: parent.id.clone(),
+        msg_id: Some("queued-anchor".into()),
+        r#type: "text".into(),
+        content: json!({
+            "content": "historical follow-up",
+            "_winkgo_delivery": {
+                "version": 1,
+                "kind": "boundary_queue",
+                "user_id": "user_1",
+                "files": [],
+                "inject_skills": []
+            }
+        })
+        .to_string(),
+        position: Some("right".into()),
+        status: Some("pending".into()),
+        hidden: false,
+        created_at: 10,
+    })
+    .await
+    .unwrap();
+
+    let branch = svc
+        .fork(
+            "user_1",
+            &parent.id,
+            ForkConversationRequest {
+                message_id: "queued-anchor".into(),
+            },
+        )
+        .await
+        .unwrap();
+    let copied = repo
+        .list_messages_page(
+            &branch.id,
+            &MessagePageParams {
+                limit: 20,
+                direction: MessagePageDirection::InitialLatest,
+            },
+        )
+        .await
+        .unwrap()
+        .items
+        .pop()
+        .expect("forked history row");
+
+    assert_eq!(copied.status.as_deref(), Some("finish"));
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(&copied.content).unwrap(),
+        json!({ "content": "historical follow-up" })
     );
 }
 
@@ -5671,9 +6397,20 @@ async fn cancel_keeps_turn_claim_until_agent_terminal_event() {
     let second = svc
         .send_message("user_1", &conv.id, make_send_req(), &task_mgr_dyn)
         .await
-        .unwrap_err();
-    assert!(matches!(second, ConversationError::Busy { .. }));
+        .expect("a follow-up submitted during cancellation should wait at the next boundary");
+    assert!(second.queued_at_boundary);
 
+    agent.release_finish();
+    tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            if svc.runtime_state().active_turn_id_for(&conv.id).as_deref() != Some(send.turn_id.as_str()) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("queued follow-up should claim the next turn");
     agent.release_finish();
     wait_for_turn_released(&svc, &conv.id).await;
 }
@@ -6001,6 +6738,7 @@ fn make_test_confirmations() -> Vec<Confirmation> {
             action: Some("edit_file".into()),
             description: "Edit main.rs".into(),
             command_type: Some("bash".into()),
+            questions: None,
             options: vec![],
         },
         Confirmation {
@@ -6010,6 +6748,7 @@ fn make_test_confirmations() -> Vec<Confirmation> {
             action: Some("read_file".into()),
             description: "Read config.toml".into(),
             command_type: None,
+            questions: None,
             options: vec![],
         },
     ]

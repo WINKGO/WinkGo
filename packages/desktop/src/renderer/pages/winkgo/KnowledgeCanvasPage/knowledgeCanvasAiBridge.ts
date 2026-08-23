@@ -423,7 +423,7 @@ export async function runKnowledgeCanvasAnalysis(
   const assistants = await ipcBridge.assistants.list.invoke();
   const assistant = selectKnowledgeCanvasAssistant(assistants);
   if (!assistant) {
-    throw new Error('没有可用的 WINK GO CLI 或 Codex CLI。请先在“助手”页面安装并启用一个 Agent。');
+    throw new Error('没有可用的 WINK GO CLI Agent。请先在“助手”页面安装并启用一个 Agent。');
   }
 
   options.onProgress?.({

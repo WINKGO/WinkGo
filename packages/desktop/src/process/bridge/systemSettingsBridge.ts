@@ -17,9 +17,14 @@
 import { ipcBridge } from '@/common';
 import { ProcessConfig } from '@process/utils/initStorage';
 import { changeLanguage } from '@process/services/i18n';
-import type { PetSize } from '@process/pet/petTypes';
+import { resolvePetSize } from '@process/pet/petTypes';
 import { createOrUpdateTray, destroyTray, setCloseToTrayEnabled } from '@process/utils/tray';
 import { readCloseToTraySetting, writeCloseToTraySetting } from '@process/utils/closeToTraySetting';
+import {
+  getWinkGoBrowserLoginPermission,
+  hydrateWinkGoBrowserLoginPermission,
+  setWinkGoBrowserLoginPermission,
+} from '@process/services/winkGoBrowserLoginPermissionService';
 
 type LanguageChangeListener = () => void;
 let _languageChangeListener: LanguageChangeListener | null = null;
@@ -33,6 +38,10 @@ export function onLanguageChanged(listener: LanguageChangeListener): void {
 }
 
 export function initSystemSettingsBridge(): void {
+  void hydrateWinkGoBrowserLoginPermission().catch((error) => {
+    console.warn('[SystemSettings] Failed to hydrate browser login permission:', error);
+  });
+
   ipcBridge.systemSettings.getCloseToTray.provider(async () => readCloseToTraySetting());
 
   ipcBridge.systemSettings.setCloseToTray.provider(async ({ enabled }) => {
@@ -77,7 +86,8 @@ export function initSystemSettingsBridge(): void {
     }
     await ProcessConfig.set('pet.enabled', enabled);
     if (enabled) {
-      createPetWindow();
+      const size = resolvePetSize(await ProcessConfig.get('pet.size'));
+      createPetWindow(size);
     } else {
       destroyPetWindow();
     }
@@ -85,13 +95,14 @@ export function initSystemSettingsBridge(): void {
 
   ipcBridge.systemSettings.getPetSize.provider(async () => {
     const value = await ProcessConfig.get('pet.size');
-    return value ?? 280;
+    return resolvePetSize(value);
   });
 
   ipcBridge.systemSettings.setPetSize.provider(async ({ size }) => {
-    await ProcessConfig.set('pet.size', size);
+    const resolvedSize = resolvePetSize(size);
+    await ProcessConfig.set('pet.size', resolvedSize);
     const { resizePetWindow } = await import('@process/pet/petManager');
-    resizePetWindow(size as PetSize);
+    resizePetWindow(resolvedSize);
   });
 
   ipcBridge.systemSettings.getPetDnd.provider(async () => {
@@ -117,4 +128,7 @@ export function initSystemSettingsBridge(): void {
     const { setPetConfirmEnabled } = await import('@process/pet/petManager');
     setPetConfirmEnabled(enabled);
   });
+
+  ipcBridge.systemSettings.getBrowserLoginPermission.provider(() => getWinkGoBrowserLoginPermission());
+  ipcBridge.systemSettings.setBrowserLoginPermission.provider((input) => setWinkGoBrowserLoginPermission(input));
 }

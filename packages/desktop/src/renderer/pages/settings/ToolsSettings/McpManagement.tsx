@@ -1,5 +1,6 @@
-import { Button, Collapse, Dropdown, Menu, Modal } from '@arco-design/web-react';
-import { Down, Plus } from '@icon-park/react';
+// Modified from AionUI by WINK GO contributors in 2026.
+import { Button, Collapse, Modal } from '@arco-design/web-react';
+import { Plus } from '@icon-park/react';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { BUILTIN_IMAGE_GEN_ID, BUILTIN_IMAGE_GEN_NAME, type IMcpServer } from '@/common/config/storage';
@@ -107,8 +108,6 @@ const McpManagement: React.FC<McpManagementProps> = ({ message }) => {
     [handleBatchImportMcpServers, handleTestMcpConnections]
   );
 
-  const [importMode, setImportMode] = React.useState<'json' | 'oneclick'>('json');
-
   React.useEffect(() => {
     mcpServers.filter(isOAuthCapableServer).forEach((server) => {
       void checkOAuthStatus(server);
@@ -131,37 +130,17 @@ const McpManagement: React.FC<McpManagementProps> = ({ message }) => {
         header={
           <div className='flex items-center justify-between'>
             {t('settings.mcpSettings')}
-            <Dropdown
-              trigger='click'
-              droplist={
-                <Menu>
-                  <Menu.Item
-                    key='json'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setImportMode('json');
-                      showAddMcpModal();
-                    }}
-                  >
-                    {t('settings.mcpImportFromJSON')}
-                  </Menu.Item>
-                  <Menu.Item
-                    key='oneclick'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setImportMode('oneclick');
-                      showAddMcpModal();
-                    }}
-                  >
-                    {t('settings.mcpOneKeyImport')}
-                  </Menu.Item>
-                </Menu>
-              }
+            <Button
+              type='outline'
+              icon={<Plus size='14' />}
+              shape='round'
+              onClick={(event) => {
+                event.stopPropagation();
+                showAddMcpModal();
+              }}
             >
-              <Button type='outline' icon={<Plus size='14' />} shape='round' onClick={(e) => e.stopPropagation()}>
-                {t('settings.mcpAddServer')} <Down size='12' />
-              </Button>
-            </Dropdown>
+              {t('settings.mcpAddServer')}
+            </Button>
           </div>
         }
         name='mcp-servers'
@@ -205,7 +184,6 @@ const McpManagement: React.FC<McpManagementProps> = ({ message }) => {
       <AddMcpServerModal
         visible={showMcpModal}
         server={editingMcpServer}
-        existingServerNames={mcpServers.map((server) => server.name)}
         onCancel={hideMcpModal}
         onSubmit={
           editingMcpServer
@@ -213,7 +191,6 @@ const McpManagement: React.FC<McpManagementProps> = ({ message }) => {
             : wrappedHandleAddMcpServer
         }
         onBatchImport={wrappedHandleBatchImportMcpServers}
-        importMode={importMode}
       />
 
       <Modal

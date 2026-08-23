@@ -11,6 +11,8 @@
  * 统一处理自定义 CSS 的 !important 添加和格式化
  */
 
+import { parse } from 'postcss';
+
 /**
  * 自动为所有 CSS 属性添加 !important
  * @param css - 原始 CSS 字符串
@@ -21,15 +23,18 @@ export const addImportantToAll = (css: string): string => {
     return '';
   }
 
-  return css.replace(/([a-zA-Z-]+)\s*:\s*([^;!}]+);/g, (match, property, value) => {
-    const trimmedValue = value.trim();
-    // 如果已经包含 !important，不再添加
-    if (trimmedValue.endsWith('!important')) {
-      return match;
-    }
-    // 添加 !important
-    return `${property}: ${trimmedValue} !important;`;
-  });
+  try {
+    const root = parse(css);
+    root.walkDecls((declaration) => {
+      if (!declaration.important) {
+        declaration.important = true;
+      }
+    });
+    return root.toString();
+  } catch {
+    // Keep invalid user CSS unchanged so a malformed theme cannot interrupt startup.
+    return css;
+  }
 };
 
 /**

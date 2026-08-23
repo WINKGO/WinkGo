@@ -84,18 +84,26 @@ impl AcpPermissionRequestData {
                 .as_ref()
                 .and_then(|raw| raw.get("description").and_then(Value::as_str))
                 .map(ToOwned::to_owned)
-                .unwrap_or_else(|| {
-                    self.tool_call
-                        .raw_input
-                        .as_ref()
-                        .map(Value::to_string)
-                        .unwrap_or_default()
-                }),
+                .unwrap_or_default(),
             command_type: self.tool_call.kind.map(|kind| match kind {
                 AcpToolCallKind::Read => "read".to_owned(),
                 AcpToolCallKind::Edit => "edit".to_owned(),
                 AcpToolCallKind::Execute => "execute".to_owned(),
             }),
+            questions: self
+                .tool_call
+                .raw_input
+                .as_ref()
+                .and_then(|raw| raw.get("questions"))
+                .filter(|questions| {
+                    questions.as_array().is_some_and(|items| {
+                        !items.is_empty()
+                            && items
+                                .iter()
+                                .all(|item| item.get("question").is_some() && item.get("options").is_some())
+                    })
+                })
+                .cloned(),
             options: self
                 .options
                 .iter()

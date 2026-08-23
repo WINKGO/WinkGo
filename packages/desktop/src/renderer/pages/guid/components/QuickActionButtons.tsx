@@ -7,13 +7,11 @@
  */
 
 import { webui } from '@/common/adapter/ipcBridge';
-import { Button } from '@arco-design/web-react';
-import { DownloadComputer, Earth } from '@icon-park/react';
+import { Earth } from '@icon-park/react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import styles from '../index.module.css';
-import InstallerCenter from './InstallerCenter';
 
 type QuickActionButtonsProps = {
   onOpenLink: (url: string) => void;
@@ -32,8 +30,7 @@ let webuiStatusCache: {
 const QuickActionButtons: React.FC<QuickActionButtonsProps> = ({ onOpenLink, inactiveBorderColor, activeShadow }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [hoveredQuickAction, setHoveredQuickAction] = useState<'installer' | 'website' | 'webui' | null>(null);
-  const [installerCenterVisible, setInstallerCenterVisible] = useState(false);
+  const [hoveredQuickAction, setHoveredQuickAction] = useState<'website' | 'webui' | null>(null);
   const [webuiQuickStatus, setWebuiQuickStatus] = useState<WebuiQuickStatus>('checking');
 
   useEffect(() => {
@@ -114,26 +111,6 @@ const QuickActionButtons: React.FC<QuickActionButtonsProps> = ({ onOpenLink, ina
         className={`absolute left-50% -translate-x-1/2 flex flex-col justify-center items-center ${styles.guidQuickActions}`}
       >
         <div className='flex justify-center items-center gap-24px'>
-          <Button
-            type='text'
-            className='group inline-flex items-center justify-center !h-36px !min-w-36px !max-w-36px !px-0 !rd-999px !bg-fill-0 cursor-pointer overflow-hidden whitespace-nowrap hover:!max-w-170px hover:!px-14px hover:justify-start hover:gap-8px transition-[max-width,padding,border-radius,box-shadow] duration-420 ease-in-out'
-            style={quickActionStyle(hoveredQuickAction === 'installer')}
-            onMouseEnter={() => setHoveredQuickAction('installer')}
-            onMouseLeave={() => setHoveredQuickAction(null)}
-            onClick={() => setInstallerCenterVisible(true)}
-            aria-label={t('guid.installerCenter.entry')}
-            title={t('guid.installerCenter.entry')}
-          >
-            <DownloadComputer
-              theme='outline'
-              size='20'
-              fill='currentColor'
-              className='flex-shrink-0 text-[var(--color-text-3)] group-hover:text-[var(--color-primary)] transition-colors duration-300'
-            />
-            <span className='opacity-0 max-w-0 overflow-hidden text-14px text-[var(--color-text-2)] group-hover:opacity-100 group-hover:max-w-128px transition-all duration-360 ease-in-out'>
-              {t('guid.installerCenter.entry')}
-            </span>
-          </Button>
           <div
             className='group inline-flex items-center justify-center h-36px min-w-36px max-w-36px px-0 rd-999px bg-fill-0 cursor-pointer overflow-hidden whitespace-nowrap hover:max-w-150px hover:px-14px hover:justify-start hover:gap-8px transition-[max-width,padding,border-radius,box-shadow] duration-420 ease-in-out'
             style={quickActionStyle(hoveredQuickAction === 'website')}
@@ -187,7 +164,6 @@ const QuickActionButtons: React.FC<QuickActionButtonsProps> = ({ onOpenLink, ina
           </div>
         </div>
       </div>
-      <InstallerCenter visible={installerCenterVisible} onCancel={() => setInstallerCenterVisible(false)} />
     </>
   );
 };

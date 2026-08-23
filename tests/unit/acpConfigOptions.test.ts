@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import type { AcpConfigOptionDto, SetConfigOptionResponse } from '@/common/types/platform/acpTypes';
 import { deriveSelectOption, hasObservedValue } from '@/renderer/hooks/agent/useAcpConfigOptions';
 import { describe, expect, it } from 'vitest';
@@ -23,17 +24,30 @@ const options: AcpConfigOptionDto[] = [
       { value: 'high', name: 'High' },
     ],
   },
+  {
+    id: 'response_speed',
+    category: 'speed',
+    option_type: 'select',
+    current_value: 'fast',
+    options: [
+      { value: 'balanced', name: 'Balanced' },
+      { value: 'fast', name: 'Fast' },
+    ],
+  },
 ];
 
 describe('ACP config option derivation', () => {
-  it('keeps model and thought_level independent', () => {
+  it('keeps model, thought level, and response speed independent', () => {
     const model = deriveSelectOption(options, 'model', ['model']);
     const thought = deriveSelectOption(options, 'thought_level', ['reasoning_effort']);
+    const speed = deriveSelectOption(options, 'speed', ['response_speed', 'service_tier']);
 
     expect(model?.currentValue).toBe('gpt-5.5');
     expect(model?.options.map((item) => item.value)).toEqual(['gpt-5.5', 'gpt-5.4']);
     expect(thought?.currentValue).toBe('high');
     expect(thought?.options.map((item) => item.value)).toEqual(['low', 'high']);
+    expect(speed?.currentValue).toBe('fast');
+    expect(speed?.options.map((item) => item.value)).toEqual(['balanced', 'fast']);
   });
 
   it('derives select options from backend DTOs using type', () => {

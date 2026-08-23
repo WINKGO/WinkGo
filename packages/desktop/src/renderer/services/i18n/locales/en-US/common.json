@@ -307,6 +307,18 @@
       "loadFailed": "Failed to load WeChat favorites.",
       "saveSuccess": "WeChat favorites were saved on this computer.",
       "saveFailed": "Failed to save WeChat favorites."
+    },
+    "smartHome": {
+      "saveSuccess": "Smart-home settings saved locally.",
+      "title": "Smart-home connection",
+      "tokenSaved": "Token saved",
+      "tokenMissing": "Token not set",
+      "token": "Long-lived access token",
+      "tokenKeep": "Saved in Windows Credential Manager; leave blank to keep it",
+      "tokenPlaceholder": "Paste a Home Assistant long-lived token",
+      "devices": "Local device registry (JSON array)",
+      "scenes": "Local scenes (JSON array)",
+      "privacy": "Configuration stays on this computer. The access token is stored by Windows Credential Manager."
     }
   },
   "version": "Version",
@@ -315,6 +327,8 @@
   "loading": "Please wait...",
   "copy": "Copy",
   "reply": "Reply",
+  "openInBuiltinBrowser": "Open in built-in browser",
+  "openInSystemBrowser": "Open in system browser",
   "copySuccess": "Copied",
   "copyFailed": "Copy failed",
   "download": "Download",
@@ -391,6 +405,11 @@
       "diagnosticsReportSuccess": "Diagnostics report sent",
       "diagnosticsReportFailed": "Failed to send diagnostics report"
     },
+    "databaseNewerThanApp": {
+      "title": "A newer version of WINK GO is required",
+      "description": "Your local data was created by a newer version of WINK GO, and this version cannot open it. Update WINK GO to the latest version to continue. Your data is intact; no reinstall or data reset is needed.",
+      "descriptionWithVersion": "Your local data was created by a version of WINK GO newer than the one installed now (v{{currentVersion}}), so this version cannot open it. Update WINK GO to the latest version to continue. Your data is intact; no reinstall or data reset is needed."
+    },
     "localDataRepair": {
       "title": "Local data repair failed",
       "description": "WINK GO opened, but WINK GO Core stopped while preparing local startup data such as assistant or agent records. Reinstalling WINK GO may not fix this. Send a diagnostics report or contact support so the local database can be inspected.",
@@ -418,6 +437,34 @@
       "diagnosticsReportFailed": "Failed to send diagnostics report",
       "rebuildFailed": "Failed to back up old DB and rebuild new DB"
     },
+    "pendingSlow": {
+      "title": "Starting up",
+      "description": "WINK GO Core is starting up, please wait. If it doesn't respond after a while, you can quit and reopen the app."
+    },
+    "exited": {
+      "title": "Startup didn't complete",
+      "description": "WINK GO Core couldn't finish starting and has exited. Please restart the app; if this keeps happening, please send diagnostics.",
+      "sendDiagnostics": "Send diagnostics",
+      "diagnosticsSent": "Diagnostics sent",
+      "diagnosticsReportSuccess": "Diagnostics reported",
+      "diagnosticsReportFailed": "Failed to send diagnostics, please retry"
+    },
+    "portReportTimeout": {
+      "title": "Startup timed out",
+      "description": "WINK GO Core didn't finish starting within the expected time. Please restart the app; if this keeps happening, please send diagnostics.",
+      "sendDiagnostics": "Send diagnostics",
+      "diagnosticsSent": "Diagnostics sent",
+      "diagnosticsReportSuccess": "Diagnostics reported",
+      "diagnosticsReportFailed": "Failed to send diagnostics, please retry"
+    },
+    "startupFailed": {
+      "title": "Startup failed",
+      "description": "WINK GO Core failed to start. Please restart the app; if this keeps happening, please send diagnostics.",
+      "sendDiagnostics": "Send diagnostics",
+      "diagnosticsSent": "Diagnostics sent",
+      "diagnosticsReportSuccess": "Diagnostics reported",
+      "diagnosticsReportFailed": "Failed to send diagnostics, please retry"
+    },
     "transientConcurrentStartup": {
       "title": "WINK GO is starting up",
       "description": "Another WINK GO startup was still using the local data when this window opened. This is temporary and your data is safe — no reinstall is needed. Please wait a moment and try again, or restart WINK GO.",
@@ -428,7 +475,91 @@
       "diagnosticsHint": "If this keeps happening, you can send a diagnostics report."
     }
   },
+  "browserSkillRecorder": {
+    "title": "Browser Skill Recorder",
+    "hint": "Record repeatable web workflows as local skills",
+    "loadFailed": "Failed to load browser skills",
+    "done": "Operation completed",
+    "failed": "Operation failed. Please retry.",
+    "recording": "Recording · {{count}} steps",
+    "replaying": "Running browser skill",
+    "browserReady": "Browser connected and ready to record",
+    "browserMissing": "Open a WINK GO browser tab first",
+    "localOnly": "Recordings stay on this computer",
+    "namePlaceholder": "Skill name, e.g. Submit daily report",
+    "descriptionPlaceholder": "What this workflow does (optional)",
+    "nameRequired": "Enter a skill name first",
+    "parametersRequired": "Fill in the required runtime parameters",
+    "saveSkill": "Stop and save",
+    "startRecording": "Start recording web workflow",
+    "savedSkills": "Saved browser skills",
+    "stepCount": "{{count}} steps",
+    "runSkill": "Run skill",
+    "noSkills": "No browser skills yet",
+    "noSkillsHint": "Complete a workflow in the browser and WINK GO will save it",
+    "workflowSteps": "Workflow steps",
+    "workflowStepsHint": "Reorder or remove steps, then save",
+    "moveStepUp": "Move step up",
+    "moveStepDown": "Move step down",
+    "unknownTarget": "Unknown target",
+    "stepTypes": {
+      "navigate": "Open page",
+      "click": "Click",
+      "input": "Fill",
+      "select": "Select",
+      "submit": "Submit"
+    }
+  },
+  "desktopSkillRecorder": {
+    "title": "Desktop automation",
+    "hint": "Record a desktop workflow and save it as a reusable local Skill",
+    "loadFailed": "Desktop automation is temporarily unavailable",
+    "done": "Workflow completed",
+    "failed": "Workflow failed",
+    "ready": "Ready",
+    "recording": "Recording",
+    "paused": "Recording paused",
+    "replaying": "Running Skill",
+    "localOnly": "Recordings and parameters stay on this computer",
+    "chooseTarget": "Choose an app window to record",
+    "targetRequired": "Choose an app window first",
+    "namePlaceholder": "Name this workflow",
+    "descriptionPlaceholder": "Describe its purpose (optional)",
+    "nameRequired": "Enter a Skill name",
+    "parametersRequired": "Complete all runtime parameters",
+    "startRecording": "Start recording",
+    "saveSkill": "Stop and save",
+    "pause": "Pause",
+    "resume": "Resume",
+    "runSkill": "Run",
+    "noSkills": "No desktop automation Skills yet",
+    "parameterCount": "{{count}} parameters"
+  },
+  "computerUse": {
+    "model": "Vision model",
+    "chooseModel": "Choose a vision model",
+    "goal": "Task",
+    "ready": "Ready",
+    "running": "The model is observing and acting",
+    "steps": "Step {{count}}",
+    "stop": "Stop",
+    "failed": "Task not completed"
+  },
+  "desktopComputerUse": {
+    "title": "Desktop Computer Use",
+    "hint": "Use a vision model to operate Windows apps",
+    "goalPlaceholder": "Example: Open Notepad and write the meeting summary",
+    "start": "Control desktop"
+  },
+  "browserComputerUse": {
+    "title": "WINK GO Browser Computer Use",
+    "hint": "Use a model to operate the in-app browser",
+    "goalPlaceholder": "Example: Find the WINK GO website and open Downloads",
+    "start": "Control in-app browser"
+  },
+  "addFunction": "Add functions",
   "fileAttach.addFiles": "Add files",
+  "fileAttach.manageSkills": "Add or manage skills",
   "fileAttach.myDevice": "Upload from device",
   "fileAttach.failed": "Upload failed",
   "fileAttach.uploading": "Uploading...",

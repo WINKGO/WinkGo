@@ -307,6 +307,18 @@
       "loadFailed": "读取微信常用目标失败。",
       "saveSuccess": "微信常用目标已保存在本机。",
       "saveFailed": "保存微信常用目标失败。"
+    },
+    "smartHome": {
+      "saveSuccess": "智能家居设置已保存在本机。",
+      "title": "智能家居连接",
+      "tokenSaved": "令牌已保存",
+      "tokenMissing": "尚未设置令牌",
+      "token": "长期访问令牌",
+      "tokenKeep": "已保存在 Windows 凭据管理器中；留空即可继续使用",
+      "tokenPlaceholder": "粘贴 Home Assistant 长期访问令牌",
+      "devices": "本机设备清单（JSON 数组）",
+      "scenes": "本机场景（JSON 数组）",
+      "privacy": "配置仅保存在这台电脑。访问令牌由 Windows 凭据管理器安全保存。"
     }
   },
   "version": "版本号",
@@ -315,6 +327,8 @@
   "loading": "请稍候...",
   "copy": "复制",
   "reply": "引用",
+  "openInBuiltinBrowser": "内置浏览器打开",
+  "openInSystemBrowser": "系统浏览器打开",
   "copySuccess": "已复制",
   "copyFailed": "Copy failed",
   "download": "下载",
@@ -391,6 +405,11 @@
       "diagnosticsReportSuccess": "诊断报告已发送",
       "diagnosticsReportFailed": "诊断报告发送失败"
     },
+    "databaseNewerThanApp": {
+      "title": "需要更新 WINK GO",
+      "description": "本地数据由更高版本的 WINK GO 创建，当前版本无法打开。请将 WINK GO 更新到最新版本即可继续使用；数据完好无损，无需重装或重置数据。",
+      "descriptionWithVersion": "本地数据由比当前版本 v{{currentVersion}} 更新的 WINK GO 创建，当前版本无法打开。请将 WINK GO 更新到最新版本即可继续使用；数据完好无损，无需重装或重置数据。"
+    },
     "localDataRepair": {
       "title": "本地数据修复失败",
       "description": "WINK GO 已打开，但 WINK GO Core 在准备本地启动数据时停止，例如 assistant 或智能体记录。重新安装 WINK GO 可能无法解决此问题。请发送诊断报告或联系支持，以便检查本地数据库。",
@@ -418,6 +437,34 @@
       "diagnosticsReportFailed": "诊断报告发送失败",
       "rebuildFailed": "备份旧库并重建新库失败"
     },
+    "pendingSlow": {
+      "title": "正在启动",
+      "description": "WINK GO Core 正在启动，请稍候。若长时间无响应，可退出应用后重试。"
+    },
+    "exited": {
+      "title": "启动未完成",
+      "description": "WINK GO Core 未能完成启动并已退出。请重启应用；若反复出现，请上报诊断信息。",
+      "sendDiagnostics": "发送诊断",
+      "diagnosticsSent": "诊断已发送",
+      "diagnosticsReportSuccess": "诊断信息已上报",
+      "diagnosticsReportFailed": "诊断上报失败，请稍后重试"
+    },
+    "portReportTimeout": {
+      "title": "启动超时",
+      "description": "WINK GO Core 未在预期时间内完成启动。请重启应用；若反复出现，请发送诊断。",
+      "sendDiagnostics": "发送诊断",
+      "diagnosticsSent": "诊断已发送",
+      "diagnosticsReportSuccess": "诊断信息已上报",
+      "diagnosticsReportFailed": "诊断上报失败，请稍后重试"
+    },
+    "startupFailed": {
+      "title": "启动失败",
+      "description": "WINK GO Core 启动失败。请重启应用；若反复出现，请发送诊断。",
+      "sendDiagnostics": "发送诊断",
+      "diagnosticsSent": "诊断已发送",
+      "diagnosticsReportSuccess": "诊断信息已上报",
+      "diagnosticsReportFailed": "诊断上报失败，请稍后重试"
+    },
     "transientConcurrentStartup": {
       "title": "WINK GO 正在启动",
       "description": "此窗口打开时，另一个 WINK GO 启动进程仍在使用本地数据。这是暂时的，您的数据是安全的——无需重新安装。请稍候片刻后重试，或重启 WINK GO。",
@@ -428,7 +475,91 @@
       "diagnosticsHint": "如果该问题反复出现，您可以发送诊断报告。"
     }
   },
+  "browserSkillRecorder": {
+    "title": "网页技能录制",
+    "hint": "录制重复网页流程并保存为本地技能",
+    "loadFailed": "加载网页技能失败",
+    "done": "操作已完成",
+    "failed": "操作失败，请重试",
+    "recording": "正在录制 · {{count}} 步",
+    "replaying": "正在执行网页技能",
+    "browserReady": "浏览器已连接，可以开始录制",
+    "browserMissing": "请先打开 WINK GO 浏览器标签页",
+    "localOnly": "录制内容只保存在这台电脑",
+    "namePlaceholder": "技能名称，例如：每日提交报表",
+    "descriptionPlaceholder": "用途说明（可选）",
+    "nameRequired": "请先填写技能名称",
+    "parametersRequired": "请填写运行所需参数",
+    "saveSkill": "停止并保存",
+    "startRecording": "开始录制网页流程",
+    "savedSkills": "已保存的网页技能",
+    "stepCount": "{{count}} 步",
+    "runSkill": "运行技能",
+    "noSkills": "还没有网页技能",
+    "noSkillsHint": "打开浏览器完成一次流程，WINK GO 会把它保存下来",
+    "workflowSteps": "流程步骤",
+    "workflowStepsHint": "调整顺序或删除步骤，然后保存",
+    "moveStepUp": "上移步骤",
+    "moveStepDown": "下移步骤",
+    "unknownTarget": "未知目标",
+    "stepTypes": {
+      "navigate": "打开网页",
+      "click": "点击",
+      "input": "填写",
+      "select": "选择",
+      "submit": "提交"
+    }
+  },
+  "desktopSkillRecorder": {
+    "title": "电脑自动化",
+    "hint": "录制一次桌面流程，保存为可重复执行的本地 Skill",
+    "loadFailed": "电脑自动化服务暂时不可用",
+    "done": "流程执行完成",
+    "failed": "流程执行失败",
+    "ready": "准备就绪",
+    "recording": "正在录制",
+    "paused": "录制已暂停",
+    "replaying": "正在执行 Skill",
+    "localOnly": "录制内容和参数仅保存在本机",
+    "chooseTarget": "选择要录制的软件窗口",
+    "targetRequired": "请先选择软件窗口",
+    "namePlaceholder": "给这个流程起个名字",
+    "descriptionPlaceholder": "说明用途（可选）",
+    "nameRequired": "请输入 Skill 名称",
+    "parametersRequired": "请填写所有运行参数",
+    "startRecording": "开始录制",
+    "saveSkill": "停止并保存",
+    "pause": "暂停",
+    "resume": "继续",
+    "runSkill": "运行",
+    "noSkills": "还没有电脑自动化 Skill",
+    "parameterCount": "{{count}} 个参数"
+  },
+  "computerUse": {
+    "model": "视觉模型",
+    "chooseModel": "选择视觉模型",
+    "goal": "要完成的任务",
+    "ready": "准备就绪",
+    "running": "模型正在观察并操作",
+    "steps": "第 {{count}} 步",
+    "stop": "停止",
+    "failed": "任务未完成"
+  },
+  "desktopComputerUse": {
+    "title": "桌面 Computer Use",
+    "hint": "使用视觉模型操作 Windows 软件",
+    "goalPlaceholder": "例如：打开记事本并写入会议摘要",
+    "start": "开始控制桌面"
+  },
+  "browserComputerUse": {
+    "title": "WINK GO 浏览器 Computer Use",
+    "hint": "使用模型操作软件内置浏览器",
+    "goalPlaceholder": "例如：在内置浏览器搜索 WINK GO 官网并打开下载页",
+    "start": "开始控制内置浏览器"
+  },
+  "addFunction": "添加功能",
   "fileAttach.addFiles": "添加文件",
+  "fileAttach.manageSkills": "添加或管理技能",
   "fileAttach.myDevice": "从设备上传",
   "fileAttach.failed": "上传失败",
   "fileAttach.uploading": "上传中...",

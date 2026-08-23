@@ -23,9 +23,9 @@ const PROJECTS = [
     upstreamEntries: 2033,
     currentRoot: '',
     manifest: 'docs/vendor/aionui-modification-manifest.tsv',
-    rows: 1266,
-    inline: 1094,
-    manifestOnly: 172,
+    rows: 1325,
+    inline: 1123,
+    manifestOnly: 202,
   },
   {
     name: 'AionCore',
@@ -38,8 +38,8 @@ const PROJECTS = [
     upstreamEntries: 1181,
     currentRoot: 'backend',
     manifest: 'docs/vendor/aioncore-modification-manifest.tsv',
-    rows: 708,
-    inline: 687,
+    rows: 715,
+    inline: 694,
     manifestOnly: 21,
   },
   {

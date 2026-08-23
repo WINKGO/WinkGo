@@ -35,6 +35,8 @@ export interface PlatformConfig {
   platform: PlatformType;
   /** Base URL（预设供应商使用） / Base URL (for preset providers) */
   base_url?: string;
+  /** 供应商官网（注册、购买额度或管理 API Key） / Provider website */
+  website_url?: string;
   /** 国际化 key（可选，用于需要翻译的平台名称） / i18n key (optional, for platform names that need translation) */
   i18nKey?: string;
 }
@@ -44,12 +46,25 @@ export interface PlatformConfig {
  * Model Platform options list
  *
  * 顺序：
- * 1. 自定义（需要用户输入 base url）
- * 2. Moonshot/Kimi（战略合作，置顶展示）
- * 3. New API / Gemini 官方平台
- * 4+ 预设供应商
+ * 1. WINK GO 中转站（默认，用户只需粘贴 API Key）
+ * 2. 自定义（需要用户输入 base url）
+ * 3. Moonshot/Kimi（战略合作，置顶展示）
+ * 4. New API / Gemini 官方平台
+ * 5+ 预设供应商
  */
 export const MODEL_PLATFORMS: PlatformConfig[] = [
+  // WINK GO 官方中转站：地址预设，安装包不包含任何 API Key。
+  // WINK GO relay: endpoint preset only; no API key is bundled.
+  {
+    name: 'WINK GO',
+    value: 'WINK-GO',
+    logo: null,
+    platform: 'custom',
+    base_url: 'https://winkgo.xyz/v1',
+    website_url: 'https://winkgo.xyz/',
+    i18nKey: 'settings.platformWinkGo',
+  },
+
   // 自定义选项（需要用户输入 base url）/ Custom option (requires user to input base url)
   { name: 'Custom', value: 'custom', logo: null, platform: 'custom', i18nKey: 'settings.platformCustom' },
 

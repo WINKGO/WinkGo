@@ -7,6 +7,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { BUILTIN_BROWSER_MCP_NAME, BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME } from '@/common/config/constants';
 import type { IMcpServer, IProvider, TProviderWithModel } from '@/common/config/storage';
 import AgentModeSelector from '@/renderer/components/agent/AgentModeSelector';
 import { DROPDOWN_SEARCH_THRESHOLD } from '@/renderer/components/agent/runtimeSelectorOptions';
@@ -22,12 +23,26 @@ import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { getCleanFileNames, FileService } from '@/renderer/services/FileService';
 import { iconColors } from '@/renderer/styles/colors';
 import { isElectronDesktop } from '@/renderer/utils/platform';
+import { openDynamicIslandPanel } from '@/renderer/utils/winkgo/openDynamicIslandPanel';
 import type { AcpModelInfo } from '../types';
 import { getAvailableModels } from '../utils/modelUtils';
 import { Button, Checkbox, Dropdown, Menu, Message, Tooltip } from '@arco-design/web-react';
-import { ArrowUp, Brain, FolderUpload, Lightning, Plus, Shield, UploadOne } from '@icon-park/react';
+import {
+  ArrowUp,
+  Brain,
+  Browser,
+  Calendar,
+  Computer,
+  FolderUpload,
+  Lightning,
+  Plus,
+  Puzzle,
+  Shield,
+  UploadOne,
+} from '@icon-park/react';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 import styles from '../index.module.css';
 
 /**
@@ -86,6 +101,8 @@ type GuidActionRowProps = {
   // Thought level (mobile action sheet; only present for ACP agents)
   thoughtLevelOption?: AgentRuntimeDerivedOption | null;
   onThoughtLevelSelect?: (value: string) => void;
+  speedOption?: AgentRuntimeDerivedOption | null;
+  onSpeedSelect?: (value: string) => void;
 
   // Agent mode
   modeBackend?: string;
@@ -123,6 +140,8 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
   setSelectedAcpModel,
   thoughtLevelOption,
   onThoughtLevelSelect,
+  speedOption,
+  onSpeedSelect,
   modeBackend,
   selectedMode,
   dynamicModes = [],
@@ -140,6 +159,7 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
   onSend,
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
   const [isPlusDropdownOpen, setIsPlusDropdownOpen] = useState(false);
@@ -204,6 +224,12 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
     : mcpServers;
   const showSkillSearch = allSkills.length > DROPDOWN_SEARCH_THRESHOLD;
   const showMcpSearch = mcpServers.length > DROPDOWN_SEARCH_THRESHOLD;
+  const desktopComputerUseMcp = mcpServers.find(
+    (server) => server.name.trim().toLowerCase() === BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME
+  );
+  const browserComputerUseMcp = mcpServers.find(
+    (server) => server.name.trim().toLowerCase() === BUILTIN_BROWSER_MCP_NAME
+  );
 
   const openHostFilePicker = useCallback(() => {
     ipcBridge.dialog.showOpen
@@ -287,6 +313,28 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
       });
     }
 
+    // Response speed is a real Runtime option. Agents that do not advertise it
+    // intentionally get no row instead of a cosmetic control that cannot work.
+    if (speedOption && speedOption.options.length > 0 && onSpeedSelect) {
+      const currentValue = speedOption.currentValue;
+      entries.push({
+        key: 'speed',
+        icon: <Lightning theme='outline' size='16' />,
+        label: t('agent.speed.label', { defaultValue: 'Speed' }),
+        meta: speedOption.options.find((o) => o.value === currentValue)?.label || currentValue || '',
+        submenu: {
+          title: t('agent.speed.label', { defaultValue: 'Speed' }),
+          options: speedOption.options.map((o) => ({
+            key: o.value,
+            label: o.label,
+            description: o.description ?? undefined,
+            active: o.value === currentValue,
+          })),
+          onSelect: (value) => onSpeedSelect(value),
+        },
+      });
+    }
+
     // Permission / agent mode.
     if (dynamicModes.length > 0) {
       const modeOptions: MobileActionSheetOption[] = dynamicModes.map((mode) => ({
@@ -305,6 +353,33 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
           options: modeOptions,
           onSelect: onModeSelect,
         },
+      });
+    }
+
+    // Mobile WebUI cannot open Electron-only island panels, but it can select
+    // the desktop-hosted MCP capabilities for the next conversation. Keep the
+    // two Computer Use surfaces visible as first-class actions instead of
+    // hiding them inside the generic MCP submenu.
+    if (desktopComputerUseMcp) {
+      const selected = selectedMcpServerIds.includes(desktopComputerUseMcp.id);
+      entries.push({
+        key: 'desktop-computer-use',
+        icon: <Computer theme='outline' size='16' />,
+        label: t('common.desktopComputerUse.title', { defaultValue: '桌面 Computer Use' }),
+        meta: selected ? '✓' : undefined,
+        variant: selected ? 'primary' : 'muted',
+        onClick: () => onToggleMcpServer(desktopComputerUseMcp.id),
+      });
+    }
+    if (browserComputerUseMcp) {
+      const selected = selectedMcpServerIds.includes(browserComputerUseMcp.id);
+      entries.push({
+        key: 'browser-computer-use',
+        icon: <Browser theme='outline' size='16' />,
+        label: t('common.browserComputerUse.title', { defaultValue: 'WINK GO 浏览器 Computer Use' }),
+        meta: selected ? '✓' : undefined,
+        variant: selected ? 'primary' : 'muted',
+        onClick: () => onToggleMcpServer(browserComputerUseMcp.id),
       });
     }
 
@@ -383,6 +458,8 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
     setSelectedAcpModel,
     thoughtLevelOption,
     onThoughtLevelSelect,
+    speedOption,
+    onSpeedSelect,
     dynamicModes,
     selectedMode,
     onModeSelect,
@@ -397,6 +474,8 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
     activeMcpCount,
     isWebUI,
     openHostFilePicker,
+    desktopComputerUseMcp,
+    browserComputerUseMcp,
     t,
   ]);
 
@@ -417,6 +496,16 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
             });
         } else if (key === 'device') {
           fileInputRef.current?.click();
+        } else if (key === 'desktop-computer-use') {
+          void openDynamicIslandPanel('desktopComputerUse');
+        } else if (key === 'browser-computer-use') {
+          void openDynamicIslandPanel('browserComputerUse');
+        } else if (key === 'scheduled') {
+          void navigate('/scheduled');
+        } else if (key === 'manage-skills') {
+          void navigate('/settings/skills');
+        } else if (key === 'manage-mcp') {
+          void navigate('/settings/tools');
         }
       }}
     >
@@ -443,6 +532,28 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
           </div>
         </Menu.Item>
       )}
+      {isElectronDesktop() ? (
+        <>
+          <Menu.Item key='desktop-computer-use'>
+            <div className='flex items-center gap-8px'>
+              <Computer theme='outline' size='16' fill={iconColors.secondary} style={{ lineHeight: 0 }} />
+              <span>{t('common.desktopComputerUse.title', { defaultValue: '桌面 Computer Use' })}</span>
+            </div>
+          </Menu.Item>
+          <Menu.Item key='browser-computer-use'>
+            <div className='flex items-center gap-8px'>
+              <Browser theme='outline' size='16' fill={iconColors.secondary} style={{ lineHeight: 0 }} />
+              <span>{t('common.browserComputerUse.title', { defaultValue: 'WINK GO 浏览器 Computer Use' })}</span>
+            </div>
+          </Menu.Item>
+          <Menu.Item key='scheduled'>
+            <div className='flex items-center gap-8px'>
+              <Calendar theme='outline' size='16' fill={iconColors.secondary} style={{ lineHeight: 0 }} />
+              <span>{t('cron.scheduledTasks')}</span>
+            </div>
+          </Menu.Item>
+        </>
+      ) : null}
       {allSkills.length > 0 && (
         <Menu.SubMenu
           key='skills'
@@ -530,6 +641,18 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
           </SubmenuSearchList>
         </Menu.SubMenu>
       )}
+      <Menu.Item key='manage-skills'>
+        <div className='flex items-center gap-8px'>
+          <Puzzle theme='outline' size='16' fill={iconColors.secondary} style={{ lineHeight: 0 }} />
+          <span>{t('common.fileAttach.manageSkills', { defaultValue: 'Add or manage skills' })}</span>
+        </div>
+      </Menu.Item>
+      <Menu.Item key='manage-mcp'>
+        <div className='flex items-center gap-8px'>
+          <Shield theme='outline' size='16' fill={iconColors.secondary} style={{ lineHeight: 0 }} />
+          <span>{t('conversation.mcp.openSettings', { defaultValue: 'Open Tools settings' })}</span>
+        </div>
+      </Menu.Item>
     </Menu>
   );
 
@@ -547,6 +670,8 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
                 loading={uploading}
                 disabled={uploading}
                 data-testid='file-upload-btn'
+                aria-label={t('common.addFunction', { defaultValue: 'Add functions' })}
+                title={t('common.addFunction', { defaultValue: 'Add functions' })}
                 onClick={() => setIsSheetOpen(true)}
               />
               {files.length > 0 && (
@@ -559,7 +684,7 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
               )}
             </span>
           ) : (
-            <Dropdown trigger='hover' onVisibleChange={handlePlusDropdownVisibleChange} droplist={menuContent}>
+            <Dropdown trigger='click' onVisibleChange={handlePlusDropdownVisibleChange} droplist={menuContent}>
               <span className='flex items-center gap-4px cursor-pointer lh-[1]'>
                 <Button
                   type='secondary'
@@ -569,6 +694,8 @@ const GuidActionRow: React.FC<GuidActionRowProps> = ({
                   loading={uploading}
                   disabled={uploading}
                   data-testid='file-upload-btn'
+                  aria-label={t('common.addFunction', { defaultValue: 'Add functions' })}
+                  title={t('common.addFunction', { defaultValue: 'Add functions' })}
                 />
                 {files.length > 0 && (
                   <Tooltip

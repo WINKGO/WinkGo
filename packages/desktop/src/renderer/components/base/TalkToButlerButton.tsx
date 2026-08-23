@@ -7,6 +7,7 @@
  */
 
 import { useTalkToButler } from '@/renderer/hooks/assistant/useTalkToButler';
+import type { ChatFileRef } from '@/common/types/chatFile';
 import { Button, Dropdown, Menu } from '@arco-design/web-react';
 import { Down } from '@icon-park/react';
 import classNames from 'classnames';
@@ -27,8 +28,8 @@ export type TalkToButlerButtonProps = {
   label: string;
   /** Prompt pre-filled into the home chat input for the "via chat" item. */
   prompt?: string;
-  /** Optional file paths pre-attached to the input (e.g. report screenshots). */
-  files?: string[];
+  /** Optional source-tagged files pre-attached to the input. */
+  files?: ChatFileRef[];
   /**
    * Override for the "via chat" action. Default behaviour hands off to the
    * WinkGo Butler (select it + pre-fill `prompt`). Callers that want a

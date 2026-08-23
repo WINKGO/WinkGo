@@ -273,6 +273,14 @@ pub enum SessionEvent {
         kind: PermissionKind,
     },
 
+    /// A structured question asked by the agent, separate from permission approval.
+    Ask {
+        request_id: String,
+        questions: serde_json::Value,
+    },
+    /// The matching question was answered, dismissed, or retracted.
+    AskResolved { request_id: String },
+
     // ======================================================================
     // ADDITIVE backend-produced / orchestration variants (007 §C2 / §9.0).
     // The reducer takes explicit no-op arms for ALL of these EXCEPT SubagentUpdate
@@ -812,6 +820,8 @@ pub fn classify(event: &SessionEvent) -> EventClass {
         | Plan { .. }
         | Permission { .. }
         | PermissionResolved { .. }
+        | Ask { .. }
+        | AskResolved { .. }
         | PromptAccepted { .. }
         | UsageDelta { .. }
         | Provisioning { .. }
@@ -870,7 +880,12 @@ pub fn persist_tier(event: &SessionEvent) -> PersistTier {
             | Notice { .. }
             | MessageFinalized(..) => PersistTier::Display,
             TurnResult { .. } => PersistTier::DisplayAndState, // text→display; outcome→state
-            Permission { .. } | PermissionResolved { .. } | Detached { .. } | PromptAccepted { .. } => {
+            Permission { .. }
+            | PermissionResolved { .. }
+            | Ask { .. }
+            | AskResolved { .. }
+            | Detached { .. }
+            | PromptAccepted { .. } => {
                 PersistTier::DisplayAndState
             }
             SubagentUpdate { .. } => PersistTier::DisplayAndState, // roster→display; resumable→Tier2.last_subagents

@@ -1,6 +1,8 @@
 {
   "desktopPet": "Masaüstü Pet",
   "enable": "Masaüstü Pet'i Etkinleştir",
+  "butlerSetup": "Kurulumu asistana yaptır",
+  "butlerSetupPrompt": "Benim için bir masaüstü evcil hayvanı oluştur. Evcil hayvana dönüştürmen için bir resim ekleyeceğim.",
   "size": "Pet Boyutu",
   "sizeSmall": "Küçük ({{px}}px)",
   "sizeMedium": "Orta ({{px}}px)",

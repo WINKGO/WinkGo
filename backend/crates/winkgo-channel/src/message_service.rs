@@ -219,6 +219,9 @@ impl ChannelMessageService {
             | AgentStreamEvent::Plan(_)
             | AgentStreamEvent::Permission(_)
             | AgentStreamEvent::AcpPermission(_)
+            // IM channels have no structured question card. Keep the ask
+            // pending in the WINK GO desktop UI, like a permission request.
+            | AgentStreamEvent::Ask(_)
             | AgentStreamEvent::AcpToolCall(_)
             | AgentStreamEvent::AvailableCommands(_)
             | AgentStreamEvent::SkillSuggest(_)
@@ -228,6 +231,7 @@ impl ChannelMessageService {
             | AgentStreamEvent::AcpConfigOption(_)
             | AgentStreamEvent::AcpSessionInfo(_)
             | AgentStreamEvent::AcpContextUsage(_)
+            | AgentStreamEvent::AcpTerminalOutput(_)
             | AgentStreamEvent::AcpPromptHookWarning(_)
             | AgentStreamEvent::System(_)
             | AgentStreamEvent::RequestTrace(_)

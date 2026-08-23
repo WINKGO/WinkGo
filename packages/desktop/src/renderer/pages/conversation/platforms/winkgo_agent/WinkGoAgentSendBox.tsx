@@ -10,6 +10,7 @@ import { ipcBridge } from '@/common';
 import type { IConversationMcpStatus } from '@/common/config/storage';
 import { isChatFileRef, uploadFileRef, type ChatFileRef } from '@/common/types/chatFile';
 import AgentModeSelector from '@/renderer/components/agent/AgentModeSelector';
+import WinkGoAgentModelSelector from './WinkGoAgentModelSelector';
 import CommandQueuePanel from '@/renderer/components/chat/CommandQueuePanel';
 import MobileActionSheet, {
   type MobileActionSheetEntry,
@@ -142,6 +143,12 @@ const WinkGoAgentSendBox: React.FC<{
   const { t } = useTranslation();
   const { checkAndUpdateTitle } = useAutoTitle();
   const { current_model } = modelSelection;
+  const configuredProviderId =
+    current_model?.id?.trim() ||
+    (current_model as (typeof current_model & { provider_id?: string }) | undefined)?.provider_id?.trim() ||
+    '';
+  const configuredModelName = current_model?.use_model?.trim() || '';
+  const hasConfiguredModel = Boolean(configuredProviderId && configuredModelName);
   const teamPermission = useTeamPermission();
   const propagateMode = teamPermission?.propagateMode;
 
@@ -173,21 +180,53 @@ const WinkGoAgentSendBox: React.FC<{
     if (teamPermission) return;
   }, [teamPermission]);
   const prepareRuntimeSync = useCallback(async () => {
+    // Project/Browser-only conversations are valid before a model is chosen.
+    // Starting the agent in that state sends an empty provider id to the
+    // backend and produces the misleading `Provider "" not found` toast.
+    if (!hasConfiguredModel) return;
     if (teamPermission) {
       await teamPermission.warmupSession();
       return;
     }
     await ensureConversationRuntime(conversation_id);
-  }, [conversation_id, teamPermission]);
+  }, [conversation_id, hasConfiguredModel, teamPermission]);
   const runtimeConfig = useAcpConfigOptions({
     conversation_id,
     prepareRuntime: prepareRuntimeConfig,
     prepareSetRuntime: teamPermission?.warmupSession,
     loadConfigOptions: teamPermission?.loadConfigOptions,
-    enabled: Boolean(conversation_id),
+    enabled: Boolean(conversation_id) && hasConfiguredModel,
   });
   const runtimeMode = runtimeConfig.mode;
   const runtimeThoughtLevel = runtimeConfig.thoughtLevel;
+  const runtimeSpeed = runtimeConfig.speed;
+
+  const handleThoughtLevelSetOption = useCallback(
+    async (optionId: string, value: string) => {
+      try {
+        const result = await runtimeConfig.setConfigOption(optionId, value);
+        Message.success(t('agent.thoughtLevel.switchSuccess'));
+        return result;
+      } catch (error) {
+        Message.error(t(configErrorMessageKey(error)));
+        throw error;
+      }
+    },
+    [runtimeConfig, t]
+  );
+  const handleSpeedSetOption = useCallback(
+    async (optionId: string, value: string) => {
+      try {
+        const result = await runtimeConfig.setConfigOption(optionId, value);
+        Message.success(t('agent.speed.switchSuccess', { defaultValue: '响应速度已更新' }));
+        return result;
+      } catch (error) {
+        Message.error(t(configErrorMessageKey(error)));
+        throw error;
+      }
+    },
+    [runtimeConfig, t]
+  );
 
   useEffect(() => {
     if (!runtimeMode?.currentValue) return;
@@ -195,8 +234,8 @@ const WinkGoAgentSendBox: React.FC<{
   }, [runtimeMode?.currentValue]);
 
   useEffect(() => {
-    if (!conversation_id) return;
     setAgentWarmed(false);
+    if (!conversation_id || !hasConfiguredModel) return;
     void prepareRuntimeSync()
       .then(() => {
         setAgentWarmed(true);
@@ -204,7 +243,7 @@ const WinkGoAgentSendBox: React.FC<{
       .catch((error) => {
         Message.error(getConversationRuntimeWorkspaceErrorMessage(error, t));
       });
-  }, [conversation_id, prepareRuntimeSync, t]);
+  }, [conversation_id, hasConfiguredModel, prepareRuntimeSync, t]);
 
   const slash_commands = useSlashCommands(conversation_id, {
     conversation_type: 'winkgo_agent',
@@ -328,7 +367,6 @@ const WinkGoAgentSendBox: React.FC<{
     enqueue,
     remove,
     prioritize,
-    sendNow,
     clear,
     reorder,
     toggleMode,
@@ -696,6 +734,8 @@ const WinkGoAgentSendBox: React.FC<{
           setAtPath(items);
         }}
         loading={teamRuntime?.loading ?? isBusy}
+        active={teamRuntime?.isActive}
+        onFocused={teamRuntime?.onFocus}
         disabled={!current_model?.use_model}
         placeholder={
           current_model?.use_model
@@ -721,6 +761,14 @@ const WinkGoAgentSendBox: React.FC<{
         }
         rightTools={
           <div className='flex items-center gap-8px min-w-0'>
+            <WinkGoAgentModelSelector
+              selection={modelSelection}
+              thoughtLevel={runtimeThoughtLevel}
+              speed={runtimeSpeed}
+              setStatus={runtimeConfig.setStatus}
+              onSetThoughtLevel={handleThoughtLevelSetOption}
+              onSetSpeed={handleSpeedSetOption}
+            />
             <AgentModeSelector
               backend='winkgo_agent'
               conversation_id={conversation_id}

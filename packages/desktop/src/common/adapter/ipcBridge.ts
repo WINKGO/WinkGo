@@ -15,8 +15,17 @@
  */
 
 import type { IConfirmation } from '@/common/chat/chatLib';
+import type {
+  BrowserComputerUseRunRequest,
+  BrowserComputerUseRunResult,
+  BrowserComputerUseStatus,
+  DesktopComputerUseRunRequest,
+  DesktopComputerUseRunResult,
+  DesktopComputerUseStatus,
+} from '@/common/types/computerUse';
 import type { AcpSlashCommandApiItem } from '@/common/chat/slash/types';
 import { bridge } from '@/common/platform/bridge';
+import { buildListTasksPath } from './teamTaskPath';
 import type { OpenDialogOptions } from 'electron';
 import type {
   ICssTheme,
@@ -57,9 +66,12 @@ import type {
   ITeamAgentRuntimeStatusEvent,
   ITeamAgentSpawnedEvent,
   ITeamAgentStatusEvent,
+  ITeamActivityPage,
   ITeamChildTurnEvent,
   ITeamCreatedEvent,
   ITeamListChangedEvent,
+  ITeamMailboxChangedEvent,
+  ITeamMailboxMessage,
   ITeamRemovedEvent,
   ITeamRenamedEvent,
   ITeamRunAck,
@@ -69,6 +81,7 @@ import type {
   ITeamSessionStatusChangedEvent,
   ITeamSlotWorkChangedEvent,
   ITeamTaskChangedEvent,
+  ITeamTaskItem,
   ICancelTeamChildTurnParams,
   ICancelTeamRunParams,
   IPauseTeamSlotParams,
@@ -92,7 +105,15 @@ import type {
 import type { AgentMetadata } from '@/renderer/utils/model/agentTypes';
 import type { Theme } from '@/common/theme/types';
 import type { AttachFolderRequest, ProjectDetailDto, ProjectEntryDto } from '@/common/types/project';
-import type { ChatFileRef } from '@/common/types/chatFile';
+import type { ChatFileRef, ContentEncoding } from '@/common/types/chatFile';
+import type {
+  DesktopRecorderStatus,
+  DesktopRecorderTarget,
+  DesktopSkillOperationResult,
+  DesktopSkillRunRequest,
+  DesktopSkillSaveRequest,
+  DesktopSkillSummary,
+} from '@/common/types/desktopAutomation';
 import type { ProtocolDetectionRequest, ProtocolDetectionResponse } from '../utils/protocolDetector';
 import {
   buildCreateConversationBody,
@@ -232,6 +253,13 @@ export const conversation = {
     }
   ),
   reset: httpPost<void, IResetConversationParams>((p) => `/api/conversations/${p.id}/reset`),
+  fork: withResponseMap(
+    httpPost<TChatConversation, { conversation_id: string; message_id: string }>(
+      (p) => `/api/conversations/${p.conversation_id}/fork`,
+      (p) => ({ message_id: p.message_id })
+    ),
+    fromApiConversation
+  ),
   ensureRuntime: httpPost<EnsureConversationRuntimeResponse, { conversation_id: string }>(
     (p) => `/api/conversations/${p.conversation_id}/runtime/ensure`,
     () => undefined
@@ -243,6 +271,10 @@ export const conversation = {
   stop: httpPost<{ runtime: TConversationRuntimeSummary }, { conversation_id: string; turn_id: string }>(
     (p) => `/api/conversations/${p.conversation_id}/cancel`,
     (p) => ({ turn_id: p.turn_id })
+  ),
+  killTerminal: httpPost<void, { conversation_id: string; terminal_id: string }>(
+    (p) => `/api/conversations/${p.conversation_id}/terminals/${encodeURIComponent(p.terminal_id)}/kill`,
+    () => undefined
   ),
   activeCount: httpGet<{ count: number }>('/api/conversations/active-count'),
   sendMessage: httpPost<ISendMessageResult, ISendMessageParams>(
@@ -274,6 +306,10 @@ export const conversation = {
     (p) => `/api/conversations/${p.conversation_id}/confirmations/${encodeURIComponent(p.call_id)}/confirm`,
     (p) => ({ msg_id: p.msg_id, data: p.confirm_key })
   ),
+  answerAsk: httpPost<void, IAnswerAskParams>(
+    (p) => `/api/conversations/${p.conversation_id}/asks/${encodeURIComponent(p.request_id)}/answer`,
+    (p) => (p.decline ? { decline: true } : { answers: p.answers ?? [] })
+  ),
   listArtifacts: httpGet<IConversationArtifact[], { conversation_id: string }>(
     (p) => `/api/conversations/${p.conversation_id}/artifacts`
   ),
@@ -290,10 +326,17 @@ export const conversation = {
     msg_id: string;
     content: string;
     position: 'right';
-    status: 'finish';
+    status: 'finish' | 'pending' | 'error';
     hidden: boolean;
     created_at: number;
   }>('message.userCreated'),
+  statusChanged: wsEmitter<{
+    user_id: string;
+    conversation_id: string;
+    msg_id: string;
+    status: 'finish' | 'pending' | 'work' | 'error';
+    turn_id?: string;
+  }>('message.statusChanged'),
   artifactStream: wsEmitter<IConversationArtifact>('conversation.artifact'),
   turnCompleted: wsMappedEmitter<IConversationTurnCompletedEvent>('turn.completed', (raw) => {
     const r = raw as Record<string, unknown>;
@@ -320,6 +363,9 @@ export const conversation = {
       is_processing: (rawRuntime.is_processing ?? rawRuntime.isProcessing ?? false) as boolean,
       pending_confirmations: (rawRuntime.pending_confirmations ?? rawRuntime.pendingConfirmations ?? 0) as number,
       turn_id: (rawRuntime.turn_id ?? rawRuntime.turnId ?? null) as string | null,
+      interjection_mode: (rawRuntime.interjection_mode ??
+        rawRuntime.interjectionMode ??
+        'boundary_queue') as IConversationTurnCompletedEvent['runtime']['interjection_mode'],
     };
     const rawModel = (r.model ?? {}) as Record<string, unknown>;
     const model: IConversationTurnCompletedEvent['model'] = {
@@ -416,12 +462,6 @@ export interface ICdpStatus {
   enabled: boolean;
   port: number | null;
   startupEnabled: boolean;
-  instances: Array<{
-    pid: number;
-    port: number;
-    cwd: string;
-    startTime: number;
-  }>;
   configEnabled: boolean;
   isDevMode: boolean;
 }
@@ -443,6 +483,7 @@ export type RuntimeFailureKind =
   | 'unsupported_platform'
   | 'bundled_resource_missing'
   | 'bundled_resource_invalid'
+  | 'activation_io_failed'
   | 'unknown';
 
 export interface IRuntimeStatusScope {
@@ -523,6 +564,82 @@ export interface IWinkGoSkillBridgePlan {
     env: Record<string, string>;
   };
   originalJson: string;
+}
+
+export type WinkGoBrowserWorkflowStepType = 'navigate' | 'click' | 'input' | 'select' | 'submit';
+
+export interface WinkGoBrowserWorkflowParameter {
+  key: string;
+  label: string;
+  secret: boolean;
+  required: boolean;
+}
+
+export interface WinkGoBrowserWorkflowStep {
+  id: string;
+  type: WinkGoBrowserWorkflowStepType;
+  recordedAt: number;
+  url?: string;
+  selector?: string;
+  testId?: string;
+  role?: string;
+  accessibleName?: string;
+  fallbackText?: string;
+  value?: string;
+  parameterKey?: string;
+}
+
+export interface WinkGoBrowserSkillItem {
+  id: string;
+  name: string;
+  description: string;
+  domain: string;
+  entryUrl: string;
+  capability?: string;
+  aiEnhanced?: boolean;
+  aiModel?: string;
+  stepCount: number;
+  parameters: WinkGoBrowserWorkflowParameter[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WinkGoBrowserSkillDetail extends WinkGoBrowserSkillItem {
+  steps: WinkGoBrowserWorkflowStep[];
+}
+
+export type WinkGoBrowserRecorderPhase = 'idle' | 'recording' | 'distilling' | 'replaying';
+
+export interface WinkGoBrowserRecorderStatus {
+  phase: WinkGoBrowserRecorderPhase;
+  browserAttached: boolean;
+  currentUrl: string;
+  recordedStepCount: number;
+  startedAt?: number;
+  activeSkillId?: string;
+  message?: string;
+}
+
+export interface WinkGoBrowserSkillSaveRequest {
+  name: string;
+  description?: string;
+}
+
+export interface WinkGoBrowserSkillRunRequest {
+  skillId: string;
+  parameters?: Record<string, string>;
+}
+
+export interface WinkGoBrowserSkillUpdateStepsRequest {
+  skillId: string;
+  stepIds: string[];
+}
+
+export interface WinkGoBrowserSkillOperationResult {
+  ok: boolean;
+  status: WinkGoBrowserRecorderStatus;
+  skill?: WinkGoBrowserSkillItem;
+  message?: string;
 }
 
 export interface IWinkGoWechatPreferences {
@@ -988,6 +1105,16 @@ export type WinkGoXiaozhiLocalProbe = {
   label: string;
   detail: string;
   elapsedMs: number;
+  buildTimestampMs?: number;
+};
+
+export type WinkGoRuntimeIdentity = {
+  installed: boolean;
+  executablePath: string;
+  logPath: string;
+  source: 'explicit_bundle' | 'installed_release' | 'packaged' | 'legacy' | 'missing';
+  legacyFallback: boolean;
+  modifiedAtMs: number;
 };
 
 export type WinkGoRemoteGatewayState =
@@ -1030,6 +1157,7 @@ export type WinkGoXiaozhiSnapshot = {
   hardwareSecretConfigured: boolean;
   mobileSecretConfigured: boolean;
   runtimeInstalled: boolean;
+  runtimeIdentity: WinkGoRuntimeIdentity;
   configPath: string;
   legacyCompatible: boolean;
 };
@@ -1100,6 +1228,10 @@ export const application = {
   setZoomFactor: bridge.buildProvider<number, { factor: number }>('app.set-zoom-factor'),
   getCdpStatus: bridge.buildProvider<IBridgeResponse<ICdpStatus>, void>('app.get-cdp-status'),
   updateCdpConfig: bridge.buildProvider<IBridgeResponse<ICdpConfig>, Partial<ICdpConfig>>('app.update-cdp-config'),
+  clearBrowserData: bridge.buildProvider<IBridgeResponse<void>, void>('app.clear-browser-data'),
+  reportBrowserWebContentsId: bridge.buildProvider<IBridgeResponse<void>, { webContentsId: number }>(
+    'app.report-browser-webcontents-id'
+  ),
   getStartOnBootStatus: bridge.buildProvider<IBridgeResponse<IStartOnBootStatus>, void>('app.get-start-on-boot-status'),
   setStartOnBoot: bridge.buildProvider<IBridgeResponse<IStartOnBootStatus>, { enabled: boolean }>(
     'app.set-start-on-boot'
@@ -1133,6 +1265,69 @@ export const winkGoSkills = {
   saveSmartHomePreferences: bridge.buildProvider<IWinkGoSmartHomePreferences, IWinkGoSmartHomePreferencesSaveRequest>(
     'winkgo-skills.save-smart-home-preferences'
   ),
+};
+
+// ---------------------------------------------------------------------------
+// WINK GO browser skill recorder — local deterministic workflows.
+// ---------------------------------------------------------------------------
+
+export const winkGoBrowserSkills = {
+  getStatus: bridge.buildProvider<WinkGoBrowserRecorderStatus, void>('winkgo-browser-skills.get-status'),
+  list: bridge.buildProvider<WinkGoBrowserSkillItem[], void>('winkgo-browser-skills.list'),
+  get: bridge.buildProvider<WinkGoBrowserSkillDetail | null, { skillId: string }>('winkgo-browser-skills.get'),
+  start: bridge.buildProvider<WinkGoBrowserSkillOperationResult, void>('winkgo-browser-skills.start'),
+  stopAndSave: bridge.buildProvider<WinkGoBrowserSkillOperationResult, WinkGoBrowserSkillSaveRequest>(
+    'winkgo-browser-skills.stop-and-save'
+  ),
+  cancel: bridge.buildProvider<WinkGoBrowserSkillOperationResult, void>('winkgo-browser-skills.cancel'),
+  run: bridge.buildProvider<WinkGoBrowserSkillOperationResult, WinkGoBrowserSkillRunRequest>(
+    'winkgo-browser-skills.run'
+  ),
+  updateSteps: bridge.buildProvider<WinkGoBrowserSkillOperationResult, WinkGoBrowserSkillUpdateStepsRequest>(
+    'winkgo-browser-skills.update-steps'
+  ),
+  remove: bridge.buildProvider<WinkGoBrowserSkillOperationResult, { skillId: string }>('winkgo-browser-skills.remove'),
+};
+
+// ---------------------------------------------------------------------------
+// WINK GO desktop skill recorder — native Windows recording + safe replay.
+// ---------------------------------------------------------------------------
+
+export const winkGoDesktopSkills = {
+  getStatus: bridge.buildProvider<DesktopRecorderStatus, void>('winkgo-desktop-skills.get-status'),
+  listTargets: bridge.buildProvider<DesktopRecorderTarget[], void>('winkgo-desktop-skills.list-targets'),
+  list: bridge.buildProvider<DesktopSkillSummary[], void>('winkgo-desktop-skills.list'),
+  start: bridge.buildProvider<DesktopSkillOperationResult, void>('winkgo-desktop-skills.start'),
+  refreshStatus: bridge.buildProvider<DesktopRecorderStatus, void>('winkgo-desktop-skills.refresh-status'),
+  pause: bridge.buildProvider<DesktopSkillOperationResult, void>('winkgo-desktop-skills.pause'),
+  resume: bridge.buildProvider<DesktopSkillOperationResult, void>('winkgo-desktop-skills.resume'),
+  stopAndSave: bridge.buildProvider<DesktopSkillOperationResult, DesktopSkillSaveRequest>(
+    'winkgo-desktop-skills.stop-and-save'
+  ),
+  cancel: bridge.buildProvider<DesktopSkillOperationResult, void>('winkgo-desktop-skills.cancel'),
+  run: bridge.buildProvider<DesktopSkillOperationResult, DesktopSkillRunRequest>('winkgo-desktop-skills.run'),
+  remove: bridge.buildProvider<boolean, { skillId: string }>('winkgo-desktop-skills.remove'),
+  statusChanged: bridge.buildEmitter<DesktopRecorderStatus>('winkgo-desktop-skills.status-changed'),
+};
+
+// Desktop Computer Use and in-app Browser Computer Use are intentionally
+// separate skills. They do not share task state, targets or action executors.
+export const winkGoDesktopComputerUse = {
+  getStatus: bridge.buildProvider<DesktopComputerUseStatus, void>('winkgo-desktop-computer-use.get-status'),
+  run: bridge.buildProvider<DesktopComputerUseRunResult, DesktopComputerUseRunRequest>(
+    'winkgo-desktop-computer-use.run'
+  ),
+  cancel: bridge.buildProvider<DesktopComputerUseStatus, void>('winkgo-desktop-computer-use.cancel'),
+  statusChanged: bridge.buildEmitter<DesktopComputerUseStatus>('winkgo-desktop-computer-use.status-changed'),
+};
+
+export const winkGoBrowserComputerUse = {
+  getStatus: bridge.buildProvider<BrowserComputerUseStatus, void>('winkgo-browser-computer-use.get-status'),
+  run: bridge.buildProvider<BrowserComputerUseRunResult, BrowserComputerUseRunRequest>(
+    'winkgo-browser-computer-use.run'
+  ),
+  cancel: bridge.buildProvider<BrowserComputerUseStatus, void>('winkgo-browser-computer-use.cancel'),
+  statusChanged: bridge.buildEmitter<BrowserComputerUseStatus>('winkgo-browser-computer-use.status-changed'),
 };
 
 export const winkGoAuth = {
@@ -1307,12 +1502,25 @@ export type SkillFileNode = {
 };
 
 export const fs = {
+  /** Read by stable file identity; supersedes path-only Preview reads. */
+  readContent: httpPost<string, { file: ChatFileRef; encoding?: ContentEncoding }>('/api/fs/content'),
+  /** Save with optional optimistic-concurrency mtime from the last read. */
+  writeContent: httpPut<boolean, { file: ChatFileRef; data: string; ifMatch?: number }>(
+    '/api/fs/content',
+    ({ file, data }) => ({ file, data }),
+    ({ ifMatch }) => (typeof ifMatch === 'number' ? { 'If-Match': String(ifMatch) } : undefined)
+  ),
+  getContentMetadata: withResponseMap(
+    httpPost<RawFileMetadata, { file: ChatFileRef }>('/api/fs/content/metadata'),
+    fromBackendFileMetadata
+  ),
   getFilesByDir: httpPost<Array<IDirOrFile>, { dir: string; root: string }>('/api/fs/dir'),
   // Reveal a project-scoped entry in the OS file manager (Finder/Explorer).
   // The backend resolves the pe-ref to an absolute path (resolve_reference) and
   // calls shell.showItemInFolder — the front end never builds the absolute path
   // (avoids the Windows verbatim `\\?\` pitfall). Electron-only at the call site.
   reveal: httpPost<void, { pe_id: string; relative_path: string }>('/api/fs/reveal'),
+  copyAbsolutePath: httpPost<void, { pe_id: string; relative_path: string }>('/api/fs/copy-absolute-path'),
   listWorkspaceFiles: withResponseMap(
     httpPost<Array<RawWorkspaceFlatFile>, { root: string }>('/api/fs/list'),
     fromBackendWorkspaceFlatFiles
@@ -1338,7 +1546,10 @@ export const fs = {
     }
   >('/api/fs/zip'),
   cancelZip: httpPost<boolean, { request_id: string }>('/api/fs/zip/cancel'),
-  getFileMetadata: httpPost<IFileMetadata, { path: string; workspace?: string }>('/api/fs/metadata'),
+  getFileMetadata: withResponseMap(
+    httpPost<RawFileMetadata, { path: string; workspace?: string }>('/api/fs/metadata'),
+    fromBackendFileMetadata
+  ),
   // Import OS files into a project entry's directory (A-paste). `target` is the
   // drop-target pe + relative dir ('' = its root). Name conflicts are reported in
   // `failed_files` (not overwritten); directories are rejected there this round.
@@ -1899,14 +2110,39 @@ export const previewHistory = {
 
 // Preview panel
 export const preview = {
-  open: wsEmitter<{
+  // Opening the preview is an Electron UI command.  A WebSocket emitter has a
+  // deliberately empty `emit()` implementation in the main process, so MCP
+  // browser actions could request a tab without the renderer ever receiving
+  // it.  Keep this command on the native bridge; the renderer can then create
+  // and attach the visible webview before control continues.
+  open: bridge.buildEmitter<{
     content: string;
     content_type: import('../types/office/preview').PreviewContentType;
     metadata?: {
       title?: string;
       file_name?: string;
+      conversation_id?: string;
     };
   }>('preview.open'),
+  /**
+   * Main-process browser control needs an acknowledgement from the renderer.
+   * A fire-and-forget event can be lost while the conversation route is still
+   * mounting, which leaves the MCP waiting for a webview that was never
+   * created.  The provider returns only after PreviewContext accepted the open
+   * request; CDP attachment is still verified separately by the main process.
+   */
+  requestOpen: bridge.buildProvider<
+    { accepted: boolean },
+    {
+      content: string;
+      content_type: import('../types/office/preview').PreviewContentType;
+      metadata?: {
+        title?: string;
+        file_name?: string;
+        conversation_id?: string;
+      };
+    }
+  >('preview.request-open'),
 };
 
 // ---------------------------------------------------------------------------
@@ -1987,6 +2223,12 @@ export const theme = {
 // System Settings — routed to /api/settings/* unless they need Electron-native side effects.
 // ---------------------------------------------------------------------------
 
+export type IWinkGoBrowserLoginPermission = {
+  enabled: boolean;
+  consentVersion?: string;
+  consentAt?: string;
+};
+
 export const systemSettings = {
   getCloseToTray: bridge.buildProvider<boolean, void>('system-settings:get-close-to-tray'),
   setCloseToTray: bridge.buildProvider<void, { enabled: boolean }>('system-settings:set-close-to-tray'),
@@ -2018,6 +2260,13 @@ export const systemSettings = {
   setPetDnd: bridge.buildProvider<void, { dnd: boolean }>('system-settings:set-pet-dnd'),
   getPetConfirmEnabled: bridge.buildProvider<boolean, void>('system-settings:get-pet-confirm-enabled'),
   setPetConfirmEnabled: bridge.buildProvider<void, { enabled: boolean }>('system-settings:set-pet-confirm-enabled'),
+  getBrowserLoginPermission: bridge.buildProvider<IWinkGoBrowserLoginPermission, void>(
+    'system-settings:get-browser-login-permission'
+  ),
+  setBrowserLoginPermission: bridge.buildProvider<
+    IWinkGoBrowserLoginPermission,
+    { enabled: boolean; consentAccepted?: boolean }
+  >('system-settings:set-browser-login-permission'),
   ensureNodeRuntime: httpPost<{ ready: boolean }, { scope: IRuntimeStatusScope }>('/api/system/ensure-node-runtime'),
   ensureManagedAcpTool: httpPost<{ ready: boolean }, { scope: IRuntimeStatusScope; tool_id: string }>(
     '/api/system/ensure-managed-acp-tool'
@@ -2272,6 +2521,8 @@ interface ISendMessageParams {
 export interface ISendMessageResult {
   msg_id: string;
   turn_id: string;
+  delivered_midturn?: boolean;
+  queued_at_boundary?: boolean;
   runtime: TConversationRuntimeSummary;
 }
 
@@ -2280,6 +2531,13 @@ export interface IConfirmMessageParams {
   msg_id: string;
   conversation_id: string;
   call_id: string;
+}
+
+export interface IAnswerAskParams {
+  conversation_id: string;
+  request_id: string;
+  answers?: Array<{ question: string; labels: string[] }>;
+  decline?: boolean;
 }
 
 export interface ICreateConversationParams {
@@ -2365,6 +2623,26 @@ export interface IFileMetadata {
   isDirectory?: boolean;
 }
 
+type RawFileMetadata = {
+  name: string;
+  path: string;
+  size: number;
+  type: string;
+  last_modified: number;
+  is_directory?: boolean;
+};
+
+function fromBackendFileMetadata(metadata: RawFileMetadata): IFileMetadata {
+  return {
+    name: metadata.name,
+    path: metadata.path,
+    size: metadata.size,
+    type: metadata.type,
+    lastModified: metadata.last_modified,
+    isDirectory: metadata.is_directory,
+  };
+}
+
 export type IWorkspaceFlatFile = {
   name: string;
   fullPath: string;
@@ -2446,6 +2724,7 @@ export interface IConversationTurnCompletedEvent {
     is_processing: boolean;
     pending_confirmations: number;
     turn_id: string | null;
+    interjection_mode?: 'native' | 'boundary_queue' | 'cancel_resume';
   };
   workspace: string;
   model: {
@@ -2765,6 +3044,31 @@ export const team = {
     (p) => ({ mode: p.session_mode })
   ),
   getRunState: httpGet<ITeamRunStateResponse, { team_id: string }>((p) => `/api/teams/${p.team_id}/run-state`),
+  listMailbox: httpGet<ITeamMailboxMessage[], { team_id: string; limit?: number }>(
+    (p) => `/api/teams/${p.team_id}/mailbox?limit=${p.limit ?? 500}`
+  ),
+  listTasks: httpGet<ITeamTaskItem[], { team_id: string; limit?: number; ids?: string[] }>((p) =>
+    buildListTasksPath(p)
+  ),
+  listActivity: httpGet<
+    ITeamActivityPage,
+    {
+      team_id: string;
+      limit?: number;
+      cursor_ts?: number;
+      cursor_id?: string;
+      direction?: 'desc' | 'asc';
+      kind?: 'all' | 'message' | 'task';
+    }
+  >((p) => {
+    const query = new URLSearchParams();
+    if (p.limit != null) query.set('limit', String(p.limit));
+    if (p.cursor_ts != null) query.set('cursor_ts', String(p.cursor_ts));
+    if (p.cursor_id != null) query.set('cursor_id', p.cursor_id);
+    if (p.direction) query.set('direction', p.direction);
+    if (p.kind) query.set('kind', p.kind);
+    return `/api/teams/${p.team_id}/activity?${query.toString()}`;
+  }),
   sendMessage: httpPost<ITeamRunAck, ISendTeamMessageParams>(
     (p) => `/api/teams/${p.team_id}/messages`,
     (p) => ({
@@ -2813,6 +3117,7 @@ export const team = {
   teammateMessage: wsEmitter<ITeamTeammateMessageEvent>('team.teammateMessage'),
   sessionStatusChanged: wsEmitter<ITeamSessionStatusChangedEvent>('team.sessionStatusChanged'),
   taskChanged: wsEmitter<ITeamTaskChangedEvent>('team.taskChanged'),
+  mailboxChanged: wsEmitter<ITeamMailboxChangedEvent>('team.mailboxChanged'),
   sessionChanged: wsEmitter<ITeamSessionChangedEvent>('team.sessionChanged'),
   runAccepted: wsEmitter<ITeamRunEvent>('team.runAccepted'),
   runStarted: wsEmitter<ITeamRunEvent>('team.runStarted'),

@@ -38,6 +38,15 @@
   "closeTabMessage": "現在の内容はまだ保存されていません。保存してから閉じますか？",
   "saveAndClose": "保存して閉じる",
   "closeWithoutSave": "保存しない",
+  "saveConflictTitle": "WINK GO の外部でファイルが変更されました",
+  "saveConflictMessage": "ファイルを開いた後にディスク上の内容が変更されました。他の変更を上書きしないよう、続行する前に最新の内容を再読み込みしてください。",
+  "reloadFile": "ファイルを再読み込み",
+  "reloadSuccess": "ディスクから最新の内容を読み込みました",
+  "reloadFailed": "ファイルの再読み込みに失敗しました",
+  "save": {
+    "tooltip": "変更を保存（Ctrl/Cmd+S）",
+    "clean": "未保存の変更はありません"
+  },
   "pptTitle": "PowerPoint プレゼンテーション",
   "pptOpenHint": "下のボタンをクリックして、システムアプリで開いて完全なコンテンツを表示します",
   "pptOpenFile": "ファイルを開く",
@@ -133,6 +142,15 @@
     "inspectElement": "要素を検証",
     "inspectElementEnable": "要素インスペクターを有効化",
     "inspectElementDisable": "要素インスペクターを無効化"
+  },
+  "browser": {
+    "newTab": "新しいタブ",
+    "addressPlaceholder": "URL を入力または検索",
+    "agentActiveTooltip": "エージェントがこのタブを操作しています",
+    "tabLimitReached": "タブ数の上限（{{count}}）に達したため、最も古いタブを再利用しました。",
+    "agentFirstUseTitle": "エージェントがアプリ内ブラウザーを使用しています",
+    "agentFirstUseContent": "このパネル内でページを開き、クリックや内容の読み取りができます。ログイン状態は保持されます。",
+    "agentFirstUseAction": "設定を開く"
   },
   "ppt": {
     "loading": "PPTプレビューを起動中...",

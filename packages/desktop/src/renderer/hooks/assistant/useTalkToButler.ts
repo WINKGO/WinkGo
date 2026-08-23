@@ -7,6 +7,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import type { ChatFileRef } from '@/common/types/chatFile';
 import type { Assistant } from '@/common/types/agent/assistantTypes';
 import { globalNavigate } from '@/renderer/utils/navigation';
 import { Message } from '@arco-design/web-react';
@@ -20,8 +21,8 @@ const BUTLER_ASSISTANT_ID = 'winkgo-assistant';
 export type TalkToButlerArgs = {
   /** Prompt pre-filled into the home chat input. */
   prompt: string;
-  /** Optional file paths pre-attached to the input (e.g. report screenshots). */
-  files?: string[];
+  /** Optional source-tagged files pre-attached to the input. */
+  files?: ChatFileRef[];
 };
 
 /**

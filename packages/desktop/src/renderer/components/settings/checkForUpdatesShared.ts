@@ -8,6 +8,14 @@
 
 import { ipcBridge } from '@/common';
 import type { UpdateReleaseInfo } from '@/common/update/updateTypes';
+import semver from 'semver';
+
+const isNewerVersion = (candidate: string | null | undefined, current: string): boolean => {
+  if (!candidate) return false;
+  const currentSemver = semver.valid(current) || semver.coerce(current)?.version;
+  const candidateSemver = semver.valid(candidate) || semver.coerce(candidate)?.version;
+  return Boolean(currentSemver && candidateSemver && semver.gt(candidateSemver, currentSemver));
+};
 
 /**
  * Discriminated outcome of an update check. The `available`/`upToDate` field
@@ -48,12 +56,10 @@ export const runUpdateCheck = async (opts: {
   checkFailedLabel: string;
 }): Promise<CheckUpdateOutcome> => {
   try {
-    let autoUpdateAvailable = false;
     let autoUpdateInfo: { version: string; releaseNotes?: string } | null = null;
     try {
       const autoRes = await ipcBridge.autoUpdate.check.invoke({ includePrerelease: opts.includePrerelease });
       if (autoRes?.success && autoRes.data?.updateInfo) {
-        autoUpdateAvailable = true;
         autoUpdateInfo = {
           version: autoRes.data.updateInfo.version,
           releaseNotes: autoRes.data.updateInfo.releaseNotes,
@@ -72,7 +78,12 @@ export const runUpdateCheck = async (opts: {
     const latest = res.data?.latest ?? null;
     const releasePageUrl = latest?.htmlUrl || '';
 
-    if (autoUpdateAvailable || (res.data?.updateAvailable && latest)) {
+    const autoUpdateAvailable = isNewerVersion(autoUpdateInfo?.version, currentVersion);
+    const manualUpdateAvailable = Boolean(
+      res.data?.updateAvailable && latest && isNewerVersion(latest.version, currentVersion)
+    );
+
+    if (autoUpdateAvailable || manualUpdateAvailable) {
       return {
         kind: 'available',
         currentVersion,

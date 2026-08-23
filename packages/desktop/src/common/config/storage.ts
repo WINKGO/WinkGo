@@ -18,8 +18,6 @@ export const EnvStorage = buildStorage<IEnvStorageRefer>('agent.env');
 
 export interface IConfigStorageRefer {
   language: string;
-  theme: string; // @deprecated migrated to theme.activeId/theme.userThemes
-  colorScheme: string; // @deprecated migrated to theme.activeId/theme.userThemes
   /** Persisted app-wide UI zoom factor for Display settings */
   'ui.zoomFactor'?: number;
   /** Per-region configurable font sizes (px), set in Appearance settings */
@@ -34,9 +32,6 @@ export interface IConfigStorageRefer {
   'webui.desktop.allowRemote'?: boolean;
   /** 桌面模式下 WebUI 端口 / WebUI port in desktop mode */
   'webui.desktop.port'?: number;
-  customCss: string; // 自定义 CSS 样式 // @deprecated migrated to theme.activeId/theme.userThemes
-  'css.themes': ICssTheme[]; // 自定义 CSS 主题列表 / Custom CSS themes list // @deprecated migrated to theme.activeId/theme.userThemes
-  'css.activeThemeId': string; // 当前激活的主题 ID / Currently active theme ID // @deprecated migrated to theme.activeId/theme.userThemes
   /** Active unified theme ID */
   'theme.activeId': string;
   /** User-created themes */
@@ -55,6 +50,10 @@ export interface IConfigStorageRefer {
   'system.keepAwake'?: boolean;
   // Automatically preview newly created Office files in the current workspace
   'system.autoPreviewOfficeFiles'?: boolean;
+  // In-app Browser Computer Use: user-consented login and QR-flow interaction.
+  'browser.loginAutomationEnabled'?: boolean;
+  'browser.loginAutomationConsentVersion'?: string;
+  'browser.loginAutomationConsentAt'?: string;
   // Skills Market: whether the external skills market source is enabled
   'skillsMarket.enabled'?: boolean;
   /**
@@ -127,6 +126,7 @@ export type ConversationSource = 'winkgo' | 'telegram' | 'lark' | 'dingtalk' | '
 
 export type TChatConversationStatus = 'pending' | 'running' | 'finished';
 export type TConversationRuntimeStateKind = 'idle' | 'starting' | 'running' | 'cancelling' | 'waiting_confirmation';
+export type TInterjectionMode = 'native' | 'boundary_queue' | 'cancel_resume';
 
 export type TConversationRuntimeSummary = {
   state: TConversationRuntimeStateKind;
@@ -136,6 +136,8 @@ export type TConversationRuntimeSummary = {
   is_processing: boolean;
   pending_confirmations: number;
   turn_id: string | null;
+  /** Missing on older Core builds; the renderer must default to boundary_queue. */
+  interjection_mode?: TInterjectionMode;
 };
 
 export type TConversationAssistantIdentity = {
@@ -170,6 +172,15 @@ interface IChatConversation<T, Extra> {
    * conversations without a bound project.
    */
   project_id?: string;
+  /** Detail-response-only native prompt media capabilities. */
+  prompt_capability?: { image: boolean; audio: boolean };
+  /** WINK GO Core local-history branch support. */
+  fork_capability?: { at_turn: boolean };
+}
+
+export interface TConversationForkLineage {
+  parent_conversation_id: string;
+  parent_message_id: string;
 }
 
 export interface TokenUsageBreakdown {
@@ -243,6 +254,8 @@ export type TChatConversation =
           is_health_check?: boolean;
           /** Cron job ID that spawned this conversation */
           cron_job_id?: string;
+          /** Informational lineage for a locally branched conversation. */
+          fork?: TConversationForkLineage;
         }
       >,
       'model'

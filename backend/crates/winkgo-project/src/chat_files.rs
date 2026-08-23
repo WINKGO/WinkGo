@@ -30,6 +30,56 @@ pub struct ResolvedChatMessage {
 }
 
 impl ProjectService {
+    /// Resolve one stable chat-file identity to an absolute path.
+    ///
+    /// This is the shared trust boundary for Preview/content endpoints and
+    /// chat attachment delivery. Project references are resolved with the
+    /// requested operation, uploads must stay under WINK GO's managed upload
+    /// root, and local files are accepted only after canonicalization.
+    pub async fn resolve_chat_file_ref(
+        &self,
+        file: &ChatFileRef,
+        upload_root: &Path,
+        op: FileOp,
+    ) -> Result<String, ProjectError> {
+        match file {
+            ChatFileRef::Project { pe_id, relative_path } => {
+                let resolved = self
+                    .resolve_reference(ReferenceInput {
+                        pe_id: pe_id.clone(),
+                        relative_path: relative_path.clone(),
+                        op,
+                    })
+                    .await?;
+                let abs = resolved.absolute_path.ok_or_else(|| ProjectError::ChatFileMissing {
+                    path: relative_path.clone(),
+                })?;
+                if !Path::new(&abs).exists() {
+                    return Err(ProjectError::ChatFileMissing { path: abs });
+                }
+                Ok(abs)
+            }
+            ChatFileRef::Upload { path } => {
+                let candidate = Path::new(path);
+                if !candidate.is_file() {
+                    return Err(ProjectError::ChatFileMissing { path: path.clone() });
+                }
+                if !path_within(upload_root, candidate) {
+                    return Err(ProjectError::UploadPathOutsideRoot { path: path.clone() });
+                }
+                Ok(path.clone())
+            }
+            ChatFileRef::Local { path } => {
+                let canonical = std::fs::canonicalize(path)
+                    .map_err(|_| ProjectError::LocalPathNotReadable { path: path.clone() })?;
+                if !canonical.is_file() {
+                    return Err(ProjectError::LocalPathNotReadable { path: path.clone() });
+                }
+                Ok(canonical.to_string_lossy().into_owned())
+            }
+        }
+    }
+
     /// Resolve a message's `files` to absolute paths and return the inlined
     /// content. Atomic: any bad reference (unknown pe, escape, missing file,
     /// out-of-root upload, unreadable local path) fails the whole message.
@@ -44,49 +94,7 @@ impl ProjectService {
     ) -> Result<ResolvedChatMessage, ProjectError> {
         let mut paths = Vec::with_capacity(files.len());
         for file in files {
-            match file {
-                ChatFileRef::Project { pe_id, relative_path } => {
-                    let resolved = self
-                        .resolve_reference(ReferenceInput {
-                            pe_id: pe_id.clone(),
-                            relative_path: relative_path.clone(),
-                            op: FileOp::Read,
-                        })
-                        .await?;
-                    let abs = resolved.absolute_path.ok_or_else(|| ProjectError::ChatFileMissing {
-                        path: relative_path.clone(),
-                    })?;
-                    // A project ref may point at a file or a folder (the tree
-                    // allows attaching a directory); require only that it exists.
-                    if !Path::new(&abs).exists() {
-                        return Err(ProjectError::ChatFileMissing { path: abs });
-                    }
-                    paths.push(abs);
-                }
-                ChatFileRef::Upload { path } => {
-                    let candidate = Path::new(path);
-                    if !candidate.is_file() {
-                        return Err(ProjectError::ChatFileMissing { path: path.clone() });
-                    }
-                    if !path_within(upload_root, candidate) {
-                        return Err(ProjectError::UploadPathOutsideRoot { path: path.clone() });
-                    }
-                    paths.push(path.clone());
-                }
-                ChatFileRef::Local { path } => {
-                    // A path the user explicitly picked in the host-file browser,
-                    // which already exposes the whole filesystem. No managed-root
-                    // restriction (that is the upload channel's D2 invariant only);
-                    // just canonicalize (collapsing `..`/symlinks) and require an
-                    // existing regular file.
-                    let canonical = std::fs::canonicalize(path)
-                        .map_err(|_| ProjectError::LocalPathNotReadable { path: path.clone() })?;
-                    if !canonical.is_file() {
-                        return Err(ProjectError::LocalPathNotReadable { path: path.clone() });
-                    }
-                    paths.push(canonical.to_string_lossy().into_owned());
-                }
-            }
+            paths.push(self.resolve_chat_file_ref(file, upload_root, FileOp::Read).await?);
         }
 
         let content = if paths.is_empty() {

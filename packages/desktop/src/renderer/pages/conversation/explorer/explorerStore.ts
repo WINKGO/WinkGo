@@ -95,11 +95,25 @@ const loadUi = (id: string): PersistedUi => {
   }
 };
 
-const persistUi = (): void => {
+const persistUi = (options?: { guardEmptyOverwrite?: boolean }): void => {
   const ls = getLocalStorage();
   if (!ls || !projectId) return;
   const data: PersistedUi = { expanded: [...expanded] };
   if (selected) data.selected = selected;
+  // Only the project-switch leave path uses this guard. During a rapid switch
+  // the in-memory set can be transiently empty; do not overwrite a richer saved
+  // expansion state the user never asked to collapse.
+  if (options?.guardEmptyOverwrite && data.expanded.length === 0) {
+    try {
+      const raw = ls.getItem(uiStorageKey(projectId));
+      const previous = raw ? (JSON.parse(raw) as Partial<PersistedUi>) : null;
+      if (previous && Array.isArray(previous.expanded) && previous.expanded.length > 0) {
+        data.expanded = previous.expanded;
+      }
+    } catch {
+      // Corrupt or absent state: persist the current state below.
+    }
+  }
   try {
     ls.setItem(uiStorageKey(projectId), JSON.stringify(data));
   } catch {
@@ -109,12 +123,49 @@ const persistUi = (): void => {
 
 // ── snapshot + notify ────────────────────────────────────────────────────────
 
-const rebuildSnapshot = (): void => {
-  snapshot = { projectId, treeData: buildTreeData(cache, expanded, roots), selected, expanded: [...expanded] };
+const treeNodesEqual = (left: readonly TreeNode[], right: readonly TreeNode[]): boolean => {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index += 1) {
+    const a = left[index];
+    const b = right[index];
+    if (
+      a.key !== b.key ||
+      a.title !== b.title ||
+      a.isLeaf !== b.isLeaf ||
+      a.excluded !== b.excluded ||
+      a.role !== b.role ||
+      a.runtimeStatus !== b.runtimeStatus
+    ) {
+      return false;
+    }
+    if (a.children === undefined || b.children === undefined) {
+      if (a.children !== b.children) return false;
+    } else if (!treeNodesEqual(a.children, b.children)) {
+      return false;
+    }
+  }
+  return true;
 };
 
+const keyListsEqual = (left: readonly PeKey[], right: readonly PeKey[]): boolean =>
+  left.length === right.length && left.every((key, index) => key === right[index]);
+
+const viewsEqual = (left: ExplorerView, right: ExplorerView): boolean =>
+  left.projectId === right.projectId &&
+  left.selected === right.selected &&
+  keyListsEqual(left.expanded, right.expanded) &&
+  treeNodesEqual(left.treeData, right.treeData);
+
 const commit = (): void => {
-  rebuildSnapshot();
+  const next: ExplorerView = {
+    projectId,
+    treeData: buildTreeData(cache, expanded, roots),
+    selected,
+    expanded: [...expanded],
+  };
+  if (viewsEqual(snapshot, next)) return;
+  snapshot = next;
   for (const listener of listeners) listener();
 };
 
@@ -145,8 +196,10 @@ const runReconcile = (): void => {
         if (changed) commit();
       })
       .catch(() => {
-        // Offline / reconnect: current already advanced; the reconnect path
-        // resets current and re-declares, so no gap is left behind.
+        // A rejected subscription was never actually established. Roll only
+        // those declarations back so the next reconcile (including a normal
+        // expand action, not just a reconnect) can safely retry them.
+        for (const key of toAdd) current.delete(key);
       });
   }
 };
@@ -260,7 +313,7 @@ export const openProject = (id: string, projectRoots: RootRef[]): void => {
     commit();
     return;
   }
-  if (projectId) persistUi();
+  if (projectId) persistUi({ guardEmptyOverwrite: true });
   projectId = id;
   roots = projectRoots;
   cache = new Map();

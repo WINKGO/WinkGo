@@ -1,4 +1,5 @@
 import type { IConversationTurnCompletedEvent, IResponseMessage } from '@/common/adapter/ipcBridge';
+import { containsRetiredWinkGoAgentIdentity } from '@/renderer/utils/model/agentTypeSupportPolicy';
 
 export type IslandActivityStatus = 'running' | 'success' | 'error' | 'attention';
 export type IslandActivityKind = 'tool' | 'permission' | 'agent' | 'system';
@@ -71,7 +72,9 @@ const normalizeStatus = (value: unknown, hasError = false): IslandActivityStatus
 };
 
 const resolveSource = (value: unknown): string => {
-  const normalized = stringValue(value).toLocaleLowerCase();
+  const original = stringValue(value);
+  const normalized = original.toLocaleLowerCase();
+  if (containsRetiredWinkGoAgentIdentity(original)) return 'WINK GO';
   if (normalized.includes('wechat') || normalized.includes('weixin')) return '微信';
   if (
     normalized.includes('qqmusic') ||
@@ -105,16 +108,6 @@ const resolveSource = (value: unknown): string => {
   if (normalized.includes('youku') || normalized.includes('优酷')) return '优酷';
   if (normalized.includes('tencent_video') || normalized.includes('腾讯视频')) return '腾讯视频';
   if (normalized.includes('doubao') || normalized.includes('豆包')) return '豆包';
-  if (normalized.includes('claude')) return 'Claude Code';
-  if (normalized.includes('codex')) return 'Codex';
-  if (normalized.includes('openclaw')) return 'OpenClaw';
-  if (normalized.includes('hermes')) return 'Hermes';
-  if (normalized.includes('qclaw')) return 'QClaw';
-  if (normalized.includes('workbuddy')) return 'WorkBuddy';
-  if (normalized.includes('kiro')) return 'Kiro';
-  if (normalized.includes('qoder')) return 'Qoder';
-  if (normalized.includes('trae')) return 'Trae';
-  if (normalized.includes('vscode') || normalized.includes('visual_studio_code')) return 'VS Code';
   if (normalized.includes('smart_home') || normalized.includes('home_assistant')) return '智能家居';
   if (normalized.includes('browser') || normalized.includes('web_automation')) return '网页自动化';
   if (normalized.includes('mcp')) return 'MCP';

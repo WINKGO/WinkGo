@@ -6,6 +6,8 @@
  */
 import { expect, test } from '@playwright/test';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'path';
 
 declare global {
@@ -30,6 +32,7 @@ async function resolveMainWindow(electronApp: ElectronApplication): Promise<Page
 test.describe('Installation integrity failure dialog', () => {
   test('shows diagnostics actions and records a user report', async () => {
     const projectRoot = path.resolve(__dirname, '../../..');
+    const userDataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'winkgo-integrity-e2e-'));
     const electronApp = await electron.launch({
       args: ['.'],
       cwd: projectRoot,
@@ -39,6 +42,7 @@ test.describe('Installation integrity failure dialog', () => {
         WINKGO_DISABLE_AUTO_UPDATE: '1',
         WINKGO_DISABLE_DEVTOOLS: '1',
         WINKGO_E2E_TEST: '1',
+        WINKGO_E2E_USER_DATA_DIR: userDataDirectory,
         WINKGO_CDP_PORT: '0',
         NODE_ENV: 'development',
       },
@@ -49,7 +53,7 @@ test.describe('Installation integrity failure dialog', () => {
       const page = await resolveMainWindow(electronApp);
 
       await expect(page.getByTestId('installation-integrity-dialog')).toBeVisible();
-      await expect(page.getByTestId('installation-integrity-description')).toContainText(/WinkGo/);
+      await expect(page.getByTestId('installation-integrity-description')).toContainText(/WINK GO|WinkGo/i);
       await expect(page.getByTestId('installation-integrity-report')).toBeVisible();
       await expect(page.getByTestId('installation-integrity-download')).toBeVisible();
 
@@ -72,6 +76,7 @@ test.describe('Installation integrity failure dialog', () => {
         });
     } finally {
       await electronApp.close();
+      fs.rmSync(userDataDirectory, { recursive: true, force: true });
     }
   });
 });

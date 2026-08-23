@@ -1,5 +1,7 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { WORKSPACE_HEADER_HEIGHT } from '@/renderer/pages/conversation/utils/layoutCalc';
 import { dispatchWorkspaceToggleEvent } from '@/renderer/utils/workspace/workspaceEvents';
+import { Button } from '@arco-design/web-react';
 import { ExpandLeft, ExpandRight } from '@icon-park/react';
 import React from 'react';
 import WorkspaceOpenButton from './WorkspaceOpenButton';
@@ -69,6 +71,19 @@ export const DesktopWorkspaceToggle: React.FC = () => (
   >
     <ExpandLeft size={16} />
   </button>
+);
+
+// Windows keeps the workspace control on the outer edge instead of crowding
+// the Explorer toolbar. It remains present in both states so the same affordance
+// collapses and restores the panel.
+export const DesktopWorkspaceEdgeToggle: React.FC<{ collapsed: boolean }> = ({ collapsed }) => (
+  <Button
+    type='text'
+    className='workspace-edge-toggle'
+    onClick={() => dispatchWorkspaceToggleEvent()}
+    aria-label={collapsed ? 'Expand workspace' : 'Collapse workspace'}
+    icon={collapsed ? <ExpandRight size={15} /> : <ExpandLeft size={15} />}
+  />
 );
 
 export default WorkspacePanelHeader;

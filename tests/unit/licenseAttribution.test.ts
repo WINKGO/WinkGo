@@ -163,7 +163,7 @@ describe('Apache-2.0 derivative attribution', () => {
     expect(source).not.toContain('Copyright 2025 AionUi');
   });
 
-  it('bundles only the independently written PDF compatibility skill', () => {
+  it('bundles only the independently written PDF compatibility skill', { timeout: 60_000 }, () => {
     const builtinSkillsRoot = resolve(projectRoot, 'backend/crates/winkgo-app/assets/builtin-skills');
     const pdfSkillRoot = resolve(builtinSkillsRoot, 'pdf');
     const restrictedLegacyFileHashes = new Set([

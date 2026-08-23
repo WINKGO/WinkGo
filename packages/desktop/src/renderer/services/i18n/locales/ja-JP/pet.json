@@ -1,6 +1,8 @@
 {
   "desktopPet": "デスクトップペット",
   "enable": "デスクトップペットを有効にする",
+  "butlerSetup": "執事に設定を依頼",
+  "butlerSetupPrompt": "デスクトップペットを作成してください。画像を添付するので、その画像をペットにしてください。",
   "size": "ペットのサイズ",
   "sizeSmall": "小 ({{px}}px)",
   "sizeMedium": "中 ({{px}}px)",

@@ -85,4 +85,15 @@ describe('desktop pet authoritative state', () => {
     await waitFor(() => expect(enableSwitch()).not.toBeDisabled());
     expect(enableSwitch()).toHaveAttribute('aria-checked', 'false');
   });
+
+  it('defaults the pet size selection to small when desktop state lookup fails', async () => {
+    getPetEnabled.mockResolvedValue(true);
+    getPetSize.mockRejectedValue(new Error('ipc unavailable'));
+
+    render(<PetSettings />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'pet.sizeSmall' })).toBeChecked();
+    });
+  });
 });

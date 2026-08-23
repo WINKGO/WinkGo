@@ -18,7 +18,7 @@ import log from 'electron-log';
 import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
-import { parse } from 'semver';
+import { gt, parse } from 'semver';
 import {
   recordAutoUpdateNativeInstallError,
   recordAutoUpdateNativeInstallReady,
@@ -635,6 +635,18 @@ class AutoUpdaterService extends EventEmitter {
       if (!result.isUpdateAvailable) {
         log.debug('[auto-update] no update available from CDN feed', {
           version: result.updateInfo.version,
+        });
+        return { success: true };
+      }
+
+      // A rolled-back channel can be reported as available by electron-updater.
+      // WINK GO accepts strict forward upgrades only.
+      const feedVersion = parse(result.updateInfo.version);
+      const installedVersion = parse(app.getVersion());
+      if (feedVersion && installedVersion && !gt(feedVersion, installedVersion)) {
+        log.debug('[auto-update] feed version not newer than installed; ignoring', {
+          feedVersion: feedVersion.version,
+          installedVersion: installedVersion.version,
         });
         return { success: true };
       }

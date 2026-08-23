@@ -4,32 +4,69 @@
   "actions": [
     {
       "id": "list",
-      "phrases": ["设备列表", "区域", "服务"],
-      "tool_names": ["homeassistant.list_areas", "homeassistant.get_area_entities", "appliance.list_devices"],
+      "phrases": [
+        "设备列表",
+        "区域",
+        "服务"
+      ],
+      "tool_names": [
+        "homeassistant.list_areas",
+        "homeassistant.get_area_entities",
+        "appliance.list_devices"
+      ],
       "default_arguments": {}
     },
     {
       "id": "state",
-      "phrases": ["状态", "是否打开"],
-      "tool_names": ["homeassistant.get_entity_state", "appliance.get_device_state"],
+      "phrases": [
+        "状态",
+        "是否打开"
+      ],
+      "tool_names": [
+        "homeassistant.get_entity_state",
+        "appliance.get_device_state"
+      ],
       "default_arguments": {}
     },
     {
       "id": "power",
-      "phrases": ["打开", "关闭", "开灯", "关灯"],
-      "tool_names": ["homeassistant.turn_on", "homeassistant.turn_off", "homeassistant.toggle", "appliance.set_power"],
+      "phrases": [
+        "打开",
+        "关闭",
+        "开灯",
+        "关灯"
+      ],
+      "tool_names": [
+        "homeassistant.turn_on",
+        "homeassistant.turn_off",
+        "homeassistant.toggle",
+        "appliance.set_power"
+      ],
       "default_arguments": {}
     },
     {
       "id": "temperature",
-      "phrases": ["温度", "空调"],
-      "tool_names": ["homeassistant.set_climate_temperature", "appliance.set_temperature"],
+      "phrases": [
+        "温度",
+        "空调"
+      ],
+      "tool_names": [
+        "homeassistant.set_climate_temperature",
+        "appliance.set_temperature"
+      ],
       "default_arguments": {}
     },
     {
       "id": "scene",
-      "phrases": ["执行场景", "回家模式", "离家模式"],
-      "tool_names": ["appliance.run_scene", "homeassistant.call_service"],
+      "phrases": [
+        "执行场景",
+        "回家模式",
+        "离家模式"
+      ],
+      "tool_names": [
+        "appliance.run_scene",
+        "homeassistant.call_service"
+      ],
       "default_arguments": {}
     },
     {

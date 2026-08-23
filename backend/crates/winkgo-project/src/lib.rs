@@ -15,6 +15,7 @@ pub mod containment;
 pub mod monitor;
 pub mod routes;
 pub mod runtime;
+pub mod scm;
 mod service;
 pub mod types;
 

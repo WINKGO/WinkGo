@@ -1,0 +1,130 @@
+.winkgo-browser-recorder {
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+}
+
+.winkgo-browser-recorder__status {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--fill-1);
+}
+
+.winkgo-browser-recorder__status > span:nth-child(2),
+.winkgo-browser-recorder__skill-summary span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.winkgo-browser-recorder__status strong,
+.winkgo-browser-recorder__skill strong,
+.winkgo-browser-recorder__empty strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.winkgo-browser-recorder__status small,
+.winkgo-browser-recorder__skill small,
+.winkgo-browser-recorder__empty small {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.winkgo-browser-recorder__status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-success-6);
+}
+
+.winkgo-browser-recorder__status-dot--recording {
+  background: var(--color-danger-6);
+  animation: winkgo-browser-recorder-pulse 1.2s ease-in-out infinite;
+}
+
+.winkgo-browser-recorder__capture,
+.winkgo-browser-recorder__parameters {
+  display: grid;
+  gap: 8px;
+}
+
+.winkgo-browser-recorder__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.winkgo-browser-recorder__record-button {
+  height: 28px;
+  border-radius: 8px;
+}
+
+.winkgo-browser-recorder__skills {
+  display: grid;
+  max-height: 160px;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.winkgo-browser-recorder__skill {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 4px 5px;
+  border: 1px solid var(--border-base);
+  border-radius: 11px;
+  background: var(--bg-1);
+}
+
+.winkgo-browser-recorder__skill-summary {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+
+.winkgo-browser-recorder__skill-actions {
+  display: flex;
+  align-items: center;
+}
+
+.winkgo-browser-recorder__parameters {
+  grid-column: 1 / -1;
+  padding-top: 8px;
+}
+
+.winkgo-browser-recorder__empty {
+  padding: 3px 2px 1px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-align: center;
+}
+
+.winkgo-browser-recorder__feedback {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+@keyframes winkgo-browser-recorder-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-danger-6) 34%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+}

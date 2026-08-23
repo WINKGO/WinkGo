@@ -2,6 +2,7 @@
   "fileChanges": "Dosya Değişiklikleri",
   "fileChangesCount": "{{count}} Dosya Değişikliği",
   "conversationInProgress": "Bir görüşme şu anda devam ediyor...",
+  "delivery": { "queued": "Mevcut görevin tamamlanması bekleniyor" },
   "confirm": "Onayla",
   "canceledExecution": "Yürütme iptal edildi",
   "openLinkFailed": "Bağlantı açılamadı",
@@ -62,6 +63,13 @@
   "processing": "İşleniyor...",
   "responseSentSuccessfully": "Yanıt başarıyla gönderildi",
   "permissionResponseFailed": "Yanıt gönderilemedi. Lütfen tekrar deneyin.",
+  "askSubmit": "Gönder",
+  "askDecline": "Atla",
+  "askAnswered": "Yanıtlandı",
+  "askDeclined": "Atlandı",
+  "askOther": "Diğer",
+  "askOtherPlaceholder": "Yanıtınızı yazın",
+  "requestDetails": "İstek ayrıntıları:",
   "confirmation": {
     "applyChange": "Bu değişikliği uygula?",
     "allowExecution": "Yürütmeye izin ver?",
@@ -72,5 +80,14 @@
     "yesAlwaysAllowTool": "Evet, \"{{serverName}}\" sunucusundan \"{{toolName}}\" aracına her zaman izin ver",
     "yesAlwaysAllowServer": "Evet, \"{{serverName}}\" sunucusundaki tüm araçlara her zaman izin ver",
     "no": "Hayır (esc)"
+  },
+  "fork": {
+    "action": "Buradan çatalla",
+    "errorTurnInFlight": "Çatallamadan önce mevcut yanıtın bitmesini bekleyin",
+    "errorParentUnbound": "Bu konuşmanın henüz çatallanacak bir arka uç oturumu yok",
+    "errorPointUnsupported": "Bu ajan yalnızca en son mesajdan çatallayabilir",
+    "errorUnsupported": "Bu ajan çatallamayı desteklemiyor",
+    "errorGeneric": "Çatallama başarısız: {{message}}",
+    "errorTeamUnsupported": "Team member conversations must be managed from Team mode"
   }
 }

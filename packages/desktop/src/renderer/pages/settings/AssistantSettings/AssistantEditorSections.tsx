@@ -11,6 +11,9 @@ import {
 import type { AgentModeOption } from '@/renderer/utils/model/agentTypes';
 import { useAgentLogos, resolveAgentAvatar } from '@/renderer/utils/model/agentLogo';
 import type { AvailableBackend } from './types';
+import { filterAssistantEditorBackends } from './assistantUtils';
+import WinkGoInlineSearchInput from '@/renderer/components/base/WinkGoInlineSearchInput';
+import { DROPDOWN_SEARCH_THRESHOLD } from '@/renderer/components/agent/runtimeSelectorOptions';
 import { Avatar, Select, Tag } from '@arco-design/web-react';
 import { Info, Robot } from '@icon-park/react';
 import React, { useMemo, useState } from 'react';
@@ -51,6 +54,12 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
   const editAgent = agent.value;
   const setEditAgent = agent.setValue;
   const availableBackends = agent.availableBackends;
+  const [agentQuery, setAgentQuery] = useState('');
+  const showAgentSearch = availableBackends.length > DROPDOWN_SEARCH_THRESHOLD;
+  const filteredBackends = useMemo(
+    () => filterAssistantEditorBackends(availableBackends, agentQuery),
+    [availableBackends, agentQuery]
+  );
 
   // Render the agent's own avatar (icon/logo) for a dropdown row. Falls back to
   // a Robot glyph when the agent has neither an explicit icon nor a catalog logo.
@@ -438,6 +447,31 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
               onChange={(value) => setEditAgent(value as string)}
               disabled={isGenerated}
               data-testid='select-assistant-agent'
+              onVisibleChange={(visible) => {
+                if (!visible) setAgentQuery('');
+              }}
+              dropdownRender={(menu) =>
+                showAgentSearch ? (
+                  <div>
+                    <div className='px-6px pt-4px pb-6px' style={{ background: 'var(--color-bg-popup)' }}>
+                      <WinkGoInlineSearchInput
+                        value={agentQuery}
+                        onChange={setAgentQuery}
+                        placeholder={t('settings.searchAssistants', { defaultValue: 'Search assistants' })}
+                        data-testid='assistant-agent-search'
+                      />
+                    </div>
+                    {menu}
+                  </div>
+                ) : (
+                  menu
+                )
+              }
+              notFoundContent={
+                <div className='px-12px py-10px text-12px text-t-tertiary text-center'>
+                  {t('settings.assistantNoMatch', { defaultValue: 'No matching assistants' })}
+                </div>
+              }
               renderFormat={(_option, value) => {
                 const selected = availableBackends.find((item) => item.id === value);
                 if (!selected) return (value as string) ?? '';
@@ -449,7 +483,7 @@ const AssistantEditorSections: React.FC<AssistantEditorSectionsProps> = ({ edito
                 );
               }}
             >
-              {availableBackends.map((option) => (
+              {filteredBackends.map((option) => (
                 <Select.Option key={option.id} value={option.id}>
                   <span className='flex items-center gap-8px'>
                     {renderAgentAvatar(option)}

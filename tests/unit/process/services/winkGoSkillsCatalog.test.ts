@@ -25,6 +25,11 @@ import {
 
 let temporaryDirectory = '';
 const bundledSkills = path.join(process.cwd(), 'resources', 'winkgo', 'skills');
+const bundledSkillIds = fs
+  .readdirSync(bundledSkills, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && !entry.name.startsWith('_'))
+  .map((entry) => entry.name)
+  .sort();
 
 beforeEach(async () => {
   temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'winkgo-skills-catalog-'));
@@ -43,7 +48,7 @@ describe('WINK GO Skills catalog', () => {
     const catalog = listWinkGoSkillsCatalog();
 
     expect(catalog.available).toBe(true);
-    expect(catalog.skills).toHaveLength(23);
+    expect(catalog.skills).toHaveLength(bundledSkillIds.length);
     expect(catalog.skills.map((skill) => skill.id)).not.toContain('desktop_agents');
     expect(catalog.skills.map((skill) => skill.id)).not.toContain('feishu');
     expect(catalog.skills.every((skill) => skill.actionCount > 0)).toBe(true);
@@ -57,6 +62,29 @@ describe('WINK GO Skills catalog', () => {
     expect(document).toContain('winkgo.wechat.list_favorites');
     expect(document).not.toMatch(/[A-Z]:\\/);
     expect(document).not.toMatch(/\bpython(?:3)?\b/i);
+  });
+
+  it.each(bundledSkillIds)('prepares the %s package as a complete portable Runtime skill', (skillId) => {
+    const prepared = prepareWinkGoSkillImport(skillId);
+
+    expect(prepared.skillPath).toBeTruthy();
+    const skillPath = prepared.skillPath!;
+    const skillDocument = fs.readFileSync(path.join(skillPath, 'SKILL.md'), 'utf8');
+    const actions = JSON.parse(fs.readFileSync(path.join(skillPath, 'actions.json'), 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(path.join(skillPath, 'manifest.json'), 'utf8'));
+
+    expect(skillDocument).toContain(`name: ${JSON.stringify(skillId)}`);
+    expect(skillDocument).toContain('WINK GO Runtime Skills');
+    expect(skillDocument).not.toMatch(/[A-Z]:\\/);
+    expect(actions.actions.length).toBeGreaterThan(0);
+    expect(new Set(actions.actions.map((action: { id: string }) => action.id)).size).toBe(actions.actions.length);
+    expect(
+      actions.actions.every(
+        (action: { id?: string; phrases?: string[]; tool_names?: string[] }) =>
+          Boolean(action.id) && Boolean(action.phrases?.length) && Boolean(action.tool_names?.length)
+      )
+    ).toBe(true);
+    expect(manifest.id).toBe(skillId);
   });
 
   it('normalizes WeChat favorites and includes them in the filtered bridge config', () => {
@@ -84,6 +112,12 @@ describe('WINK GO Skills catalog', () => {
       fs.readFileSync(path.join(temporaryDirectory, 'winkgo-runtime-skills', 'enabled-skills.json'), 'utf8')
     );
     expect(config.skillPreferences.wechat).toEqual(saved);
+    expect(config.localBrowserSkillsEnabled).toBe(true);
+    expect(config.localDesktopSkillsEnabled).toBe(true);
+    expect(config.allowedToolNames).toContain('winkgo.browser_skill.list');
+    expect(config.allowedToolNames).toContain('winkgo.browser_skill.run');
+    expect(config.allowedToolNames).toContain('winkgo.desktop_skill.list');
+    expect(config.allowedToolNames).toContain('winkgo.desktop_skill.run');
     expect(config.allowedToolNames).toContain('winkgo.wechat.list_favorites');
     expect(config.allowedToolPrefixes).toContain('wechat.');
   });

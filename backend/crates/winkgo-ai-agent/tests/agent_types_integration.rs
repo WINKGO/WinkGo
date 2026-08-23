@@ -153,7 +153,7 @@ async fn winkgo_agent_agent_metadata() {
 fn agent_session_kind_is_limited_to_runnable_runtimes() {
     fn assert_runnable(kind: AgentSessionKind) {
         match kind {
-            AgentSessionKind::Acp(_) | AgentSessionKind::WinkGoAgent(_) => {}
+            AgentSessionKind::Acp(_) | AgentSessionKind::WinkGoAgent(_) | AgentSessionKind::Antigravity(_) => {}
         }
     }
 
@@ -193,6 +193,7 @@ async fn collect_idle_ignores_winkgo_agent_agent_type() {
                 belongs_to_team: false,
             })),
             AgentType::Gemini
+            | AgentType::Antigravity
             | AgentType::OpenclawGateway
             | AgentType::Remote
             | AgentType::Nanobot

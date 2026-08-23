@@ -27,6 +27,9 @@
     "configureFirst": "請先在設定中配置一個 Agent。",
     "switching": "正在切換 Agent..."
   },
+  "runtime": {
+    "managedByAgent": "由 Agent 管理"
+  },
   "model": {
     "switchSuccess": "模型切換成功",
     "switchFailed": "模型切換失敗",
@@ -47,5 +50,31 @@
     "label": "思考強度",
     "switchSuccess": "思考強度切換成功",
     "switchFailed": "思考強度切換失敗"
+  },
+  "speed": {
+    "label": "速度",
+    "switchSuccess": "回應速度切換成功",
+    "switchFailed": "回應速度切換失敗"
+  },
+  "voiceTask": {
+    "emptyCommand": "任務內容為空，未提交給 Agent。",
+    "noAgent": "沒有可用的 WINK GO Agent，或指定的桌面 Agent 技能已停用。",
+    "noModel": "WINK GO CLI 沒有可用模型，請先在「模型」頁面設定並啟用模型。",
+    "conversationName": "小智：{{command}}",
+    "createFailed": "WINK GO Agent 無法建立對話。",
+    "queued": "任務已排入 {{assistant}} 的佇列，會在目前任務完成後自動執行。",
+    "accepted": "任務已交給 {{assistant}}，可在 WINK GO 中查看執行進度。",
+    "none": "目前沒有管家任務。",
+    "waitingConfirmation": "{{assistant}} 正在等待您確認。",
+    "queuedStatus": "{{assistant}} 已接收排隊任務，會在目前任務完成後執行。",
+    "running": "{{assistant}} 正在執行任務。",
+    "finishedWithResult": "{{assistant}} 已完成任務：{{result}}",
+    "finishedNoResult": "{{assistant}} 已完成任務，但沒有讀取到最終回覆。",
+    "failed": "{{assistant}} 執行失敗：{{error}}",
+    "acceptedStatus": "{{assistant}} 已接收任務。",
+    "noCancelable": "目前沒有可取消的管家任務。",
+    "cancelling": "{{assistant}} 仍在結束任務，請稍後再試。",
+    "cancelled": "已取消 {{assistant}} 的目前任務。",
+    "history": "最近有 {{count}} 個 Agent 任務：{{tasks}}。"
   }
 }

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Build builtin MCP server scripts as fully self-contained CJS bundles.
  *
@@ -31,6 +32,21 @@ async function main() {
       ...SHARED_OPTIONS,
       entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/imageGenServer.ts')],
       outfile: path.join(ROOT, 'out/main/builtin-mcp-image-gen.js'),
+    }),
+    esbuild.build({
+      ...SHARED_OPTIONS,
+      entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/browserServer.ts')],
+      outfile: path.join(ROOT, 'out/main/builtin-mcp-browser.js'),
+    }),
+    esbuild.build({
+      ...SHARED_OPTIONS,
+      entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/browserSkillsServer.ts')],
+      outfile: path.join(ROOT, 'out/main/builtin-mcp-browser-skills.js'),
+    }),
+    esbuild.build({
+      ...SHARED_OPTIONS,
+      entryPoints: [path.join(ROOT, 'packages/desktop/src/process/resources/builtinMcp/desktopComputerUseServer.ts')],
+      outfile: path.join(ROOT, 'out/main/builtin-mcp-desktop-computer-use.js'),
     }),
   ]);
 }

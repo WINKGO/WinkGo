@@ -23,7 +23,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  vi.resetModules();
   delete window.__backendPort;
 });
 

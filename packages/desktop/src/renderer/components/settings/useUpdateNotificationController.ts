@@ -70,7 +70,7 @@ const reduceNotificationState = (
   event: UpdateNotificationEvent
 ): UpdateNotificationState => updateNotificationReducer(current, event).state;
 
-const RELEASES_PAGE_URL = 'https://github.com/WINKGO/wink-go/releases';
+const RELEASES_PAGE_URL = 'https://winkgo.top/';
 const STARTUP_WEBSITE_UPDATE_CHECK_DELAY_MS = 5000;
 
 const getVersionLabelFromState = (state: UpdateNotificationState): string =>

@@ -9,7 +9,9 @@ import { Button, Input, InputNumber, Progress, Radio, Switch } from '@arco-desig
 import {
   AlarmClock,
   ApplicationMenu,
+  Browser,
   CloseSmall,
+  Computer,
   Compression,
   Delete,
   Download,
@@ -55,8 +57,10 @@ import {
   type IslandDynamicIdentity,
 } from '@renderer/utils/model/winkGoBranding';
 import { playWinkGoInteractionSound } from '@renderer/utils/winkgo/islandFilePreferences';
+import { useAddEventListener } from '@renderer/utils/emitter';
 import type { IslandActivity, IslandActivityStatus } from './islandActivity';
 import { extractMailVerificationCode, isLikelyVerificationMail } from './mailVerificationCode';
+import ComputerUsePanel from './ComputerUsePanel';
 import MediaLyrics from './MediaLyrics';
 import { useIslandActivityFeed } from './useIslandActivityFeed';
 import { useIslandFileOrganizer, type IslandRecentFile } from './useIslandFileOrganizer';
@@ -69,6 +73,8 @@ type IslandPanel =
   | 'notification'
   | 'tools'
   | 'mail'
+  | 'browserComputerUse'
+  | 'desktopComputerUse'
   | 'timer'
   | 'files'
   | 'category'
@@ -277,12 +283,14 @@ const IslandLoopText: React.FC<{ text: string }> = ({ text }) => {
 };
 
 const floatingWindowSizes: Record<Exclude<IslandPanel, null> | 'collapsed', { height: number; width: number }> = {
-  collapsed: { width: 250, height: 38 },
+  collapsed: { width: 294, height: 38 },
   activity: { width: 440, height: 300 },
   media: { width: 320, height: 115 },
   notification: { width: 410, height: 238 },
   tools: { width: 250, height: 46 },
   mail: { width: 440, height: 458 },
+  browserComputerUse: { width: 440, height: 370 },
+  desktopComputerUse: { width: 440, height: 370 },
   timer: { width: 440, height: 128 },
   files: { width: 470, height: 132 },
   category: { width: 470, height: 132 },
@@ -303,6 +311,7 @@ type IslandToast = {
   id: string;
   source: string;
   text: string;
+  activityId?: string;
 };
 
 const getIslandToastDisplayText = (toast: IslandToast | null): string =>
@@ -615,6 +624,16 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
   const toolWheelDeltaRef = useRef(0);
   const [draggingQuickAppPath, setDraggingQuickAppPath] = useState<string | null>(null);
   const [panel, setPanel] = useState<IslandPanel>(null);
+  useAddEventListener(
+    'dynamic-island.open-panel',
+    (nextPanel) => {
+      setPanel(nextPanel);
+    },
+    []
+  );
+  useEffect(() => {
+    return window.electronAPI?.desktopIsland?.onOpenPanel?.((nextPanel) => setPanel(nextPanel));
+  }, []);
   const [mediaView, setMediaView] = useState<MediaView>('controls');
   const [toolWheelIndex, setToolWheelIndex] = useState(0);
   const [categoryName, setCategoryName] = useState('');
@@ -1113,15 +1132,19 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
       media: null,
       notification: null,
     });
-    setToastQueue((current) => [
-      ...current,
-      {
-        id: `activity:${eventKey}:${primaryActivity.timestamp}`,
-        source: identity.source,
-        text: `${primaryActivity.source} · ${t(activityStatusKey[primaryActivity.status])} · ${primaryActivity.title}`,
-      },
-    ]);
-  }, [floating, primaryActivity, t]);
+    const nextToast: IslandToast = {
+      id: `activity:${eventKey}:${primaryActivity.timestamp}`,
+      activityId: primaryActivity.id,
+      source: identity.source,
+      text: `${primaryActivity.source} · ${t(activityStatusKey[primaryActivity.status])} · ${primaryActivity.title}`,
+    };
+    if (activeToast?.activityId === primaryActivity.id) {
+      setActiveToast(nextToast);
+      setToastQueue((current) => current.filter((toast) => toast.activityId !== primaryActivity.id));
+      return;
+    }
+    setToastQueue((current) => [...current.filter((toast) => toast.activityId !== primaryActivity.id), nextToast]);
+  }, [activeToast?.activityId, floating, primaryActivity, t]);
 
   useEffect(() => {
     if (!floating || activeToast || toastQueue.length === 0) return undefined;
@@ -1672,27 +1695,31 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
       ? t('common.winkGoWorkspace.focusTimer')
       : panel === 'mail'
         ? t('common.winkGoWorkspace.mailNotifications')
-        : panel === 'media'
-          ? mediaView === 'lyrics'
-            ? t('common.winkGoWorkspace.lyrics')
-            : t('common.winkGoWorkspace.mediaControl')
-          : panel === 'notification'
-            ? windowsRuntime.notification?.mail
-              ? t('common.winkGoWorkspace.mailNotifications')
-              : t('common.winkGoWorkspace.wechatNotifications')
-            : panel === 'files'
-              ? t('common.winkGoWorkspace.fileShelf')
-              : panel === 'apps'
-                ? t('common.winkGoWorkspace.quickAppsTitle')
-                : panel === 'category'
-                  ? t('common.winkGoWorkspace.newCategory')
-                  : panel === 'destination'
-                    ? t('common.winkGoWorkspace.chooseDestination')
-                    : panel === 'drop'
-                      ? t('common.winkGoWorkspace.dropFilesHere')
-                      : panel === 'format'
-                        ? '格式快转'
-                        : t('common.winkGoWorkspace.realtimeActivity');
+        : panel === 'browserComputerUse'
+          ? t('common.browserComputerUse.title', { defaultValue: 'WINK GO 浏览器 Computer Use' })
+          : panel === 'desktopComputerUse'
+            ? t('common.desktopComputerUse.title', { defaultValue: '桌面 Computer Use' })
+            : panel === 'media'
+              ? mediaView === 'lyrics'
+                ? t('common.winkGoWorkspace.lyrics')
+                : t('common.winkGoWorkspace.mediaControl')
+              : panel === 'notification'
+                ? windowsRuntime.notification?.mail
+                  ? t('common.winkGoWorkspace.mailNotifications')
+                  : t('common.winkGoWorkspace.wechatNotifications')
+                : panel === 'files'
+                  ? t('common.winkGoWorkspace.fileShelf')
+                  : panel === 'apps'
+                    ? t('common.winkGoWorkspace.quickAppsTitle')
+                    : panel === 'category'
+                      ? t('common.winkGoWorkspace.newCategory')
+                      : panel === 'destination'
+                        ? t('common.winkGoWorkspace.chooseDestination')
+                        : panel === 'drop'
+                          ? t('common.winkGoWorkspace.dropFilesHere')
+                          : panel === 'format'
+                            ? '格式快转'
+                            : t('common.winkGoWorkspace.realtimeActivity');
   const panelHint =
     panel === 'timer'
       ? t('common.winkGoWorkspace.focusTimerHint')
@@ -1700,29 +1727,33 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
         ? mailStatus?.account?.email
           ? t('common.winkGoWorkspace.mailPanelHint', { account: mailStatus.account.email })
           : t('common.winkGoWorkspace.mailNotConfigured')
-        : panel === 'media'
-          ? mediaView === 'lyrics'
-            ? t('common.winkGoWorkspace.lyricsHint')
-            : t('common.winkGoWorkspace.mediaControlHint')
-          : panel === 'notification'
-            ? windowsRuntime.notification?.mail
-              ? t('common.winkGoWorkspace.mailNotificationsHint', {
-                  account: windowsRuntime.notification.mail.accountEmail,
-                })
-              : t('common.winkGoWorkspace.wechatNotificationsHint')
-            : panel === 'files'
-              ? t('common.winkGoWorkspace.fileShelfHint')
-              : panel === 'apps'
-                ? t('common.winkGoWorkspace.quickAppsHint')
-                : panel === 'category'
-                  ? t('common.winkGoWorkspace.categoryHint')
-                  : panel === 'destination'
-                    ? t('common.winkGoWorkspace.chooseDestinationHint', { count: organizer.pendingPaths.length })
-                    : panel === 'drop'
-                      ? t('common.winkGoWorkspace.chooseDestinationHint', { count: 1 })
-                      : panel === 'format'
-                        ? 'Alt + 4 · 本机快速转换'
-                        : t('common.winkGoWorkspace.activityHint');
+        : panel === 'browserComputerUse'
+          ? t('common.browserComputerUse.hint', { defaultValue: '使用模型操作软件内置浏览器' })
+          : panel === 'desktopComputerUse'
+            ? t('common.desktopComputerUse.hint', { defaultValue: '使用视觉模型操作 Windows 软件' })
+            : panel === 'media'
+              ? mediaView === 'lyrics'
+                ? t('common.winkGoWorkspace.lyricsHint')
+                : t('common.winkGoWorkspace.mediaControlHint')
+              : panel === 'notification'
+                ? windowsRuntime.notification?.mail
+                  ? t('common.winkGoWorkspace.mailNotificationsHint', {
+                      account: windowsRuntime.notification.mail.accountEmail,
+                    })
+                  : t('common.winkGoWorkspace.wechatNotificationsHint')
+                : panel === 'files'
+                  ? t('common.winkGoWorkspace.fileShelfHint')
+                  : panel === 'apps'
+                    ? t('common.winkGoWorkspace.quickAppsHint')
+                    : panel === 'category'
+                      ? t('common.winkGoWorkspace.categoryHint')
+                      : panel === 'destination'
+                        ? t('common.winkGoWorkspace.chooseDestinationHint', { count: organizer.pendingPaths.length })
+                        : panel === 'drop'
+                          ? t('common.winkGoWorkspace.chooseDestinationHint', { count: 1 })
+                          : panel === 'format'
+                            ? 'Alt + 4 · 本机快速转换'
+                            : t('common.winkGoWorkspace.activityHint');
   const quickAppStatusText =
     organizer.quickAppStatus.type === 'error'
       ? organizer.quickAppStatus.code === 'not_found'
@@ -1906,6 +1937,10 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
                   alt=''
                   draggable={false}
                 />
+              ) : panel === 'browserComputerUse' ? (
+                <Browser theme='outline' size='19' fill='currentColor' />
+              ) : panel === 'desktopComputerUse' ? (
+                <Computer theme='outline' size='19' fill='currentColor' />
               ) : panel === 'media' ? (
                 <Music theme='outline' size='19' fill='currentColor' />
               ) : panel === 'notification' ? (
@@ -1943,7 +1978,11 @@ const TitlebarDynamicIsland: React.FC<TitlebarDynamicIslandProps> = ({ floating 
             />
           </header>
 
-          {panel === 'mail' ? (
+          {panel === 'browserComputerUse' ? (
+            <ComputerUsePanel kind='browser' />
+          ) : panel === 'desktopComputerUse' ? (
+            <ComputerUsePanel kind='desktop' />
+          ) : panel === 'mail' ? (
             <div className='titlebar-dynamic-island__mail-panel'>
               <div className='titlebar-dynamic-island__mail-list' aria-busy={mailListBusy}>
                 {mailMessages.length > 0 ? (

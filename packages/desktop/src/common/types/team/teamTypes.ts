@@ -121,7 +121,7 @@ export type ITeamRunEvent = {
 export type ITeamRunStateResponse = {
   session_generation: string | null;
   active_run: ITeamRunEvent | null;
-  slot_work: ITeamSlotWork[];
+  slot_work?: ITeamSlotWork[];
 };
 
 export type ITeamChildTurnEvent = {
@@ -242,11 +242,58 @@ export type ITeamSessionStatusChangedEvent = {
   error?: string;
 };
 
-/** IPC event pushed when a Team task board item changes */
+/** Read-only mailbox message used by the team activity board. */
+export type ITeamMailboxMessage = {
+  id: string;
+  team_id: string;
+  from_agent_id: string;
+  to_agent_id: string;
+  msg_type: string;
+  content: string;
+  summary?: string;
+  files: string[];
+  read: boolean;
+  created_at: number;
+};
+
+/** Read-only task used by the team activity board. */
+export type ITeamTaskItem = {
+  id: string;
+  team_id: string;
+  subject: string;
+  description?: string;
+  status: string;
+  owner?: string;
+  blocked_by: string[];
+  blocks: string[];
+  created_at: number;
+  updated_at: number;
+};
+
+export type ITeamActivityItem =
+  | { kind: 'message'; created_at: number; id: string; message: ITeamMailboxMessage }
+  | { kind: 'task'; created_at: number; id: string; task: ITeamTaskItem };
+
+export type ITeamActivityPage = {
+  items: ITeamActivityItem[];
+  next_cursor?: { ts: number; id: string };
+  has_more: boolean;
+};
+
+/** IPC event pushed when a Team task board item changes. */
 export type ITeamTaskChangedEvent = {
   team_id: string;
   task_id?: string;
   action?: string;
+  task?: ITeamTaskItem;
+  change?: 'created' | 'updated';
+};
+
+/** IPC event pushed when a Team mailbox message is written or marked read. */
+export type ITeamMailboxChangedEvent = {
+  team_id: string;
+  message: ITeamMailboxMessage;
+  change: 'created' | 'read';
 };
 
 /** IPC event pushed when Team session lifecycle changes */

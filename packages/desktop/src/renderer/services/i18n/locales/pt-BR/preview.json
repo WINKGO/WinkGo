@@ -38,6 +38,15 @@
   "closeTabMessage": "O conteúdo atual não foi salvo. Deseja salvar antes de fechar?",
   "saveAndClose": "Salvar e Fechar",
   "closeWithoutSave": "Não Salvar",
+  "saveConflictTitle": "Arquivo alterado fora do WINK GO",
+  "saveConflictMessage": "O arquivo no disco foi alterado depois de ser aberto. Recarregue o conteúdo mais recente antes de continuar para não substituir outras alterações.",
+  "reloadFile": "Recarregar arquivo",
+  "reloadSuccess": "Conteúdo mais recente carregado do disco",
+  "reloadFailed": "Falha ao recarregar o arquivo",
+  "save": {
+    "tooltip": "Salvar alterações (Ctrl/Cmd+S)",
+    "clean": "Nenhuma alteração não salva"
+  },
   "pptTitle": "Apresentação do PowerPoint",
   "pptOpenHint": "Clique no botão abaixo para abrir no aplicativo do sistema e visualizar o conteúdo completo",
   "pptOpenFile": "Abrir Arquivo",
@@ -133,6 +142,15 @@
     "inspectElement": "Inspecionar elemento",
     "inspectElementEnable": "Habilitar inspecionador de elemento",
     "inspectElementDisable": "Desabilitar inspecionador de elemento"
+  },
+  "browser": {
+    "newTab": "Nova aba",
+    "addressPlaceholder": "Digite uma URL ou pesquise",
+    "agentActiveTooltip": "O agente está operando esta aba",
+    "tabLimitReached": "Limite de abas atingido ({{count}}). A aba mais antiga foi reutilizada.",
+    "agentFirstUseTitle": "O agente está usando o navegador interno",
+    "agentFirstUseContent": "Ele pode abrir páginas, clicar e ler conteúdo neste painel. Seu login é preservado.",
+    "agentFirstUseAction": "Abrir configurações"
   },
   "ppt": {
     "loading": "Iniciando visualização do PPT...",

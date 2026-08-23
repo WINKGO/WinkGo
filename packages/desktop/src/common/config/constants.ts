@@ -10,6 +10,20 @@
  * WinkGo应用程序共用常量
  */
 
+// ===== 应用内浏览器 / In-app browser =====
+
+/** 所有浏览器标签共享且跨重启保留的安全会话分区。 */
+export const BROWSER_SESSION_PARTITION = 'persist:winkgo-browser';
+
+/** 内置浏览器 MCP 的稳定注册名；主进程与渲染进程必须保持一致。 */
+export const BUILTIN_BROWSER_MCP_NAME = 'winkgo-browser';
+
+/** 录制型浏览器技能的本机确定性调用服务。 */
+export const BUILTIN_BROWSER_SKILLS_MCP_NAME = 'winkgo-browser-skills';
+
+/** 独立的 Windows 桌面 Computer Use MCP；不得与应用内浏览器工具混用。 */
+export const BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME = 'winkgo-desktop-computer-use';
+
 // ===== 文件处理相关常量 =====
 
 /** 临时文件时间戳分隔符 */

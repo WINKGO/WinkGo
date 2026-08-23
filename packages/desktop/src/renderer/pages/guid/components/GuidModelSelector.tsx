@@ -41,6 +41,8 @@ type GuidModelSelectorProps = {
   setSelectedAcpModel: React.Dispatch<React.SetStateAction<string | null>>;
   thoughtLevelOption?: AgentRuntimeDerivedOption | null;
   onThoughtLevelSelect?: (value: string) => void;
+  speedOption?: AgentRuntimeDerivedOption | null;
+  onSpeedSelect?: (value: string) => void;
 };
 
 /** Composite id for a provider+model pair, so the shared flat model list can track selection. */
@@ -56,6 +58,8 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
   setSelectedAcpModel,
   thoughtLevelOption,
   onThoughtLevelSelect,
+  speedOption,
+  onSpeedSelect,
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -113,6 +117,12 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
           currentValue: selectedThoughtLevelValue || null,
         }
       : null;
+  const selectedSpeedLabel = speedOption
+    ? speedOption.options.find((item) => item.value === speedOption.currentValue)?.label ||
+      speedOption.currentValue ||
+      speedOption.options[0]?.label ||
+      ''
+    : '';
   const combinedAcpButtonLabel = composeRuntimeSelectorLabel({
     modelLabel: acpButtonLabel,
     thoughtLevel: normalizedThoughtLevelOption,
@@ -219,7 +229,7 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
           onVisibleChange={setModelMenuVisible}
           droplist={
             <Menu selectedKeys={selectedAcpModel ? [selectedAcpModel] : []}>
-              {normalizedThoughtLevelOption ? (
+              {normalizedThoughtLevelOption || speedOption ? (
                 <>
                   {/* Two-level layout: model row on top, thought-level row below;
                       each expands into a left-side submenu. */}
@@ -235,31 +245,60 @@ const GuidModelSelector: React.FC<GuidModelSelectorProps> = ({
                   >
                     {modelListNode}
                   </Menu.SubMenu>
-                  <Menu.SubMenu
-                    key='thought-level'
-                    triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
-                    title={
-                      <RuntimeSelectorSubMenuTitle
-                        label={t('agent.thoughtLevel.label')}
-                        value={getCurrentThoughtLevelLabel(normalizedThoughtLevelOption)}
-                      />
-                    }
-                  >
-                    {normalizedThoughtLevelOption.options.map((item) => (
-                      <Menu.Item
-                        key={item.value}
-                        className={item.value === normalizedThoughtLevelOption.currentValue ? '!bg-2' : ''}
-                        onClick={() => onThoughtLevelSelect?.(item.value)}
-                      >
-                        <RuntimeSelectorCheckedItem
-                          selected={item.value === normalizedThoughtLevelOption.currentValue}
-                          description={item.description}
+                  {normalizedThoughtLevelOption ? (
+                    <Menu.SubMenu
+                      key='thought-level'
+                      triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+                      title={
+                        <RuntimeSelectorSubMenuTitle
+                          label={t('agent.thoughtLevel.label')}
+                          value={getCurrentThoughtLevelLabel(normalizedThoughtLevelOption)}
+                        />
+                      }
+                    >
+                      {normalizedThoughtLevelOption.options.map((item) => (
+                        <Menu.Item
+                          key={item.value}
+                          className={item.value === normalizedThoughtLevelOption.currentValue ? '!bg-2' : ''}
+                          onClick={() => onThoughtLevelSelect?.(item.value)}
                         >
-                          {item.label}
-                        </RuntimeSelectorCheckedItem>
-                      </Menu.Item>
-                    ))}
-                  </Menu.SubMenu>
+                          <RuntimeSelectorCheckedItem
+                            selected={item.value === normalizedThoughtLevelOption.currentValue}
+                            description={item.description}
+                          >
+                            {item.label}
+                          </RuntimeSelectorCheckedItem>
+                        </Menu.Item>
+                      ))}
+                    </Menu.SubMenu>
+                  ) : null}
+                  {speedOption ? (
+                    <Menu.SubMenu
+                      key='speed'
+                      triggerProps={RUNTIME_SUBMENU_TRIGGER_PROPS}
+                      title={
+                        <RuntimeSelectorSubMenuTitle
+                          label={t('agent.speed.label', { defaultValue: 'Speed' })}
+                          value={selectedSpeedLabel}
+                        />
+                      }
+                    >
+                      {speedOption.options.map((item) => (
+                        <Menu.Item
+                          key={item.value}
+                          className={item.value === speedOption.currentValue ? '!bg-2' : ''}
+                          onClick={() => onSpeedSelect?.(item.value)}
+                        >
+                          <RuntimeSelectorCheckedItem
+                            selected={item.value === speedOption.currentValue}
+                            description={item.description}
+                          >
+                            {item.label}
+                          </RuntimeSelectorCheckedItem>
+                        </Menu.Item>
+                      ))}
+                    </Menu.SubMenu>
+                  ) : null}
                 </>
               ) : (
                 modelListNode

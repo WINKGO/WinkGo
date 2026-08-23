@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 //! `Capabilities` — a backend's declared capability (BackendAdapter
 //! responsibility 3). RFC §8 three tiers + the signal set it can emit. Read by
 //! the adapter only — NEVER by the pure reducer `step()` (I12).
@@ -72,12 +73,26 @@ pub struct Capabilities {
     /// it — a dead button (MX-QUEUE-3). `can_queue` MUST read this bit, never
     /// `caps.steer`. Default false; only claude sets it true.
     pub accepts_proactive_input: bool,
+    /// True only when a message sent during an active turn is consumed by that
+    /// same turn. This is deliberately separate from proactive next-turn input.
+    /// Unknown backends default to false and use WINK GO's boundary queue.
+    pub supports_midturn_delivery: bool,
     /// NEW (#101): user-invokable slash commands the backend advertises (claude
     /// `control_request{initialize}` response `commands[]`; ACP `session/update`
     /// `available_commands_update`; incl. MCP/plugin/skill-derived). Open set,
     /// discovery-filled, additive (Default empty). The reducer NEVER reads it (I12)
     /// — pure a-side/UI surface, projected by the REST get_slash_commands read.
     pub slash_commands: Vec<SlashCommandInfo>,
+}
+
+#[cfg(test)]
+mod winkgo_interjection_tests {
+    use super::*;
+
+    #[test]
+    fn unknown_backends_do_not_claim_native_midturn_delivery() {
+        assert!(!Capabilities::default().supports_midturn_delivery);
+    }
 }
 
 /// #101: an advertised slash command (discovery, open set). `description` is the

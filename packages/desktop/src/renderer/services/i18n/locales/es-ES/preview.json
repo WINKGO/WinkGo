@@ -38,6 +38,15 @@
   "closeTabMessage": "El contenido actual no se ha guardado. ¿Deseas guardarlo antes de cerrar?",
   "saveAndClose": "Guardar y cerrar",
   "closeWithoutSave": "No guardar",
+  "saveConflictTitle": "Archivo modificado fuera de WINK GO",
+  "saveConflictMessage": "El archivo del disco cambió después de abrirlo. Vuelve a cargar el contenido más reciente antes de continuar para no sobrescribir otros cambios.",
+  "reloadFile": "Volver a cargar el archivo",
+  "reloadSuccess": "Contenido más reciente cargado desde el disco",
+  "reloadFailed": "No se pudo volver a cargar el archivo",
+  "save": {
+    "tooltip": "Guardar cambios (Ctrl/Cmd+S)",
+    "clean": "No hay cambios sin guardar"
+  },
   "pptTitle": "Presentación de PowerPoint",
   "pptOpenHint": "Haz clic en el botón para abrir en la aplicación del sistema y ver el contenido completo",
   "pptOpenFile": "Abrir archivo",
@@ -133,6 +142,15 @@
     "inspectElement": "Inspeccionar elemento",
     "inspectElementEnable": "Activar inspector de elementos",
     "inspectElementDisable": "Desactivar inspector de elementos"
+  },
+  "browser": {
+    "newTab": "Nueva pestaña",
+    "addressPlaceholder": "Escribe una URL o busca",
+    "agentActiveTooltip": "El agente está operando esta pestaña",
+    "tabLimitReached": "Se alcanzó el límite de pestañas ({{count}}). Se reutilizó la pestaña más antigua.",
+    "agentFirstUseTitle": "El agente está usando el navegador integrado",
+    "agentFirstUseContent": "Puede abrir páginas, hacer clic y leer contenido en este panel. Tu sesión se conserva.",
+    "agentFirstUseAction": "Abrir ajustes"
   },
   "ppt": {
     "loading": "Iniciando vista previa de PPT...",

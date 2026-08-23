@@ -27,6 +27,9 @@
     "configureFirst": "Please configure an agent in Settings first.",
     "switching": "Switching agent..."
   },
+  "runtime": {
+    "managedByAgent": "Agent tarafından yönetiliyor"
+  },
   "model": {
     "switchSuccess": "Model switched successfully",
     "switchFailed": "Failed to switch model",
@@ -47,5 +50,31 @@
     "label": "Düşünme düzeyi",
     "switchSuccess": "Düşünme düzeyi değiştirildi",
     "switchFailed": "Düşünme düzeyi değiştirilemedi"
+  },
+  "speed": {
+    "label": "Hız",
+    "switchSuccess": "Yanıt hızı güncellendi",
+    "switchFailed": "Yanıt hızı güncellenemedi"
+  },
+  "voiceTask": {
+    "emptyCommand": "Görev içeriği boş olduğu için Agent'a gönderilmedi.",
+    "noAgent": "Kullanılabilir bir WINK GO Agent yok veya belirtilen masaüstü Agent becerisi kullanımdan kaldırılmış.",
+    "noModel": "WINK GO CLI için kullanılabilir model yok. Önce Modeller sayfasında bir model yapılandırıp etkinleştirin.",
+    "conversationName": "XiaoZhi: {{command}}",
+    "createFailed": "WINK GO Agent konuşması oluşturulamadı.",
+    "queued": "Görev {{assistant}} kuyruğuna eklendi ve mevcut görev bitince otomatik olarak çalışacak.",
+    "accepted": "Görev {{assistant}} Agent'a gönderildi. İlerlemeyi WINK GO'da izleyebilirsiniz.",
+    "none": "Etkin bir asistan görevi yok.",
+    "waitingConfirmation": "{{assistant}} onayınızı bekliyor.",
+    "queuedStatus": "{{assistant}} kuyruktaki görevi aldı ve mevcut görev bitince çalıştıracak.",
+    "running": "{{assistant}} görevi çalıştırıyor.",
+    "finishedWithResult": "{{assistant}} görevi tamamladı: {{result}}",
+    "finishedNoResult": "{{assistant}} görevi tamamladı ancak son yanıt bulunamadı.",
+    "failed": "{{assistant}} başarısız oldu: {{error}}",
+    "acceptedStatus": "{{assistant}} görevi kabul etti.",
+    "noCancelable": "İptal edilebilecek etkin bir asistan görevi yok.",
+    "cancelling": "{{assistant}} görevi hâlâ durduruyor. Kısa süre sonra tekrar deneyin.",
+    "cancelled": "{{assistant}} için mevcut görev iptal edildi.",
+    "history": "Yakın zamanda {{count}} Agent görevi var: {{tasks}}."
   }
 }

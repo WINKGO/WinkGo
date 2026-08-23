@@ -33,6 +33,7 @@ function readArgument(name) {
 
 const finalExeArgument = readArgument('--exe');
 const packedAsarArgument = readArgument('--packed-asar');
+const packedRootArgument = readArgument('--packed-root');
 const mode = finalExeArgument
   ? 'final-exe'
   : argv.includes('--packed')
@@ -752,6 +753,14 @@ function main() {
 
   if (mode === 'source') {
     return printResult(mode, auditSource());
+  }
+
+  if (mode === 'packed' && packedRootArgument) {
+    const packedRoot = path.resolve(packedRootArgument);
+    if (!fs.existsSync(packedRoot) || !fs.statSync(packedRoot).isDirectory()) {
+      throw new Error(`Packed privacy audit root does not exist or is not a directory: ${packedRoot}`);
+    }
+    return printResult(mode, auditAbsoluteRoots([packedRoot], projectRoot));
   }
 
   return printResult(mode, audit(getAuditRoots(mode)));

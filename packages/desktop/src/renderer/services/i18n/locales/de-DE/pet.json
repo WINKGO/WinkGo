@@ -1,6 +1,8 @@
 {
   "desktopPet": "Desktop-Begleiter",
   "enable": "Desktop-Begleiter aktivieren",
+  "butlerSetup": "Vom Assistenten einrichten lassen",
+  "butlerSetupPrompt": "Erstelle ein Desktop-Haustier für mich. Ich füge ein Bild an, das du in das Haustier verwandeln sollst.",
   "size": "Begleitergröße",
   "sizeSmall": "Klein ({{px}}px)",
   "sizeMedium": "Mittel ({{px}}px)",

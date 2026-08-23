@@ -3,9 +3,33 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const { prepareWinkGoCore } = require('../../../packages/shared-scripts/src/prepare-winkgo-core');
+const {
+  prepareWinkGoCore,
+  resolveLocalCargoTargetDir,
+} = require('../../../packages/shared-scripts/src/prepare-winkgo-core');
 
 describe('prepare-winkgo-core local bundle input', () => {
+  it('uses an ASCII Cargo target when a Windows project path contains non-ASCII characters', () => {
+    const target = resolveLocalCargoTargetDir(
+      'D:\\WINK GO AGENT\\共享组件\\桌面主程序源码',
+      'win32',
+      'x64',
+      {},
+      'C:\\Users\\builder\\AppData\\Local\\Temp'
+    );
+
+    expect(target).toMatch(/^C:\\Users\\builder\\AppData\\Local\\Temp\\winkgo-cargo-target\\[a-f0-9]{12}\\x64$/u);
+    expect(target).not.toContain('共享组件');
+  });
+
+  it('preserves an explicitly configured Cargo target directory', () => {
+    expect(
+      resolveLocalCargoTargetDir('D:\\项目', 'win32', 'x64', {
+        WINKGO_BACKEND_CARGO_TARGET_DIR: 'C:\\WINKGO-Cache',
+      })
+    ).toBe('C:\\WINKGO-Cache');
+  });
+
   it('hard fails local bundle input that lacks managed-resources manifest', () => {
     const tmp = mkdtempSync(join(tmpdir(), 'winkgo-local-bundle-'));
     const projectRoot = join(tmp, 'project');

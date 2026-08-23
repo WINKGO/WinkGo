@@ -13,14 +13,36 @@
   "icon_key": "music",
   "color": "linear-gradient(135deg, #22d3ee, #3b82f6)",
   "description": "独立控制汽水音乐，支持搜索、收藏、历史、听歌模式、推荐与播放控制。",
-  "strong_aliases": ["汽水音乐", "汽水播放器", "抖音音乐客户端"],
-  "weak_aliases": ["音乐", "播放器", "听歌", "下一首", "上一首", "暂停", "歌单"],
-  "capability_labels": ["搜索播放", "收藏与历史", "听歌模式与推荐", "播放控制"],
+  "strong_aliases": [
+    "汽水音乐",
+    "汽水播放器",
+    "抖音音乐客户端"
+  ],
+  "weak_aliases": [
+    "音乐",
+    "播放器",
+    "听歌",
+    "下一首",
+    "上一首",
+    "暂停",
+    "歌单"
+  ],
+  "capability_labels": [
+    "搜索播放",
+    "收藏与历史",
+    "听歌模式与推荐",
+    "播放控制"
+  ],
   "related_skill_ids": [],
   "legacy_route_prefix": "汽水音乐",
   "tool_selectors": {
-    "prefixes": ["music.fizz_", "music.station_"],
-    "exclude_names": ["music.station_compact_toggle"],
+    "prefixes": [
+      "music.fizz_",
+      "music.station_"
+    ],
+    "exclude_names": [
+      "music.station_compact_toggle"
+    ],
     "names": [],
     "shared_names": [
       "music.cancel_current",
@@ -49,48 +71,48 @@
   "compatibility_tool_aliases": {
     "music.fizz_app_close": {
       "canonical_tool_name": "music.station_close",
-      "default_arguments": { "player": "fizz" }
+      "default_arguments": {"player": "fizz"}
     },
     "music.fizz_app_open": {
       "canonical_tool_name": "music.station_open",
-      "default_arguments": { "player": "fizz", "minimize": false }
+      "default_arguments": {"player": "fizz", "minimize": false}
     },
     "music.fizz_lyrics_toggle": {
       "canonical_tool_name": "music.station_lyrics_toggle",
-      "default_arguments": { "player": "fizz" }
+      "default_arguments": {"player": "fizz"}
     },
     "music.fizz_next_now": {
       "canonical_tool_name": "music.station_track_next",
-      "default_arguments": { "player": "fizz" }
+      "default_arguments": {"player": "fizz"}
     },
     "music.fizz_play_pause": {
       "canonical_tool_name": "music.control_playback",
-      "default_arguments": { "action": "play_pause", "player": "fizz" }
+      "default_arguments": {"action": "play_pause", "player": "fizz"}
     },
     "music.fizz_previous_now": {
       "canonical_tool_name": "music.station_track_previous",
-      "default_arguments": { "player": "fizz" }
+      "default_arguments": {"player": "fizz"}
     },
     "music.fizz_volume_lower": {
       "canonical_tool_name": "music.system_volume_lower",
-      "default_arguments": { "player": "fizz" }
+      "default_arguments": {"player": "fizz"}
     },
     "music.fizz_volume_raise": {
       "canonical_tool_name": "music.system_volume_raise",
-      "default_arguments": { "player": "fizz" }
+      "default_arguments": {"player": "fizz"}
     },
     "music.fizz_volume_set": {
       "canonical_tool_name": "music.system_volume_set",
-      "default_arguments": { "player": "fizz" }
+      "default_arguments": {"player": "fizz"}
     },
     "music.like_current_song": {
       "canonical_tool_name": "music.fizz_like_current_song"
     },
     "music.open_music_app": {
       "canonical_tool_name": "music.station_open",
-      "default_arguments": { "player": "fizz" },
+      "default_arguments": {"player": "fizz"},
       "argument_transforms": {
-        "visible": { "target": "minimize", "operation": "not" }
+        "visible": {"target": "minimize", "operation": "not"}
       }
     },
     "music.search_and_play": {
@@ -99,12 +121,12 @@
     },
     "music.station_play_toggle": {
       "canonical_tool_name": "music.control_playback",
-      "default_arguments": { "action": "play", "player": "fizz" },
+      "default_arguments": {"action": "play", "player": "fizz"},
       "drop_arguments": ["player"]
     },
     "music.toggle_lyrics": {
       "canonical_tool_name": "music.station_lyrics_toggle",
-      "default_arguments": { "player": "fizz" }
+      "default_arguments": {"player": "fizz"}
     },
     "music.track_heart_toggle": {
       "canonical_tool_name": "music.fizz_like_current_song",

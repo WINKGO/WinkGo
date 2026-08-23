@@ -5,6 +5,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { localFileRef } from '@/common/types/chatFile';
 import { FileService } from '@/renderer/services/FileService';
 
 const asFileList = (files: File[]): FileList =>
@@ -29,6 +30,7 @@ describe('FileService.processDroppedFiles', () => {
       expect.objectContaining({
         name: 'photo.png',
         path: 'C:\\Users\\Administrator\\Desktop\\photo.png',
+        chatRef: localFileRef('C:\\Users\\Administrator\\Desktop\\photo.png'),
       }),
     ]);
   });

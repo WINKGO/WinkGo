@@ -2,16 +2,20 @@
 use std::sync::Arc;
 
 use tracing::debug;
+use winkgo_api_types::{TeamTaskChangedPayload, TeamTaskResponse, WebSocketMessage};
 use winkgo_common::{generate_id, now_ms};
 use winkgo_db::ITeamRepository;
 use winkgo_db::UpdateTaskParams;
 use winkgo_db::models::TeamTaskRow;
+use winkgo_realtime::EventBroadcaster;
 
 use crate::error::TeamError;
+use crate::events::TEAM_TASK_CHANGED_EVENT;
 use crate::types::{TaskStatus, TeamTask};
 
 pub struct TaskBoard {
     repo: Arc<dyn ITeamRepository>,
+    broadcaster: Option<Arc<dyn EventBroadcaster>>,
 }
 
 /// Optional fields for task update.
@@ -26,7 +30,17 @@ pub struct TaskUpdate {
 
 impl TaskBoard {
     pub fn new(repo: Arc<dyn ITeamRepository>) -> Self {
-        Self { repo }
+        Self {
+            repo,
+            broadcaster: None,
+        }
+    }
+
+    pub fn new_with_broadcaster(repo: Arc<dyn ITeamRepository>, broadcaster: Arc<dyn EventBroadcaster>) -> Self {
+        Self {
+            repo,
+            broadcaster: Some(broadcaster),
+        }
     }
 
     pub async fn create_task(
@@ -70,7 +84,9 @@ impl TaskBoard {
 
         debug!(team_id, task_id = %task_id, subject, "task created");
 
-        TeamTask::from_row(&row).map_err(TeamError::Json)
+        let task = TeamTask::from_row(&row).map_err(TeamError::Json)?;
+        self.broadcast_changed(&task, "created");
+        Ok(task)
     }
 
     pub async fn update_task(&self, team_id: &str, task_id: &str, update: &TaskUpdate) -> Result<TeamTask, TeamError> {
@@ -102,7 +118,9 @@ impl TaskBoard {
 
         debug!(team_id, task_id, "task updated");
 
-        TeamTask::from_row(&updated).map_err(TeamError::Json)
+        let task = TeamTask::from_row(&updated).map_err(TeamError::Json)?;
+        self.broadcast_changed(&task, "updated");
+        Ok(task)
     }
 
     pub async fn list_tasks(&self, team_id: &str) -> Result<Vec<TeamTask>, TeamError> {
@@ -125,12 +143,56 @@ impl TaskBoard {
         }
         Ok(())
     }
+
+    fn broadcast_changed(&self, task: &TeamTask, change: &str) {
+        let Some(broadcaster) = &self.broadcaster else {
+            return;
+        };
+        let payload = TeamTaskChangedPayload {
+            team_id: task.team_id.clone(),
+            task: TeamTaskResponse {
+                id: task.id.clone(),
+                team_id: task.team_id.clone(),
+                subject: task.subject.clone(),
+                description: task.description.clone(),
+                status: task.status.to_string(),
+                owner: task.owner.clone(),
+                blocked_by: task.blocked_by.clone(),
+                blocks: task.blocks.clone(),
+                created_at: task.created_at,
+                updated_at: task.updated_at,
+            },
+            change: change.to_owned(),
+        };
+        broadcaster.broadcast(WebSocketMessage::new(
+            TEAM_TASK_CHANGED_EVENT,
+            serde_json::to_value(payload).expect("serialize task changed payload"),
+        ));
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_utils::MockTeamRepo;
+
+    struct RecordingBroadcaster {
+        events: std::sync::Mutex<Vec<WebSocketMessage<serde_json::Value>>>,
+    }
+
+    impl RecordingBroadcaster {
+        fn new() -> Self {
+            Self {
+                events: std::sync::Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    impl EventBroadcaster for RecordingBroadcaster {
+        fn broadcast(&self, event: WebSocketMessage<serde_json::Value>) {
+            self.events.lock().unwrap().push(event);
+        }
+    }
 
     // -- Helper ---------------------------------------------------------------
 
@@ -150,6 +212,40 @@ mod tests {
         assert_eq!(task.status, TaskStatus::Pending);
         assert!(task.blocked_by.is_empty());
         assert!(task.blocks.is_empty());
+    }
+
+    #[tokio::test]
+    async fn create_and_update_broadcast_full_activity_payloads() {
+        let repo = Arc::new(MockTeamRepo::new());
+        let broadcaster = Arc::new(RecordingBroadcaster::new());
+        let board = TaskBoard::new_with_broadcaster(repo, broadcaster.clone());
+
+        let task = board
+            .create_task("t1", "Implement board", None, Some("a1"), &[])
+            .await
+            .unwrap();
+        board
+            .update_task(
+                "t1",
+                &task.id,
+                &TaskUpdate {
+                    status: Some(TaskStatus::InProgress),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+
+        let events = broadcaster.events.lock().unwrap();
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0].name, TEAM_TASK_CHANGED_EVENT);
+        let created: TeamTaskChangedPayload = serde_json::from_value(events[0].data.clone()).unwrap();
+        assert_eq!(created.task.id, task.id);
+        assert_eq!(created.task.owner.as_deref(), Some("a1"));
+        assert_eq!(created.change, "created");
+        let updated: TeamTaskChangedPayload = serde_json::from_value(events[1].data.clone()).unwrap();
+        assert_eq!(updated.task.status, "in_progress");
+        assert_eq!(updated.change, "updated");
     }
 
     #[tokio::test]

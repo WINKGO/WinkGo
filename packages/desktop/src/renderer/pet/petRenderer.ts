@@ -1,38 +1,39 @@
 // Modified from AionUI by WINK GO contributors in 2026.
 const LOAD_TIMEOUT = 3000;
 const FADE_MS = 150;
-const PET_STATES_BASE_PATH = '../pet-states';
+const PET_STATES_BASE_PATH = '../pet-states-doraemon-v1';
+const PET_DISPLAY_SCALE_PERCENT = 72;
+const PET_DISPLAY_INSET_PERCENT = (100 - PET_DISPLAY_SCALE_PERCENT) / 2;
 let currentObject: HTMLImageElement | null = document.getElementById('pet') as HTMLImageElement;
 
 function getStateAssetPath(state: string): string {
-  return `${PET_STATES_BASE_PATH}/${state}.svg`;
+  return `${PET_STATES_BASE_PATH}/${state}.png`;
 }
 
 function setupTransitions(target: HTMLImageElement | null): void {
   if (!target) return;
+  target.style.position = 'absolute';
+  target.style.inset = `${PET_DISPLAY_INSET_PERCENT}%`;
+  target.style.width = `${PET_DISPLAY_SCALE_PERCENT}%`;
+  target.style.height = `${PET_DISPLAY_SCALE_PERCENT}%`;
+  target.style.objectFit = 'contain';
   target.style.transformOrigin = '50% 55%';
 }
 
 /**
- * Load a new SVG state and cross-fade it over the previous one. The old object
+ * Load a new pet state and cross-fade it over the previous one. The old object
  * is removed only after the fade completes, so there's no white flash between
- * states. If the new SVG fails to load within LOAD_TIMEOUT we bail out silently
+ * states. If the new asset fails to load within LOAD_TIMEOUT we bail out silently
  * and keep showing the previous state.
  */
-function loadSvg(svgPath: string): void {
-  // Chromium blocks SVG documents loaded through <object> in the packaged,
-  // sandboxed file:// renderer. An image keeps the animated SVG visible in
-  // both development and packaged builds without weakening web security.
+function loadPetAsset(assetPath: string): void {
   const newObj = document.createElement('img');
   newObj.id = 'pet';
   newObj.alt = '';
-  newObj.style.position = 'absolute';
-  newObj.style.inset = '0';
-  newObj.style.width = '100%';
-  newObj.style.height = '100%';
+  setupTransitions(newObj);
   newObj.style.opacity = '0';
   newObj.style.transition = `opacity ${FADE_MS}ms ease-out`;
-  newObj.src = svgPath;
+  newObj.src = assetPath;
 
   let loaded = false;
   const timeout = setTimeout(() => {
@@ -72,12 +73,11 @@ function loadSvg(svgPath: string): void {
   document.body.appendChild(newObj);
 }
 
-// The initial SVG is hard-coded in pet.html without any transition setup or
+// The initial asset is hard-coded in pet.html without any transition setup or
 // positioning — mirror the runtime swap target so subsequent cross-fades work
 // and eye/body transforms animate from the start.
 if (currentObject) {
-  currentObject.style.position = 'absolute';
-  currentObject.style.inset = '0';
+  setupTransitions(currentObject);
   currentObject.style.transition = `opacity ${FADE_MS}ms ease-out`;
   currentObject.addEventListener('load', () => {
     setupTransitions(currentObject);
@@ -85,7 +85,7 @@ if (currentObject) {
 }
 
 window.petAPI.onStateChange((state: string) => {
-  loadSvg(getStateAssetPath(state));
+  loadPetAsset(getStateAssetPath(state));
 });
 
 window.petAPI.onEyeMove(({ eyeDx, eyeDy, bodyDx, bodyRotate }) => {

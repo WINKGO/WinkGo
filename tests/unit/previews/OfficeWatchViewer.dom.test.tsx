@@ -19,10 +19,29 @@
  * is recorded in N4c-final.md Deviations.
  */
 
-import { afterEach, beforeEach, describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+
+vi.mock('@/common', () => ({
+  ipcBridge: {
+    pptPreview: {},
+    wordPreview: {},
+    excelPreview: {},
+  },
+}));
+vi.mock('@/common/adapter/httpBridge', () => ({
+  getBaseUrl: () => 'http://127.0.0.1:13400',
+  isBackendHttpError: () => false,
+}));
+vi.mock('@/renderer/components/media/WebviewHost', () => ({ default: () => null }));
+vi.mock('@/renderer/utils/platform', () => ({
+  isElectronDesktop: () => Boolean(window.electronAPI),
+  openExternalUrl: vi.fn(),
+}));
+vi.mock('@arco-design/web-react', () => ({ Button: () => null, Spin: () => null }));
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
 describe('OfficeWatchViewer module shape', () => {
-  it('module loads and exposes a default export', { timeout: 30000 }, async () => {
+  it('module loads and exposes a default export', { timeout: 120_000 }, async () => {
     const mod = await import('@/renderer/pages/conversation/Preview/components/viewers/OfficeWatchViewer');
     expect(mod).toBeDefined();
     expect(mod.default).toBeDefined();

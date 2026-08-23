@@ -477,7 +477,10 @@ async fn compare_result_contains_full_paths() {
     assert_eq!(result.unstaged.len(), 1);
 
     // relative_path should be just the file path relative to workspace
-    assert_eq!(result.unstaged[0].relative_path, "src/main.rs");
+    assert_eq!(
+        Path::new(&result.unstaged[0].relative_path),
+        Path::new("src/main.rs")
+    );
 
     // file_path should contain the workspace prefix
     let canonical = std::fs::canonicalize(tmp.path()).unwrap();

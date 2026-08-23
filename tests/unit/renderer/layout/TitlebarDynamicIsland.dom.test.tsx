@@ -104,6 +104,12 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+vi.mock('@renderer/components/layout/Titlebar/ComputerUsePanel', () => ({
+  default: ({ kind }: { kind: 'desktop' | 'browser' }) => (
+    <div data-testid={`${kind}-computer-use-panel`}>{kind} computer use</div>
+  ),
+}));
+
 vi.mock('@/common', () => ({
   ipcBridge: {
     cron: {
@@ -277,6 +283,19 @@ describe('TitlebarDynamicIsland', () => {
     expect(calculateFloatingIslandHeight(115, 178.2)).toBe(187);
     expect(calculateFloatingIslandHeight(190, 120)).toBe(190);
     expect(calculateFloatingIslandHeight(190, 800)).toBe(500);
+  });
+
+  it('omits automation shortcuts from the utility wheel while keeping timer and mail', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+
+    expect(screen.queryByRole('button', { name: 'common.desktopComputerUse.title' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.winkGoWorkspace.openUtilityWheel' }));
+    expect(screen.queryByRole('option', { name: 'common.desktopComputerUse.title' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'common.browserComputerUse.title' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'common.winkGoWorkspace.focusTimer' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'common.winkGoWorkspace.mailNotifications' })).toBeTruthy();
   });
 
   beforeEach(() => {
@@ -798,6 +817,44 @@ describe('TitlebarDynamicIsland', () => {
     const toast = await screen.findByTestId('titlebar-dynamic-island-toast-panel');
     expect(toast).toHaveTextContent('ESP32 小智');
     expect(toast).toHaveTextContent('打开网易云');
+  });
+
+  it('updates an active ESP32 running toast to completion instead of queuing stale running state', async () => {
+    render(<TitlebarDynamicIsland floating />);
+    await screen.findByText('is ready');
+    const startedAtMs = Date.now() - 300;
+
+    act(() => {
+      mocks.xiaozhiActivityHandler?.({
+        id: 'xiaozhi-command:xiaozhi_hardware:2:1',
+        source: 'xiaozhi_hardware',
+        sourceLabel: 'ESP32 小智',
+        command: '查询电脑系统信息',
+        status: 'running',
+        message: '指令已进入 WINK GO Runtime',
+        startedAtMs,
+        updatedAtMs: startedAtMs,
+      });
+    });
+    expect(await screen.findByTestId('titlebar-dynamic-island-toast-panel')).toHaveTextContent('Running');
+
+    act(() => {
+      mocks.xiaozhiActivityHandler?.({
+        id: 'xiaozhi-command:xiaozhi_hardware:2:1',
+        source: 'xiaozhi_hardware',
+        sourceLabel: 'ESP32 小智',
+        command: '查询电脑系统信息',
+        toolName: 'windows.get_system_info',
+        status: 'success',
+        message: 'WINK GO Runtime 已确认执行完成',
+        startedAtMs,
+        updatedAtMs: Date.now(),
+        elapsedMs: 300,
+      });
+    });
+
+    expect(await screen.findByTestId('titlebar-dynamic-island-toast-panel')).toHaveTextContent('Success');
+    expect(screen.getByTestId('titlebar-dynamic-island-toast-panel')).not.toHaveTextContent('Running');
   });
 
   it('shows the active Windows media session and sends native playback controls', async () => {

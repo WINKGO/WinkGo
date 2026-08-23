@@ -8,11 +8,14 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Left, Right, Refresh, Loading } from '@icon-park/react';
+import { ipcBridge } from '@/common';
+import { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
 import {
   isAllowedWebviewNavigationUrl,
   isAllowedWebviewPartition,
   REMOTE_WEBVIEW_PARTITION,
 } from '@/common/platform/electronSecurity';
+import { InternalNavTracker, shouldResetHistoryForUrlProp } from './webviewHistory';
 
 export interface WebviewHostProps {
   /** URL to display */
@@ -31,6 +34,16 @@ export interface WebviewHostProps {
   onDidFinishLoad?: () => void;
   /** Called when the page fails to load */
   onDidFailLoad?: (errorCode: number, errorDescription: string) => void;
+  /** Called whenever the displayed URL changes. */
+  onUrlChange?: (url: string) => void;
+  /** Called when the page reports a document title. */
+  onTitleChange?: (title: string) => void;
+  /** Called when the page reports a favicon. */
+  onFaviconChange?: (favicon: string) => void;
+  /** Resolve raw address-bar input; return null to ignore it. */
+  resolveUrlInput?: (raw: string) => string | null;
+  /** Optional actions rendered beside the address bar. */
+  navBarActions?: React.ReactNode;
 }
 
 const MIN_ZOOM_FACTOR = 0.75;
@@ -55,11 +68,22 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   style,
   onDidFinishLoad,
   onDidFailLoad,
+  onUrlChange,
+  onTitleChange,
+  onFaviconChange,
+  resolveUrlInput,
+  navBarActions,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
   const autoFitPendingRef = useRef(false);
+  const onUrlChangeRef = useRef(onUrlChange);
+  onUrlChangeRef.current = onUrlChange;
+  const onTitleChangeRef = useRef(onTitleChange);
+  onTitleChangeRef.current = onTitleChange;
+  const onFaviconChangeRef = useRef(onFaviconChange);
+  onFaviconChangeRef.current = onFaviconChange;
   const webviewPartition = partition && isAllowedWebviewPartition(partition) ? partition : REMOTE_WEBVIEW_PARTITION;
   const safeUrl = isAllowedWebviewNavigationUrl(url, webviewPartition) ? url : 'about:blank';
 
@@ -70,9 +94,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   const [zoomFactor, setZoomFactor] = useState(1);
   const [webviewReady, setWebviewReady] = useState(false);
 
-  // Self-managed history stacks
-  const historyBackRef = useRef<string[]>([]);
-  const historyForwardRef = useRef<string[]>([]);
+  const internalNavRef = useRef(new InternalNavTracker());
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
 
@@ -90,10 +112,14 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
 
   const isStarOffice = isStarOfficeUrl(currentUrl);
 
+  useEffect(() => {
+    if (currentUrl) onUrlChangeRef.current?.(currentUrl);
+  }, [currentUrl]);
+
   // Reset when props.url changes
   useEffect(() => {
-    historyBackRef.current = [];
-    historyForwardRef.current = [];
+    if (!shouldResetHistoryForUrlProp(safeUrl, internalNavRef.current)) return;
+    internalNavRef.current.clear();
     setCanGoBack(false);
     setCanGoForward(false);
     setCurrentUrl(safeUrl);
@@ -121,16 +147,9 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
       if (!webviewEl || !targetUrl) return;
       if (!isAllowedWebviewNavigationUrl(targetUrl, webviewPartition)) return;
       if (targetUrl === currentUrl) return;
-
-      if (currentUrl) {
-        historyBackRef.current.push(currentUrl);
-      }
-      historyForwardRef.current = [];
-
+      internalNavRef.current.record(targetUrl);
       setCurrentUrl(targetUrl);
       setInputUrl(targetUrl);
-      setCanGoBack(historyBackRef.current.length > 0);
-      setCanGoForward(false);
 
       webviewEl.src = targetUrl;
     },
@@ -145,6 +164,11 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
     const handleStartLoading = () => setIsLoading(true);
     const handleStopLoading = () => {
       setIsLoading(false);
+    };
+
+    const syncNavState = () => {
+      setCanGoBack(Boolean(webviewEl.canGoBack?.()));
+      setCanGoForward(Boolean(webviewEl.canGoForward?.()));
     };
 
     // Inject script to intercept links / window.open / form submissions
@@ -226,16 +250,32 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
     };
 
     const handleDidNavigate = (event: Event & { url?: string }) => {
-      const newUrl = (event as any).url;
+      const newUrl = event.url;
       if (newUrl && newUrl !== currentUrl) {
+        internalNavRef.current.record(newUrl);
         setCurrentUrl(newUrl);
         setInputUrl(newUrl);
       }
+      syncNavState();
     };
 
     const handleDomReady = () => {
       setWebviewReady(true);
+      syncNavState();
       injectClickInterceptor();
+
+      try {
+        const webContentsId = webviewEl.getWebContentsId?.();
+        if (typeof webContentsId === 'number') {
+          void ipcBridge.application.reportBrowserWebContentsId.invoke({ webContentsId }).then((result) => {
+            if (!result.success && result.msg) {
+              console.warn('[WINK GO browser] Agent control unavailable:', result.msg);
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('[WINK GO browser] Failed to report webContents id:', error);
+      }
 
       // Inject viewport meta for responsive pages
       webviewEl
@@ -339,6 +379,14 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
       onDidFailLoad?.(event.errorCode, event.errorDescription);
     };
 
+    const handlePageTitleUpdated = (event: Event & { title?: string }) => {
+      if (event.title) onTitleChangeRef.current?.(event.title);
+    };
+
+    const handlePageFaviconUpdated = (event: Event & { favicons?: string[] }) => {
+      if (event.favicons?.[0]) onFaviconChangeRef.current?.(event.favicons[0]);
+    };
+
     webviewEl.addEventListener('did-start-loading', handleStartLoading);
     webviewEl.addEventListener('did-stop-loading', handleStopLoading);
     webviewEl.addEventListener('dom-ready', handleDomReady);
@@ -347,6 +395,8 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
     webviewEl.addEventListener('console-message', handleConsoleMessage as EventListener);
     webviewEl.addEventListener('did-finish-load', handleDidFinishLoad);
     webviewEl.addEventListener('did-fail-load', handleDidFailLoad as EventListener);
+    webviewEl.addEventListener('page-title-updated', handlePageTitleUpdated as EventListener);
+    webviewEl.addEventListener('page-favicon-updated', handlePageFaviconUpdated as EventListener);
 
     return () => {
       webviewEl.removeEventListener('did-start-loading', handleStartLoading);
@@ -357,6 +407,8 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
       webviewEl.removeEventListener('console-message', handleConsoleMessage as EventListener);
       webviewEl.removeEventListener('did-finish-load', handleDidFinishLoad);
       webviewEl.removeEventListener('did-fail-load', handleDidFailLoad as EventListener);
+      webviewEl.removeEventListener('page-title-updated', handlePageTitleUpdated as EventListener);
+      webviewEl.removeEventListener('page-favicon-updated', handlePageFaviconUpdated as EventListener);
     };
   }, [navigateToWithHistory, currentUrl, onDidFinishLoad, onDidFailLoad, isStarOfficeUrl]);
 
@@ -429,29 +481,15 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
     [isStarOffice]
   );
 
-  // Back
   const handleGoBack = useCallback(() => {
-    if (historyBackRef.current.length === 0) return;
-    const prevUrl = historyBackRef.current.pop()!;
-    historyForwardRef.current.push(currentUrl);
-    setCanGoBack(historyBackRef.current.length > 0);
-    setCanGoForward(true);
-    setCurrentUrl(prevUrl);
-    setInputUrl(prevUrl);
-    if (webviewRef.current) webviewRef.current.src = prevUrl;
-  }, [currentUrl]);
+    const webviewEl = webviewRef.current;
+    if (webviewEl?.canGoBack?.()) webviewEl.goBack();
+  }, []);
 
-  // Forward
   const handleGoForward = useCallback(() => {
-    if (historyForwardRef.current.length === 0) return;
-    const nextUrl = historyForwardRef.current.pop()!;
-    historyBackRef.current.push(currentUrl);
-    setCanGoBack(true);
-    setCanGoForward(historyForwardRef.current.length > 0);
-    setCurrentUrl(nextUrl);
-    setInputUrl(nextUrl);
-    if (webviewRef.current) webviewRef.current.src = nextUrl;
-  }, [currentUrl]);
+    const webviewEl = webviewRef.current;
+    if (webviewEl?.canGoForward?.()) webviewEl.goForward();
+  }, []);
 
   // Refresh
   const handleRefresh = useCallback(() => {
@@ -462,14 +500,17 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
   const handleUrlSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      let targetUrl = inputUrl.trim();
-      if (!targetUrl) return;
-      if (!/^https?:\/\//i.test(targetUrl)) {
-        targetUrl = 'https://' + targetUrl;
+      const raw = inputUrl.trim();
+      if (!raw) return;
+      if (resolveUrlInput) {
+        const targetUrl = resolveUrlInput(raw);
+        if (targetUrl) navigateToWithHistory(targetUrl);
+        return;
       }
+      const targetUrl = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
       navigateToWithHistory(targetUrl);
     },
-    [inputUrl, navigateToWithHistory]
+    [inputUrl, navigateToWithHistory, resolveUrlInput]
   );
 
   const handleUrlKeyDown = useCallback(
@@ -553,6 +594,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
             .winkgo-url-viewer-toolbar .toolbar-input {
               -webkit-appearance: none;
               appearance: none;
+              box-sizing: border-box;
               width: 100%;
               height: 30px;
               padding: 0 12px;
@@ -613,6 +655,7 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
               placeholder='Enter URL...'
             />
           </form>
+          {navBarActions}
         </div>
       )}
 
@@ -639,6 +682,8 @@ const WebviewHost: React.FC<WebviewHostProps> = ({
             transition: 'opacity 150ms ease-in',
           }}
           partition={webviewPartition}
+          allowpopups={webviewPartition === BROWSER_SESSION_PARTITION}
+          webpreferences='contextIsolation=yes, nodeIntegration=no, nativeWindowOpen=no'
         />
       </div>
     </div>

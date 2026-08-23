@@ -216,18 +216,8 @@ pub(crate) fn build_claude_init_args(config: &SessionConfig) -> Vec<String> {
     // syscall-free fn.
     args.push("--allow-dangerously-skip-permissions".to_string());
 
-    // TEMPORARY: disable AskUserQuestion until the multi-question interactive card is
-    // ported to the current frontend. claude's AskUserQuestion can ask several
-    // questions at once (`{questions:[…]}`), but the active frontend only renders a
-    // single-question permission card, so a multi-question ask would silently drop all
-    // but the first. Rather than ship that half-answer behaviour, deny the tool at
-    // spawn time — claude then falls back to plain-text questions, which render fully.
-    // Mirrors the official @agentclientprotocol/claude-agent-acp adapter, which
-    // likewise lists `AskUserQuestion` in `disallowedTools` for the same reason
-    // ("not a great way to expose this over ACP at the moment"). Remove once the
-    // frontend gains a multi-question renderer.
-    args.push("--disallowed-tools".to_string());
-    args.push("AskUserQuestion".to_string());
+    // AskUserQuestion is enabled: it has a first-class multi-question card and
+    // dedicated answer channel instead of being flattened into a permission.
 
     if let Some(model) = config.model.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         args.push("--model".to_string());
@@ -733,14 +723,75 @@ impl ClaudeSessionBackend {
                 .await
                 .map_err(|e| BackendError::Transport(format!("write control_response: {e}")))?;
         }
-        // RA -1: the reducer leaves requires-action only on PermissionResolved.
+        // Resolve the same counter the original request incremented. The legacy
+        // confirmation endpoint can still answer a recovered AskUserQuestion.
+        let cur_gen = self.turn_gen.load(Ordering::SeqCst);
+        let resolved = if pending.tool_name == "AskUserQuestion" {
+            SessionEvent::AskResolved {
+                request_id: request_id.to_string(),
+            }
+        } else {
+            SessionEvent::PermissionResolved {
+                request_id: request_id.to_string(),
+                kind: crate::event::PermissionKind::Tool,
+            }
+        };
+        let _ = self.event_tx.send(SessionEnvelope {
+            session_id: self.session_id.clone(),
+            turn_gen: cur_gen,
+            event: resolved,
+        });
+        Ok(CommandReceipt {
+            accepted: true,
+            admission: Admission::NoTurn,
+            turn_gen: cur_gen,
+        })
+    }
+
+    async fn answer_ask(
+        &self,
+        request_id: &str,
+        answers: Option<Vec<super::types::QuestionAnswer>>,
+    ) -> Result<CommandReceipt, BackendError> {
+        use std::sync::atomic::Ordering;
+        let pending = self
+            .pending_perms
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .remove(request_id)
+            .ok_or_else(|| BackendError::Transport(format!("no pending ask for request_id {request_id}")))?;
+        if pending.tool_name != "AskUserQuestion" {
+            return Err(BackendError::Transport(format!(
+                "request_id {request_id} is not a structured question"
+            )));
+        }
+        let (decision, answer_slice) = match &answers {
+            Some(list) => (super::types::PermissionDecision::Approved, list.as_slice()),
+            None => (super::types::PermissionDecision::Denied, &[][..]),
+        };
+        let response = build_control_response(request_id, &pending, decision, None, answer_slice);
+        {
+            let mut guard = self.stdin.lock().await;
+            let stdin = guard
+                .as_mut()
+                .ok_or_else(|| BackendError::Transport("claude stdin unavailable".into()))?;
+            self.adapter
+                .write_control_response(stdin, &response)
+                .await
+                .map_err(|error| BackendError::Transport(format!("write control_response: {error}")))?;
+        }
+        tracing::info!(
+            conversation_id = %self.session_id,
+            request_id = %request_id,
+            answered = answers.is_some(),
+            "structured question answer written to agent stdin"
+        );
         let cur_gen = self.turn_gen.load(Ordering::SeqCst);
         let _ = self.event_tx.send(SessionEnvelope {
             session_id: self.session_id.clone(),
             turn_gen: cur_gen,
-            event: SessionEvent::PermissionResolved {
+            event: SessionEvent::AskResolved {
                 request_id: request_id.to_string(),
-                kind: crate::event::PermissionKind::Tool,
             },
         });
         Ok(CommandReceipt {
@@ -2439,6 +2490,7 @@ impl SessionBackend for ClaudeSessionBackend {
                 self.answer_permission(&request_id, decision, selected.as_deref(), &answers)
                     .await
             }
+            Command::AnswerAsk { request_id, answers } => self.answer_ask(&request_id, answers).await,
             // Acknowledge: a conversation-side fold (done-unseen → seen). NO claude
             // wire; accept as a local no-op (§C1).
             Command::Acknowledge { .. } => {
@@ -2662,12 +2714,10 @@ mod tests {
                 "--permission-mode".to_string(),
                 "default".to_string(),
                 "--allow-dangerously-skip-permissions".to_string(),
-                "--disallowed-tools".to_string(),
-                "AskUserQuestion".to_string(),
             ],
             "an unconfigured claude session is gated as `default` (never silently bypassed), \
-             with runtime-bypass UNLOCKED but not activated, and AskUserQuestion denied \
-             (temporary — no multi-question frontend renderer yet)"
+             with runtime-bypass UNLOCKED but not activated; AskUserQuestion remains enabled \
+             through its dedicated structured-answer channel"
         );
         assert_eq!(build_claude_mcp_config(&[]), None, "no servers → no --mcp-config");
     }
@@ -2771,12 +2821,10 @@ mod tests {
                 "--permission-mode".to_string(),
                 "default".to_string(),
                 "--allow-dangerously-skip-permissions".to_string(),
-                "--disallowed-tools".to_string(),
-                "AskUserQuestion".to_string(),
             ],
             "a blank mode is gated as `default` (never silently bypassed); the unlock flag \
              is always present so a later in-band switch to bypass is accepted; \
-             AskUserQuestion is denied (temporary)"
+             AskUserQuestion remains available through the structured-answer channel"
         );
     }
 

@@ -1,6 +1,8 @@
 {
   "desktopPet": "Mascota de escritorio",
   "enable": "Activar mascota de escritorio",
+  "butlerSetup": "Pedir al asistente que lo configure",
+  "butlerSetupPrompt": "Crea una mascota de escritorio para mí. Adjuntaré una imagen para que la conviertas en la mascota.",
   "size": "Tamaño de la mascota",
   "sizeSmall": "Pequeño ({{px}}px)",
   "sizeMedium": "Mediano ({{px}}px)",

@@ -49,11 +49,14 @@ vi.mock('@/renderer/components/chat/SendBox', () => ({
   default: ({
     onSend,
     onChange,
+    rightTools,
   }: {
     onSend: (message: string) => Promise<void>;
     onChange?: (value: string) => void;
+    rightTools?: React.ReactNode;
   }) => (
     <div>
+      {rightTools}
       <button type='button' onClick={() => onChange?.('hello')}>
         change
       </button>
@@ -65,6 +68,9 @@ vi.mock('@/renderer/components/chat/SendBox', () => ({
 }));
 
 vi.mock('@/renderer/components/agent/AgentModeSelector', () => ({ default: () => null }));
+vi.mock('@/renderer/pages/conversation/platforms/winkgo_agent/WinkGoAgentModelSelector', () => ({
+  default: () => <button data-testid='composer-model-selector'>model</button>,
+}));
 vi.mock('@/renderer/components/chat/CommandQueuePanel', () => ({ default: () => null }));
 vi.mock('@/renderer/components/chat/MobileActionSheet', () => ({
   default: () => null,
@@ -237,6 +243,12 @@ describe('WinkGoAgentSendBox', () => {
     useTeamPermissionMock.mockReturnValue(null);
   });
 
+  it('places the model selector inside the composer action row', () => {
+    render(<WinkGoAgentSendBox conversation_id='conv-1' modelSelection={modelSelection} />);
+
+    expect(screen.getByTestId('composer-model-selector')).toBeInTheDocument();
+  });
+
   it('does not warm up team session when draft content changes', async () => {
     const warmupSession = vi.fn().mockResolvedValue(undefined);
     useTeamPermissionMock.mockReturnValue({
@@ -312,6 +324,19 @@ describe('WinkGoAgentSendBox', () => {
     await waitFor(() => {
       expect(ensureConversationRuntimeMock).toHaveBeenCalledWith('conv-1');
     });
+  });
+
+  it('does not start a standalone runtime before a provider and model are selected', async () => {
+    const unconfiguredSelection = {
+      ...modelSelection,
+      current_model: undefined,
+    } as WinkGoAgentModelSelection;
+
+    render(<WinkGoAgentSendBox conversation_id='conv-1' modelSelection={unconfiguredSelection} />);
+    await act(async () => Promise.resolve());
+
+    expect(ensureConversationRuntimeMock).not.toHaveBeenCalled();
+    expect(Message.error).not.toHaveBeenCalled();
   });
 
   it('suppresses visible error and preserves runtime gate for active-turn busy conflicts', async () => {

@@ -11,10 +11,79 @@ const { isDeepStrictEqual } = require('node:util');
 const projectRoot = path.resolve(__dirname, '..');
 const skillsRoot = path.join(projectRoot, 'resources', 'winkgo', 'skills');
 const proxyPath = path.join(projectRoot, 'resources', 'winkgo', 'winkgo-skill-runtime-proxy.cjs');
+const executableName = 'SparkBot-MCP-Hub-v1.1.0.exe';
+
+const resolveRuntimeSelection = () => {
+  const localAppData = process.env.LOCALAPPDATA || '';
+  const explicitRoot = process.env.WINKGO_BUNDLED_RUNTIME_DIR;
+  const releasesRoot = path.join(localAppData, 'Wink Go', 'data', 'runtime', 'xiaozhi');
+  const installed = fs.existsSync(releasesRoot)
+    ? fs
+        .readdirSync(releasesRoot, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && !entry.name.includes('.old-'))
+        .map((entry) => path.join(releasesRoot, entry.name, executableName))
+        .filter(fs.existsSync)
+        .sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs)
+    : [];
+  const candidates = [
+    ...(explicitRoot
+      ? [
+          [path.join(explicitRoot, 'SparkBot-MCP-Hub-v1.1.0-release', executableName), 'explicit_bundle'],
+          [path.join(explicitRoot, executableName), 'explicit_bundle'],
+        ]
+      : []),
+    ...installed.map((executablePath) => [executablePath, 'installed_release']),
+    [path.join(localAppData, 'Wink Go', 'winkgo-runtime', executableName), 'legacy'],
+  ];
+  const selected = candidates.find(([executablePath]) => fs.existsSync(executablePath));
+  const executablePath = selected?.[0] || '';
+  return {
+    executablePath,
+    runtimeRoot: executablePath ? path.dirname(executablePath) : '',
+    source: selected?.[1] || 'missing',
+  };
+};
+
+const runtimeSelection = resolveRuntimeSelection();
+if (process.argv.includes('--print-runtime')) {
+  process.stdout.write(`${JSON.stringify(runtimeSelection, null, 2)}\n`);
+  process.exit(0);
+}
+
+const recoverRuntimeLock = () => {
+  const lockPath = runtimeSelection.runtimeRoot ? path.join(runtimeSelection.runtimeRoot, 'runtime.lock') : '';
+  if (!lockPath || !fs.existsSync(lockPath)) return { removed: false, pid: null, reason: 'missing' };
+  const rawPid = fs.readFileSync(lockPath, 'utf8').trim();
+  if (!/^\d+$/.test(rawPid)) return { removed: false, pid: null, reason: 'invalid' };
+  const pid = Number(rawPid);
+  let processPath = '';
+  try {
+    processPath = require('node:child_process')
+      .execFileSync(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid} -ErrorAction Stop).Path`],
+        { encoding: 'utf8', windowsHide: true, timeout: 2_000 }
+      )
+      .trim();
+  } catch {
+    fs.rmSync(lockPath, { force: true });
+    return { removed: true, pid, reason: 'process_exited' };
+  }
+  if (path.resolve(processPath).toLowerCase() === path.resolve(runtimeSelection.executablePath).toLowerCase()) {
+    return { removed: false, pid, reason: 'runtime_alive' };
+  }
+  fs.rmSync(lockPath, { force: true });
+  return { removed: true, pid, reason: 'pid_reused' };
+};
+
+if (process.argv.includes('--recover-runtime-lock')) {
+  process.stdout.write(`${JSON.stringify(recoverRuntimeLock(), null, 2)}\n`);
+  process.exit(0);
+}
+
 const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'winkgo-runtime-audit-'));
 const configPath = path.join(temporaryRoot, 'enabled-skills.json');
-const executableName = 'SparkBot-MCP-Hub-v1.1.0.exe';
-const localRuntimeRoot = path.join(process.env.LOCALAPPDATA || '', 'Wink Go', 'winkgo-runtime');
+const localRuntimeRoot = runtimeSelection.runtimeRoot;
 const safeSmokeCalls = {
   bilibili: ['desktop_agents.video_client_read_window', { client: 'bilibili' }],
   claude: ['claude.check_runtime', {}],
@@ -108,12 +177,15 @@ for (const aliasName of conflictedCompatibilityAliases) {
   if (!directActionToolOwners.has(aliasName)) declaredToolNames.delete(aliasName);
 }
 
-const runtimeExecutable = path.join(localRuntimeRoot, executableName);
+const runtimeExecutable = runtimeSelection.executablePath;
 const runtimeConfigCandidates = [
   path.join(process.env.APPDATA || '', 'com.winkgo.desktop', 'inspiration-runtime.yaml'),
-  ...['config.local.yaml', 'config.bundle-local.yaml', 'config.yaml'].map((name) => path.join(localRuntimeRoot, name)),
-];
+  ...['config.local.yaml', 'config.bundle-local.yaml', 'config.yaml'].map((name) =>
+    localRuntimeRoot ? path.join(localRuntimeRoot, name) : ''
+  ),
+].filter(Boolean);
 const runtimeConfig = runtimeConfigCandidates.find((candidate) => fs.existsSync(candidate));
+if (runtimeSelection.executablePath) recoverRuntimeLock();
 const runtimeLaunch =
   fs.existsSync(runtimeExecutable) && runtimeConfig
     ? {

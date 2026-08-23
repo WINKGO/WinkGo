@@ -1,0 +1,72 @@
+.editor {
+  display: grid;
+  gap: 8px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-base);
+}
+
+.header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.header > span,
+.details {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.header strong,
+.details strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.header small,
+.details small {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.steps {
+  display: grid;
+  max-height: 210px;
+  gap: 5px;
+  overflow-y: auto;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  min-height: 40px;
+  padding: 5px 6px;
+  border: 1px solid var(--border-base);
+  border-radius: 9px;
+  background: var(--fill-1);
+}
+
+.index {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--fill-2);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+}

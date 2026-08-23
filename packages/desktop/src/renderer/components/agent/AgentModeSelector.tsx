@@ -142,6 +142,12 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
     (mode: AgentModeOption) => modeLabelFormatter?.(mode) ?? mode.label,
     [modeLabelFormatter]
   );
+  const pendingMode = conversation_id ? runtimeConfig.pendingValues?.[runtimeMode?.id ?? 'mode'] : undefined;
+  const pendingModeLabel = useMemo(() => {
+    if (!pendingMode || pendingMode === current_mode) return undefined;
+    const option = modes.find((mode) => mode.value === pendingMode);
+    return option ? getDisplayModeLabel(option) : pendingMode;
+  }, [pendingMode, current_mode, modes, getDisplayModeLabel]);
 
   const can_switchMode = modes.length > 0 && Boolean(conversation_id || onModeSelect);
   // Mobile conversation header agent pill is display-only by design.
@@ -191,12 +197,17 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
         if (!runtimeMode) {
           throw new Error('config_not_observed');
         }
-        await runtimeConfig.setConfigOption(runtimeMode.id, mode);
+        return runtimeConfig.setConfigOption(runtimeMode.id, mode);
       };
 
       setIsLoading(true);
       try {
-        await setActiveMode();
+        const applied = await setActiveMode();
+        const landed = applied?.find((option) => option.id === runtimeMode?.id)?.current_value === mode;
+        if (!landed) {
+          Message.info(t('agentMode.switchPendingNextTurn', { defaultValue: '将在下一轮生效' }));
+          return;
+        }
         setCurrentMode(mode);
         onModeChanged?.(mode);
         Message.success(t('agentMode.switchSuccess'));
@@ -230,7 +241,7 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
 
   // Dropdown menu (shared between compact and full mode)
   const dropdownMenu = (
-    <Menu onClickMenuItem={(key) => void handleModeChange(key)}>
+    <Menu className='winkgo-permission-menu' onClickMenuItem={(key) => void handleModeChange(key)}>
       <Menu.ItemGroup title={t('agentMode.switchMode', { defaultValue: 'Switch Mode' })}>
         {modes.map((mode: AgentModeOption) => (
           <Menu.Item key={mode.value} className={current_mode === mode.value ? '!bg-2' : ''}>
@@ -240,7 +251,7 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
               data-testid={`winkgo_agent-mode-option-${mode.value}`}
             >
               <span aria-hidden='true' className='w-16px shrink-0 text-primary'>
-                {current_mode === mode.value ? '✓' : ''}
+                {current_mode === mode.value ? '✓' : pendingMode === mode.value ? '⏱' : ''}
               </span>
               {mode.description ? (
                 <Tooltip content={mode.description} position='right'>
@@ -266,13 +277,15 @@ const AgentModeSelector: React.FC<AgentModeSelectorProps> = ({
         : can_switchMode
           ? getCurrentModeLabel()
           : agent_name || backend || 'Agent';
+    const showPendingTarget = Boolean(pendingModeLabel) && compactLabelType !== 'agent';
+    const baseWithPending = showPendingTarget ? `${baseCompactLabel} → ${pendingModeLabel}` : baseCompactLabel;
     const compactLabel =
       compactLabelOverride ||
-      (compactLabelPrefix && compactLabelType !== 'agent'
+      (compactLabelPrefix && compactLabelType !== 'agent' && !showPendingTarget
         ? hideCompactLabelPrefixOnMobile && isMobile
           ? baseCompactLabel
           : `${compactLabelPrefix} · ${baseCompactLabel}`
-        : baseCompactLabel);
+        : baseWithPending);
     if (!canInteract && legacyCompactBehavior) {
       return null;
     }

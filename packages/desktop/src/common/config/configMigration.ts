@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { ipcBridge } from '@/common';
 import { httpRequest } from '@/common/adapter/httpBridge';
 import { assistantRuntimeKey, type AssistantAgent } from '@/common/types/agent/assistantTypes';
@@ -26,10 +27,13 @@ const LEGACY_CHANNEL_KEYS = [
   'assistant.wecom.agent',
 ] as const;
 
-const LEGACY_CHANNEL_PLATFORMS = ['telegram', 'lark', 'dingtalk', 'weixin', 'wecom'] as const;
+// Only these platforms are owned by the built-in channel settings API.
+// WeCom is provided by the ext-wecom-bot extension and must not be sent to
+// `/api/channel/settings/:platform`, where it is intentionally unsupported.
+const LEGACY_BACKEND_CHANNEL_PLATFORMS = ['telegram', 'lark', 'dingtalk', 'weixin'] as const;
 
 type LegacyChannelConfigKey = (typeof LEGACY_CHANNEL_KEYS)[number];
-type LegacyChannelPlatform = (typeof LEGACY_CHANNEL_PLATFORMS)[number];
+type LegacyChannelPlatform = (typeof LEGACY_BACKEND_CHANNEL_PLATFORMS)[number];
 type LegacyBusinessConfigKey =
   | 'google.config'
   | 'acp.promptTimeout'
@@ -59,8 +63,6 @@ const ALL_LEGACY_KEYS: LegacyConfigKey[] = [
   'acp.promptTimeout',
   'acp.agentIdleTimeout',
   'language',
-  'theme',
-  'colorScheme',
   'ui.zoomFactor',
   'ui.fontSize.chat',
   'ui.fontSize.markdown',
@@ -68,9 +70,6 @@ const ALL_LEGACY_KEYS: LegacyConfigKey[] = [
   'webui.desktop.enabled',
   'webui.desktop.allowRemote',
   'webui.desktop.port',
-  'customCss',
-  'css.themes',
-  'css.activeThemeId',
   'tools.imageGenerationModel',
   'tools.speechToText',
   'workspace.pasteConfirm',
@@ -209,7 +208,7 @@ async function migrateLegacyChannelSettings(configFile: LegacyChannelConfigFile)
     return;
   }
 
-  for (const platform of LEGACY_CHANNEL_PLATFORMS) {
+  for (const platform of LEGACY_BACKEND_CHANNEL_PLATFORMS) {
     const assistantKey = `assistant.${platform}.agent` as const;
     const defaultModelKey = `assistant.${platform}.defaultModel` as const;
 

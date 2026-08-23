@@ -8,8 +8,9 @@
 
 import { ipcBridge } from '@/common';
 import { type ChatFileRef, chatFileRefPath } from '@/common/types/chatFile';
-import type { IMcpServer, TProviderWithModel } from '@/common/config/storage';
-import { toSessionMcpServer } from '@/renderer/hooks/mcp/catalog';
+import { BUILTIN_BROWSER_MCP_NAME, BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME } from '@/common/config/constants';
+import type { IMcpServer, ISessionMcpServer, TProviderWithModel } from '@/common/config/storage';
+import { ensureBackendMcpCatalog, toSessionMcpServer } from '@/renderer/hooks/mcp/catalog';
 import { emitter } from '@/renderer/utils/emitter';
 import { updateWorkspaceTime } from '@/renderer/utils/workspace/workspaceHistory';
 import { Message } from '@arco-design/web-react';
@@ -20,6 +21,21 @@ import { mutate as swrMutate } from 'swr';
 import { getConversationCreateErrorMessage } from '@/renderer/pages/conversation/utils/conversationCreateError';
 import { primeConversationCache } from '@/renderer/pages/conversation/utils/conversationCache';
 import type { AcpModelInfo } from '../types';
+
+const mergeMcpIds = (selected: string[] | undefined, required: string[]): string[] => [
+  ...new Set([...(selected ?? []), ...required]),
+];
+
+const mergeSessionMcpServers = (
+  selected: ISessionMcpServer[],
+  required: ISessionMcpServer[]
+): ISessionMcpServer[] => {
+  const merged = new Map<string, ISessionMcpServer>();
+  for (const server of [...selected, ...required]) {
+    merged.set(server.id || server.name, server);
+  }
+  return [...merged.values()];
+};
 
 export type GuidSendDeps = {
   // Input state
@@ -38,6 +54,8 @@ export type GuidSendDeps = {
   selectedMode: string;
   selectedAcpModel: string | null;
   selectedThoughtLevelValue?: string;
+  selectedSpeedOptionId?: string;
+  selectedSpeedValue?: string;
   currentAcpCachedModelInfo: AcpModelInfo | null;
   current_model: TProviderWithModel | undefined;
 
@@ -86,6 +104,8 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     selectedMode,
     selectedAcpModel,
     selectedThoughtLevelValue,
+    selectedSpeedOptionId,
+    selectedSpeedValue,
     currentAcpCachedModelInfo,
     current_model,
     guidDisabledBuiltinSkills,
@@ -117,31 +137,56 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     const assistantBackend = selectedAssistantBackend;
     const enabled_skills_to_send = guidEnabledSkills ?? assistantDefaultSkillIds;
     const excludeBuiltinSkills = guidDisabledBuiltinSkills ?? assistantDefaultDisabledBuiltinSkillIds;
+    const requiredCoreMcpNames = new Set([BUILTIN_BROWSER_MCP_NAME, BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME]);
+    const resolvedAvailableMcpServers = [...requiredCoreMcpNames].every((requiredName) =>
+      availableMcpServers.some((server) => server.name === requiredName && server.builtin === true)
+    )
+      ? availableMcpServers
+      : await ensureBackendMcpCatalog()
+          .then(({ allServers }) => allServers)
+          .catch(() => availableMcpServers);
     const selectedAllMcpServerIds = selectedMcpServerIds ?? [];
     const selectedMcpServerIdSet = new Set(selectedAllMcpServerIds);
-    const selectedUserMcpServerIds = availableMcpServers
+    const selectedUserMcpServerIds = resolvedAvailableMcpServers
       .filter((server) => selectedMcpServerIdSet.has(server.id) && server.builtin !== true)
       .map((server) => server.id);
-    const selectedAllSessionMcpServers = availableMcpServers
+    const selectedAllSessionMcpServers = resolvedAvailableMcpServers
       .filter((server) => selectedMcpServerIdSet.has(server.id))
       .map((server) => toSessionMcpServer(server));
-    const selectedSessionMcpServers = availableMcpServers
+    const selectedSessionMcpServers = resolvedAvailableMcpServers
       .filter((server) => selectedMcpServerIdSet.has(server.id) && server.builtin === true)
       .map((server) => toSessionMcpServer(server));
     const defaultSelectedMcpServerIds = assistantDefaultMcpIds;
-    const defaultSelectedUserMcpServerIds = availableMcpServers
+    const defaultSelectedUserMcpServerIds = resolvedAvailableMcpServers
       .filter((server) => (defaultSelectedMcpServerIds ?? []).includes(server.id) && server.builtin !== true)
       .map((server) => server.id);
-    const assistantOverrideMcpIds =
-      selectedMcpServerIds !== undefined ? selectedAllMcpServerIds : defaultSelectedMcpServerIds;
+    // Browser control is a core WINK GO capability rather than an optional
+    // assistant preference.  Always attach the native in-app browser MCP so a
+    // user can say "open this site" in any new conversation without first
+    // knowing about the MCP selector.  Other user-selected/default MCP servers
+    // keep their existing behavior.
+    const requiredCoreMcpServers = resolvedAvailableMcpServers
+      .filter((server) => server.builtin === true && requiredCoreMcpNames.has(server.name))
+      .map((server) => toSessionMcpServer(server));
+    const requiredCoreMcpIds = requiredCoreMcpServers.map((server) => server.id);
+    const assistantOverrideMcpIds = mergeMcpIds(
+      selectedMcpServerIds !== undefined ? selectedAllMcpServerIds : defaultSelectedMcpServerIds,
+      requiredCoreMcpIds
+    );
     const selectedUserMcpServerIdsToSend =
       selectedMcpServerIds !== undefined ? selectedUserMcpServerIds : defaultSelectedUserMcpServerIds;
-    const selectedSessionMcpServersToSend =
+    const selectedSessionMcpServersToSend = mergeSessionMcpServers(
       selectedMcpServerIds !== undefined
         ? selectedAllSessionMcpServers
-        : availableMcpServers
+        : resolvedAvailableMcpServers
             .filter((server) => (defaultSelectedMcpServerIds ?? []).includes(server.id))
-            .map((server) => toSessionMcpServer(server));
+            .map((server) => toSessionMcpServer(server)),
+      requiredCoreMcpServers
+    );
+    const selectedBuiltinSessionMcpServers = mergeSessionMcpServers(
+      selectedSessionMcpServers,
+      requiredCoreMcpServers
+    );
 
     const assistantOverrideModel =
       selectedAcpModel || currentAcpCachedModelInfo?.current_model_id || current_model?.use_model || undefined;
@@ -187,6 +232,10 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
             custom_workspace: isCustomWorkspace,
             selected_mcp_server_ids: selectedUserMcpServerIdsToSend,
             selected_session_mcp_servers: selectedSessionMcpServersToSend,
+            pending_config_options:
+              selectedSpeedOptionId && selectedSpeedValue
+                ? { [selectedSpeedOptionId]: selectedSpeedValue }
+                : undefined,
           },
         });
 
@@ -229,7 +278,9 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
           default_files: files.map(chatFileRefPath),
           selected_mcp_server_ids: selectedUserMcpServerIdsToSend,
           selected_session_mcp_servers:
-            selectedMcpServerIds !== undefined ? selectedSessionMcpServers : selectedSessionMcpServersToSend,
+            selectedMcpServerIds !== undefined ? selectedBuiltinSessionMcpServers : selectedSessionMcpServersToSend,
+          pending_config_options:
+            selectedSpeedOptionId && selectedSpeedValue ? { [selectedSpeedOptionId]: selectedSpeedValue } : undefined,
         },
       });
       if (!conversation || !conversation.id) {
@@ -263,6 +314,8 @@ export const useGuidSend = (deps: GuidSendDeps): GuidSendResult => {
     selectedMode,
     selectedAcpModel,
     selectedThoughtLevelValue,
+    selectedSpeedOptionId,
+    selectedSpeedValue,
     currentAcpCachedModelInfo,
     current_model,
     guidDisabledBuiltinSkills,

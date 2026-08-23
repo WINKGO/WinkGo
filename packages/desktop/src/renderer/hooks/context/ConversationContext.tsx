@@ -64,6 +64,12 @@ export interface ConversationContextValue {
    * Assistant id bound to this conversation snapshot, if any.
    */
   assistantId?: string;
+
+  /** Native media blocks accepted by the active Agent prompt. */
+  promptCapability?: { image: boolean; audio: boolean };
+
+  /** Message-level local conversation branch capability. */
+  forkCapability?: { at_turn: boolean };
 }
 
 /**

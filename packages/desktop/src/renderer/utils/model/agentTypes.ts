@@ -19,7 +19,7 @@ import type { TFunction } from 'i18next';
 export const MANAGED_AGENTS_SWR_KEY = 'agents.managed';
 
 /** Type of an agent. */
-export type AgentType = 'acp' | 'remote' | 'winkgo_agent' | 'openclaw-gateway' | 'nanobot';
+export type AgentType = 'acp' | 'antigravity' | 'remote' | 'winkgo_agent' | 'openclaw-gateway' | 'nanobot';
 
 /** Source tier of an agent row, mirroring backend `agent_source` enum. */
 export type AgentSource = 'internal' | 'builtin' | 'extension' | 'custom';
@@ -177,6 +177,22 @@ export async function fetchManagedAgents(): Promise<ManagedAgent[]> {
     // fallback to empty
   }
   return [];
+}
+
+/** Shared search haystack used by every Agent picker. */
+export function managedAgentSearchText(agent: ManagedAgent, language: string): string {
+  return [
+    agent.name,
+    agent.name_i18n?.[language],
+    agent.description,
+    agent.description_i18n?.[language],
+    agent.backend,
+    agent.command,
+    agent.agent_source_info?.binary_name,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
 }
 
 const getAgentManagementErrorDetails = (details: unknown): AgentManagementErrorDetails => {

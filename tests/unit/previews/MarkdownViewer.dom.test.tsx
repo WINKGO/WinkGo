@@ -20,8 +20,8 @@ vi.mock('@/common', () => ({
     fs: {
       fetchRemoteImage: { invoke: vi.fn() },
       getImageBase64: { invoke: vi.fn() },
-      getFileMetadata: { invoke: vi.fn() },
-      readFile: { invoke: vi.fn() },
+      getContentMetadata: { invoke: vi.fn() },
+      readContent: { invoke: vi.fn() },
     },
   },
 }));
@@ -122,9 +122,9 @@ describe('MarkdownViewer', () => {
   beforeEach(() => {
     previewMocks.openPreview.mockClear();
     copyTextMock.mockClear();
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockReset();
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockReset();
+    vi.mocked(ipcBridge.fs.readContent.invoke).mockReset();
     vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockReset();
-    vi.mocked(ipcBridge.fs.readFile.invoke).mockReset();
     vi.mocked(ipcBridge.fs.fetchRemoteImage.invoke).mockReset();
   });
 
@@ -145,8 +145,8 @@ describe('MarkdownViewer', () => {
 
   it('opens local file links in the preview panel instead of browser windows', async () => {
     const filePath = '/Users/demo/Desktop/chart.jpg';
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
-    vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockResolvedValue('data:image/jpeg;base64,abc123');
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
+    vi.mocked(ipcBridge.fs.readContent.invoke).mockResolvedValue('data:image/jpeg;base64,abc123');
 
     render(<MarkdownViewer content={`[image](${filePath})`} file_path='/Users/demo/Desktop/test.md' />);
 
@@ -167,14 +167,16 @@ describe('MarkdownViewer', () => {
         { replace: true }
       );
     });
-    expect(ipcBridge.fs.getImageBase64.invoke).toHaveBeenCalledWith({ path: filePath, workspace: undefined });
-    expect(ipcBridge.fs.readFile.invoke).not.toHaveBeenCalled();
+    expect(ipcBridge.fs.readContent.invoke).toHaveBeenCalledWith({
+      file: { kind: 'local', path: filePath },
+      encoding: 'dataurl',
+    });
   });
 
   it('opens hash range local file links at the start line in preview mode', async () => {
     const filePath = '/Users/demo/Desktop/app.ts';
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
-    vi.mocked(ipcBridge.fs.readFile.invoke).mockResolvedValue('const value = 1;\n');
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
+    vi.mocked(ipcBridge.fs.readContent.invoke).mockResolvedValue('const value = 1;\n');
 
     render(<MarkdownViewer content={`[app.ts](${filePath}#L10-L20)`} file_path='/Users/demo/Desktop/test.md' />);
 
@@ -205,8 +207,8 @@ describe('MarkdownViewer', () => {
 
   it('opens encoded file URL hash links in preview mode', async () => {
     const filePath = '/Users/demo/Desktop/My File.ts';
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
-    vi.mocked(ipcBridge.fs.readFile.invoke).mockResolvedValue('const value = 1;\n');
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
+    vi.mocked(ipcBridge.fs.readContent.invoke).mockResolvedValue('const value = 1;\n');
 
     render(<MarkdownViewer content='[encoded file](file:///Users/demo/Desktop/My%20File.ts#L1)' />);
 
@@ -248,5 +250,28 @@ describe('MarkdownViewer', () => {
       expect(screen.getByRole('img', { name: 'image' })).toHaveAttribute('src', 'data:image/jpeg;base64,abc123');
     });
     expect(previewMocks.openPreview).not.toHaveBeenCalled();
+  });
+
+  it('resolves project-relative images through the project file reference', async () => {
+    vi.mocked(ipcBridge.fs.readContent.invoke).mockResolvedValue('data:image/png;base64,project-image');
+
+    render(
+      <MarkdownViewer
+        content='![architecture](../assets/architecture.png)'
+        fileRef={{ kind: 'project', pe_id: 'project-1', relative_path: 'docs/guide/readme.md' }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('img', { name: 'architecture' })).toHaveAttribute(
+        'src',
+        'data:image/png;base64,project-image'
+      );
+    });
+    expect(ipcBridge.fs.readContent.invoke).toHaveBeenCalledWith({
+      file: { kind: 'project', pe_id: 'project-1', relative_path: 'docs/assets/architecture.png' },
+      encoding: 'dataurl',
+    });
+    expect(ipcBridge.fs.getImageBase64.invoke).not.toHaveBeenCalled();
   });
 });

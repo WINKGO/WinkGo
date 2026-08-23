@@ -17,8 +17,6 @@ import wecomLogo from '@/renderer/assets/channel-logos/wecom.svg';
 import weixinLogo from '@/renderer/assets/channel-logos/weixin.svg';
 import winkGoLogo from '@/renderer/assets/logos/brand/app.png?inline';
 import appleMusicLogo from '@/renderer/assets/product-logos/apple-music.svg';
-import claudeLogo from '@/renderer/assets/product-logos/claude.png';
-import codexLogo from '@/renderer/assets/product-logos/codex.png';
 import genericMusicLogo from '@/renderer/assets/product-logos/generic-music.svg';
 import kugouMusicLogo from '@/renderer/assets/product-logos/kugou-music.svg';
 import neteaseMusicLogo from '@/renderer/assets/product-logos/netease-music.svg';
@@ -27,6 +25,7 @@ import sodaMusicLogo from '@/renderer/assets/product-logos/soda-music.svg';
 import spotifyLogo from '@/renderer/assets/product-logos/spotify.svg';
 import type { IslandActivity } from '@/renderer/components/layout/Titlebar/islandActivity';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
+import { containsRetiredWinkGoAgentIdentity } from '@/renderer/utils/model/agentTypeSupportPolicy';
 
 export const WINK_GO_DISPLAY_NAME = 'WINK GO';
 export const WINK_GO_CLI_DISPLAY_NAME = 'WINK GO CLI';
@@ -279,6 +278,9 @@ export const resolveActivityIdentity = (activity: IslandActivity): IslandDynamic
     return winkGoIslandIdentity(`activity:${activity.id}:winkgo`);
   }
   const searchable = `${activity.source} ${activity.title} ${activity.kind}`;
+  if (containsRetiredWinkGoAgentIdentity(searchable)) {
+    return winkGoIslandIdentity(`activity:${activity.id}:winkgo`);
+  }
   const notificationRule = resolveIslandIdentityRule(searchable, NOTIFICATION_IDENTITY_RULES);
   if (notificationRule) {
     return {
@@ -295,25 +297,6 @@ export const resolveActivityIdentity = (activity: IslandActivity): IslandDynamic
       key: `activity:${activity.id}:${mediaRule.label}`,
       label: mediaRule.label,
       source: mediaRule.source,
-      fallbackSource: winkGoLogo,
-      kind: 'activity-app',
-    };
-  }
-  const normalized = searchable.toLocaleLowerCase();
-  if (normalized.includes('codex')) {
-    return {
-      key: `activity:${activity.id}:codex`,
-      label: 'Codex',
-      source: codexLogo,
-      fallbackSource: winkGoLogo,
-      kind: 'activity-app',
-    };
-  }
-  if (normalized.includes('claude')) {
-    return {
-      key: `activity:${activity.id}:claude`,
-      label: 'Claude',
-      source: claudeLogo,
       fallbackSource: winkGoLogo,
       kind: 'activity-app',
     };

@@ -27,6 +27,9 @@
     "configureFirst": "Please configure an agent in Settings first.",
     "switching": "Switching agent..."
   },
+  "runtime": {
+    "managedByAgent": "Managed by Agent"
+  },
   "model": {
     "switchSuccess": "Model switched successfully",
     "switchFailed": "Failed to switch model",
@@ -47,5 +50,31 @@
     "label": "Thinking Level",
     "switchSuccess": "Thinking level switched",
     "switchFailed": "Failed to switch thinking level"
+  },
+  "speed": {
+    "label": "Speed",
+    "switchSuccess": "Response speed updated",
+    "switchFailed": "Failed to update response speed"
+  },
+  "voiceTask": {
+    "emptyCommand": "The task is empty and was not sent to the Agent.",
+    "noAgent": "No WINK GO Agent is available, or the named desktop Agent skill has been retired.",
+    "noModel": "WINK GO CLI has no available model. Configure and enable one on the Models page first.",
+    "conversationName": "XiaoZhi: {{command}}",
+    "createFailed": "WINK GO could not create the Agent conversation.",
+    "queued": "The task is queued for {{assistant}} and will run after the current task finishes.",
+    "accepted": "The task was sent to {{assistant}}. You can follow its progress in WINK GO.",
+    "none": "There is no current assistant task.",
+    "waitingConfirmation": "{{assistant}} is waiting for your confirmation.",
+    "queuedStatus": "{{assistant}} received the queued task and will run it after the current task finishes.",
+    "running": "{{assistant}} is running the task.",
+    "finishedWithResult": "{{assistant}} completed the task: {{result}}",
+    "finishedNoResult": "{{assistant}} completed the task, but no final response was found.",
+    "failed": "{{assistant}} failed: {{error}}",
+    "acceptedStatus": "{{assistant}} accepted the task.",
+    "noCancelable": "There is no current assistant task to cancel.",
+    "cancelling": "{{assistant}} is still stopping the task. Try again shortly.",
+    "cancelled": "Cancelled the current task for {{assistant}}.",
+    "history": "There are {{count}} recent Agent tasks: {{tasks}}."
   }
 }

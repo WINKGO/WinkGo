@@ -2,6 +2,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use winkgo_api_types::ContentEncoding;
 use winkgo_common::FileChangeOperation;
 
 use crate::error::FileError;
@@ -15,6 +16,16 @@ use crate::types::{CompareResult, CopyResult, DirOrFile, FileMetadata, SnapshotI
 /// `path_safety` module) before reaching this trait's implementations.
 #[async_trait::async_trait]
 pub trait IFileService: Send + Sync {
+    /// Read a path already resolved and containment-checked by ProjectService.
+    async fn read_resolved_content(&self, absolute_path: &Path, encoding: ContentEncoding)
+    -> Result<String, FileError>;
+
+    /// Write a path already resolved and containment-checked by ProjectService.
+    async fn write_resolved_content(&self, absolute_path: &Path, data: &[u8]) -> Result<(), FileError>;
+
+    /// Read metadata for a path already resolved by ProjectService.
+    async fn resolved_metadata(&self, absolute_path: &Path) -> Result<FileMetadata, FileError>;
+
     // -- Directory browsing --
 
     /// List the immediate children of `dir`, returning a tree with one level

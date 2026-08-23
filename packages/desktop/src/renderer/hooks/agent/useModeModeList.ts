@@ -1,4 +1,6 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { ipcBridge } from '@/common';
+import { getModelDiscoveryBaseUrl } from '@/common/utils/modelDiscovery';
 import useSWR from 'swr';
 
 // Gemini 模型排序函数：Pro 优先，版本号降序
@@ -43,8 +45,10 @@ const useModeModeList = (
     profile?: string;
   }
 ) => {
+  const discoveryBaseUrl = getModelDiscoveryBaseUrl(base_url, platform);
+
   return useSWR(
-    [platform + '/models', { platform, base_url, api_key, try_fix, bedrock_config }],
+    [platform + '/models', { platform, base_url: discoveryBaseUrl, api_key, try_fix, bedrock_config }],
     async ([_url, { platform, base_url, api_key, try_fix, bedrock_config }]): Promise<{
       models: { label: string; value: string }[];
       fix_base_url?: string;

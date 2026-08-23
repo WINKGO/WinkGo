@@ -330,8 +330,8 @@ export function buildTreeData(cache: FactCache, expanded: ReadonlySet<PeKey>, ro
 // ── File operations (A): pure request builders ──────────────────────────────
 // The tree only knows `{pe_id, relative_path}`, so file ops map to WS fs/*
 // commands over that identity (never absolute paths). Scope mirrors the legacy
-// tree's context menu: rename + delete only (no new-file/new-folder — the old
-// tree never had those). Builders are pure so the path math + no-op detection
+// tree's context menu: rename, delete, new file and new directory. Builders are
+// pure so the path math + no-op detection
 // can be unit-tested away from the UI.
 
 /** A rename dialog request. `origRel` is the full pe-relative path being renamed. */
@@ -368,4 +368,74 @@ export function buildRenameRequest(dialog: RenameRequest, rawName: string): FsOp
 /** Build the WS fs/remove request for deleting an entry. */
 export function buildRemoveRequest(peId: string, relativePath: string): FsOpRequest {
   return { method: 'fs/remove', params: { target: { pe_id: peId, relative_path: relativePath } } };
+}
+
+/** Build a safe create-directory request below an existing project directory. */
+export function buildMkdirRequest(peId: string, parentDir: string, rawName: string): FsOpRequest | null {
+  const name = rawName.trim();
+  if (!name) return null;
+  return { method: 'fs/mkdir', params: { dir: { pe_id: peId, relative_path: joinRel(parentDir, name) } } };
+}
+
+/** Build a create-new file request; the backend refuses to overwrite an existing file. */
+export function buildCreateFileRequest(peId: string, parentDir: string, rawName: string): FsOpRequest | null {
+  const name = rawName.trim();
+  if (!name) return null;
+  return { method: 'fs/createFile', params: { file: { pe_id: peId, relative_path: joinRel(parentDir, name) } } };
+}
+
+export type TransferOp = 'copy' | 'move';
+export const PE_REF_DRAG_MIME = 'application/x-winkgo-pe-ref';
+export type DragPeRef = { pe_id: string; relative_path: string; name: string; isDir: boolean };
+
+export function serializePeRef(ref: DragPeRef): string {
+  return JSON.stringify(ref);
+}
+
+export function parsePeRef(raw: string): DragPeRef | null {
+  try {
+    const value = JSON.parse(raw) as Partial<DragPeRef>;
+    if (
+      typeof value.pe_id === 'string' &&
+      typeof value.relative_path === 'string' &&
+      typeof value.name === 'string' &&
+      typeof value.isDir === 'boolean'
+    ) {
+      return { pe_id: value.pe_id, relative_path: value.relative_path, name: value.name, isDir: value.isDir };
+    }
+  } catch {
+    // Foreign drag payload.
+  }
+  return null;
+}
+
+export function isCopyModifierPressed(event: { altKey: boolean; ctrlKey: boolean }, isMac: boolean): boolean {
+  return isMac ? event.altKey : event.ctrlKey;
+}
+
+export function resolveTransferOp(samePe: boolean, copyModifier: boolean): TransferOp {
+  const defaultOp: TransferOp = samePe ? 'move' : 'copy';
+  return copyModifier ? (defaultOp === 'move' ? 'copy' : 'move') : defaultOp;
+}
+
+export function isTransferAllowed(source: DragPeRef, target: DirRef, op: TransferOp): boolean {
+  if (source.relative_path === '') return false;
+  if (isDescendantOrSelf(peKey(target.pe_id, target.relative_path), peKey(source.pe_id, source.relative_path))) {
+    return false;
+  }
+  return !(
+    op === 'move' &&
+    source.pe_id === target.pe_id &&
+    parentRel(source.relative_path) === target.relative_path
+  );
+}
+
+export function buildTransferRequest(op: TransferOp, from: DirRef, toDir: DirRef): FsOpRequest {
+  return {
+    method: op === 'copy' ? 'fs/copy' : 'fs/move',
+    params: {
+      from: { pe_id: from.pe_id, relative_path: from.relative_path },
+      to_dir: { pe_id: toDir.pe_id, relative_path: toDir.relative_path },
+    },
+  };
 }

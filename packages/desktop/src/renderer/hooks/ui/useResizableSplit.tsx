@@ -239,6 +239,8 @@ export const useResizableSplit = (options: UseResizableSplitOptions = {}) => {
     linePlacement,
     lineClassName,
     lineStyle,
+    compact = false,
+    ariaLabel = '调整面板宽度',
   }: {
     className?: string;
     style?: CSSProperties;
@@ -246,6 +248,9 @@ export const useResizableSplit = (options: UseResizableSplitOptions = {}) => {
     linePlacement?: 'start' | 'end';
     lineClassName?: string;
     lineStyle?: CSSProperties;
+    /** Use a short Codex-style grip instead of a full-height divider line. */
+    compact?: boolean;
+    ariaLabel?: string;
   } = {}) => (
     <div
       className={classNames(
@@ -260,12 +265,34 @@ export const useResizableSplit = (options: UseResizableSplitOptions = {}) => {
         className
       )}
       style={{ width: '12px', ...style }}
+      role='separator'
+      aria-label={ariaLabel}
+      aria-orientation='vertical'
+      aria-valuemin={minWidth}
+      aria-valuemax={maxWidth}
+      aria-valuenow={Math.round(splitRatio)}
+      tabIndex={0}
       onPointerDown={handleDragStart(reverse)}
+      onKeyDown={(event) => {
+        const step = isPx ? 24 : 2;
+        let nextRatio: number | null = null;
+        if (event.key === 'Home') nextRatio = minWidth;
+        if (event.key === 'End') nextRatio = maxWidth;
+        if (event.key === 'ArrowLeft') nextRatio = splitRatio + (reverse ? step : -step);
+        if (event.key === 'ArrowRight') nextRatio = splitRatio + (reverse ? -step : step);
+        if (nextRatio === null) return;
+        event.preventDefault();
+        setSplitRatio(Math.max(minWidth, Math.min(maxWidth, nextRatio)));
+      }}
       onDoubleClick={() => setSplitRatio(defaultWidth)}
     >
       <span
+        data-winkgo-resize-grip='true'
         className={classNames(
-          'pointer-events-none block h-full w-2px bg-bg-3 opacity-90 rd-full transition-all duration-150 group-hover:w-6px group-hover:bg-aou-6 group-active:w-6px group-active:bg-aou-6',
+          'pointer-events-none block rd-full transition-all duration-150',
+          compact
+            ? 'h-44px w-4px bg-bg-4 opacity-85 shadow-[0_0_0_1px_var(--bg-2),0_4px_14px_rgba(56,126,255,0.16)] group-hover:h-56px group-hover:w-5px group-hover:bg-aou-6 group-hover:opacity-100 group-active:h-60px group-active:w-5px group-active:bg-aou-6 group-focus-visible:h-56px group-focus-visible:w-5px group-focus-visible:bg-aou-6'
+            : 'h-full w-2px bg-bg-3 opacity-90 group-hover:w-6px group-hover:bg-aou-6 group-active:w-6px group-active:bg-aou-6',
           lineClassName
         )}
         style={lineStyle}

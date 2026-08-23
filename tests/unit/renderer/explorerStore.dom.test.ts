@@ -445,7 +445,7 @@ describe('collapse while subscribe is in flight (runReconcile .then guard)', () 
 });
 
 describe('subscribe rejection (offline) path', () => {
-  it('advances current despite a rejected subscribe, then reconnect re-declares with no gap', async () => {
+  it('rolls a rejected subscription back so a later reconcile can retry it', async () => {
     const rejecting: MonitorPort = {
       subscribe: async () => {
         throw new Error('offline');
@@ -456,13 +456,32 @@ describe('subscribe rejection (offline) path', () => {
     openProject('proj1', roots);
     await flush();
 
-    // current advanced to want even though the subscribe rejected (no retry gap);
-    // the cache is empty because no snapshot came back.
-    expect(getExplorerInternalsForTest().current).toContain(peKey('pe1', ''));
+    // A failed subscription must not remain falsely declared. Otherwise the next
+    // normal reconcile would think the root is already subscribed and strand it.
+    expect(getExplorerInternalsForTest().current).not.toContain(peKey('pe1', ''));
     expect(getExplorerInternalsForTest().cacheKeys).toEqual([]);
 
-    // Reconnect: current resets to ∅ and the whole want set is re-declared. This
-    // time the port answers, filling the gap left by the earlier rejection.
+    const good = makePort({ [peKey('pe1', '')]: [dir('a')] });
+    configureExplorerStore(good.port);
+    setExpanded(peKey('pe1', ''), true);
+    await flush();
+
+    expect(good.subscribed.flat().map(refToKey)).toContain(peKey('pe1', ''));
+    expect(getExplorerInternalsForTest().current).toContain(peKey('pe1', ''));
+    expect(childNames(getExplorerSnapshot().treeData, peKey('pe1', ''))).toEqual(['a']);
+  });
+
+  it('reconnect still re-declares the whole wanted set after an offline gap', async () => {
+    const rejecting: MonitorPort = {
+      subscribe: async () => {
+        throw new Error('offline');
+      },
+      unsubscribe: () => {},
+    };
+    configureExplorerStore(rejecting);
+    openProject('proj1', roots);
+    await flush();
+
     const good = makePort({ [peKey('pe1', '')]: [dir('a')] });
     configureExplorerStore(good.port);
     onReconnect();
@@ -767,5 +786,30 @@ describe('selection + misc edge paths', () => {
     applyMonitorNotification('fs/bogus', { target: { pe_id: 'pe1', relative_path: '' }, whatever: true });
 
     expect(getExplorerInternalsForTest()).toEqual(before);
+  });
+});
+
+describe('project switch persistence guard', () => {
+  const readExpanded = (id: string): string[] => {
+    const raw = localStorage.getItem(`explorer-ui:${id}`);
+    return raw ? ((JSON.parse(raw) as { expanded?: string[] }).expanded ?? []) : [];
+  };
+
+  it('keeps an intentional user collapse-all state empty', () => {
+    openProject('project-a', roots);
+    setExpanded(peKey('pe1', 'src'), true);
+    setExpandedKeys([]);
+    expect(readExpanded('project-a')).toEqual([]);
+  });
+
+  it('does not overwrite a richer saved state with a transient empty set while switching projects', () => {
+    openProject('project-a', roots);
+    setExpandedKeys([]);
+    const saved = [peKey('pe1', ''), peKey('pe1', 'src')];
+    localStorage.setItem('explorer-ui:project-a', JSON.stringify({ expanded: saved }));
+
+    openProject('project-b', [{ pe_id: 'pe2', title: 'other' }]);
+
+    expect(readExpanded('project-a')).toEqual(saved);
   });
 });

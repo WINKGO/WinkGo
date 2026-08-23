@@ -2,6 +2,7 @@
   "fileChanges": "Зміни у файлах",
   "fileChangesCount": "Зміни у файлах: {{count}}",
   "conversationInProgress": "Наразі триває діалог...",
+  "delivery": { "queued": "Очікування завершення поточного завдання" },
   "confirm": "Підтвердити",
   "canceledExecution": "Виконання скасовано",
   "openLinkFailed": "Не вдалося відкрити посилання",
@@ -61,6 +62,13 @@
   "processing": "Обробка...",
   "responseSentSuccessfully": "Відповідь надіслано успішно",
   "permissionResponseFailed": "Не вдалося надіслати відповідь. Спробуйте ще раз.",
+  "askSubmit": "Надіслати",
+  "askDecline": "Пропустити",
+  "askAnswered": "Відповідь надано",
+  "askDeclined": "Пропущено",
+  "askOther": "Інше",
+  "askOtherPlaceholder": "Введіть відповідь",
+  "requestDetails": "Відомості про запит:",
   "confirmation": {
     "applyChange": "Застосувати цю зміну?",
     "allowExecution": "Дозволити виконання?",
@@ -74,5 +82,14 @@
   },
   "copyLastOutput": {
     "empty": "No response to copy yet"
+  },
+  "fork": {
+    "action": "Відгалузити звідси",
+    "errorTurnInFlight": "Дочекайтеся завершення поточної відповіді перед відгалуженням",
+    "errorParentUnbound": "У цієї розмови ще немає серверної сесії для відгалуження",
+    "errorPointUnsupported": "Цей агент може відгалужуватися лише від останнього повідомлення",
+    "errorUnsupported": "Цей агент не підтримує відгалуження",
+    "errorGeneric": "Не вдалося створити відгалуження: {{message}}",
+    "errorTeamUnsupported": "Team member conversations must be managed from Team mode"
   }
 }

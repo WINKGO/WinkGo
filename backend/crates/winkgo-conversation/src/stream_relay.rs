@@ -509,7 +509,8 @@ impl StreamRelay {
                         }
                         AgentStreamEvent::CronTrigger(_)
                         | AgentStreamEvent::Permission(_)
-                        | AgentStreamEvent::AcpPermission(_) => {
+                        | AgentStreamEvent::AcpPermission(_)
+                        | AgentStreamEvent::Ask(_) => {
                             attempt.saw_tool_or_side_effect = true;
                             self.forward_to_websocket(&event);
                         }
@@ -598,6 +599,7 @@ impl StreamRelay {
             AgentStreamEvent::Plan(_) => "Plan",
             AgentStreamEvent::Permission(_) => "Permission",
             AgentStreamEvent::AcpPermission(_) => "AcpPermission",
+            AgentStreamEvent::Ask(_) => "Ask",
             AgentStreamEvent::SkillSuggest(_) => "SkillSuggest",
             AgentStreamEvent::CronTrigger(_) => "CronTrigger",
             AgentStreamEvent::AcpModelInfo(_) => "AcpModelInfo",
@@ -605,6 +607,7 @@ impl StreamRelay {
             AgentStreamEvent::AcpConfigOption(_) => "AcpConfigOption",
             AgentStreamEvent::AcpSessionInfo(_) => "AcpSessionInfo",
             AgentStreamEvent::AcpContextUsage(_) => "AcpContextUsage",
+            AgentStreamEvent::AcpTerminalOutput(_) => "AcpTerminalOutput",
             AgentStreamEvent::AcpPromptHookWarning(_) => "AcpPromptHookWarning",
             AgentStreamEvent::SlashCommandsUpdated(_) => "SlashCommandsUpdated",
             AgentStreamEvent::AvailableCommands(_) => "AvailableCommands",

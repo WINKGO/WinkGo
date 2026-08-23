@@ -12,6 +12,11 @@ import { httpRequest } from '@/common/adapter/httpBridge';
 import { mcpService } from '@/common/adapter/ipcBridge';
 import type { ImageGenerationModelSetting } from '@/common/config/clientSettings';
 import {
+  BUILTIN_BROWSER_MCP_NAME,
+  BUILTIN_BROWSER_SKILLS_MCP_NAME,
+  BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME,
+} from '@/common/config/constants';
+import {
   removeImageGenerationEnvKeys,
   resolveImageGenerationMcpEnv,
   type ImageGenerationMcpEnvResolveResult,
@@ -25,6 +30,8 @@ type MigrationStepResult = boolean;
 type McpImportServer = Partial<IMcpServer> & Pick<IMcpServer, 'name' | 'transport'>;
 type BackendClientPreferences = Record<string, unknown>;
 const BUILTIN_CHROME_DEVTOOLS_NAME = 'chrome-devtools';
+const BUILTIN_BROWSER_SKILLS_SCRIPT = 'builtin-mcp-browser-skills';
+const BUILTIN_DESKTOP_COMPUTER_USE_SCRIPT = 'builtin-mcp-desktop-computer-use';
 
 const LEGACY_BACKEND_CLIENT_PREFERENCE_KEYS = [
   'assistants',
@@ -162,6 +169,72 @@ function isSameStdioTransport(left: IMcpServer['transport'], right: IMcpServer['
   );
 }
 
+function buildBuiltinBrowserServer(): McpImportServer {
+  // The primary WINK GO browser entry uses our native, deterministic MCP
+  // server.  The previous launcher delegated to chrome-devtools-mcp through
+  // npx, which made first use network-dependent and could fail before the
+  // conversation ever received a browser tool.  The native server exposes
+  // inspect/action plus recorded Browser-BC workflows over the same visible
+  // in-app webview, with no separate Chrome process.
+  const scriptPath = getBuiltinMcpScriptPath(BUILTIN_BROWSER_SKILLS_SCRIPT);
+  const serverConfig = { command: 'node', args: [scriptPath] };
+  return {
+    name: BUILTIN_BROWSER_MCP_NAME,
+    description:
+      'Open and control the visible WINK GO in-app browser, inspect pages, click, type, and run recorded local browser workflows.',
+    enabled: true,
+    builtin: true,
+    transport: { type: 'stdio', command: serverConfig.command, args: serverConfig.args },
+    original_json: JSON.stringify({ mcpServers: { [BUILTIN_BROWSER_MCP_NAME]: serverConfig } }, null, 2),
+  };
+}
+
+function buildBuiltinBrowserSkillsServer(): McpImportServer {
+  const scriptPath = getBuiltinMcpScriptPath(BUILTIN_BROWSER_SKILLS_SCRIPT);
+  const serverConfig = { command: 'node', args: [scriptPath] };
+  return {
+    name: BUILTIN_BROWSER_SKILLS_MCP_NAME,
+    description:
+      'Inspect and control the visible WINK GO built-in browser, then list or run deterministic local browser workflows.',
+    enabled: true,
+    builtin: true,
+    transport: { type: 'stdio', command: serverConfig.command, args: serverConfig.args },
+    original_json: JSON.stringify({ mcpServers: { [BUILTIN_BROWSER_SKILLS_MCP_NAME]: serverConfig } }, null, 2),
+  };
+}
+
+function buildBuiltinDesktopComputerUseServer(): McpImportServer {
+  const scriptPath = getBuiltinMcpScriptPath(BUILTIN_DESKTOP_COMPUTER_USE_SCRIPT);
+  // Codex app-server only applies its browser bridge env override to the
+  // historical `winkgo-browser` server name. Desktop Computer Use is a
+  // separate MCP, so persist the current launch's bridge credentials in its
+  // transport and refresh them on every startup. The bridge token is random
+  // per launch; keeping an old value makes the MCP exit before initialize.
+  const bridgePort = process.env.WINKGO_CDP_ACTIVE_PORT?.trim();
+  const bridgeToken = process.env.WINKGO_CDP_BRIDGE_TOKEN?.trim();
+  const env =
+    bridgePort && bridgeToken
+      ? {
+          WINKGO_CDP_ACTIVE_PORT: bridgePort,
+          WINKGO_CDP_BRIDGE_TOKEN: bridgeToken,
+        }
+      : {};
+  const serverConfig = { command: 'node', args: [scriptPath], env };
+  return {
+    name: BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME,
+    description:
+      'Observe and control one visible external Windows application with the currently selected Agent model. Separate from the WINK GO in-app browser.',
+    enabled: true,
+    builtin: true,
+    transport: { type: 'stdio', command: serverConfig.command, args: serverConfig.args, env },
+    original_json: JSON.stringify(
+      { mcpServers: { [BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME]: serverConfig } },
+      null,
+      2
+    ),
+  };
+}
+
 function buildDefaultMcpServers(): McpImportServer[] {
   const chromeConfig = {
     command: 'npx',
@@ -181,6 +254,9 @@ function buildDefaultMcpServers(): McpImportServer[] {
       },
       original_json: JSON.stringify({ mcpServers: { [BUILTIN_CHROME_DEVTOOLS_NAME]: chromeConfig } }, null, 2),
     },
+    buildBuiltinBrowserServer(),
+    buildBuiltinBrowserSkillsServer(),
+    buildBuiltinDesktopComputerUseServer(),
   ];
 }
 
@@ -265,6 +341,9 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
   const existing = await mcpService.listServers.invoke();
   const existingByName = new Map((existing ?? []).map((server) => [server.name, server]));
   const existingImageServer = existingByName.get(BUILTIN_IMAGE_GEN_NAME);
+  const existingBrowserServer = existingByName.get(BUILTIN_BROWSER_MCP_NAME);
+  const existingBrowserSkillsServer = existingByName.get(BUILTIN_BROWSER_SKILLS_MCP_NAME);
+  const existingDesktopComputerUseServer = existingByName.get(BUILTIN_DESKTOP_COMPUTER_USE_MCP_NAME);
   const existingImageEnv =
     existingImageServer?.transport.type === 'stdio' ? existingImageServer.transport.env : undefined;
   const imageEnvResolution = resolveImageGenerationMcpEnv(imageConfig, providers, existingImageEnv);
@@ -273,6 +352,9 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
   const defaultServers = buildDefaultMcpServers();
   const missing = [...defaultServers, imageServer].filter((server) => !existingByName.has(server.name));
   let imageServerUpdated = false;
+  let browserServerUpdated = false;
+  let browserSkillsServerUpdated = false;
+  let desktopComputerUseServerUpdated = false;
 
   if (missing.length > 0) {
     await mcpService.batchImportServers.invoke({ servers: missing });
@@ -358,10 +440,77 @@ async function ensureBootstrapMcpServersInDb(configFile: ConfigFile): Promise<vo
     );
   }
 
+  if (existingBrowserServer) {
+    const desiredBrowserServer = buildBuiltinBrowserServer();
+    const browserTransportChanged = !isSameStdioTransport(
+      existingBrowserServer.transport,
+      desiredBrowserServer.transport
+    );
+    const browserJsonChanged = existingBrowserServer.original_json !== desiredBrowserServer.original_json;
+    if (browserTransportChanged || browserJsonChanged || existingBrowserServer.builtin !== true) {
+      await mcpService.updateServer.invoke({
+        id: existingBrowserServer.id,
+        data: {
+          builtin: true,
+          transport: desiredBrowserServer.transport,
+          original_json: desiredBrowserServer.original_json,
+        },
+      });
+      browserServerUpdated = true;
+    }
+  }
+
+  if (existingBrowserSkillsServer) {
+    const desiredBrowserSkillsServer = buildBuiltinBrowserSkillsServer();
+    const transportChanged = !isSameStdioTransport(
+      existingBrowserSkillsServer.transport,
+      desiredBrowserSkillsServer.transport
+    );
+    const jsonChanged = existingBrowserSkillsServer.original_json !== desiredBrowserSkillsServer.original_json;
+    const descriptionChanged = existingBrowserSkillsServer.description !== desiredBrowserSkillsServer.description;
+    if (transportChanged || jsonChanged || descriptionChanged || existingBrowserSkillsServer.builtin !== true) {
+      await mcpService.updateServer.invoke({
+        id: existingBrowserSkillsServer.id,
+        data: {
+          builtin: true,
+          description: desiredBrowserSkillsServer.description,
+          transport: desiredBrowserSkillsServer.transport,
+          original_json: desiredBrowserSkillsServer.original_json,
+        },
+      });
+      browserSkillsServerUpdated = true;
+    }
+  }
+
+  if (existingDesktopComputerUseServer) {
+    const desiredDesktopServer = buildBuiltinDesktopComputerUseServer();
+    const transportChanged = !isSameStdioTransport(
+      existingDesktopComputerUseServer.transport,
+      desiredDesktopServer.transport
+    );
+    const jsonChanged = existingDesktopComputerUseServer.original_json !== desiredDesktopServer.original_json;
+    const descriptionChanged = existingDesktopComputerUseServer.description !== desiredDesktopServer.description;
+    if (transportChanged || jsonChanged || descriptionChanged || existingDesktopComputerUseServer.builtin !== true) {
+      await mcpService.updateServer.invoke({
+        id: existingDesktopComputerUseServer.id,
+        data: {
+          builtin: true,
+          description: desiredDesktopServer.description,
+          transport: desiredDesktopServer.transport,
+          original_json: desiredDesktopServer.original_json,
+        },
+      });
+      desktopComputerUseServerUpdated = true;
+    }
+  }
+
   console.info(
-    '[Migration] MCP bootstrap completed, imported %d missing defaults, updated image server: %s, image config source: %s, image enabled: %s',
+    '[Migration] MCP bootstrap completed, imported %d missing defaults, updated image server: %s, updated browser server: %s, updated browser skills server: %s, updated desktop Computer Use server: %s, image config source: %s, image enabled: %s',
     missing.length,
     imageServerUpdated ? 'yes' : 'no',
+    browserServerUpdated ? 'yes' : 'no',
+    browserSkillsServerUpdated ? 'yes' : 'no',
+    desktopComputerUseServerUpdated ? 'yes' : 'no',
     imageConfigSource,
     imageConfig?.switch === true ? 'yes' : 'no'
   );
@@ -397,7 +546,11 @@ async function syncBuiltinMcpConfig(configFile: ConfigFile): Promise<void> {
     ? (backendSettings['mcp.config'] as IMcpServer[])
     : [];
 
-  const mergedMcpConfig = [...backendMcpConfig.filter((server) => server?.builtin !== true), ...localBuiltinServers];
+  const builtinByName = new Map(
+    backendMcpConfig.filter((server) => server?.builtin === true).map((server) => [server.name, server])
+  );
+  for (const server of localBuiltinServers) builtinByName.set(server.name, server);
+  const mergedMcpConfig = [...backendMcpConfig.filter((server) => server?.builtin !== true), ...builtinByName.values()];
 
   if (JSON.stringify(backendMcpConfig) === JSON.stringify(mergedMcpConfig)) {
     return;

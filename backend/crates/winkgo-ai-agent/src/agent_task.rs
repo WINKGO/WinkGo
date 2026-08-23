@@ -22,7 +22,7 @@ use crate::manager::acp::AcpAgentManager;
 use crate::manager::winkgo_agent::WinkGoAgentAgentManager;
 use crate::protocol::events::AgentStreamEvent;
 use crate::protocol::send_error::AgentSendError;
-use crate::types::SendMessageData;
+use crate::types::{PromptMediaCaps, SendMessageData};
 
 use winkgo_api_types::{
     GetConfigOptionsResponse, GetModelInfoResponse, ModelInfoEntry, ModelInfoPayload, SetConfigOptionResponse,
@@ -59,6 +59,27 @@ pub trait IAgentTask: Send + Sync {
 
     /// Subscribe to the agent's stream event channel.
     fn subscribe(&self) -> broadcast::Receiver<AgentStreamEvent>;
+
+    /// Native image/audio blocks advertised by this agent. Unknown agents
+    /// deliberately default to path-only attachment delivery.
+    fn prompt_media_caps(&self) -> PromptMediaCaps {
+        PromptMediaCaps::default()
+    }
+
+    /// True only when this running backend can consume another message inside
+    /// the active turn. Unknown/custom agents deliberately default to false.
+    fn supports_midturn_delivery(&self) -> bool {
+        false
+    }
+
+    /// Deliver a follow-up into the currently running turn. Implementations
+    /// must opt in through `supports_midturn_delivery`; the default is an
+    /// explicit error so an unknown backend can never silently lose a message.
+    async fn deliver_midturn(&self, _data: SendMessageData) -> Result<(), MidturnDeliveryError> {
+        Err(MidturnDeliveryError::Rejected(AgentSendError::from_agent_error(
+            AgentError::bad_request("native mid-turn delivery is not supported by this agent"),
+        )))
+    }
 
     /// Send a user message to the agent. Returns once the agent has
     /// accepted the turn; actual streaming proceeds on the broadcast
@@ -101,6 +122,15 @@ pub trait IMockAgent: IAgentTask {
         _always_allow: bool,
     ) -> Result<(), AgentError> {
         Ok(())
+    }
+    fn answer_ask(
+        &self,
+        _request_id: &str,
+        _answers: Option<Vec<winkgo_api_types::AskQuestionAnswer>>,
+    ) -> Result<(), AgentError> {
+        Err(AgentError::bad_request(
+            "structured questions are not supported by this mock",
+        ))
     }
     fn get_session_key(&self) -> Option<String> {
         None
@@ -169,6 +199,24 @@ pub enum AgentInstance {
     Mock(Arc<dyn IMockAgent>),
 }
 
+#[derive(Debug, Clone)]
+pub enum MidturnDeliveryError {
+    /// The backend authoritatively rejected the injection; replaying at the next
+    /// turn boundary is safe.
+    Rejected(AgentSendError),
+    /// The request may have reached the backend but no authoritative result was
+    /// observed; automatic replay could duplicate actions.
+    Uncertain(AgentSendError),
+}
+
+impl MidturnDeliveryError {
+    pub fn send_error(&self) -> &AgentSendError {
+        match self {
+            Self::Rejected(error) | Self::Uncertain(error) => error,
+        }
+    }
+}
+
 impl AgentInstance {
     /// Common `IAgentTask` view, regardless of variant.
     pub fn as_task(&self) -> &dyn IAgentTask {
@@ -215,6 +263,14 @@ impl AgentInstance {
     /// Subscribe to the stream event channel.
     pub fn subscribe(&self) -> broadcast::Receiver<AgentStreamEvent> {
         self.as_task().subscribe()
+    }
+
+    pub fn supports_midturn_delivery(&self) -> bool {
+        self.as_task().supports_midturn_delivery()
+    }
+
+    pub async fn deliver_midturn(&self, data: SendMessageData) -> Result<(), MidturnDeliveryError> {
+        self.as_task().deliver_midturn(data).await
     }
 
     /// Send a user message to the agent.
@@ -292,6 +348,22 @@ impl AgentInstance {
             Self::Session(m) => m.confirm(msg_id, call_id, data, always_allow),
             #[cfg(any(test, feature = "test-support"))]
             Self::Mock(m) => m.confirm(msg_id, call_id, data, always_allow),
+        }
+    }
+
+    /// Answer a structured question through its dedicated channel.
+    pub fn answer_ask(
+        &self,
+        request_id: &str,
+        answers: Option<Vec<winkgo_api_types::AskQuestionAnswer>>,
+    ) -> Result<(), AgentError> {
+        match self {
+            Self::Acp(_) | Self::WinkGoAgent(_) => Err(AgentError::bad_request(
+                "structured questions are not supported by this agent",
+            )),
+            Self::Session(manager) => manager.answer_ask(request_id, answers),
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(manager) => manager.answer_ask(request_id, answers),
         }
     }
 

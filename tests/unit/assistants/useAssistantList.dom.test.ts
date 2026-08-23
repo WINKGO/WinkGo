@@ -86,7 +86,7 @@ describe('useAssistantList', () => {
 
   it('loads assistants on mount and selects first by default', async () => {
     const mockList: Assistant[] = [
-      { id: '1', name: 'Claude', sort_order: 1, source: 'builtin', enabled: true },
+      { id: '1', name: 'Kimi', sort_order: 1, source: 'builtin', enabled: true },
       { id: '2', name: 'GPT', sort_order: 2, source: 'user', enabled: true },
     ];
     (ipcBridge.assistants.list.invoke as any).mockResolvedValue(mockList);
@@ -98,6 +98,34 @@ describe('useAssistantList', () => {
     expect(result.current.assistants[0].id).toBe('1');
     expect(result.current.activeAssistantId).toBe('1');
     expect(result.current.activeAssistant?.id).toBe('1');
+  });
+
+  it('never exposes retired Agent assistants in management or selection state', async () => {
+    const mockList = [
+      {
+        id: 'retired-codex',
+        name: 'Codex CLI',
+        sort_order: 1,
+        source: 'generated',
+        enabled: true,
+        agent: { type: 'acp', acp_backend: 'codex' },
+      },
+      {
+        id: 'supported-winkgo',
+        name: 'WINK GO CLI',
+        sort_order: 2,
+        source: 'generated',
+        enabled: true,
+        agent: { type: 'winkgo_agent', acp_backend: 'winkgo_agent' },
+      },
+    ] as Assistant[];
+    (ipcBridge.assistants.list.invoke as any).mockResolvedValue(mockList);
+
+    const { result } = renderHook(() => useAssistantList());
+
+    await waitFor(() => expect(result.current.assistants).toHaveLength(1));
+    expect(result.current.assistants[0]?.id).toBe('supported-winkgo');
+    expect(result.current.activeAssistantId).toBe('supported-winkgo');
   });
 
   it('preserves backend order instead of resorting client side', async () => {

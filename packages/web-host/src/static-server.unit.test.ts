@@ -358,4 +358,50 @@ describe('static-server', () => {
     expect(typeof h2.networkUrl === 'string' || h2.networkUrl === undefined).toBe(true);
     await h2.stop();
   });
+
+  it('forwards every byte of a large WebUI upload through the TCP splice', async () => {
+    const bodyLength = 512 * 1024;
+    const backend = await startMockBackend((req, res) => {
+      let received = 0;
+      req.on('data', (chunk: Buffer) => {
+        received += chunk.length;
+      });
+      req.on('end', () => {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ received }));
+      });
+    });
+    stopBackend = backend.close;
+    handle = await startStaticServer({ staticDir, backendPort: backend.port, port: 0 });
+
+    const body = Buffer.alloc(bodyLength, 0x61);
+    const received = await new Promise<number>((resolve, reject) => {
+      const request = http.request(
+        {
+          host: '127.0.0.1',
+          port: handle!.port,
+          method: 'POST',
+          path: '/api/fs/upload',
+          headers: { 'content-type': 'application/octet-stream', 'content-length': bodyLength },
+        },
+        (response) => {
+          let raw = '';
+          response.setEncoding('utf8');
+          response.on('data', (chunk) => (raw += chunk));
+          response.on('end', () => {
+            try {
+              resolve((JSON.parse(raw) as { received: number }).received);
+            } catch (error) {
+              reject(error);
+            }
+          });
+        }
+      );
+      request.on('error', reject);
+      request.setTimeout(5000, () => request.destroy(new Error('upload forwarding timed out')));
+      request.end(body);
+    });
+
+    expect(received).toBe(bodyLength);
+  });
 });

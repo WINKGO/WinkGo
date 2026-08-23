@@ -169,13 +169,41 @@ async fn sse_401_returns_needs_auth() {
 // CT-6: Timeout
 // ---------------------------------------------------------------------------
 
+#[test]
+#[ignore = "stdio child-process fixture"]
+fn stdio_timeout_fixture() {
+    std::thread::sleep(Duration::from_secs(60));
+}
+
+#[test]
+#[ignore = "stdio child-process fixture"]
+fn stdio_non_mcp_output_fixture() {
+    println!("hello");
+}
+
+fn current_test_fixture(name: &str) -> (String, Vec<String>) {
+    (
+        std::env::current_exe()
+            .expect("current integration test executable")
+            .to_string_lossy()
+            .into_owned(),
+        vec![
+            "--ignored".into(),
+            "--exact".into(),
+            name.into(),
+            "--nocapture".into(),
+            "--test-threads=1".into(),
+        ],
+    )
+}
+
 #[tokio::test]
 async fn stdio_timeout_returns_timeout_error() {
-    // Use `sleep` which produces no stdout — our protocol read will block
+    let (command, args) = current_test_fixture("stdio_timeout_fixture");
     let svc = make_service_with_timeout(Duration::from_secs(1));
     let transport = McpServerTransport::Stdio {
-        command: "sleep".into(),
-        args: vec!["60".into()],
+        command,
+        args,
         env: HashMap::new(),
     };
 
@@ -287,20 +315,21 @@ async fn http_custom_headers_are_sent() {
 
 #[tokio::test]
 async fn stdio_with_args_spawns_correctly() {
-    // Use echo as a simple command that exits immediately
-    // Since echo doesn't speak MCP, we expect a protocol error (not a spawn error)
+    // The fixture exits after writing ordinary text instead of MCP JSON-RPC.
+    let (command, args) = current_test_fixture("stdio_non_mcp_output_fixture");
     let svc = make_service_with_timeout(Duration::from_secs(3));
     let transport = McpServerTransport::Stdio {
-        command: "echo".into(),
-        args: vec!["hello".into()],
+        command,
+        args,
         env: HashMap::new(),
     };
 
     let result = svc.test_connection("echo-server", &transport).await;
 
-    // echo outputs "hello\n" then exits — not valid JSON-RPC
     assert!(!result.success);
     let error = result.error.as_deref().unwrap();
-    // Should be a protocol error, not a spawn error
-    assert!(!error.contains("Command not found"), "echo should be found");
+    assert!(
+        !error.contains("Command not found"),
+        "fixture executable should be found"
+    );
 }

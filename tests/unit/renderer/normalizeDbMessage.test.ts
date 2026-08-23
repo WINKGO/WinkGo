@@ -108,6 +108,40 @@ describe('normalizeDbMessage', () => {
     });
   });
 
+  it('repairs legacy unknown-upstream tips for a local MCP target miss', () => {
+    const message = 'Error in MCP tool execution: target-not-found';
+    const normalized = normalizeDbMessage({
+      id: 'tip-local-target-miss',
+      type: 'tips',
+      conversation_id: 'conversation-1',
+      position: 'center',
+      status: 'error',
+      content: JSON.stringify({
+        content: message,
+        type: 'error',
+        source: 'send_failed',
+        code: 'BAD_GATEWAY',
+        error: {
+          message: 'The upstream Agent failed while handling the request',
+          code: 'UNKNOWN_UPSTREAM_ERROR',
+          ownership: 'unknown_upstream',
+          detail: message,
+          retryable: true,
+          feedback_recommended: true,
+        },
+      }),
+    } as unknown as IMessageTips) as IMessageTips;
+
+    expect(normalized.content.error).toEqual({
+      message,
+      code: 'USER_AGENT_RESOURCE_NOT_FOUND',
+      ownership: 'user_agent',
+      detail: message,
+      retryable: true,
+      feedback_recommended: false,
+    });
+  });
+
   it('prefers persisted workspace runtime errors over legacy unknown-upstream payloads', () => {
     const normalized = normalizeDbMessage({
       id: 'tip-runtime-workspace',

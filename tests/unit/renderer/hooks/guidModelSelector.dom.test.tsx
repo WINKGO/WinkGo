@@ -34,6 +34,7 @@ vi.mock('react-i18next', () => ({
       if (key === 'common.model') return 'Model';
       if (key === 'conversation.welcome.modelSwitchNotSupported') return 'Model switch is not supported';
       if (key === 'agent.thoughtLevel.label') return 'Thinking Level';
+      if (key === 'agent.speed.label') return 'Speed';
       return key;
     },
   }),
@@ -118,6 +119,16 @@ describe('GuidModelSelector', () => {
     ],
   };
 
+  const speedOption = {
+    id: 'response_speed',
+    category: 'speed',
+    currentValue: 'balanced',
+    options: [
+      { value: 'fast', label: 'Fast' },
+      { value: 'balanced', label: 'Balanced' },
+    ],
+  };
+
   it('shows ACP model descriptions in option tooltips', () => {
     render(
       <GuidModelSelector
@@ -188,6 +199,46 @@ describe('GuidModelSelector', () => {
 
     expect(setSelectedAcpModel).toHaveBeenCalledWith('gpt-5.4-codex');
     expect(onThoughtLevelSelect).toHaveBeenCalledWith('high');
+  });
+
+  it('shows model, reasoning strength, and speed as real selectable runtime controls', () => {
+    const setSelectedAcpModel = vi.fn();
+    const onThoughtLevelSelect = vi.fn();
+    const onSpeedSelect = vi.fn();
+
+    render(
+      <GuidModelSelector
+        isGeminiMode={false}
+        modelList={[]}
+        current_model={undefined}
+        setCurrentModel={vi.fn()}
+        currentAcpCachedModelInfo={{
+          current_model_id: 'gpt-5.6-terra',
+          current_model_label: 'GPT-5.6-Terra',
+          available_models: [
+            { id: 'gpt-5.6-terra', label: 'GPT-5.6-Terra' },
+            { id: 'gpt-5.6-sol', label: 'GPT-5.6-Sol' },
+          ],
+        }}
+        selectedAcpModel='gpt-5.6-terra'
+        setSelectedAcpModel={setSelectedAcpModel}
+        thoughtLevelOption={thoughtLevelOption}
+        onThoughtLevelSelect={onThoughtLevelSelect}
+        speedOption={speedOption}
+        onSpeedSelect={onSpeedSelect}
+      />
+    );
+
+    const titles = screen.getAllByTestId('submenu-title');
+    expect(titles).toHaveLength(3);
+    expect(titles[0]).toHaveTextContent('Model');
+    expect(titles[1]).toHaveTextContent('Thinking Level');
+    expect(titles[2]).toHaveTextContent('Speed');
+    expect(titles[2]).toHaveTextContent('Balanced');
+
+    const bodies = screen.getAllByTestId('submenu-body');
+    fireEvent.click(within(bodies[2]).getByText('Fast'));
+    expect(onSpeedSelect).toHaveBeenCalledWith('fast');
   });
 
   it('does not add thought level options to the WinkGo CLI provider model menu', () => {

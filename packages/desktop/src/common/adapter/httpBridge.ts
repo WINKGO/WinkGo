@@ -151,6 +151,7 @@ export function isBackendHttpError(error: unknown): error is BackendHttpError {
  */
 export type HttpRequestOptions = {
   silentStatuses?: number[];
+  headers?: Record<string, string>;
 };
 
 const SENSITIVE_LOG_KEY_PATTERN = /api[_-]?key|authorization|auth[_-]?token|access[_-]?token|refresh[_-]?token|secret/i;
@@ -183,6 +184,7 @@ export async function httpRequest<T>(
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
+  Object.assign(headers, options?.headers);
 
   console.debug(
     `[httpBridge] ${method} ${path}`,
@@ -278,14 +280,16 @@ export function httpPost<Data, Params = undefined>(
 
 export function httpPut<Data, Params = undefined>(
   path: string | ((params: Params) => string),
-  mapBody?: (params: Params) => unknown
+  mapBody?: (params: Params) => unknown,
+  mapHeaders?: (params: Params) => Record<string, string> | undefined
 ): ProviderLike<Data, Params> {
   return {
     provider: () => {},
     invoke: (async (params?: Params) => {
       const resolvedPath = typeof path === 'function' ? path(params!) : path;
       const body = mapBody ? mapBody(params!) : params;
-      return httpRequest<Data>('PUT', resolvedPath, body);
+      const headers = mapHeaders?.(params!);
+      return httpRequest<Data>('PUT', resolvedPath, body, headers ? { headers } : undefined);
     }) as ProviderLike<Data, Params>['invoke'],
   };
 }

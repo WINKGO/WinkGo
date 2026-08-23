@@ -18,6 +18,7 @@ const openPreview = vi.fn();
 vi.mock('@/renderer/pages/conversation/Preview', () => ({ usePreviewContext: () => ({ openPreview }) }));
 
 const fsRead = vi.fn();
+const readContent = vi.fn();
 vi.mock('@/renderer/pages/conversation/explorer/monitorTransport', () => ({
   initExplorerRuntime: () => ({ request: (m: string, p: unknown) => fsRead(m, p) }),
 }));
@@ -41,12 +42,16 @@ vi.mock('@/renderer/pages/conversation/explorer/ExplorerPanel', () => ({
     onOpenFile,
     onAddToChat,
     onImportFiles,
+    onNewFile,
+    onNewDir,
   }: {
     roots: Array<{ title: string }>;
     onRemoveRoot?: (id: string) => void;
     onOpenFile?: (pe: string, rel: string) => void;
     onAddToChat?: (pe: string, rel: string, name: string, isFile: boolean) => void;
     onImportFiles?: (pe: string, rel: string, paths: string[]) => void;
+    onNewFile?: (pe: string, rel: string) => void;
+    onNewDir?: (pe: string, rel: string) => void;
   }) => (
     <div>
       <span data-testid='roots'>{roots.map((r) => r.title).join(',')}</span>
@@ -62,6 +67,12 @@ vi.mock('@/renderer/pages/conversation/explorer/ExplorerPanel', () => ({
       </button>
       <button data-testid='do-import' onClick={() => onImportFiles?.('peA', 'sub', ['/os/a.txt', '/os/b.txt'])}>
         import
+      </button>
+      <button data-testid='do-new-file' onClick={() => onNewFile?.('peA', 'notes')}>
+        new file
+      </button>
+      <button data-testid='do-new-dir' onClick={() => onNewDir?.('peA', '')}>
+        new dir
       </button>
     </div>
   ),
@@ -79,8 +90,15 @@ vi.mock('@/common', () => ({
       attachFolder: { invoke: (p: unknown) => attachFolder(p) },
       removeFolder: { invoke: (p: unknown) => removeFolder(p) },
     },
-    fs: { copyFilesToProject: { invoke: (p: unknown) => copyFiles(p) } },
+    fs: {
+      copyFilesToProject: { invoke: (p: unknown) => copyFiles(p) },
+      readContent: { invoke: (p: unknown) => readContent(p) },
+    },
     dialog: { showOpen: { invoke: (p: unknown) => showOpen(p) } },
+    shell: {
+      checkToolInstalled: { invoke: vi.fn().mockResolvedValue(false) },
+      openFolderWith: { invoke: vi.fn().mockResolvedValue(undefined) },
+    },
   },
 }));
 
@@ -121,6 +139,7 @@ beforeEach(() => {
   emit.mockReset();
   activeConversationId = null;
   fsRead.mockReset().mockResolvedValue({ content: 'hello', encoding: 'utf-8' });
+  readContent.mockReset().mockResolvedValue('hello');
   vi.spyOn(Message, 'info').mockImplementation(() => '' as never);
   vi.spyOn(Message, 'warning').mockImplementation(() => '' as never);
   vi.spyOn(Message, 'error').mockImplementation(() => '' as never);
@@ -184,14 +203,14 @@ describe('ExplorerContainer attach/remove', () => {
     await waitFor(() => expect(Message.error).toHaveBeenCalledWith('conversation.explorer.attachFailed'));
   });
 
-  it('opens a selected file in preview via WS fs/read (pe_id + relative_path, no absolute path)', async () => {
+  it('opens a selected file through the ChatFileRef content API', async () => {
     renderIt();
     await screen.findByTestId('roots');
     fireEvent.click(screen.getByTestId('do-open'));
     await waitFor(() =>
-      expect(fsRead).toHaveBeenCalledWith('fs/read', {
-        file: { pe_id: 'peA', relative_path: 'docs/readme.md' },
-        encoding: 'utf-8',
+      expect(readContent).toHaveBeenCalledWith({
+        file: { kind: 'project', pe_id: 'peA', relative_path: 'docs/readme.md' },
+        encoding: 'utf8',
       })
     );
     await waitFor(() => expect(openPreview).toHaveBeenCalled());
@@ -284,5 +303,33 @@ describe('ExplorerContainer A-paste import', () => {
     renderIt();
     fireEvent.click(await screen.findByTestId('do-import'));
     await waitFor(() => expect(Message.error).toHaveBeenCalledWith('conversation.explorer.importFailed'));
+  });
+});
+
+describe('ExplorerContainer create entries', () => {
+  it('creates a new file below the selected directory', async () => {
+    renderIt();
+    fireEvent.click(await screen.findByTestId('do-new-file'));
+    const input = await screen.findByPlaceholderText('conversation.explorer.namePlaceholder');
+    fireEvent.change(input, { target: { value: 'todo.md' } });
+    fireEvent.click(screen.getByText('common.create'));
+    await waitFor(() =>
+      expect(fsRead).toHaveBeenCalledWith('fs/createFile', {
+        file: { pe_id: 'peA', relative_path: 'notes/todo.md' },
+      })
+    );
+  });
+
+  it('creates a new directory below the project root', async () => {
+    renderIt();
+    fireEvent.click(await screen.findByTestId('do-new-dir'));
+    const input = await screen.findByPlaceholderText('conversation.explorer.namePlaceholder');
+    fireEvent.change(input, { target: { value: 'assets' } });
+    fireEvent.click(screen.getByText('common.create'));
+    await waitFor(() =>
+      expect(fsRead).toHaveBeenCalledWith('fs/mkdir', {
+        dir: { pe_id: 'peA', relative_path: 'assets' },
+      })
+    );
   });
 });

@@ -8,13 +8,20 @@
 // builder — image data-URL wrapping + pdf/office absolute-path resolve + text
 // passthrough. Remove with the patch once Preview consumes {pe_id,relative_path}.
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Isolate the container module from React/UI + WS/IPC side effects; the builder
-// under test is a pure async fn that only needs the injected RPC client.
+const readContent = vi.hoisted(() => vi.fn());
+
+// Isolate the container module from React/UI side effects. Text and images use
+// the mocked ChatFileRef content bridge; office files use the injected RPC client.
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
 vi.mock('@/renderer/pages/conversation/Preview', () => ({ usePreviewContext: () => ({ openPreview: () => {} }) }));
-vi.mock('@/common', () => ({ ipcBridge: { project: { get: { invoke: () => Promise.resolve() } } } }));
+vi.mock('@/common', () => ({
+  ipcBridge: {
+    fs: { readContent: { invoke: readContent } },
+    project: { get: { invoke: () => Promise.resolve() } },
+  },
+}));
 vi.mock('@/renderer/pages/conversation/explorer/monitorTransport', () => ({ initExplorerRuntime: () => ({}) }));
 
 import { buildExplorerPreviewPayload } from '@/renderer/pages/conversation/explorer/ExplorerContainer';
@@ -34,13 +41,20 @@ const fakeClient = (result: unknown) => {
 };
 
 describe('buildExplorerPreviewPayload (PATCH ELECTRON-3SZ)', () => {
-  it('image: reads base64 and wraps it into a data URL, no file_path', async () => {
-    const client = fakeClient({ content: 'QUJD' });
+  beforeEach(() => {
+    readContent.mockReset();
+  });
+
+  it('image: reads a data URL through the ChatFileRef content bridge, no file_path', async () => {
+    readContent.mockResolvedValue('data:image/png;base64,QUJD');
+    const client = fakeClient(undefined);
     const out = await buildExplorerPreviewPayload(client, 'peA', 'pics/logo.png');
 
-    expect(client.calls).toEqual([
-      { method: 'fs/read', params: { file: { pe_id: 'peA', relative_path: 'pics/logo.png' }, encoding: 'base64' } },
-    ]);
+    expect(client.calls).toEqual([]);
+    expect(readContent).toHaveBeenCalledWith({
+      file: { kind: 'project', pe_id: 'peA', relative_path: 'pics/logo.png' },
+      encoding: 'dataurl',
+    });
     expect(out.contentType).toBe('image');
     expect(out.content).toBe('data:image/png;base64,QUJD');
     expect(out.metadata.file_path).toBeUndefined();
@@ -49,12 +63,14 @@ describe('buildExplorerPreviewPayload (PATCH ELECTRON-3SZ)', () => {
   });
 
   it('image: picks MIME by extension (svg → image/svg+xml)', async () => {
-    const out = await buildExplorerPreviewPayload(fakeClient({ content: 'PHN2Zz4=' }), 'peA', 'a/b/icon.svg');
+    readContent.mockResolvedValue('data:image/svg+xml;base64,PHN2Zz4=');
+    const out = await buildExplorerPreviewPayload(fakeClient(undefined), 'peA', 'a/b/icon.svg');
     expect(out.content).toBe('data:image/svg+xml;base64,PHN2Zz4=');
   });
 
   it('image: empty body yields empty content (no bogus data URL)', async () => {
-    const out = await buildExplorerPreviewPayload(fakeClient({ content: '' }), 'peA', 'x.png');
+    readContent.mockResolvedValue('');
+    const out = await buildExplorerPreviewPayload(fakeClient(undefined), 'peA', 'x.png');
     expect(out.content).toBe('');
   });
 
@@ -72,12 +88,15 @@ describe('buildExplorerPreviewPayload (PATCH ELECTRON-3SZ)', () => {
   );
 
   it('text: reads utf-8 content, no absolute-path resolve', async () => {
-    const client = fakeClient({ content: '# hello' });
+    readContent.mockResolvedValue('# hello');
+    const client = fakeClient(undefined);
     const out = await buildExplorerPreviewPayload(client, 'peA', 'notes/readme.md');
 
-    expect(client.calls).toEqual([
-      { method: 'fs/read', params: { file: { pe_id: 'peA', relative_path: 'notes/readme.md' }, encoding: 'utf-8' } },
-    ]);
+    expect(client.calls).toEqual([]);
+    expect(readContent).toHaveBeenCalledWith({
+      file: { kind: 'project', pe_id: 'peA', relative_path: 'notes/readme.md' },
+      encoding: 'utf8',
+    });
     expect(out.contentType).toBe('markdown');
     expect(out.content).toBe('# hello');
     expect(out.metadata.file_path).toBeUndefined();
@@ -85,7 +104,8 @@ describe('buildExplorerPreviewPayload (PATCH ELECTRON-3SZ)', () => {
   });
 
   it('code: reads utf-8 and stays editable (editable undefined)', async () => {
-    const out = await buildExplorerPreviewPayload(fakeClient({ content: 'x=1' }), 'peA', 'main.py');
+    readContent.mockResolvedValue('x=1');
+    const out = await buildExplorerPreviewPayload(fakeClient(undefined), 'peA', 'main.py');
     expect(out.contentType).toBe('code');
     expect(out.content).toBe('x=1');
     expect(out.metadata.editable).toBeUndefined();

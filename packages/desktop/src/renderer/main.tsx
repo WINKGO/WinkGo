@@ -91,8 +91,9 @@ configService.initialize().catch((err) => {
 });
 
 // i18n
-import './services/i18n';
+import { i18nStartup } from './services/i18n';
 import { registerPwa } from './services/registerPwa';
+import { createRuntimeInstallationReconciler } from './services/runtimeInstallationReconciler';
 
 import { ipcBridge } from '@/common';
 import { repairAllCronJobTimeZonesOnce } from '@renderer/pages/cron/repairCronJobTimeZone';
@@ -100,6 +101,7 @@ import { bootstrapRendererConfig } from '@renderer/services/bootstrapRenderer';
 
 // Components and utilities
 import Layout from './components/layout/Layout';
+import { BackendStartingView, BackendStartupGate } from './components/layout/AppLoader';
 import Router from './components/layout/Router';
 import Sider from './components/layout/Sider';
 import DesktopIslandWindow from './components/layout/Titlebar/DesktopIslandWindow';
@@ -229,10 +231,22 @@ const RuntimeFailureDialogs: React.FC = () => {
   const shownFailuresRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    return ipcBridge.runtime.statusChanged.on((event: IRuntimeStatusEvent) => {
-      if (event.phase !== 'failed') {
-        return;
-      }
+    const reconciler = createRuntimeInstallationReconciler({
+      showDialog: (event) => {
+        const resource = resolveRuntimeResourceLabel(event, t);
+        const description = getRuntimeComponentInstallationDescription(t, resource);
+        const controller = showInstallationIntegrityModal(
+          modal,
+          t,
+          description,
+          buildRuntimeInstallationDiagnostics(event, description)
+        );
+        return { close: () => controller.close() };
+      },
+      report: captureRuntimeInstallationIntegrityFailure,
+    });
+
+    const offStatus = ipcBridge.runtime.statusChanged.on((event: IRuntimeStatusEvent) => {
       // Startup runtime preparation is best-effort. Network failures must not
       // block the whole desktop app; an actual Agent/MCP launch will retry and
       // surface the scoped error if the runtime is still unavailable.
@@ -240,6 +254,19 @@ const RuntimeFailureDialogs: React.FC = () => {
         console.warn('[WinkGo] Background Node runtime preparation deferred:', event);
         return;
       }
+
+      if (
+        (event.phase === 'failed' && isInstallationIntegrityFailure(event.failure_kind)) ||
+        (event.phase === 'ready' && event.resource === 'node')
+      ) {
+        reconciler.handleStatus(event);
+        return;
+      }
+
+      if (event.phase !== 'failed') {
+        return;
+      }
+
       const signature = [
         event.resource,
         event.resource_id ?? '',
@@ -254,24 +281,24 @@ const RuntimeFailureDialogs: React.FC = () => {
       shownFailuresRef.current.add(signature);
 
       const resource = resolveRuntimeResourceLabel(event, t);
-      const installationIntegrityFailure = isInstallationIntegrityFailure(event.failure_kind);
-      const description = installationIntegrityFailure
-        ? getRuntimeComponentInstallationDescription(t, resource)
-        : t('settings.runtimeStatus.failedUnknown', { resource });
-      if (installationIntegrityFailure) {
-        captureRuntimeInstallationIntegrityFailure(event);
-        showInstallationIntegrityModal(modal, t, description, buildRuntimeInstallationDiagnostics(event, description));
-        return;
-      }
-
       modal.error({
         title: t('common.error'),
-        content: <InstallationIntegrityContent description={description} />,
+        content: <InstallationIntegrityContent description={t('settings.runtimeStatus.failedUnknown', { resource })} />,
         okText: t('common.confirm'),
         closable: false,
         maskClosable: false,
       });
     });
+
+    const onBeforeUnload = () => reconciler.flushPending();
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      offStatus();
+      reconciler.flushPending();
+      reconciler.dispose();
+    };
   }, [modal, t]);
 
   return <>{modalContextHolder}</>;
@@ -354,10 +381,14 @@ const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo
   const isIncompatibleRuntime = failure.reason === 'backend_incompatible_runtime';
   const isPackageArchitectureMismatch = failure.reason === 'backend_package_architecture_mismatch';
   const isDataMigrationFailure = failure.reason === 'backend_data_migration_failed';
+  const isDatabaseNewerThanApp = failure.reason === 'backend_database_newer_than_app';
   const isLocalDataRepairFailure = failure.reason === 'backend_local_data_repair_failed';
   const isRecoverableDatabaseCorruption = failure.reason === 'backend_recoverable_database_corruption';
   const isTransientConcurrentStartup = failure.reason === 'backend_transient_concurrent_startup';
   const isStartupDirectoryFailure = failure.reason === 'backend_startup_directory_unavailable';
+  const isStartupExited = failure.reason === 'backend_startup_exited';
+  const isPortReportTimeout = failure.reason === 'backend_startup_port_report_timeout';
+  const isStartupFailed = failure.reason === 'backend_startup_failed';
   const title = t('common.backendStartup.incompatibleRuntime.title');
   const description = isIncompatibleRuntime
     ? t('common.backendStartup.incompatibleRuntime.description')
@@ -367,17 +398,29 @@ const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo
           deviceArch: failure.deviceArch ?? 'arm64',
           expectedArch: failure.expectedDownloadArch ?? 'arm64',
         })
-      : isDataMigrationFailure
-        ? t('common.backendStartup.dataMigration.description')
-        : isLocalDataRepairFailure
+      : isDatabaseNewerThanApp
+        ? failure.appVersion
+          ? t('common.backendStartup.databaseNewerThanApp.descriptionWithVersion', {
+              currentVersion: failure.appVersion,
+            })
+          : t('common.backendStartup.databaseNewerThanApp.description')
+        : isDataMigrationFailure
+          ? t('common.backendStartup.dataMigration.description')
+          : isLocalDataRepairFailure
           ? t('common.backendStartup.localDataRepair.description')
           : isTransientConcurrentStartup
             ? t('common.backendStartup.transientConcurrentStartup.description')
-            : isStartupDirectoryFailure
-              ? t('common.backendStartup.startupDirectory.description')
-              : isRecoverableDatabaseCorruption
-                ? t('common.backendStartup.recoverableDatabaseCorruption.description')
-                : getBackendStartupInstallationDescription(t);
+            : isStartupExited
+              ? t('common.backendStartup.exited.description')
+              : isPortReportTimeout
+                ? t('common.backendStartup.portReportTimeout.description')
+                : isStartupFailed
+                  ? t('common.backendStartup.startupFailed.description')
+                  : isStartupDirectoryFailure
+                    ? t('common.backendStartup.startupDirectory.description')
+                    : isRecoverableDatabaseCorruption
+                      ? t('common.backendStartup.recoverableDatabaseCorruption.description')
+                      : getBackendStartupInstallationDescription(t);
   const requiredVersions = failure.requiredVersions?.map((version) => `GLIBC_${version}`).join(', ');
 
   if (!isIncompatibleRuntime && !isPackageArchitectureMismatch) {
@@ -388,15 +431,23 @@ const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo
           diagnosticsKind={
             isTransientConcurrentStartup
               ? 'transient_concurrent_startup'
-              : isRecoverableDatabaseCorruption
-                ? 'recoverable_database_corruption'
-                : isStartupDirectoryFailure
-                  ? 'startup_directory'
-                  : isLocalDataRepairFailure
-                    ? 'local_data_repair'
-                    : isDataMigrationFailure
-                      ? 'data_migration'
-                      : 'incomplete_installation'
+              : isStartupExited
+                ? 'backend_exited'
+                : isPortReportTimeout
+                  ? 'port_report_timeout'
+                  : isStartupFailed
+                    ? 'startup_failed'
+                    : isRecoverableDatabaseCorruption
+                      ? 'recoverable_database_corruption'
+                      : isStartupDirectoryFailure
+                        ? 'startup_directory'
+                        : isLocalDataRepairFailure
+                          ? 'local_data_repair'
+                          : isDatabaseNewerThanApp
+                            ? 'database_newer_than_app'
+                            : isDataMigrationFailure
+                              ? 'data_migration'
+                              : 'incomplete_installation'
           }
           diagnostics={{
             source: 'backend_startup_failure',
@@ -442,34 +493,37 @@ const BackendStartupFailureDialog: React.FC<{ failure: BackendStartupFailureInfo
 
 void registerPwa();
 
-const root = createRoot(document.getElementById('root')!);
-const isDesktopIslandWindow = window.location.hash === '#/desktop-island';
-const backendStartupFailure = window.__backendStartupFailure;
-const shouldShowBackendStartupFailureDialog =
-  backendStartupFailure?.reason === 'backend_incompatible_runtime' ||
-  backendStartupFailure?.reason === 'backend_incomplete_installation' ||
-  backendStartupFailure?.reason === 'backend_package_architecture_mismatch' ||
-  backendStartupFailure?.reason === 'backend_data_migration_failed' ||
-  backendStartupFailure?.reason === 'backend_local_data_repair_failed' ||
-  backendStartupFailure?.reason === 'backend_recoverable_database_corruption' ||
-  backendStartupFailure?.reason === 'backend_transient_concurrent_startup' ||
-  backendStartupFailure?.reason === 'backend_startup_failed';
-if (isDesktopIslandWindow) {
+function renderRoot(): void {
+  const root = createRoot(document.getElementById('root')!);
+  const isDesktopIslandWindow = window.location.hash === '#/desktop-island';
+  if (isDesktopIslandWindow) {
+    root.render(
+      <ThemeProvider>
+        <DesktopIslandApp />
+      </ThemeProvider>
+    );
+    return;
+  }
+
   root.render(
-    <ThemeProvider>
-      <DesktopIslandApp />
-    </ThemeProvider>
-  );
-} else if (backendStartupFailure && shouldShowBackendStartupFailureDialog) {
-  root.render(
-    <Config>
-      <BackendStartupFailureDialog failure={backendStartupFailure} />
-    </Config>
-  );
-} else {
-  root.render(
-    <AppProviders>
-      <App />
-    </AppProviders>
+    <BackendStartupGate
+      renderStarting={() => (
+        <Config>
+          <BackendStartingView />
+        </Config>
+      )}
+      renderFailure={(failure) => (
+        <Config>
+          <BackendStartupFailureDialog failure={failure} />
+        </Config>
+      )}
+      renderApp={() => (
+        <AppProviders>
+          <App />
+        </AppProviders>
+      )}
+    />
   );
 }
+
+void i18nStartup.catch(() => {}).finally(renderRoot);

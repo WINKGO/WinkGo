@@ -2,6 +2,7 @@
   "fileChanges": "Изменения файлов",
   "fileChangesCount": "{{count}} изменений файлов",
   "conversationInProgress": "Диалог в процессе...",
+  "delivery": { "queued": "Ожидание завершения текущей задачи" },
   "confirm": "Подтвердить",
   "canceledExecution": "Выполнение отменено",
   "openLinkFailed": "Не удалось открыть ссылку",
@@ -59,6 +60,13 @@
   "processing": "Обработка...",
   "responseSentSuccessfully": "Ответ успешно отправлен",
   "permissionResponseFailed": "Не удалось отправить ответ. Повторите попытку.",
+  "askSubmit": "Отправить",
+  "askDecline": "Пропустить",
+  "askAnswered": "Отвечено",
+  "askDeclined": "Пропущено",
+  "askOther": "Другое",
+  "askOtherPlaceholder": "Введите ответ",
+  "requestDetails": "Сведения о запросе:",
   "confirmation": {
     "applyChange": "Применить это изменение?",
     "allowExecution": "Разрешить выполнение?",
@@ -72,5 +80,14 @@
   },
   "atFile.hint": "Введите текст для поиска файлов",
   "atFile.menuLabel": "Упоминания файлов",
-  "atFile.loading": "Загрузка..."
+  "atFile.loading": "Загрузка...",
+  "fork": {
+    "action": "Ответвить отсюда",
+    "errorTurnInFlight": "Дождитесь завершения текущего ответа перед ответвлением",
+    "errorParentUnbound": "У этой беседы ещё нет серверной сессии для ответвления",
+    "errorPointUnsupported": "Этот агент может ответвляться только от последнего сообщения",
+    "errorUnsupported": "Этот агент не поддерживает ответвление",
+    "errorGeneric": "Не удалось создать ответвление: {{message}}",
+    "errorTeamUnsupported": "Team member conversations must be managed from Team mode"
+  }
 }

@@ -5,6 +5,7 @@
  */
 
 import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron';
+import { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
 
 export const REMOTE_WEBVIEW_PARTITION = 'winkgo-remote-webview';
 export const HTML_PREVIEW_WEBVIEW_PARTITION = 'winkgo-local-html-preview';
@@ -15,7 +16,13 @@ const PDF_VIEWER_EXTENSION_ORIGIN = 'chrome-extension://mhjfbmdgcfjbbpaeojofohoe
 const MAX_EXTERNAL_URL_LENGTH = 8 * 1024;
 const MAX_EXTENSION_PARTITION_SUFFIX_LENGTH = 128;
 
-export type TrustedWindowRole = 'main' | 'island' | 'pet-render' | 'pet-hit' | 'pet-confirm';
+export type TrustedWindowRole =
+  | 'main'
+  | 'island'
+  | 'automation-overlay'
+  | 'pet-render'
+  | 'pet-hit'
+  | 'pet-confirm';
 
 export type TrustedWindowUrlPolicy = {
   devOrigin?: string;
@@ -90,6 +97,7 @@ export function isExtensionSettingsPartition(partition: string): boolean {
 export function isAllowedWebviewPartition(partition: string): boolean {
   return (
     partition === REMOTE_WEBVIEW_PARTITION ||
+    partition === BROWSER_SESSION_PARTITION ||
     partition === HTML_PREVIEW_WEBVIEW_PARTITION ||
     partition === PDF_PREVIEW_WEBVIEW_PARTITION ||
     isExtensionSettingsPartition(partition)
@@ -124,7 +132,11 @@ export function isAllowedWebviewNavigationUrl(value: string, partition: string):
   const parsed = parseUrl(value);
   if (!parsed) return false;
 
-  if (partition === REMOTE_WEBVIEW_PARTITION || isExtensionSettingsPartition(partition)) {
+  if (
+    partition === REMOTE_WEBVIEW_PARTITION ||
+    partition === BROWSER_SESSION_PARTITION ||
+    isExtensionSettingsPartition(partition)
+  ) {
     return isAllowedRemoteWebviewUrl(parsed);
   }
   return isAllowedLocalPreviewUrl(parsed, partition);

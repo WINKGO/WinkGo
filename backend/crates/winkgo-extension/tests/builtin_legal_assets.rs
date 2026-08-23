@@ -6,11 +6,11 @@ use winkgo_extension::builtin_skills_corpus;
 fn collect_officecli_skill_dirs(dir: &Dir<'_>, result: &mut Vec<PathBuf>) {
     for file in dir.files() {
         let is_skill_file = file.path().file_name().and_then(|name| name.to_str()) == Some("SKILL.md");
-        let mentions_officecli = std::str::from_utf8(file.contents())
-            .map(|source| source.to_ascii_lowercase().contains("officecli"))
+        let is_officecli_derived = std::str::from_utf8(file.contents())
+            .map(|source| source.contains("This OfficeCLI-derived file was modified by WINK GO contributors in 2026"))
             .unwrap_or(false);
 
-        if is_skill_file && mentions_officecli {
+        if is_skill_file && is_officecli_derived {
             result.push(file.path().parent().expect("SKILL.md parent").to_path_buf());
         }
     }

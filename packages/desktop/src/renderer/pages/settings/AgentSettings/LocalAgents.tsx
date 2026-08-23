@@ -8,7 +8,11 @@
 
 import { ipcBridge } from '@/common';
 import { parseError } from '@/common/utils';
-import { formatManagedAgentDiagnosticMessage, type ManagedAgent } from '@/renderer/utils/model/agentTypes';
+import {
+  formatManagedAgentDiagnosticMessage,
+  managedAgentSearchText,
+  type ManagedAgent,
+} from '@/renderer/utils/model/agentTypes';
 import WinkGoModal from '@/renderer/components/base/WinkGoModal';
 import { WinkGoSearchInput } from '@/renderer/components/base';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
@@ -19,7 +23,10 @@ import TalkToButlerButton from '@/renderer/components/base/TalkToButlerButton';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AgentCard from './AgentCard';
-import { isDeprecatedRuntimeAgentType } from '@/renderer/utils/model/agentTypeSupportPolicy';
+import {
+  isDeprecatedRuntimeAgentType,
+  isRetiredWinkGoAgentIdentity,
+} from '@/renderer/utils/model/agentTypeSupportPolicy';
 import InlineAgentEditor, { type CustomAgentDraft } from './InlineAgentEditor';
 import { getBoundAssistants, useAssistantsForAgents } from './BoundAssistants';
 import SettingsPageHeader from '../components/SettingsPageHeader';
@@ -54,11 +61,12 @@ const LocalAgents: React.FC = () => {
 
   // Hide deprecated runtime backends (nanobot / openclaw-gateway / remote / gemini)
   // — they are no longer offered as agents and shouldn't appear on the detection page.
-  const officialAgents = allAgents.filter(
+  const supportedAgents = allAgents.filter((agent) => !isRetiredWinkGoAgentIdentity(agent.backend, agent.name));
+  const officialAgents = supportedAgents.filter(
     (a) => a.agent_source !== 'custom' && !isDeprecatedRuntimeAgentType(a.agent_type)
   );
 
-  const customAgents: ManagedAgent[] = allAgents.filter((a) => a.agent_source === 'custom');
+  const customAgents: ManagedAgent[] = supportedAgents.filter((a) => a.agent_source === 'custom');
 
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingAgent, setEditingAgent] = useState<ManagedAgent | null>(null);
@@ -120,19 +128,7 @@ const LocalAgents: React.FC = () => {
   const matchesAgentSearch = useCallback(
     (agent: ManagedAgent) => {
       if (!normalizedSearchQuery) return true;
-      const searchableText = [
-        agent.name,
-        agent.name_i18n?.[i18n.language],
-        agent.description,
-        agent.description_i18n?.[i18n.language],
-        agent.backend,
-        agent.command,
-        agent.agent_source_info?.binary_name,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return searchableText.includes(normalizedSearchQuery);
+      return managedAgentSearchText(agent, i18n.language).includes(normalizedSearchQuery);
     },
     [i18n.language, normalizedSearchQuery]
   );

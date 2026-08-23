@@ -6,7 +6,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { TConversationRuntimeStateKind, TConversationRuntimeSummary } from '@/common/config/storage';
+import type {
+  TConversationRuntimeStateKind,
+  TConversationRuntimeSummary,
+  TInterjectionMode,
+} from '@/common/config/storage';
 
 export type ConversationRuntimeView = {
   conversation_id: string;
@@ -14,6 +18,7 @@ export type ConversationRuntimeView = {
   state: TConversationRuntimeStateKind;
   isProcessing: boolean;
   canSendMessage: boolean;
+  interjectionMode: TInterjectionMode;
   pendingConfirmations: number;
   hasBackendRuntime: boolean;
   localSubmitting: boolean;
@@ -26,6 +31,7 @@ export type ConversationRuntimeViewLogEvent =
   | 'runtime_hydrate_missing_summary'
   | 'turn_completed_applied'
   | 'turn_completed_missing_runtime'
+  | 'turn_completed_ignored_for_other_turn'
   | 'runtime_release_confirmed'
   | 'local_send_started'
   | 'local_send_accepted'
@@ -93,6 +99,7 @@ export const createDefaultConversationRuntimeView = (conversation_id: string): C
   state: 'idle',
   isProcessing: false,
   canSendMessage: true,
+  interjectionMode: 'boundary_queue',
   pendingConfirmations: 0,
   hasBackendRuntime: false,
   localSubmitting: false,
@@ -106,6 +113,7 @@ const summarizeView = (view: ConversationRuntimeView): Record<string, unknown> =
   state: view.state,
   isProcessing: view.isProcessing,
   canSendMessage: view.canSendMessage,
+  interjectionMode: view.interjectionMode,
   pendingConfirmations: view.pendingConfirmations,
   hasBackendRuntime: view.hasBackendRuntime,
   localSubmitting: view.localSubmitting,
@@ -147,6 +155,7 @@ const viewFromRuntimeSummary = (
     state: pendingLocalSend && runtime.state === 'idle' ? 'starting' : runtime.state,
     isProcessing: pendingLocalSend || isCancelling || runtime.is_processing,
     canSendMessage: !pendingLocalSend && !isCancelling && runtime.can_send_message,
+    interjectionMode: runtime.interjection_mode ?? 'boundary_queue',
     pendingConfirmations: runtime.pending_confirmations,
     hasBackendRuntime: true,
     hydrated: true,
@@ -455,6 +464,16 @@ export const turnCompleted = (
   turn_id: string,
   runtime: TConversationRuntimeSummary | null
 ): ConversationRuntimeViewLogEntry[] => {
+  const current = runtimeViews.get(conversation_id);
+  if (current?.activeTurnId && turn_id && current.activeTurnId !== turn_id) {
+    return [
+      createLog('warn', 'turn_completed_ignored_for_other_turn', current, {
+        turn_id,
+        active_turn_id: current.activeTurnId,
+      }),
+    ];
+  }
+
   const metadata = getRuntimeMetadata(conversation_id);
   metadata.pendingLocalSendSeq = null;
   if (metadata.pendingStopTurnId === turn_id) {

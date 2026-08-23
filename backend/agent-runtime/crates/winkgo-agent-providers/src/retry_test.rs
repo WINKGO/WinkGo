@@ -144,7 +144,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_initial_http_5xx_retry_exhausts_after_five_retries() {
+    async fn test_initial_http_5xx_retry_exhausts_after_two_retries() {
         tokio::time::pause();
 
         let counter = Arc::new(AtomicU32::new(0));
@@ -161,7 +161,7 @@ mod tests {
         .await;
 
         assert!(matches!(result.unwrap_err(), ProviderError::Api { status: 503, .. }));
-        assert_eq!(counter.load(Ordering::SeqCst), 6);
+        assert_eq!(counter.load(Ordering::SeqCst), 3);
     }
 
     #[tokio::test]

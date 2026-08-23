@@ -13,7 +13,7 @@
  */
 
 import { Dropdown, Menu, Tree } from '@arco-design/web-react';
-import { isElectronDesktop } from '@/renderer/utils/platform';
+import { isElectronDesktop, isMacOS } from '@/renderer/utils/platform';
 import type { TreeProps } from '@arco-design/web-react';
 import { Caution } from '@icon-park/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -23,8 +23,18 @@ import { useTranslation } from 'react-i18next';
 import FileTypeIcon from './fileIcon/FileTypeIcon';
 
 import { getFilesFromDropEvent } from '@/renderer/services/FileService';
-import type { RootRef, TreeNode } from './explorerModel';
-import { canRemoveRoot, keyToRef, parentRel } from './explorerModel';
+import type { DragPeRef, RootRef, TransferOp, TreeNode } from './explorerModel';
+import {
+  PE_REF_DRAG_MIME,
+  canRemoveRoot,
+  isCopyModifierPressed,
+  isTransferAllowed,
+  keyToRef,
+  parentRel,
+  parsePeRef,
+  resolveTransferOp,
+  serializePeRef,
+} from './explorerModel';
 import { openProject, select, setExpandedKeys } from './explorerStore';
 import { initExplorerRuntime } from './monitorTransport';
 import { useExplorerView } from './useExplorerView';
@@ -38,10 +48,12 @@ export type ExplorerPanelProps = {
   onRemoveRoot?: (peId: string) => void;
   /** Open a file (leaf) in the preview panel. Called when a file node is selected. */
   onOpenFile?: (peId: string, relativePath: string) => void;
-  /** File operations (A) — parity with the legacy tree: rename + delete only.
+  /** File operations (A): rename, delete and create below directory nodes.
    * Omit to hide the corresponding context-menu item. */
   onRename?: (peId: string, relativePath: string, name: string) => void;
   onDelete?: (peId: string, relativePath: string, name: string) => void;
+  onNewFile?: (peId: string, dirRelativePath: string) => void;
+  onNewDir?: (peId: string, dirRelativePath: string) => void;
   /** Add a file/folder node to the active conversation's send box. Omit to hide
    * the item (e.g. no single active conversation, as on the team route). */
   onAddToChat?: (peId: string, relativePath: string, name: string, isFile: boolean) => void;
@@ -49,11 +61,14 @@ export type ExplorerPanelProps = {
    * resolves the pe-ref to an absolute path backend-side; the item is only shown
    * on Electron desktop (WebUI has no local shell / may be remote). Omit to hide. */
   onRevealInFolder?: (peId: string, relativePath: string) => void;
+  onCopyRelativePath?: (peId: string, relativePath: string, name: string) => void;
+  onCopyAbsolutePath?: (peId: string, relativePath: string) => void;
   /** Import OS files (A-paste) dropped onto a node into that node's directory
    * (a file node routes to its parent dir). `filePaths` are absolute OS paths
    * (Electron only — empty in the browser, where the drop is ignored). Omit to
    * disable drop import. */
   onImportFiles?: (targetPeId: string, targetRelativePath: string, filePaths: string[]) => void;
+  onTransfer?: (source: DragPeRef, targetPeId: string, targetRelativePath: string, op: TransferOp) => void;
 };
 
 export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
@@ -64,14 +79,20 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
   onOpenFile,
   onRename,
   onDelete,
+  onNewFile,
+  onNewDir,
   onAddToChat,
   onRevealInFolder,
+  onCopyRelativePath,
+  onCopyAbsolutePath,
   onImportFiles,
+  onTransfer,
 }) => {
   const view = useExplorerView();
   const { t } = useTranslation();
   // Key of the node currently under an OS-file drag (for the drop highlight).
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const dragSourceRef = useRef<DragPeRef | null>(null);
   // Scroll container + the last selection we already scrolled to (so we scroll
   // once when a selection's node first appears, not on every tree delta).
   const containerRef = useRef<HTMLDivElement>(null);
@@ -123,7 +144,9 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
   const handleLoadMore: TreeProps['loadMore'] = (node) => {
     const n = node as unknown as { props?: { dataRef?: { key?: string }; _key?: string } };
     const key = n.props?.dataRef?.key ?? n.props?._key;
-    if (key) setExpandedKeys(Array.from(new Set([...view.expanded, String(key)])));
+    if (key && !view.expanded.includes(String(key))) {
+      setExpandedKeys([...view.expanded, String(key)]);
+    }
     return Promise.resolve();
   };
 
@@ -155,23 +178,58 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
       const ref = keyToRef(key);
       const peId = ref.pe_id;
       const rel = ref.relative_path;
+      const isRoot = Boolean(data?.role);
 
       // A-paste drop: files land in this node's dir (a file node routes to its
       // parent). Handlers only wire up when import is enabled; the highlight
       // tracks the node currently under the drag.
       const dropTargetRel = isFile ? parentRel(rel) : rel;
-      const dropProps = onImportFiles
+      const dragProps =
+        onTransfer && !isRoot
+          ? {
+              draggable: true,
+              onDragStart: (event: React.DragEvent) => {
+                const payload: DragPeRef = { pe_id: peId, relative_path: rel, name, isDir: !isFile };
+                event.dataTransfer.setData(PE_REF_DRAG_MIME, serializePeRef(payload));
+                event.dataTransfer.effectAllowed = 'copyMove';
+                dragSourceRef.current = payload;
+              },
+              onDragEnd: () => {
+                dragSourceRef.current = null;
+                setDragOverKey(null);
+              },
+            }
+          : {};
+
+      const dropProps = onImportFiles || onTransfer
         ? {
             onDragOver: (e: React.DragEvent) => {
               e.preventDefault();
               e.stopPropagation();
-              if (dragOverKey !== key) setDragOverKey(key);
+              const source = dragSourceRef.current;
+              if (source && onTransfer) {
+                const target = { pe_id: peId, relative_path: dropTargetRel };
+                const op = resolveTransferOp(source.pe_id === peId, isCopyModifierPressed(e, isMacOS()));
+                const allowed = isTransferAllowed(source, target, op);
+                e.dataTransfer.dropEffect = allowed ? op : 'none';
+                setDragOverKey(allowed ? key : null);
+              } else if (onImportFiles) {
+                e.dataTransfer.dropEffect = 'copy';
+                if (dragOverKey !== key) setDragOverKey(key);
+              }
             },
             onDragLeave: () => setDragOverKey((prev) => (prev === key ? null : prev)),
             onDrop: (e: React.DragEvent) => {
               e.preventDefault();
               e.stopPropagation();
               setDragOverKey(null);
+              const source = parsePeRef(e.dataTransfer.getData(PE_REF_DRAG_MIME));
+              if (source && onTransfer) {
+                const target = { pe_id: peId, relative_path: dropTargetRel };
+                const op = resolveTransferOp(source.pe_id === peId, isCopyModifierPressed(e, isMacOS()));
+                if (isTransferAllowed(source, target, op)) onTransfer(source, peId, dropTargetRel, op);
+                return;
+              }
               const paths = getFilesFromDropEvent(e.nativeEvent)
                 .map((f) => f.path)
                 .filter(Boolean);
@@ -185,6 +243,7 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
           data-runtime-status={status}
           data-drop-target={dragOverKey === key || undefined}
           className={`flex items-center gap-4px min-w-0${degraded ? ' text-t-secondary' : ''}${dragOverKey === key ? ' bg-aou-2 rd-4px' : ''}`}
+          {...dragProps}
           {...dropProps}
         >
           <FileTypeIcon node={{ name, relativePath: keyToRef(key).relative_path, isFile }} expanded={isExpanded} />
@@ -192,7 +251,6 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
           {degraded && <Caution theme='outline' size='14' className='flex-shrink-0' />}
         </span>
       );
-      const isRoot = Boolean(data?.role);
       const removable = isRoot && data?.role ? canRemoveRoot(data.role, peId, workspacePeId) : false;
 
       // Root nodes only expose "remove from project" + (when available) "add to
@@ -201,15 +259,26 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
       // Reveal-in-folder is Electron-only (needs a local OS shell; WebUI may be
       // remote and has no shell permission), so gate the menu item on the runtime.
       const canReveal = Boolean(onRevealInFolder) && isElectronDesktop();
-      const hasMenu = onAddToChat || canReveal || (isRoot ? onRemoveRoot : onRename || onDelete);
+      const canCopyAbsolutePath = Boolean(onCopyAbsolutePath) && isElectronDesktop();
+      const hasMenu =
+        onAddToChat ||
+        canReveal ||
+        onCopyRelativePath ||
+        canCopyAbsolutePath ||
+        (isRoot ? onRemoveRoot : onRename || onDelete) ||
+        (!isFile && (onNewFile || onNewDir));
       if (!hasMenu) return title;
 
       const onClickMenuItem = (menuKey: string) => {
         if (menuKey === 'addToChat') onAddToChat?.(peId, rel, name, isFile);
+        else if (menuKey === 'newFile' && !isFile) onNewFile?.(peId, rel);
+        else if (menuKey === 'newDir' && !isFile) onNewDir?.(peId, rel);
         else if (menuKey === 'rename') onRename?.(peId, rel, name);
         else if (menuKey === 'delete') onDelete?.(peId, rel, name);
         else if (menuKey === 'remove' && removable) onRemoveRoot?.(peId);
         else if (menuKey === 'revealInFolder') onRevealInFolder?.(peId, rel);
+        else if (menuKey === 'copyRelativePath') onCopyRelativePath?.(peId, rel, name);
+        else if (menuKey === 'copyAbsolutePath') onCopyAbsolutePath?.(peId, rel);
       };
 
       return (
@@ -231,6 +300,22 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
                 {canReveal && (
                   <Menu.Item key='revealInFolder'>{t('conversation.workspace.contextMenu.openLocation')}</Menu.Item>
                 )}
+                {onCopyRelativePath && (
+                  <Menu.Item key='copyRelativePath'>
+                    {t('conversation.explorer.contextMenu.copyRelativePath')}
+                  </Menu.Item>
+                )}
+                {canCopyAbsolutePath && (
+                  <Menu.Item key='copyAbsolutePath'>
+                    {t('conversation.explorer.contextMenu.copyAbsolutePath')}
+                  </Menu.Item>
+                )}
+                {!isFile && onNewFile && (
+                  <Menu.Item key='newFile'>{t('conversation.explorer.contextMenu.newFile')}</Menu.Item>
+                )}
+                {!isFile && onNewDir && (
+                  <Menu.Item key='newDir'>{t('conversation.explorer.contextMenu.newDir')}</Menu.Item>
+                )}
                 {!isRoot && onRename && (
                   <Menu.Item key='rename'>{t('conversation.explorer.contextMenu.rename')}</Menu.Item>
                 )}
@@ -248,7 +333,23 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
         </Dropdown>
       );
     },
-    [onRemoveRoot, onRename, onDelete, onAddToChat, onImportFiles, dragOverKey, workspacePeId, t, view.expanded]
+    [
+      onRemoveRoot,
+      onRename,
+      onDelete,
+      onNewFile,
+      onNewDir,
+      onAddToChat,
+      onRevealInFolder,
+      onCopyRelativePath,
+      onCopyAbsolutePath,
+      onImportFiles,
+      onTransfer,
+      dragOverKey,
+      workspacePeId,
+      t,
+      view.expanded,
+    ]
   );
 
   // Container-level import target: the workspace root ('' rel). Node drops set
@@ -258,11 +359,28 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
     if (onImportFiles && workspacePeId && filePaths.length) onImportFiles(workspacePeId, '', filePaths);
   };
 
-  const containerProps = onImportFiles
+  const containerProps = onImportFiles || onTransfer
     ? {
-        onDragOver: (e: React.DragEvent) => e.preventDefault(),
+        onDragOver: (e: React.DragEvent) => {
+          e.preventDefault();
+          const source = dragSourceRef.current;
+          if (source && onTransfer && workspacePeId) {
+            const op = resolveTransferOp(source.pe_id === workspacePeId, isCopyModifierPressed(e, isMacOS()));
+            e.dataTransfer.dropEffect = isTransferAllowed(source, { pe_id: workspacePeId, relative_path: '' }, op)
+              ? op
+              : 'none';
+          }
+        },
         onDrop: (e: React.DragEvent) => {
           e.preventDefault();
+          const source = parsePeRef(e.dataTransfer.getData(PE_REF_DRAG_MIME));
+          if (source && onTransfer && workspacePeId) {
+            const op = resolveTransferOp(source.pe_id === workspacePeId, isCopyModifierPressed(e, isMacOS()));
+            if (isTransferAllowed(source, { pe_id: workspacePeId, relative_path: '' }, op)) {
+              onTransfer(source, workspacePeId, '', op);
+            }
+            return;
+          }
           importToWorkspaceRoot(
             getFilesFromDropEvent(e.nativeEvent)
               .map((f) => f.path)

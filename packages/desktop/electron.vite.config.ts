@@ -230,6 +230,7 @@ export default defineConfig(({ mode }) => {
         rollupOptions: {
           input: {
             index: resolve('packages/desktop/src/preload/main.ts'),
+            automationOverlayPreload: resolve('packages/desktop/src/preload/automationOverlayPreload.ts'),
             petPreload: resolve('packages/desktop/src/preload/petPreload.ts'),
             petHitPreload: resolve('packages/desktop/src/preload/petHitPreload.ts'),
             petConfirmPreload: resolve('packages/desktop/src/preload/petConfirmPreload.ts'),
@@ -313,6 +314,7 @@ export default defineConfig(({ mode }) => {
         rollupOptions: {
           input: {
             index: resolve(rendererRoot, 'index.html'),
+            'automation-overlay': resolve(rendererRoot, 'automation-overlay/automation-overlay.html'),
             pet: resolve(rendererRoot, 'pet/pet.html'),
             'pet-hit': resolve(rendererRoot, 'pet/pet-hit.html'),
             'pet-confirm': resolve(rendererRoot, 'pet/pet-confirm.html'),
@@ -325,32 +327,33 @@ export default defineConfig(({ mode }) => {
           output: {
             manualChunks(id: string) {
               if (!id.includes('node_modules')) return undefined;
-              if (id.includes('/react-dom/') || id.includes('/react/')) return 'vendor-react';
-              if (id.includes('/@arco-design/')) return 'vendor-arco';
+              // React and the UI/Markdown/editor packages below import each
+              // other at module evaluation time. Splitting them into separate
+              // manual chunks creates circular ESM imports in production and
+              // can leave React undefined while Arco initializes, producing a
+              // completely white packaged window. Keep this tightly coupled
+              // graph in one file-backed vendor chunk.
               if (
+                id.includes('/react-dom/') ||
+                id.includes('/react/') ||
+                id.includes('/@arco-design/') ||
                 id.includes('/react-markdown/') ||
                 id.includes('/remark-') ||
                 id.includes('/rehype-') ||
                 id.includes('/unified/') ||
                 id.includes('/mdast-') ||
                 id.includes('/hast-') ||
-                id.includes('/micromark')
-              )
-                return 'vendor-markdown';
-              if (
+                id.includes('/micromark') ||
                 id.includes('/react-syntax-highlighter/') ||
                 id.includes('/refractor/') ||
-                id.includes('/highlight.js/')
-              )
-                return 'vendor-highlight';
-              if (
+                id.includes('/highlight.js/') ||
                 id.includes('/monaco-editor/') ||
                 id.includes('/@monaco-editor/') ||
                 id.includes('/codemirror/') ||
-                id.includes('/@codemirror/')
+                id.includes('/@codemirror/') ||
+                id.includes('/katex/')
               )
-                return 'vendor-editor';
-              if (id.includes('/katex/')) return 'vendor-katex';
+                return 'vendor';
               if (id.includes('/@icon-park/')) return 'vendor-icons';
               if (id.includes('/diff2html/')) return 'vendor-diff';
               return undefined;

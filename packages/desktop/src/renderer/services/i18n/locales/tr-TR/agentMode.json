@@ -17,5 +17,6 @@
   "permission": "İzin",
   "switchMode": "İzin Modu",
   "switchSuccess": "Mode switched successfully",
-  "switchFailed": "Failed to switch mode"
+  "switchFailed": "Failed to switch mode",
+  "switchPendingNextTurn": "Sonraki turda geçerli olacak"
 }

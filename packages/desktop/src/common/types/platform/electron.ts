@@ -32,6 +32,8 @@ export interface ElectronBridgeAPI {
   desktopIsland?: {
     applySettings: (settings: { autoHideFullscreen: boolean; opacity: number; visible: boolean }) => Promise<boolean>;
     navigateMain: (route: string) => Promise<boolean>;
+    onOpenPanel: (callback: (panel: 'browserComputerUse' | 'desktopComputerUse') => void) => () => void;
+    openPanel: (panel: 'browserComputerUse' | 'desktopComputerUse') => Promise<boolean>;
     ready: () => Promise<boolean>;
     setFileDragActive: (active: boolean) => Promise<boolean>;
     setSize: (size: { height: number; width: number }) => Promise<boolean>;
@@ -49,10 +51,14 @@ export type BackendStartupFailureReason =
   | 'backend_incomplete_installation'
   | 'backend_package_architecture_mismatch'
   | 'backend_data_migration_failed'
+  | 'backend_database_newer_than_app'
   | 'backend_local_data_repair_failed'
   | 'backend_recoverable_database_corruption'
   | 'backend_transient_concurrent_startup'
   | 'backend_startup_directory_unavailable'
+  | 'backend_startup_pending_slow'
+  | 'backend_startup_exited'
+  | 'backend_startup_port_report_timeout'
   | 'backend_startup_failed';
 
 export type BackendIncompleteInstallationKind = 'missing_backend_binary' | 'missing_directory_resources';
@@ -79,6 +85,7 @@ export interface BackendStartupFailureInfo {
   deviceArch?: string;
   expectedDownloadArch?: string;
   isRosettaTranslated?: boolean;
+  appVersion?: string;
 }
 
 declare global {
@@ -88,6 +95,10 @@ declare global {
     __winkgoE2ETest?: boolean;
     __backendStartupFailed?: boolean;
     __backendStartupFailure?: BackendStartupFailureInfo | null;
+    __backendStartupBridge?: {
+      getState: () => BackendStartupFailureInfo | null;
+      subscribe: (callback: (state: BackendStartupFailureInfo | null) => void) => () => void;
+    };
     __installationIntegrityReportCount?: number;
     __lastInstallationIntegrityReportMessage?: string;
   }

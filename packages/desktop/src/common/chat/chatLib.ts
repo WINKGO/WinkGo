@@ -66,10 +66,12 @@ type TMessageType =
   | 'agent_status'
   | 'permission'
   | 'acp_permission'
+  | 'ask'
   | 'acp_tool_call'
   | 'plan'
   | 'thinking'
-  | 'available_commands';
+  | 'available_commands'
+  | 'acp_terminal_output';
 
 interface IMessage<T extends TMessageType, Content extends Record<string, any>> {
   /**
@@ -190,6 +192,8 @@ export type IMessageTips = IMessage<
     code?: string;
     params?: Record<string, unknown>;
     error?: AgentStreamErrorInfo;
+    /** Stable identity for a progress tip that replaces its predecessor. */
+    supersedes_key?: string;
   }
 >;
 
@@ -290,9 +294,36 @@ export type IMessageAgentStatus = IMessage<
 
 export type IMessageAcpPermission = IMessage<'acp_permission', AcpPermissionRequest>;
 
+export interface IAskQuestion {
+  question: string;
+  header?: string;
+  multiSelect?: boolean;
+  multi_select?: boolean;
+  options: Array<{ label: string; description?: string }>;
+}
+
+export type IMessageAsk = IMessage<
+  'ask',
+  {
+    session_id: string;
+    request_id: string;
+    questions: IAskQuestion[];
+  }
+>;
+
 export type IMessagePermission = IMessage<'permission', IConfirmation>;
 
 export type IMessageAcpToolCall = IMessage<'acp_tool_call', ToolCallUpdate>;
+
+export interface AcpTerminalOutputContent {
+  terminal_id: string;
+  command: string;
+  output: string;
+  truncated: boolean;
+  exit_status?: { exit_code?: number | null; signaled?: boolean } | null;
+}
+
+export type IMessageAcpTerminalOutput = IMessage<'acp_terminal_output', AcpTerminalOutputContent>;
 
 export const mergeAcpToolCallContent = (
   existing: IMessageAcpToolCall['content'],
@@ -372,7 +403,9 @@ export type TMessage =
   | IMessageAgentStatus
   | IMessagePermission
   | IMessageAcpPermission
+  | IMessageAsk
   | IMessageAcpToolCall
+  | IMessageAcpTerminalOutput
   | IMessagePlan
   | IMessageThinking
   | IMessageAvailableCommands;
@@ -389,6 +422,8 @@ export interface IConfirmation<Option extends any = any> {
     value: Option;
     params?: Record<string, string>; // Translation interpolation parameters
   }>;
+  /** Pending structured-question recovery payload. */
+  questions?: IAskQuestion[];
   /**
    * Command type for exec confirmations (e.g., 'curl', 'npm', 'git')
    * Used for "always allow" permission memory
@@ -659,16 +694,19 @@ export const transformMessage = (message: IResponseMessage): TMessage | undefine
         code?: unknown;
         params?: unknown;
         error?: unknown;
+        supersedes_key?: unknown;
       };
       const tipType = data.type ?? 'warning';
       const tipCode = typeof data.code === 'string' ? data.code : undefined;
       const tipParams = isObject(data.params) ? data.params : undefined;
+      const supersedesKey =
+        typeof data.supersedes_key === 'string' && data.supersedes_key ? data.supersedes_key : undefined;
       const structuredError =
         tipType === 'error'
           ? (normalizeAgentStreamError(data.error) ?? normalizeAgentStreamError({ ...data, message: data.content }))
           : undefined;
       return {
-        id: uuid(),
+        id: supersedesKey ? `tip:${supersedesKey}` : uuid(),
         type: 'tips',
         msg_id: message.msg_id,
         position: 'center',
@@ -680,6 +718,7 @@ export const transformMessage = (message: IResponseMessage): TMessage | undefine
           ...(tipCode ? { code: tipCode } : {}),
           ...(tipParams ? { params: tipParams } : {}),
           ...(structuredError ? { error: structuredError } : {}),
+          ...(supersedesKey ? { supersedes_key: supersedesKey } : {}),
         },
       };
     }
@@ -750,6 +789,17 @@ export const transformMessage = (message: IResponseMessage): TMessage | undefine
         content: message.data as any,
       };
     }
+    case 'ask': {
+      return {
+        id: uuid(),
+        type: 'ask',
+        msg_id: message.msg_id,
+        position: 'left',
+        conversation_id: message.conversation_id,
+        created_at,
+        content: message.data as IMessageAsk['content'],
+      };
+    }
     case 'acp_permission': {
       return {
         id: uuid(),
@@ -759,6 +809,18 @@ export const transformMessage = (message: IResponseMessage): TMessage | undefine
         conversation_id: message.conversation_id,
         created_at,
         content: message.data as any,
+      };
+    }
+    case 'acp_terminal_output': {
+      const terminal = message.data as AcpTerminalOutputContent;
+      return {
+        id: `term:${message.msg_id}:${terminal?.terminal_id ?? ''}`,
+        type: 'acp_terminal_output',
+        msg_id: message.msg_id,
+        position: 'left',
+        conversation_id: message.conversation_id,
+        created_at,
+        content: terminal,
       };
     }
     case 'acp_tool_call': {
@@ -861,6 +923,13 @@ export const composeMessage = (
     messageHandler('insert', message);
     return list.slice();
   };
+
+  if (message.type === 'tips' && message.content.supersedes_key) {
+    const key = message.content.supersedes_key;
+    const existing = list.findIndex((item) => item.type === 'tips' && item.content.supersedes_key === key);
+    if (existing >= 0) return updateMessage(existing, message);
+    return pushMessage(message);
+  }
 
   if (message.type === 'tool_group') {
     const remainingToolsMap = new Map(message.content.map((t) => [t.call_id, t] as const));

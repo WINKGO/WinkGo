@@ -15,7 +15,7 @@ describe('buildAssistantEditorBackends', () => {
   it('derives editor backends from supported management agents and allows unchecked agents', () => {
     const agents: ManagedAgent[] = [
       managedAgent({ id: 'agent-cursor', backend: 'cursor', name: 'Cursor', status: 'unchecked' }),
-      managedAgent({ id: 'agent-claude', backend: 'claude', name: 'Claude Code', status: 'online' }),
+      managedAgent({ id: 'agent-kimi', backend: 'kimi', name: 'Kimi', status: 'online' }),
       managedAgent({
         id: 'agent-nanobot',
         backend: 'nanobot',
@@ -49,9 +49,9 @@ describe('buildAssistantEditorBackends', () => {
         modelOptions: [],
       },
       {
-        id: 'agent-claude',
-        name: 'Claude Code',
-        runtimeKey: 'claude',
+        id: 'agent-kimi',
+        name: 'Kimi',
+        runtimeKey: 'kimi',
         modelOptions: [],
       },
     ]);
@@ -81,15 +81,15 @@ describe('buildAssistantEditorBackends', () => {
 
   it('keeps the current binding visible even when it is known unavailable', () => {
     const agents: ManagedAgent[] = [
-      managedAgent({ id: 'agent-claude', backend: 'claude', name: 'Claude Code', status: 'online' }),
+      managedAgent({ id: 'agent-kimi', backend: 'kimi', name: 'Kimi', status: 'online' }),
       managedAgent({ id: 'agent-goose', backend: 'goose', name: 'Goose', status: 'offline' }),
     ];
 
     expect(buildAssistantEditorBackends(agents, 'en-US', 'agent-goose')).toEqual([
       {
-        id: 'agent-claude',
-        name: 'Claude Code',
-        runtimeKey: 'claude',
+        id: 'agent-kimi',
+        name: 'Kimi',
+        runtimeKey: 'kimi',
         modelOptions: [],
       },
       {

@@ -147,6 +147,17 @@ const makeAgents = () => [
     installed: true,
     status: 'offline',
   },
+  {
+    id: 'acp-kimi',
+    name: 'Kimi',
+    agent_type: 'acp',
+    agent_source: 'builtin',
+    backend: 'kimi',
+    enabled: true,
+    available: false,
+    installed: false,
+    status: 'missing',
+  },
 ];
 
 describe('LocalAgents', () => {
@@ -202,7 +213,8 @@ describe('LocalAgents', () => {
     // Proves L30 (useManagedAgents) ran and fed the derived lists.
     expect(useManagedAgents).toHaveBeenCalled();
     expect(screen.getByText('WinkGo CLI')).toBeTruthy();
-    expect(screen.getByText('Claude Code')).toBeTruthy();
+    expect(screen.getByText('Kimi')).toBeTruthy();
+    expect(screen.queryByText('Claude Code')).toBeNull();
     expect(screen.getByText('My Agent')).toBeTruthy();
     expect(screen.getByTestId('agent-detection-scope-note')).toHaveTextContent(
       'settings.agentManagement.detectionScopeNote'
@@ -230,7 +242,7 @@ describe('LocalAgents', () => {
 
     expect(screen.getByText('settings.agents')).toBeTruthy();
     expect(screen.getByText('settings.agentManagement.customAgents')).toBeTruthy();
-    // Only Claude Code shows 'missing' now; openclaw-gateway is filtered out as deprecated
+    // Kimi remains as a supported missing Agent; retired integrations are hidden.
     expect(screen.getByText('settings.agentManagement.statusMissing')).toBeTruthy();
     expect(screen.getByText('settings.agentManagement.statusOffline')).toBeTruthy();
     expect(screen.queryByText('settings.agentManagement.goToChat')).toBeNull();
@@ -263,8 +275,9 @@ describe('LocalAgents', () => {
 
     // Agent names render
     expect(screen.getByText('WinkGo CLI')).toBeInTheDocument();
-    expect(screen.getByText('Claude Code')).toBeInTheDocument();
-    // Deprecated openclaw-gateway agent is filtered out
+    expect(screen.getByText('Kimi')).toBeInTheDocument();
+    expect(screen.queryByText('Claude Code')).toBeNull();
+    // Deprecated openclaw-gateway agent is filtered out.
     expect(screen.queryByText('OpenClaw Gateway')).toBeNull();
     // Status tags render
     expect(screen.getByText('settings.agentManagement.statusOnline')).toBeInTheDocument();
@@ -298,7 +311,7 @@ describe('LocalAgents', () => {
     expect(openExternalUrl).toHaveBeenCalledWith('https://github.com/WINKGO/wink-go#agent-接入与安装');
   });
 
-  it('opens the matching official setup page from each Agent info control', () => {
+  it('opens the matching official setup page from each supported Agent info control', () => {
     useManagedAgents.mockReturnValue({
       agents: makeAgents(),
       revalidate: vi.fn(),
@@ -306,9 +319,9 @@ describe('LocalAgents', () => {
     });
 
     render(<LocalAgents />);
-    fireEvent.click(screen.getByTestId('agent-row-setup-acp-claude'));
+    fireEvent.click(screen.getByTestId('agent-row-setup-acp-kimi'));
 
-    expect(openExternalUrl).toHaveBeenCalledWith('https://code.claude.com/docs/en/setup');
+    expect(openExternalUrl).toHaveBeenCalledWith('https://www.kimi.com/code/docs/en/');
   });
 
   it('binds assistants to managed agents by agent_id instead of runtime backend', () => {
@@ -369,11 +382,11 @@ describe('LocalAgents', () => {
       agents: [
         ...makeAgents(),
         {
-          id: 'acp-kimi',
-          name: 'Kimi',
+          id: 'acp-auggie',
+          name: 'Auggie',
           agent_type: 'acp',
           agent_source: 'builtin',
-          backend: 'kimi',
+          backend: 'auggie',
           enabled: true,
           available: false,
           installed: false,
@@ -386,13 +399,13 @@ describe('LocalAgents', () => {
 
     render(<LocalAgents />);
 
-    // Alphabetically Claude Code < Kimi, so this order proves the pin rule:
+    // Alphabetically Auggie < Kimi, so this order proves the pin rule:
     // winkgo_agent stays first, Kimi jumps ahead of the localeCompare ordering.
     const winkgo = screen.getByText('WinkGo CLI');
     const kimi = screen.getByText('Kimi');
-    const claude = screen.getByText('Claude Code');
+    const auggie = screen.getByText('Auggie');
     expect(kimi.compareDocumentPosition(winkgo) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
-    expect(claude.compareDocumentPosition(kimi) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(auggie.compareDocumentPosition(kimi) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
   it('renders agent management as a single diagnostics page without local/remote tabs', () => {
@@ -454,18 +467,19 @@ describe('LocalAgents', () => {
     const unavailableTab = screen.getByTestId('settings-tab-unavailable');
     expect(allTab.tagName).toBe('BUTTON');
 
-    // Default "all": both official agents visible (WinkGo CLI online, Claude Code missing).
+    // Default "all": both supported official agents visible (WinkGo CLI online, Kimi missing).
     expect(screen.getByText('WinkGo CLI')).toBeInTheDocument();
-    expect(screen.getByText('Claude Code')).toBeInTheDocument();
+    expect(screen.getByText('Kimi')).toBeInTheDocument();
+    expect(screen.queryByText('Claude Code')).toBeNull();
 
     // "available" keeps only the online agent.
     fireEvent.click(availableTab);
     expect(screen.getByText('WinkGo CLI')).toBeInTheDocument();
-    expect(screen.queryByText('Claude Code')).toBeNull();
+    expect(screen.queryByText('Kimi')).toBeNull();
 
     // "unavailable" keeps only the non-online agent.
     fireEvent.click(unavailableTab);
     expect(screen.queryByText('WinkGo CLI')).toBeNull();
-    expect(screen.getByText('Claude Code')).toBeInTheDocument();
+    expect(screen.getByText('Kimi')).toBeInTheDocument();
   });
 });

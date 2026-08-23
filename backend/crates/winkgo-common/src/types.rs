@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -57,6 +58,9 @@ pub struct Confirmation {
     pub description: String,
     pub command_type: Option<String>,
     pub options: Vec<ConfirmationOption>,
+    /// Pending structured-question recovery payload (bare `questions[]`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub questions: Option<serde_json::Value>,
 }
 
 /// A single option within a confirmation dialog.
@@ -142,6 +146,7 @@ mod tests {
             action: None,
             description: "Execute shell command".into(),
             command_type: Some("bash".into()),
+            questions: None,
             options: vec![ConfirmationOption {
                 label: "Allow".into(),
                 value: serde_json::json!(true),
