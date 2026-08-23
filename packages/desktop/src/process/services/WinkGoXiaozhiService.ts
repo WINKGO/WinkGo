@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { app } from 'electron';
+import { app, net } from 'electron';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
@@ -17,6 +17,7 @@ import type {
   WinkGoXiaozhiActionResult,
   WinkGoXiaozhiConfig,
   WinkGoXiaozhiLocalProbe,
+  WinkGoNeteaseAccountStatus,
   WinkGoXiaozhiSaveRequest,
   WinkGoXiaozhiSecretKind,
   WinkGoXiaozhiSnapshot,
@@ -28,6 +29,7 @@ import {
   createWinkGoAgentBridgeRuntimeEnv,
   winkGoAgentTaskBridgeService,
   WinkGoRemoteGatewayService,
+  WinkGoRemoteIdentityStore,
   type WinkGoRemoteGatewayConfig,
 } from './winkgoRemote';
 import { RuntimeMcpClient } from './winkgoRemote/RuntimeMcpClient';
@@ -62,11 +64,95 @@ const remoteGateway = new WinkGoRemoteGatewayService({
   runtimeToken: null,
 });
 const remoteStatusListeners = new Set<(snapshot: WinkGoXiaozhiSnapshot) => void>();
+const musicAccountIdentityStore = new WinkGoRemoteIdentityStore();
 let cachedSnapshot: WinkGoXiaozhiSnapshot | null = null;
 let localRuntimeToolClient: RuntimeMcpClient | null = null;
 let runtimeAccessTokenPromise: Promise<string> | null = null;
 
+type NeteaseAccountResponse = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  account?: {
+    configured?: boolean;
+    state?: string;
+    uid?: string;
+    display_name?: string;
+    membership_level?: string;
+    verified_at?: number | null;
+    updated_at?: number | null;
+    last_error_code?: string;
+  };
+};
+
 const credentialTarget = (kind: WinkGoXiaozhiSecretKind | 'runtime'): string => `${CREDENTIAL_PREFIX}.${kind}.token`;
+
+const normalizeNeteaseAccountStatus = (payload: NeteaseAccountResponse): WinkGoNeteaseAccountStatus => {
+  const account = payload.account;
+  if (!account || !['unbound', 'active', 'needs_rebind'].includes(account.state || '')) {
+    throw new Error('music_account_response_invalid');
+  }
+  return {
+    configured: account.configured === true,
+    state: account.state as WinkGoNeteaseAccountStatus['state'],
+    uid: bounded(account.uid, 80),
+    displayName: bounded(account.display_name, 120),
+    membershipLevel: bounded(account.membership_level, 80),
+    verifiedAt: Number.isFinite(account.verified_at) ? Number(account.verified_at) : null,
+    updatedAt: Number.isFinite(account.updated_at) ? Number(account.updated_at) : null,
+    lastErrorCode: bounded(account.last_error_code, 120),
+  };
+};
+
+export const normalizeWinkGoNeteaseMusicU = (input: string): string => {
+  let value = input.trim();
+  if (value.includes(';')) throw new Error('netease_music_u_invalid');
+  if (value.startsWith('MUSIC_U=')) value = value.slice('MUSIC_U='.length);
+  value = value.trim();
+  if (value.length < 64 || value.length > 8 * 1024 || [...value].some((character) => character.charCodeAt(0) < 33)) {
+    throw new Error('netease_music_u_invalid');
+  }
+  return value;
+};
+
+const requestNeteaseAccount = async (
+  method: 'GET' | 'POST' | 'DELETE',
+  input?: string
+): Promise<WinkGoNeteaseAccountStatus> => {
+  const authSession = winkGoCloudAuthService.getSession();
+  if (!authSession.authenticated || !authSession.user?.id) throw new Error('winkgo_account_login_required');
+  const config = await loadConfigFile();
+  const relayEndpoint = new URL(config.relayUrl || DEFAULT_RELAY_URL);
+  relayEndpoint.protocol = relayEndpoint.protocol === 'ws:' ? 'http:' : 'https:';
+  relayEndpoint.pathname = '/api/desktop/music/netease';
+  relayEndpoint.search = '';
+  const licenseAssertion = await musicAccountIdentityStore.syncLicenseAssertionFromSession(authSession.user.id);
+  musicAccountIdentityStore.clearCache();
+  const identity = await musicAccountIdentityStore.load();
+  relayEndpoint.searchParams.set('accountId', identity.accountId);
+  relayEndpoint.searchParams.set('installationId', identity.installationId);
+  relayEndpoint.searchParams.set('desktopId', identity.desktopId);
+  relayEndpoint.searchParams.set('agentId', 'winkgo-desktop-agent');
+  const response = await net.fetch(relayEndpoint.toString(), {
+    method,
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${identity.deviceToken}`,
+      'X-Winkgo-License-Assertion': licenseAssertion,
+      'X-Winkgo-Desktop-Id': identity.desktopId,
+      'X-Winkgo-Timestamp': String(Date.now()),
+      'X-Winkgo-Nonce': randomBytes(18).toString('base64url'),
+      ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+    },
+    ...(method === 'POST' ? { body: JSON.stringify({ music_u: normalizeWinkGoNeteaseMusicU(input || '') }) } : {}),
+    signal: AbortSignal.timeout(20_000),
+  });
+  const payload = (await response.json().catch(() => ({}))) as NeteaseAccountResponse;
+  if (!response.ok || payload.ok !== true) {
+    throw new Error(bounded(payload.error || payload.message, 240) || `music_account_http_${response.status}`);
+  }
+  return normalizeNeteaseAccountStatus(payload);
+};
 
 const ensureRuntimeAccessToken = async (): Promise<string> => {
   if (runtimeAccessTokenPromise) return runtimeAccessTokenPromise;
@@ -836,6 +922,14 @@ export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionRe
     message: [probe.detail, ...loaded].join('；'),
   };
 };
+
+export const getWinkGoNeteaseAccount = async (): Promise<WinkGoNeteaseAccountStatus> => requestNeteaseAccount('GET');
+
+export const bindWinkGoNeteaseAccount = async (musicU: string): Promise<WinkGoNeteaseAccountStatus> =>
+  requestNeteaseAccount('POST', musicU);
+
+export const unbindWinkGoNeteaseAccount = async (): Promise<WinkGoNeteaseAccountStatus> =>
+  requestNeteaseAccount('DELETE');
 
 /** Exact local Runtime tool boundary used by deterministic desktop automation. */
 export const callWinkGoRuntimeTool = async (

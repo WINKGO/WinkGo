@@ -39,6 +39,7 @@
     "agreementRequired": "請先閱讀並同意服務條款與隱私政策",
     "empty": "請輸入使用者名稱與密碼",
     "phoneRequired": "註冊時請填寫手機號碼",
+    "usernameNumeric": "使用者名稱不能全部由數字組成",
     "phoneInvalid": "請輸入有效的中國大陸手機號碼，或以 + 開頭的國際號碼",
     "invalidCredentials": "使用者名稱或密碼錯誤",
     "accountExists": "此帳號或手機號碼可能已經登記，請直接登入或更換資料",

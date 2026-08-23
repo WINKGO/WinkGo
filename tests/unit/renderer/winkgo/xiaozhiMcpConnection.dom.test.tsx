@@ -16,6 +16,9 @@ const mocks = vi.hoisted(() => ({
   refreshBindingCode: vi.fn(),
   authorizeFirewall: vi.fn(),
   detectLanIp: vi.fn(),
+  getNeteaseAccount: vi.fn(),
+  bindNeteaseAccount: vi.fn(),
+  unbindNeteaseAccount: vi.fn(),
   statusHandler: undefined as ((snapshot: typeof snapshot) => void) | undefined,
   navigate: vi.fn(),
 }));
@@ -34,6 +37,9 @@ vi.mock('@/common', () => ({
       refreshBindingCode: { invoke: mocks.refreshBindingCode },
       authorizeFirewall: { invoke: mocks.authorizeFirewall },
       detectLanIp: { invoke: mocks.detectLanIp },
+      getNeteaseAccount: { invoke: mocks.getNeteaseAccount },
+      bindNeteaseAccount: { invoke: mocks.bindNeteaseAccount },
+      unbindNeteaseAccount: { invoke: mocks.unbindNeteaseAccount },
       statusChanged: {
         on: (handler: (next: typeof snapshot) => void) => {
           mocks.statusHandler = handler;
@@ -61,6 +67,29 @@ vi.mock('react-i18next', () => ({
         'settings.mcpWorkspace.bindingHelp': '如果设备码显示失效，请重新获取设备码，同时确认电脑防火墙和WebUI已开启。',
         'settings.mcpWorkspace.bindingHelpLabel': '查看设备绑定帮助',
         'settings.mcpWorkspace.webuiConfiguration': 'WebUI 配置',
+        'settings.mcpWorkspace.neteaseAccount.title': '网易云音乐账号',
+        'settings.mcpWorkspace.neteaseAccount.description': '绑定自己的网易云账号',
+        'settings.mcpWorkspace.neteaseAccount.statusUnbound': '未绑定',
+        'settings.mcpWorkspace.neteaseAccount.statusActive': '已绑定',
+        'settings.mcpWorkspace.neteaseAccount.statusNeedsRebind': '登录已失效',
+        'settings.mcpWorkspace.neteaseAccount.accountLabel': '网易云账号',
+        'settings.mcpWorkspace.neteaseAccount.uidLabel': 'UID',
+        'settings.mcpWorkspace.neteaseAccount.membershipLabel': '会员状态',
+        'settings.mcpWorkspace.neteaseAccount.inputLabel': 'MUSIC_U',
+        'settings.mcpWorkspace.neteaseAccount.placeholder': '只粘贴 MUSIC_U 的值',
+        'settings.mcpWorkspace.neteaseAccount.disclosure': '凭据会加密保存，且不得填写密码或整段 Cookie。',
+        'settings.mcpWorkspace.neteaseAccount.bind': '验证并绑定',
+        'settings.mcpWorkspace.neteaseAccount.rebind': '重新绑定',
+        'settings.mcpWorkspace.neteaseAccount.unbind': '解除绑定',
+        'settings.mcpWorkspace.neteaseAccount.refresh': '刷新状态',
+        'settings.mcpWorkspace.neteaseAccount.unbindConfirm': '确认解除绑定？',
+        'settings.mcpWorkspace.neteaseAccount.bindSuccess': '网易云账号验证并绑定成功。',
+        'settings.mcpWorkspace.neteaseAccount.unbindSuccess': '网易云账号已解除绑定。',
+        'settings.mcpWorkspace.neteaseAccount.inputInvalid': '请输入有效的 MUSIC_U。',
+        'settings.mcpWorkspace.neteaseAccount.loginRequired': '请先登录 WINK GO 账号。',
+        'settings.mcpWorkspace.neteaseAccount.desktopBindingRequired': '请先绑定同一个小程序账号。',
+        'settings.mcpWorkspace.neteaseAccount.serviceUnavailable': '网易云账号服务暂不可用。',
+        'settings.mcpWorkspace.neteaseAccount.unknownMembership': '未知',
       };
       return (translations[key] ?? key).replace('{{domain}}', options?.domain ?? '');
     },
@@ -165,6 +194,32 @@ describe('XiaozhiMcpConnection', () => {
     });
     mocks.refreshBindingCode.mockResolvedValue({ success: true, data: snapshot });
     mocks.authorizeFirewall.mockResolvedValue({ success: true, data: snapshot });
+    mocks.getNeteaseAccount.mockResolvedValue({
+      success: true,
+      data: {
+        configured: false,
+        state: 'unbound',
+        uid: '',
+        displayName: '',
+        membershipLevel: '',
+        verifiedAt: null,
+        updatedAt: null,
+        lastErrorCode: '',
+      },
+    });
+    mocks.bindNeteaseAccount.mockResolvedValue({
+      success: true,
+      data: {
+        configured: true,
+        state: 'active',
+        uid: '123456',
+        displayName: '测试账号',
+        membershipLevel: '网易云会员',
+        verifiedAt: 1,
+        updatedAt: 1,
+        lastErrorCode: '',
+      },
+    });
   });
 
   it('shows a neutral detection state before the first Runtime snapshot arrives', () => {
@@ -288,5 +343,52 @@ describe('XiaozhiMcpConnection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'WebUI 配置' }));
 
     expect(mocks.navigate).toHaveBeenCalledWith('/settings/webui');
+  });
+
+  it('shows only sanitized NetEase account metadata after status refresh', async () => {
+    mocks.getNeteaseAccount.mockResolvedValue({
+      success: true,
+      data: {
+        configured: true,
+        state: 'active',
+        uid: '123456',
+        displayName: '测试账号',
+        membershipLevel: '网易云会员',
+        verifiedAt: 1,
+        updatedAt: 1,
+        lastErrorCode: '',
+      },
+    });
+
+    render(<XiaozhiMcpConnection />);
+
+    expect(await screen.findByText('测试账号')).toBeInTheDocument();
+    expect(screen.getByText('123456')).toBeInTheDocument();
+    expect(screen.getByText('网易云会员')).toBeInTheDocument();
+    expect(screen.queryByText(/MUSIC_U=/)).toBeNull();
+  });
+
+  it('submits MUSIC_U once and clears the secret input after binding', async () => {
+    render(<XiaozhiMcpConnection />);
+    const input = await screen.findByPlaceholderText('只粘贴 MUSIC_U 的值');
+    const musicU = 'm'.repeat(64);
+    fireEvent.change(input, { target: { value: musicU } });
+    fireEvent.click(screen.getByRole('button', { name: '验证并绑定' }));
+
+    await waitFor(() => expect(mocks.bindNeteaseAccount).toHaveBeenCalledWith({ musicU }));
+    expect(input).toHaveValue('');
+    expect(await screen.findByText('测试账号')).toBeInTheDocument();
+  });
+
+  it('shows a safe binding requirement without exposing a raw server response', async () => {
+    mocks.getNeteaseAccount.mockResolvedValue({
+      success: false,
+      error: 'desktop_miniapp_binding_required',
+    });
+
+    render(<XiaozhiMcpConnection />);
+
+    expect(await screen.findByText('请先绑定同一个小程序账号。')).toBeInTheDocument();
+    expect(screen.queryByText('desktop_miniapp_binding_required')).toBeNull();
   });
 });

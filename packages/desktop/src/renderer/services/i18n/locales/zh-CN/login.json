@@ -38,6 +38,7 @@
   "errors": {
     "agreementRequired": "请先阅读并同意服务条款和隐私政策",
     "empty": "请输入用户名和密码",
+    "usernameNumeric": "用户名不能全部由数字组成",
     "phoneRequired": "注册时请填写手机号",
     "phoneInvalid": "请输入有效的中国大陆手机号，或以 + 开头的国际号码",
     "invalidCredentials": "用户名或密码错误",

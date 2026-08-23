@@ -39,6 +39,7 @@
     "agreementRequired": "Lisez et acceptez les Conditions d’utilisation et la Politique de confidentialité avant de continuer",
     "empty": "Veuillez entrer un nom d'utilisateur et un mot de passe",
     "phoneRequired": "Un numéro de mobile est requis pour l'inscription",
+    "usernameNumeric": "Le nom d’utilisateur ne peut pas contenir uniquement des chiffres",
     "phoneInvalid": "Saisissez un numéro chinois valide ou un numéro international commençant par +",
     "invalidCredentials": "Nom d'utilisateur ou mot de passe invalide",
     "accountExists": "Ce compte ou numéro de mobile est peut-être déjà enregistré. Connectez-vous ou utilisez d’autres informations",

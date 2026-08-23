@@ -1193,6 +1193,23 @@ export type WinkGoXiaozhiActionResult = {
   message: string;
 };
 
+export type WinkGoNeteaseAccountState = 'unbound' | 'active' | 'needs_rebind';
+
+export type WinkGoNeteaseAccountStatus = {
+  configured: boolean;
+  state: WinkGoNeteaseAccountState;
+  uid: string;
+  displayName: string;
+  membershipLevel: string;
+  verifiedAt: number | null;
+  updatedAt: number | null;
+  lastErrorCode: string;
+};
+
+export type WinkGoNeteaseAccountBindRequest = {
+  musicU: string;
+};
+
 export type WinkGoGeneratedImageRecoveryResult = {
   path: string | null;
   recovered: boolean;
@@ -1439,6 +1456,16 @@ export const winkGoXiaozhi = {
     'winkgo-xiaozhi.authorize-firewall'
   ),
   detectLanIp: bridge.buildProvider<WinkGoInspirationResult<string>, void>('winkgo-xiaozhi.detect-lan-ip'),
+  getNeteaseAccount: bridge.buildProvider<WinkGoInspirationResult<WinkGoNeteaseAccountStatus>, void>(
+    'winkgo-xiaozhi.netease-account.get'
+  ),
+  bindNeteaseAccount: bridge.buildProvider<
+    WinkGoInspirationResult<WinkGoNeteaseAccountStatus>,
+    WinkGoNeteaseAccountBindRequest
+  >('winkgo-xiaozhi.netease-account.bind'),
+  unbindNeteaseAccount: bridge.buildProvider<WinkGoInspirationResult<WinkGoNeteaseAccountStatus>, void>(
+    'winkgo-xiaozhi.netease-account.unbind'
+  ),
   statusChanged: bridge.buildEmitter<WinkGoXiaozhiSnapshot>('winkgo-xiaozhi.status-changed'),
   activityChanged: bridge.buildEmitter<WinkGoXiaozhiActivity>('winkgo-xiaozhi.activity-changed'),
 };

@@ -10,7 +10,9 @@ import { winkGoCloudAuthService } from '@process/services/WinkGoCloudAuthService
 import { requireWinkGoCapability } from '@process/services/winkGoEditionGuard';
 import {
   authorizeWinkGoXiaozhiFirewall,
+  bindWinkGoNeteaseAccount,
   detectWinkGoLanIp,
+  getWinkGoNeteaseAccount,
   getWinkGoXiaozhiSnapshot,
   refreshWinkGoBindingCode,
   resolveWinkGoXiaozhiRuntimeLogPath,
@@ -20,6 +22,7 @@ import {
   stopWinkGoRemoteGateway,
   subscribeWinkGoXiaozhiStatus,
   testWinkGoXiaozhiConnections,
+  unbindWinkGoNeteaseAccount,
 } from '@process/services/WinkGoXiaozhiService';
 import { WinkGoXiaozhiActivityMonitor } from '@process/services/WinkGoXiaozhiActivityService';
 
@@ -67,6 +70,11 @@ export function initWinkGoXiaozhiBridge(): void {
   ipcBridge.winkGoXiaozhi.refreshBindingCode.provider(() => capturePro(refreshWinkGoBindingCode));
   ipcBridge.winkGoXiaozhi.authorizeFirewall.provider(() => capturePro(authorizeWinkGoXiaozhiFirewall));
   ipcBridge.winkGoXiaozhi.detectLanIp.provider(() => capturePro(async () => detectWinkGoLanIp()));
+  ipcBridge.winkGoXiaozhi.getNeteaseAccount.provider(() => capturePro(getWinkGoNeteaseAccount));
+  ipcBridge.winkGoXiaozhi.bindNeteaseAccount.provider((request) =>
+    capturePro(() => bindWinkGoNeteaseAccount(request.musicU))
+  );
+  ipcBridge.winkGoXiaozhi.unbindNeteaseAccount.provider(() => capturePro(unbindWinkGoNeteaseAccount));
   const unsubscribe = subscribeWinkGoXiaozhiStatus((snapshot) => {
     ipcBridge.winkGoXiaozhi.statusChanged.emit(snapshot);
   });
@@ -79,13 +87,13 @@ export function initWinkGoXiaozhiBridge(): void {
     hasXiaozhiCapability: winkGoCloudAuthService.hasCapability('mcp.miniapp'),
     startRuntime: startWinkGoXiaozhiRuntime,
   }).catch((error) => {
-      // Starting here also runs the packaged-Runtime upgrade check before the
-      // ESP32 channel reconnects, so a customer never keeps routing through a
-      // stale executable merely because they did not open the MCP settings page.
-      console.warn(
-        '[WINK GO Xiaozhi] 启动时更新并连接 Runtime 失败：',
-        error instanceof Error ? error.message : String(error)
-      );
+    // Starting here also runs the packaged-Runtime upgrade check before the
+    // ESP32 channel reconnects, so a customer never keeps routing through a
+    // stale executable merely because they did not open the MCP settings page.
+    console.warn(
+      '[WINK GO Xiaozhi] 启动时更新并连接 Runtime 失败：',
+      error instanceof Error ? error.message : String(error)
+    );
   });
   if (winkGoCloudAuthService.hasUsableSession() && winkGoCloudAuthService.hasCapability('remote.desktop')) {
     void startWinkGoRemoteGateway().catch(() => {

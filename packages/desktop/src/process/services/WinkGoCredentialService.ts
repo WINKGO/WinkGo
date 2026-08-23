@@ -239,7 +239,10 @@ const containsControlCharacter = (value: string): boolean =>
     return codePoint < 32 || codePoint === 127;
   });
 
-export function validateWinkGoAuthCredentials(credentials: WinkGoAuthCredentials): WinkGoCredentialValidation {
+export function validateWinkGoAuthCredentials(
+  credentials: WinkGoAuthCredentials,
+  options: { allowLegacyNumericUsername?: boolean } = {}
+): WinkGoCredentialValidation {
   const username = normalizeUsername(credentials.username);
   if (
     username.length < MIN_USERNAME_LENGTH ||
@@ -247,6 +250,9 @@ export function validateWinkGoAuthCredentials(credentials: WinkGoAuthCredentials
     containsControlCharacter(username)
   ) {
     return { valid: false, username, message: 'username' };
+  }
+  if (!options.allowLegacyNumericUsername && /^\d+$/.test(username)) {
+    return { valid: false, username, message: 'usernameNumeric' };
   }
   if (credentials.password.length < MIN_PASSWORD_LENGTH || credentials.password.length > MAX_PASSWORD_LENGTH) {
     return { valid: false, username, message: 'password' };
@@ -331,7 +337,7 @@ export class WinkGoDesktopAuthService {
 
   async login(credentials: WinkGoAuthCredentials): Promise<WinkGoAuthResult> {
     return this.runExclusive(async () => {
-      const validation = validateWinkGoAuthCredentials(credentials);
+      const validation = validateWinkGoAuthCredentials(credentials, { allowLegacyNumericUsername: true });
       if (!validation.valid) {
         return { success: false, code: 'invalidCredentials' };
       }
