@@ -1,6 +1,6 @@
 {
   "name": "wink-go",
-  "version": "2.2.19",
+  "version": "2.2.20",
   "private": true,
   "description": "WINK GO — a local-first AI agent workspace for agents, models, skills, MCP, files, automation, and Dynamic Island.",
   "keywords": [
