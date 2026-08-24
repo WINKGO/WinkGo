@@ -995,6 +995,14 @@ try {
 
   const isWindowsBuild = builderArgs.includes('--win') || builderArgs.includes('--all');
   if (isWindowsBuild) {
+    // The floating island relies on a Windows OLE drop target. Build it from
+    // source for every Windows package so electron-builder cannot silently
+    // omit the addon and ship a degraded file-drop experience.
+    execSync('node scripts/prepare-winkgo-native-drop.cjs', {
+      stdio: 'inherit',
+      env: { ...process.env, WINKGO_NATIVE_DROP_ARCH: targetArch },
+    });
+
     // A clean customer machine has no historical Runtime under LOCALAPPDATA.
     // Stage and verify the exact signed Runtime payload before electron-builder
     // copies it to resources/winkgo-runtime.

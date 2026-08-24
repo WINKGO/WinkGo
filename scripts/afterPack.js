@@ -37,6 +37,14 @@ function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) 
     throw new Error(`Packaged app is missing required bundled resource(s): ${result.missing.join(', ')}`);
   }
 
+  if (electronPlatformName === 'win32') {
+    const nativeDropPath = path.join(resourcesDir, 'native', 'winkgo_native_drop.node');
+    if (!fs.existsSync(nativeDropPath) || fs.statSync(nativeDropPath).size < 1024) {
+      throw new Error(`WINK GO native drop addon is missing or incomplete: ${nativeDropPath}`);
+    }
+    console.log(`   ✓ WINK GO native drop verified for ${targetArch}`);
+  }
+
   console.log(`   ✓ Bundled resources verified for ${result.runtimeKey} (${result.checked.length} checks)`);
 }
 
