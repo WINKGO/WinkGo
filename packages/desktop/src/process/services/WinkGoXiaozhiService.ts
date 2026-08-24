@@ -460,9 +460,9 @@ const probeRuntime = async (runtimeApi: string): Promise<WinkGoXiaozhiLocalProbe
 
 const probeTcpPort = async (host: string, port: number): Promise<WinkGoXiaozhiLocalProbe> => {
   const started = now();
-  const net = await import('node:net');
+  const nodeNet = await import('node:net');
   return new Promise((resolve) => {
-    const socket = net.createConnection({ host, port });
+    const socket = nodeNet.createConnection({ host, port });
     let settled = false;
     const finish = (ok: boolean): void => {
       if (settled) return;
