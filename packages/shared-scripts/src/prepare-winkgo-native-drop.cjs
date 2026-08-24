@@ -5,6 +5,15 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
+const MIN_NATIVE_DROP_BYTES = 1024;
+
+function validateNativeDropBinary(binaryPath) {
+  if (!fs.existsSync(binaryPath) || fs.statSync(binaryPath).size < MIN_NATIVE_DROP_BYTES) {
+    throw new Error(`WINK GO native drop output is missing or incomplete: ${binaryPath}`);
+  }
+  return fs.statSync(binaryPath).size;
+}
+
 function resolveNativeDropPaths(projectRoot, arch, targetRoot) {
   return {
     manifestPath: path.join(projectRoot, 'packages', 'desktop', 'native', 'winkgo-native-drop', 'Cargo.toml'),
@@ -14,7 +23,7 @@ function resolveNativeDropPaths(projectRoot, arch, targetRoot) {
 }
 
 function prepareWinkGoNativeDrop(options = {}) {
-  const projectRoot = path.resolve(options.projectRoot || path.join(__dirname, '..'));
+  const projectRoot = path.resolve(options.projectRoot || path.join(__dirname, '..', '..', '..'));
   const platform = options.platform || process.platform;
   const arch = options.arch || process.env.WINKGO_NATIVE_DROP_ARCH || process.arch;
   const runner = options.runner || spawnSync;
@@ -41,13 +50,10 @@ function prepareWinkGoNativeDrop(options = {}) {
   }
 
   const builtDll = path.join(paths.cargoTargetRoot, 'release', 'winkgo_native_drop.dll');
-  if (!fs.existsSync(builtDll) || fs.statSync(builtDll).size < 1024) {
-    throw new Error(`WINK GO native drop output is missing or incomplete: ${builtDll}`);
-  }
-
+  validateNativeDropBinary(builtDll);
   fs.mkdirSync(path.dirname(paths.outputPath), { recursive: true });
   fs.copyFileSync(builtDll, paths.outputPath);
-  const size = fs.statSync(paths.outputPath).size;
+  const size = validateNativeDropBinary(paths.outputPath);
   console.log(`Prepared WINK GO native drop: ${paths.outputPath} (${size} bytes)`);
   return { skipped: false, outputPath: paths.outputPath, size };
 }
@@ -61,4 +67,9 @@ if (require.main === module) {
   }
 }
 
-module.exports = { prepareWinkGoNativeDrop, resolveNativeDropPaths };
+module.exports = {
+  MIN_NATIVE_DROP_BYTES,
+  prepareWinkGoNativeDrop,
+  resolveNativeDropPaths,
+  validateNativeDropBinary,
+};

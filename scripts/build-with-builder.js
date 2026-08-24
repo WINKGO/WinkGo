@@ -998,7 +998,7 @@ try {
     // The floating island relies on a Windows OLE drop target. Build it from
     // source for every Windows package so electron-builder cannot silently
     // omit the addon and ship a degraded file-drop experience.
-    execSync('node scripts/prepare-winkgo-native-drop.cjs', {
+    execSync('node packages/shared-scripts/src/prepare-winkgo-native-drop.cjs', {
       stdio: 'inherit',
       env: { ...process.env, WINKGO_NATIVE_DROP_ARCH: targetArch },
     });

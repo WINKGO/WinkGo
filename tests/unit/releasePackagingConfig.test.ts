@@ -189,6 +189,17 @@ describe('release packaging configuration', () => {
     expect(macBlock).not.toContain('winkgo_native_drop.node');
   });
 
+  it('builds and verifies the Windows OLE native addon before release', () => {
+    const buildScript = readProjectFile('scripts/build-with-builder.js');
+    const afterPack = readProjectFile('scripts/afterPack.js');
+
+    expect(buildScript).toMatch(
+      /if \(isWindowsBuild\) \{[\s\S]*?packages\/shared-scripts\/src\/prepare-winkgo-native-drop\.cjs/
+    );
+    expect(afterPack).toContain("electronPlatformName === 'win32'");
+    expect(afterPack).toContain('validateNativeDropBinary(nativeDropPath)');
+  });
+
   it('ships every standalone builtin MCP entry point outside app.asar', () => {
     const config = readProjectFile('packages/desktop/electron-builder.yml');
     const afterPack = readProjectFile('scripts/afterPack.js');

@@ -5,13 +5,15 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const { prepareWinkGoNativeDrop } = require('../../../scripts/prepare-winkgo-native-drop.cjs') as {
-  prepareWinkGoNativeDrop: (options: Record<string, unknown>) => {
-    skipped: boolean;
-    outputPath?: string;
-    size?: number;
+const { prepareWinkGoNativeDrop, validateNativeDropBinary } =
+  require('../../../packages/shared-scripts/src/prepare-winkgo-native-drop.cjs') as {
+    prepareWinkGoNativeDrop: (options: Record<string, unknown>) => {
+      skipped: boolean;
+      outputPath?: string;
+      size?: number;
+    };
+    validateNativeDropBinary: (binaryPath: string) => number;
   };
-};
 
 describe('prepare-winkgo-native-drop', () => {
   it('copies a verified Cargo DLL to the Node addon packaging path', () => {
@@ -65,6 +67,38 @@ describe('prepare-winkgo-native-drop', () => {
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
       rmSync(targetRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a 1023-byte truncated addon at the packaging boundary', () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'winkgo-native-drop-small-'));
+    try {
+      const binaryPath = join(tempRoot, 'winkgo_native_drop.node');
+      writeFileSync(binaryPath, Buffer.alloc(1023, 1));
+      expect(() => validateNativeDropBinary(binaryPath)).toThrow('output is missing or incomplete');
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed when Cargo exits with a nonzero status', () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), 'winkgo-native-drop-cargo-failure-'));
+    try {
+      const manifestPath = join(projectRoot, 'packages', 'desktop', 'native', 'winkgo-native-drop', 'Cargo.toml');
+      mkdirSync(join(manifestPath, '..'), { recursive: true });
+      writeFileSync(manifestPath, '[package]\nname = "winkgo-native-drop"\nversion = "0.1.0"\n');
+
+      expect(() =>
+        prepareWinkGoNativeDrop({
+          projectRoot,
+          platform: 'win32',
+          arch: process.arch,
+          stdio: 'ignore',
+          runner: () => ({ status: 2 }),
+        })
+      ).toThrow('native drop build failed: exit 2');
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
     }
   });
 

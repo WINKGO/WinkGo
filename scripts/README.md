@@ -6,15 +6,14 @@ This directory contains scripts for building and packaging WINK GO across differ
 
 ## Scripts Overview
 
-| Script                    | Lines | Purpose                                         |
-| ------------------------- | ----- | ----------------------------------------------- |
-| `build-with-builder.js`   | 116   | Coordinates Electron Forge and electron-builder |
-| `rebuildNativeModules.js` | 219   | **Unified native module rebuild utility**       |
-| `beforeBuild.js`          | 38    | Pre-packaging native module rebuild hook        |
-| `afterPack.js`            | 67    | Post-packaging verification (Linux only)        |
-| `afterSign.js`            | 47    | macOS code signing and notarization             |
-
-**Total**: 487 lines (down from 711 lines before optimization)
+| Script                                                       | Lines | Purpose                                                 |
+| ------------------------------------------------------------ | ----- | ------------------------------------------------------- |
+| `build-with-builder.js`                                      | 116   | Coordinates Electron Forge and electron-builder         |
+| `rebuildNativeModules.js`                                    | 219   | **Unified native module rebuild utility**               |
+| `beforeBuild.js`                                             | 38    | Pre-packaging native module rebuild hook                |
+| `afterPack.js`                                               | —     | Post-packaging native rebuild and release verification  |
+| `packages/shared-scripts/src/prepare-winkgo-native-drop.cjs` | —     | Builds the Windows OLE file-drop addon before packaging |
+| `afterSign.js`                                               | 47    | macOS code signing and notarization                     |
 
 ## Architecture
 
@@ -25,13 +24,14 @@ npm run dist:*
     ↓
 build-with-builder.js
     ↓
-    ├─→ Electron Forge (webpack compilation)
+    ├─→ electron-vite (main, preload and renderer compilation)
+    ├─→ Windows native OLE drop addon build
     ↓
 electron-builder
     ↓
     ├─→ beforeBuild.js → rebuildNativeModules.js (all platforms)
     ├─→ Package app
-    ├─→ afterPack.js → rebuildNativeModules.js (Linux only)
+    ├─→ afterPack.js → native rebuild plus resource/legal/addon verification
     └─→ afterSign.js (macOS only)
 ```
 
@@ -66,6 +66,8 @@ This is the core module that handles all native module rebuilding. It provides:
 #### Windows
 
 - **Modules rebuilt**: `better-sqlite3`
+- **Pre-package addon**: `winkgo-native-drop` is built from Cargo source in a short temporary target path and copied as `winkgo_native_drop.node`
+- **Post-package gate**: the OLE addon must exist and be at least 1024 bytes or the build fails
 - **Skipped**: `node-pty` (uses prebuilt binaries)
 - **Environment**: MSVS 2022, Windows SDK 10.0.19041.0
 

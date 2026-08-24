@@ -12,6 +12,7 @@ const {
 const {
   verifyBundledWinkGoCoreResources,
 } = require('../packages/shared-scripts/src/verify-bundled-winkgo-core-resources');
+const { validateNativeDropBinary } = require('../packages/shared-scripts/src/prepare-winkgo-native-drop.cjs');
 
 /**
  * afterPack hook for electron-builder
@@ -39,9 +40,7 @@ function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) 
 
   if (electronPlatformName === 'win32') {
     const nativeDropPath = path.join(resourcesDir, 'native', 'winkgo_native_drop.node');
-    if (!fs.existsSync(nativeDropPath) || fs.statSync(nativeDropPath).size < 1024) {
-      throw new Error(`WINK GO native drop addon is missing or incomplete: ${nativeDropPath}`);
-    }
+    validateNativeDropBinary(nativeDropPath);
     console.log(`   ✓ WINK GO native drop verified for ${targetArch}`);
   }
 
