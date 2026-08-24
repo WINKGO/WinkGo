@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -229,8 +229,10 @@ describe('XiaozhiMcpConnection', () => {
     render(<XiaozhiMcpConnection />);
     const input = await screen.findByPlaceholderText('只粘贴 MUSIC_U 的值');
     fireEvent.change(input, { target: { value: 'm'.repeat(64) } });
-    fireEvent.click(screen.getByRole('button', { name: '验证并绑定' }));
-    expect(await screen.findByText('网易云账号服务暂不可用。')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '验证并绑定' }));
+      await Promise.resolve();
+    });
     return input as HTMLInputElement;
   };
 
@@ -402,6 +404,12 @@ describe('XiaozhiMcpConnection', () => {
     await triggerRejectedBinding();
 
     await waitFor(() => expect(screen.getByRole('button', { name: '刷新状态' })).toBeEnabled());
+  });
+
+  it('shows a safe service error when binding IPC rejects', async () => {
+    await triggerRejectedBinding();
+
+    expect(await screen.findByText('网易云账号服务暂不可用。')).toBeInTheDocument();
   });
 
   it('releases the loading state when account status IPC rejects', async () => {
