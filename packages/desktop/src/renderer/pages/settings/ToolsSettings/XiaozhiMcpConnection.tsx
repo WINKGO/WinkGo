@@ -357,21 +357,47 @@ const XiaozhiMcpConnection: React.FC = () => {
     [t]
   );
 
-  const loadNeteaseAccount = useCallback(
-    async (notify = false): Promise<void> => {
-      setNeteaseBusy(true);
-      const result = await ipcBridge.winkGoXiaozhi.getNeteaseAccount.invoke();
-      setNeteaseBusy(false);
-      if (!result.success || !result.data) {
-        const message = neteaseErrorMessage(result.error || '');
-        setNeteaseError(message);
-        if (notify) Message.error(message);
-        return;
+  const runNeteaseAccountAction = useCallback(
+    async (
+      action: () => Promise<{
+        success: boolean;
+        data?: WinkGoNeteaseAccountStatus | null;
+        error?: string;
+      }>,
+      options: {
+        fallbackError: string;
+        notifyError?: boolean;
+        successMessage?: string;
       }
+    ): Promise<void> => {
+      setNeteaseBusy(true);
       setNeteaseError('');
-      setNeteaseAccount(result.data);
+      try {
+        const result = await action();
+        if (!result.success || !result.data) {
+          throw new Error(result.error || options.fallbackError);
+        }
+        setNeteaseAccount(result.data);
+        if (options.successMessage) Message.success(options.successMessage);
+      } catch (error) {
+        const message = neteaseErrorMessage(error instanceof Error ? error.message : String(error));
+        setNeteaseError(message);
+        if (options.notifyError) Message.error(message);
+      } finally {
+        setNeteaseBusy(false);
+      }
     },
     [neteaseErrorMessage]
+  );
+
+  const loadNeteaseAccount = useCallback(
+    async (notify = false): Promise<void> => {
+      await runNeteaseAccountAction(() => ipcBridge.winkGoXiaozhi.getNeteaseAccount.invoke(), {
+        fallbackError: 'music_account_status_failed',
+        notifyError: notify,
+      });
+    },
+    [runNeteaseAccountAction]
   );
 
   const loadSnapshot = useCallback(async () => {
@@ -537,34 +563,21 @@ const XiaozhiMcpConnection: React.FC = () => {
   };
 
   const bindNeteaseAccount = async (): Promise<void> => {
-    setNeteaseBusy(true);
-    setNeteaseError('');
-    const result = await ipcBridge.winkGoXiaozhi.bindNeteaseAccount.invoke({ musicU: neteaseMusicU });
+    const musicU = neteaseMusicU;
     setNeteaseMusicU('');
-    setNeteaseBusy(false);
-    if (!result.success || !result.data) {
-      const message = neteaseErrorMessage(result.error || '');
-      setNeteaseError(message);
-      Message.error(message);
-      return;
-    }
-    setNeteaseAccount(result.data);
-    Message.success(t('settings.mcpWorkspace.neteaseAccount.bindSuccess'));
+    await runNeteaseAccountAction(() => ipcBridge.winkGoXiaozhi.bindNeteaseAccount.invoke({ musicU }), {
+      fallbackError: 'music_account_bind_failed',
+      notifyError: true,
+      successMessage: t('settings.mcpWorkspace.neteaseAccount.bindSuccess'),
+    });
   };
 
   const unbindNeteaseAccount = async (): Promise<void> => {
-    setNeteaseBusy(true);
-    setNeteaseError('');
-    const result = await ipcBridge.winkGoXiaozhi.unbindNeteaseAccount.invoke();
-    setNeteaseBusy(false);
-    if (!result.success || !result.data) {
-      const message = neteaseErrorMessage(result.error || '');
-      setNeteaseError(message);
-      Message.error(message);
-      return;
-    }
-    setNeteaseAccount(result.data);
-    Message.success(t('settings.mcpWorkspace.neteaseAccount.unbindSuccess'));
+    await runNeteaseAccountAction(() => ipcBridge.winkGoXiaozhi.unbindNeteaseAccount.invoke(), {
+      fallbackError: 'music_account_unbind_failed',
+      notifyError: true,
+      successMessage: t('settings.mcpWorkspace.neteaseAccount.unbindSuccess'),
+    });
   };
 
   const bindingCodeValid = Boolean(snapshot?.remoteGateway.bindingCode && bindingSeconds > 0);

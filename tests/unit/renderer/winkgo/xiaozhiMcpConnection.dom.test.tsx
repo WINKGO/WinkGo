@@ -105,6 +105,8 @@ vi.mock('@arco-design/web-react', async (importOriginal) => {
       success: vi.fn(),
       warning: vi.fn(),
     },
+    Popconfirm: ({ children, onOk }: { children: React.ReactElement; onOk?: () => void }) =>
+      React.cloneElement(children, { onClick: () => void onOk?.() }),
   };
 });
 
@@ -221,6 +223,16 @@ describe('XiaozhiMcpConnection', () => {
       },
     });
   });
+
+  const triggerRejectedBinding = async (): Promise<HTMLInputElement> => {
+    mocks.bindNeteaseAccount.mockRejectedValueOnce(new Error('ipc unavailable'));
+    render(<XiaozhiMcpConnection />);
+    const input = await screen.findByPlaceholderText('只粘贴 MUSIC_U 的值');
+    fireEvent.change(input, { target: { value: 'm'.repeat(64) } });
+    fireEvent.click(screen.getByRole('button', { name: '验证并绑定' }));
+    expect(await screen.findByText('网易云账号服务暂不可用。')).toBeInTheDocument();
+    return input as HTMLInputElement;
+  };
 
   it('shows a neutral detection state before the first Runtime snapshot arrives', () => {
     mocks.getSnapshot.mockImplementation(() => new Promise(() => undefined));
@@ -378,6 +390,51 @@ describe('XiaozhiMcpConnection', () => {
     await waitFor(() => expect(mocks.bindNeteaseAccount).toHaveBeenCalledWith({ musicU }));
     expect(input).toHaveValue('');
     expect(await screen.findByText('测试账号')).toBeInTheDocument();
+  });
+
+  it('clears the secret when binding IPC rejects', async () => {
+    const input = await triggerRejectedBinding();
+
+    expect(input).toHaveValue('');
+  });
+
+  it('releases the loading state when binding IPC rejects', async () => {
+    await triggerRejectedBinding();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '刷新状态' })).toBeEnabled());
+  });
+
+  it('releases the loading state when account status IPC rejects', async () => {
+    mocks.getNeteaseAccount.mockRejectedValueOnce(new Error('ipc unavailable'));
+    render(<XiaozhiMcpConnection />);
+
+    expect(await screen.findByText('网易云账号服务暂不可用。')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: '刷新状态' })).toBeEnabled());
+  });
+
+  it('releases the loading state when account unbinding IPC rejects', async () => {
+    mocks.getNeteaseAccount.mockResolvedValueOnce({
+      success: true,
+      data: {
+        configured: true,
+        state: 'active',
+        uid: '123456',
+        displayName: '测试账号',
+        membershipLevel: '网易云会员',
+        verifiedAt: 1,
+        updatedAt: 1,
+        lastErrorCode: '',
+      },
+    });
+    mocks.unbindNeteaseAccount.mockRejectedValueOnce(new Error('ipc unavailable'));
+    render(<XiaozhiMcpConnection />);
+
+    expect(await screen.findByText('测试账号')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '解除绑定' }));
+
+    await waitFor(() => expect(mocks.unbindNeteaseAccount).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('网易云账号服务暂不可用。')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: '刷新状态' })).toBeEnabled());
   });
 
   it('shows a safe binding requirement without exposing a raw server response', async () => {
