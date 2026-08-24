@@ -109,7 +109,14 @@ export const normalizeWinkGoNeteaseMusicU = (input: string): string => {
   if (value.includes(';')) throw new Error('netease_music_u_invalid');
   if (value.startsWith('MUSIC_U=')) value = value.slice('MUSIC_U='.length);
   value = value.trim();
-  if (value.length < 64 || value.length > 8 * 1024 || [...value].some((character) => character.charCodeAt(0) < 33)) {
+  if (
+    value.length < 64 ||
+    value.length > 8 * 1024 ||
+    [...value].some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 33 || code === 127;
+    })
+  ) {
     throw new Error('netease_music_u_invalid');
   }
   return value;

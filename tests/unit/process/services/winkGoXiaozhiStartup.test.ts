@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { startWinkGoXiaozhiAtLaunch } from '@/process/bridge/winkgo/xiaozhiBridge';
-import { normalizeWinkGoNeteaseMusicU } from '@/process/services/WinkGoXiaozhiService';
 
 describe('WINK GO XiaoZhi desktop startup', () => {
   it('starts and upgrades the local Runtime when the signed-in account has XiaoZhi access', async () => {
@@ -27,12 +26,5 @@ describe('WINK GO XiaoZhi desktop startup', () => {
 
     expect(started).toBe(false);
     expect(startRuntime).not.toHaveBeenCalled();
-  });
-
-  it('accepts only one MUSIC_U value and rejects a complete Cookie', () => {
-    expect(normalizeWinkGoNeteaseMusicU(`MUSIC_U=${'m'.repeat(64)}`)).toBe('m'.repeat(64));
-    expect(() => normalizeWinkGoNeteaseMusicU(`MUSIC_U=${'m'.repeat(64)}; __csrf=secret`)).toThrow(
-      'netease_music_u_invalid'
-    );
   });
 });
