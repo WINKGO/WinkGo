@@ -128,6 +128,10 @@ extraResources:
     to: legal/PRIVACY.md
   - from: TERMS.md
     to: legal/TERMS.md
+  # Wry license/source notices apply to the native Dynamic Island integration
+  # even when its Windows-only binary is not shipped on the current platform.
+  - from: packages/desktop/native/winkgo-native-drop/vendor/wry-0.55.1
+    to: legal/vendor/wry-0.55.1
   # winkgo_core binary (pre-compiled per platform/arch, ships its own bun runtime)
   - from: resources/bundled-winkgo-core
     to: bundled-winkgo-core
@@ -156,8 +160,6 @@ win:
     # Windows PE/Node addon and must never enter a signed macOS application.
     - from: packages/desktop/native/winkgo_native_drop.node
       to: native/winkgo_native_drop.node
-    - from: packages/desktop/native/winkgo-native-drop/vendor/wry-0.55.1
-      to: legal/vendor/wry-0.55.1
     # Full local Runtime prepared from its signed integrity manifest. The
     # desktop resolver loads the executable from this exact packaged path on a
     # clean customer machine before any user-data release exists.

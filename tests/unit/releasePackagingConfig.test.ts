@@ -184,7 +184,7 @@ describe('release packaging configuration', () => {
     const sharedResources = config.slice(0, config.indexOf('\nwin:'));
 
     expect(winBlock).toContain('packages/desktop/native/winkgo_native_drop.node');
-    expect(winBlock).toContain('packages/desktop/native/winkgo-native-drop/vendor/wry-0.55.1');
+    expect(sharedResources).toContain('packages/desktop/native/winkgo-native-drop/vendor/wry-0.55.1');
     expect(sharedResources).not.toContain('packages/desktop/native/winkgo_native_drop.node');
     expect(macBlock).not.toContain('winkgo_native_drop.node');
   });
