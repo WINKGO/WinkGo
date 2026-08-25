@@ -238,6 +238,7 @@ function redactAutomaticContextText(value: string): string {
   return value
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer <redacted>')
     .replace(/(MUSIC_U\s*=\s*)[^;\s"',}]+/gi, '$1<redacted>')
+    .replace(/((?:qm_keyst|qqmusic_key)\s*=\s*)[^;\s"',}]+/gi, '$1<redacted>')
     .replace(/\b(?:sk|key|token|api)[-_][A-Za-z0-9_-]{10,}\b/gi, '<redacted-token>')
     .replace(/\b(?:1[3-9]\d{9}|\+[1-9]\d{7,14})\b/g, '<redacted-phone>')
     .replace(/[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n\s]+\\)*[^\\/:*?"<>|\r\n\s]*/g, '<local-path>')

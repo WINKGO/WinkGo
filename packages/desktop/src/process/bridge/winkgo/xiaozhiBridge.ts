@@ -11,8 +11,10 @@ import { requireWinkGoCapability } from '@process/services/winkGoEditionGuard';
 import {
   authorizeWinkGoXiaozhiFirewall,
   bindWinkGoNeteaseAccount,
+  bindWinkGoQqMusicAccount,
   detectWinkGoLanIp,
   getWinkGoNeteaseAccount,
+  getWinkGoQqMusicAccount,
   getWinkGoXiaozhiSnapshot,
   refreshWinkGoBindingCode,
   resolveWinkGoXiaozhiRuntimeLogPath,
@@ -23,6 +25,7 @@ import {
   subscribeWinkGoXiaozhiStatus,
   testWinkGoXiaozhiConnections,
   unbindWinkGoNeteaseAccount,
+  unbindWinkGoQqMusicAccount,
 } from '@process/services/WinkGoXiaozhiService';
 import { WinkGoXiaozhiActivityMonitor } from '@process/services/WinkGoXiaozhiActivityService';
 
@@ -75,6 +78,11 @@ export function initWinkGoXiaozhiBridge(): void {
     capturePro(() => bindWinkGoNeteaseAccount(request.musicU))
   );
   ipcBridge.winkGoXiaozhi.unbindNeteaseAccount.provider(() => capturePro(unbindWinkGoNeteaseAccount));
+  ipcBridge.winkGoXiaozhi.getQqMusicAccount.provider(() => capturePro(getWinkGoQqMusicAccount));
+  ipcBridge.winkGoXiaozhi.bindQqMusicAccount.provider((request) =>
+    capturePro(() => bindWinkGoQqMusicAccount(request.cookie))
+  );
+  ipcBridge.winkGoXiaozhi.unbindQqMusicAccount.provider(() => capturePro(unbindWinkGoQqMusicAccount));
   const unsubscribe = subscribeWinkGoXiaozhiStatus((snapshot) => {
     ipcBridge.winkGoXiaozhi.statusChanged.emit(snapshot);
   });

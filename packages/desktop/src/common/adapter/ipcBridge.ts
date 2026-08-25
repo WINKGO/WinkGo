@@ -1193,11 +1193,11 @@ export type WinkGoXiaozhiActionResult = {
   message: string;
 };
 
-export type WinkGoNeteaseAccountState = 'unbound' | 'active' | 'needs_rebind';
+export type WinkGoMusicAccountState = 'unbound' | 'active' | 'needs_rebind';
 
-export type WinkGoNeteaseAccountStatus = {
+export type WinkGoMusicAccountStatus = {
   configured: boolean;
-  state: WinkGoNeteaseAccountState;
+  state: WinkGoMusicAccountState;
   uid: string;
   displayName: string;
   membershipLevel: string;
@@ -1206,8 +1206,16 @@ export type WinkGoNeteaseAccountStatus = {
   lastErrorCode: string;
 };
 
+export type WinkGoNeteaseAccountState = WinkGoMusicAccountState;
+export type WinkGoNeteaseAccountStatus = WinkGoMusicAccountStatus;
+export type WinkGoQqMusicAccountStatus = WinkGoMusicAccountStatus;
+
 export type WinkGoNeteaseAccountBindRequest = {
   musicU: string;
+};
+
+export type WinkGoQqMusicAccountBindRequest = {
+  cookie: string;
 };
 
 export type WinkGoGeneratedImageRecoveryResult = {
@@ -1465,6 +1473,16 @@ export const winkGoXiaozhi = {
   >('winkgo-xiaozhi.netease-account.bind'),
   unbindNeteaseAccount: bridge.buildProvider<WinkGoInspirationResult<WinkGoNeteaseAccountStatus>, void>(
     'winkgo-xiaozhi.netease-account.unbind'
+  ),
+  getQqMusicAccount: bridge.buildProvider<WinkGoInspirationResult<WinkGoQqMusicAccountStatus>, void>(
+    'winkgo-xiaozhi.qq-music-account.get'
+  ),
+  bindQqMusicAccount: bridge.buildProvider<
+    WinkGoInspirationResult<WinkGoQqMusicAccountStatus>,
+    WinkGoQqMusicAccountBindRequest
+  >('winkgo-xiaozhi.qq-music-account.bind'),
+  unbindQqMusicAccount: bridge.buildProvider<WinkGoInspirationResult<WinkGoQqMusicAccountStatus>, void>(
+    'winkgo-xiaozhi.qq-music-account.unbind'
   ),
   statusChanged: bridge.buildEmitter<WinkGoXiaozhiSnapshot>('winkgo-xiaozhi.status-changed'),
   activityChanged: bridge.buildEmitter<WinkGoXiaozhiActivity>('winkgo-xiaozhi.activity-changed'),

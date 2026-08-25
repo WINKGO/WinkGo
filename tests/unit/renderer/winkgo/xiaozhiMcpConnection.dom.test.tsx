@@ -19,6 +19,9 @@ const mocks = vi.hoisted(() => ({
   getNeteaseAccount: vi.fn(),
   bindNeteaseAccount: vi.fn(),
   unbindNeteaseAccount: vi.fn(),
+  getQqMusicAccount: vi.fn(),
+  bindQqMusicAccount: vi.fn(),
+  unbindQqMusicAccount: vi.fn(),
   statusHandler: undefined as ((snapshot: typeof snapshot) => void) | undefined,
   navigate: vi.fn(),
 }));
@@ -40,6 +43,9 @@ vi.mock('@/common', () => ({
       getNeteaseAccount: { invoke: mocks.getNeteaseAccount },
       bindNeteaseAccount: { invoke: mocks.bindNeteaseAccount },
       unbindNeteaseAccount: { invoke: mocks.unbindNeteaseAccount },
+      getQqMusicAccount: { invoke: mocks.getQqMusicAccount },
+      bindQqMusicAccount: { invoke: mocks.bindQqMusicAccount },
+      unbindQqMusicAccount: { invoke: mocks.unbindQqMusicAccount },
       statusChanged: {
         on: (handler: (next: typeof snapshot) => void) => {
           mocks.statusHandler = handler;
@@ -90,6 +96,29 @@ vi.mock('react-i18next', () => ({
         'settings.mcpWorkspace.neteaseAccount.desktopBindingRequired': '请先绑定同一个小程序账号。',
         'settings.mcpWorkspace.neteaseAccount.serviceUnavailable': '网易云账号服务暂不可用。',
         'settings.mcpWorkspace.neteaseAccount.unknownMembership': '未知',
+        'settings.mcpWorkspace.qqMusicAccount.title': 'QQ 音乐账号',
+        'settings.mcpWorkspace.qqMusicAccount.description': '绑定自己的 QQ 音乐账号',
+        'settings.mcpWorkspace.qqMusicAccount.statusUnbound': '未绑定',
+        'settings.mcpWorkspace.qqMusicAccount.statusActive': '已绑定',
+        'settings.mcpWorkspace.qqMusicAccount.statusNeedsRebind': '登录已失效',
+        'settings.mcpWorkspace.qqMusicAccount.accountLabel': 'QQ 音乐账号',
+        'settings.mcpWorkspace.qqMusicAccount.uidLabel': 'QQ 音乐 UID',
+        'settings.mcpWorkspace.qqMusicAccount.membershipLabel': '会员状态',
+        'settings.mcpWorkspace.qqMusicAccount.inputLabel': 'QQ 音乐登录 Cookie',
+        'settings.mcpWorkspace.qqMusicAccount.placeholder': '粘贴包含 uin 和 qm_keyst 的 QQ 音乐 Cookie',
+        'settings.mcpWorkspace.qqMusicAccount.disclosure': '仅提取必要字段并加密保存。',
+        'settings.mcpWorkspace.qqMusicAccount.bind': '验证并绑定 QQ 音乐',
+        'settings.mcpWorkspace.qqMusicAccount.rebind': '重新绑定 QQ 音乐',
+        'settings.mcpWorkspace.qqMusicAccount.unbind': '解除 QQ 音乐绑定',
+        'settings.mcpWorkspace.qqMusicAccount.refresh': '刷新 QQ 音乐状态',
+        'settings.mcpWorkspace.qqMusicAccount.unbindConfirm': '确认解除 QQ 音乐绑定？',
+        'settings.mcpWorkspace.qqMusicAccount.bindSuccess': 'QQ 音乐账号验证并绑定成功。',
+        'settings.mcpWorkspace.qqMusicAccount.unbindSuccess': 'QQ 音乐账号已解除绑定。',
+        'settings.mcpWorkspace.qqMusicAccount.inputInvalid': '请输入有效的 QQ 音乐 Cookie。',
+        'settings.mcpWorkspace.qqMusicAccount.loginRequired': '请先登录 WINK GO 账号。',
+        'settings.mcpWorkspace.qqMusicAccount.desktopBindingRequired': '请先绑定同一个小程序账号。',
+        'settings.mcpWorkspace.qqMusicAccount.serviceUnavailable': 'QQ 音乐账号服务暂不可用。',
+        'settings.mcpWorkspace.qqMusicAccount.unknownMembership': '未知',
       };
       return (translations[key] ?? key).replace('{{domain}}', options?.domain ?? '');
     },
@@ -217,6 +246,32 @@ describe('XiaozhiMcpConnection', () => {
         uid: '123456',
         displayName: '测试账号',
         membershipLevel: '网易云会员',
+        verifiedAt: 1,
+        updatedAt: 1,
+        lastErrorCode: '',
+      },
+    });
+    mocks.getQqMusicAccount.mockResolvedValue({
+      success: true,
+      data: {
+        configured: false,
+        state: 'unbound',
+        uid: '',
+        displayName: '',
+        membershipLevel: '',
+        verifiedAt: null,
+        updatedAt: null,
+        lastErrorCode: '',
+      },
+    });
+    mocks.bindQqMusicAccount.mockResolvedValue({
+      success: true,
+      data: {
+        configured: true,
+        state: 'active',
+        uid: '87654321',
+        displayName: 'QQ 测试账号',
+        membershipLevel: '豪华绿钻',
         verifiedAt: 1,
         updatedAt: 1,
         lastErrorCode: '',
@@ -455,5 +510,21 @@ describe('XiaozhiMcpConnection', () => {
 
     expect(await screen.findByText('请先绑定同一个小程序账号。')).toBeInTheDocument();
     expect(screen.queryByText('desktop_miniapp_binding_required')).toBeNull();
+  });
+
+  it('submits the QQ Music Cookie once, clears it, and renders only sanitized metadata', async () => {
+    render(<XiaozhiMcpConnection />);
+    const input = await screen.findByPlaceholderText('粘贴包含 uin 和 qm_keyst 的 QQ 音乐 Cookie');
+    const cookie = `uin=o87654321; qm_keyst=${'k'.repeat(32)}; p_skey=desktop-only`;
+    fireEvent.change(input, { target: { value: cookie } });
+    fireEvent.click(screen.getByRole('button', { name: '验证并绑定 QQ 音乐' }));
+
+    await waitFor(() => expect(mocks.bindQqMusicAccount).toHaveBeenCalledWith({ cookie }));
+    expect(input).toHaveValue('');
+    expect(await screen.findByText('QQ 测试账号')).toBeInTheDocument();
+    expect(screen.getByText('87654321')).toBeInTheDocument();
+    expect(screen.getByText('豪华绿钻')).toBeInTheDocument();
+    expect(screen.queryByText(/qm_keyst=/)).toBeNull();
+    expect(screen.queryByText(/p_skey=/)).toBeNull();
   });
 });

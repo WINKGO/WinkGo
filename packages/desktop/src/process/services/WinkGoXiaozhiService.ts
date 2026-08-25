@@ -18,6 +18,7 @@ import type {
   WinkGoXiaozhiConfig,
   WinkGoXiaozhiLocalProbe,
   WinkGoNeteaseAccountStatus,
+  WinkGoQqMusicAccountStatus,
   WinkGoXiaozhiSaveRequest,
   WinkGoXiaozhiSecretKind,
   WinkGoXiaozhiSnapshot,
@@ -69,7 +70,7 @@ let cachedSnapshot: WinkGoXiaozhiSnapshot | null = null;
 let localRuntimeToolClient: RuntimeMcpClient | null = null;
 let runtimeAccessTokenPromise: Promise<string> | null = null;
 
-type NeteaseAccountResponse = {
+type MusicAccountResponse = {
   ok?: boolean;
   error?: string;
   message?: string;
@@ -87,7 +88,7 @@ type NeteaseAccountResponse = {
 
 const credentialTarget = (kind: WinkGoXiaozhiSecretKind | 'runtime'): string => `${CREDENTIAL_PREFIX}.${kind}.token`;
 
-const normalizeNeteaseAccountStatus = (payload: NeteaseAccountResponse): WinkGoNeteaseAccountStatus => {
+const normalizeMusicAccountStatus = (payload: MusicAccountResponse): WinkGoNeteaseAccountStatus => {
   const account = payload.account;
   if (!account || !['unbound', 'active', 'needs_rebind'].includes(account.state || '')) {
     throw new Error('music_account_response_invalid');
@@ -122,6 +123,34 @@ export const normalizeWinkGoNeteaseMusicU = (input: string): string => {
   return value;
 };
 
+export const normalizeWinkGoQqMusicCookie = (input: string): string => {
+  const raw = input.trim();
+  if (raw.length < 32 || raw.length > 16 * 1024 || raw.includes('\r') || raw.includes('\n') || raw.includes('\0')) {
+    throw new Error('qq_music_cookie_invalid');
+  }
+  const values = new Map<string, string>();
+  for (const part of raw.split(';')) {
+    const separator = part.indexOf('=');
+    if (separator <= 0) continue;
+    const key = part.slice(0, separator).trim().toLowerCase();
+    const value = part.slice(separator + 1).trim();
+    if (value) values.set(key, value);
+  }
+  let uin = values.get('uin') || values.get('qqmusic_uin') || values.get('wxuin') || '';
+  if (uin.toLowerCase().startsWith('o')) uin = uin.slice(1);
+  const musicKey = values.get('qm_keyst') || values.get('qqmusic_key') || '';
+  if (
+    !/^\d{4,20}$/.test(uin) ||
+    musicKey.length < 16 ||
+    musicKey.length > 2048 ||
+    musicKey.includes(';') ||
+    [...musicKey].some((character) => character.charCodeAt(0) < 33 || character.charCodeAt(0) === 127)
+  ) {
+    throw new Error('qq_music_cookie_invalid');
+  }
+  return `uin=o${uin}; qqmusic_uin=${uin}; qm_keyst=${musicKey}; qqmusic_key=${musicKey}`;
+};
+
 const requestNeteaseAccount = async (
   method: 'GET' | 'POST' | 'DELETE',
   input?: string
@@ -154,11 +183,50 @@ const requestNeteaseAccount = async (
     ...(method === 'POST' ? { body: JSON.stringify({ music_u: normalizeWinkGoNeteaseMusicU(input || '') }) } : {}),
     signal: AbortSignal.timeout(20_000),
   });
-  const payload = (await response.json().catch(() => ({}))) as NeteaseAccountResponse;
+  const payload = (await response.json().catch(() => ({}))) as MusicAccountResponse;
   if (!response.ok || payload.ok !== true) {
     throw new Error(bounded(payload.error || payload.message, 240) || `music_account_http_${response.status}`);
   }
-  return normalizeNeteaseAccountStatus(payload);
+  return normalizeMusicAccountStatus(payload);
+};
+
+const requestQqMusicAccount = async (
+  method: 'GET' | 'POST' | 'DELETE',
+  input?: string
+): Promise<WinkGoQqMusicAccountStatus> => {
+  const authSession = winkGoCloudAuthService.getSession();
+  if (!authSession.authenticated || !authSession.user?.id) throw new Error('winkgo_account_login_required');
+  const config = await loadConfigFile();
+  const relayEndpoint = new URL(config.relayUrl || DEFAULT_RELAY_URL);
+  relayEndpoint.protocol = relayEndpoint.protocol === 'ws:' ? 'http:' : 'https:';
+  relayEndpoint.pathname = '/api/desktop/music/qq';
+  relayEndpoint.search = '';
+  const licenseAssertion = await musicAccountIdentityStore.syncLicenseAssertionFromSession(authSession.user.id);
+  musicAccountIdentityStore.clearCache();
+  const identity = await musicAccountIdentityStore.load();
+  relayEndpoint.searchParams.set('accountId', identity.accountId);
+  relayEndpoint.searchParams.set('installationId', identity.installationId);
+  relayEndpoint.searchParams.set('desktopId', identity.desktopId);
+  relayEndpoint.searchParams.set('agentId', 'winkgo-desktop-agent');
+  const response = await net.fetch(relayEndpoint.toString(), {
+    method,
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${identity.deviceToken}`,
+      'X-Winkgo-License-Assertion': licenseAssertion,
+      'X-Winkgo-Desktop-Id': identity.desktopId,
+      'X-Winkgo-Timestamp': String(Date.now()),
+      'X-Winkgo-Nonce': randomBytes(18).toString('base64url'),
+      ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+    },
+    ...(method === 'POST' ? { body: JSON.stringify({ cookie: normalizeWinkGoQqMusicCookie(input || '') }) } : {}),
+    signal: AbortSignal.timeout(20_000),
+  });
+  const payload = (await response.json().catch(() => ({}))) as MusicAccountResponse;
+  if (!response.ok || payload.ok !== true) {
+    throw new Error(bounded(payload.error || payload.message, 240) || `music_account_http_${response.status}`);
+  }
+  return normalizeMusicAccountStatus(payload);
 };
 
 const ensureRuntimeAccessToken = async (): Promise<string> => {
@@ -937,6 +1005,14 @@ export const bindWinkGoNeteaseAccount = async (musicU: string): Promise<WinkGoNe
 
 export const unbindWinkGoNeteaseAccount = async (): Promise<WinkGoNeteaseAccountStatus> =>
   requestNeteaseAccount('DELETE');
+
+export const getWinkGoQqMusicAccount = async (): Promise<WinkGoQqMusicAccountStatus> => requestQqMusicAccount('GET');
+
+export const bindWinkGoQqMusicAccount = async (cookie: string): Promise<WinkGoQqMusicAccountStatus> =>
+  requestQqMusicAccount('POST', cookie);
+
+export const unbindWinkGoQqMusicAccount = async (): Promise<WinkGoQqMusicAccountStatus> =>
+  requestQqMusicAccount('DELETE');
 
 /** Exact local Runtime tool boundary used by deterministic desktop automation. */
 export const callWinkGoRuntimeTool = async (
