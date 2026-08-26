@@ -10,6 +10,7 @@ const generator = require('../../../scripts/licenses/generate-third-party-licens
   checkLockInputs: () => void;
   normalizeLicense: (value: unknown) => string | null;
   normalizeNpmVersion: (value: unknown) => string;
+  normalizeText: (value: string) => string;
   validateEntries: (entries: Array<{ id: string; license: string | null; licenseTextHashes: string[] }>) => void;
 };
 
@@ -38,6 +39,10 @@ describe('third-party dependency license artifacts', () => {
   it('normalizes non-standard v-prefixed npm package versions', () => {
     expect(generator.normalizeNpmVersion('v2.1.5')).toBe('2.1.5');
     expect(generator.normalizeNpmVersion('1.0.0-beta.1')).toBe('1.0.0-beta.1');
+  });
+
+  it('removes trailing horizontal whitespace from generated license text', () => {
+    expect(generator.normalizeText('first  \r\nsecond\t\r\n')).toBe('first\nsecond\n');
   });
 
   it('ships generated artifacts in desktop, web CLI, release, and CI paths', () => {
