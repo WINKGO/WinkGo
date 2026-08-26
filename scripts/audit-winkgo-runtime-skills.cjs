@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 'use strict';
 
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const readline = require('node:readline');
 const { isDeepStrictEqual } = require('node:util');
+const { prepareWinkGoRuntimePackage } = require('./prepare-winkgo-runtime-package.cjs');
 
 const projectRoot = path.resolve(__dirname, '..');
 const skillsRoot = path.join(projectRoot, 'resources', 'winkgo', 'skills');
 const proxyPath = path.join(projectRoot, 'resources', 'winkgo', 'winkgo-skill-runtime-proxy.cjs');
 const executableName = 'SparkBot-MCP-Hub-v1.1.0.exe';
+const browserSkillToolNames = ['winkgo.browser_skill.list', 'winkgo.browser_skill.run'];
+const desktopSkillToolNames = ['winkgo.desktop_skill.list', 'winkgo.desktop_skill.run'];
 
 const resolveRuntimeSelection = () => {
   const localAppData = process.env.LOCALAPPDATA || '';
@@ -61,7 +64,12 @@ const recoverRuntimeLock = () => {
     processPath = require('node:child_process')
       .execFileSync(
         'powershell.exe',
-        ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Id ${pid} -ErrorAction Stop).Path`],
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `$process=Get-Process -Id ${pid} -ErrorAction SilentlyContinue; if (-not $process) { exit 1 }; $process.Path`,
+        ],
         { encoding: 'utf8', windowsHide: true, timeout: 2_000 }
       )
       .trim();
@@ -83,32 +91,64 @@ if (process.argv.includes('--recover-runtime-lock')) {
 
 const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'winkgo-runtime-audit-'));
 const configPath = path.join(temporaryRoot, 'enabled-skills.json');
-const localRuntimeRoot = runtimeSelection.runtimeRoot;
+if (!runtimeSelection.runtimeRoot) throw new Error('No WINK GO Runtime was found for the audit.');
+const localRuntimeRoot = path.join(temporaryRoot, 'runtime');
+prepareWinkGoRuntimePackage({ sourceRoot: runtimeSelection.runtimeRoot, destinationRoot: localRuntimeRoot });
+const runtimeExecutable = path.join(localRuntimeRoot, executableName);
+const listSelectedRuntimePids = () => {
+  if (process.platform !== 'win32' || !runtimeExecutable) return [];
+  const escapedPath = runtimeExecutable.replaceAll("'", "''");
+  const result = spawnSync(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `$target='${escapedPath}'; Get-CimInstance Win32_Process -Filter \"Name='${executableName}'\" | Where-Object { $_.ExecutablePath -eq $target } | ForEach-Object { $_.ProcessId }`,
+    ],
+    { encoding: 'utf8', windowsHide: true }
+  );
+  if (result.status !== 0) return [];
+  return String(result.stdout || '')
+    .split(/\r?\n/)
+    .map((value) => Number.parseInt(value.trim(), 10))
+    .filter((value) => Number.isInteger(value) && value > 0);
+};
+const cleanupAuditRuntimeProcesses = async () => {
+  if (process.platform !== 'win32') return;
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  const escapedPath = runtimeExecutable.replaceAll("'", "''");
+  for (const pid of listSelectedRuntimePids()) {
+    spawnSync(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `$target='${escapedPath}'; $process=Get-Process -Id ${pid} -ErrorAction SilentlyContinue; if ($process -and $process.Path -eq $target) { Stop-Process -Id ${pid} -Force }`,
+      ],
+      { encoding: 'utf8', windowsHide: true }
+    );
+  }
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  const leaked = listSelectedRuntimePids();
+  if (leaked.length > 0) throw new Error(`Runtime audit left child process(es): ${leaked.join(', ')}`);
+};
 const safeSmokeCalls = {
   bilibili: ['desktop_agents.video_client_read_window', { client: 'bilibili' }],
-  claude: ['claude.check_runtime', {}],
-  codex: ['codex.check_runtime', {}],
+  desktop_automation: ['winkgo.desktop_skill.list', {}],
   doubao: ['doubao.check_runtime', {}],
-  google_antigravity: ['desktop_agents.check_agent', { agent: 'antigravity' }],
-  hermes: ['hermes.check_runtime', {}],
   iqiyi: ['desktop_agents.video_client_read_window', { client: 'iqiyi' }],
-  kiro: ['desktop_agents.check_agent', { agent: 'kiro' }],
   netease_music: ['music.station_now_snapshot', { player: 'cloud', force_refresh: true }],
-  openclaw: ['openclaw.check_runtime', {}],
-  qclaw: ['desktop_agents.check_agent', { agent: 'qclaw' }],
-  qoder: ['desktop_agents.check_agent', { agent: 'qoder' }],
   qq_music: ['music.station_now_snapshot', { player: 'qq', force_refresh: true }],
   // Local registry smoke test stays read-only and does not require a user's
   // optional Home Assistant credential.
   smart_home: ['appliance.list_devices', {}],
   soda_music: ['music.station_now_snapshot', { player: 'fizz', force_refresh: true }],
   tencent_video: ['desktop_agents.video_client_read_window', { client: 'tencentvideo' }],
-  trae_cn: ['desktop_agents.check_agent', { agent: 'traecn' }],
-  visual_studio_code: ['desktop_agents.check_agent', { agent: 'visualstudio' }],
-  web_automation: ['windows.browser_list_results', {}],
+  web_automation: ['winkgo.browser_skill.list', {}],
   wechat: ['wechat.get_client_status', {}],
   windows: ['windows.get_system_info', {}],
-  workbuddy: ['desktop_agents.check_agent', { agent: 'workbuddy' }],
   youku: ['desktop_agents.video_client_read_window', { client: 'youku' }],
 };
 
@@ -131,11 +171,34 @@ for (const skillId of skillIds) {
   const actions = JSON.parse(fs.readFileSync(path.join(skillsRoot, skillId, 'actions.json'), 'utf8'));
   const selectors =
     manifest.tool_selectors && typeof manifest.tool_selectors === 'object' ? manifest.tool_selectors : {};
-  for (const name of [...(selectors.names || []), ...(selectors.shared_names || [])]) declaredToolNames.add(name);
-  for (const prefix of selectors.prefixes || []) declaredPrefixes.add(prefix);
+  const bridgeToolNames =
+    skillId === 'web_automation'
+      ? browserSkillToolNames
+      : skillId === 'desktop_automation'
+        ? [...desktopSkillToolNames, 'desktop_automation.cancel']
+        : null;
+  if (bridgeToolNames) {
+    for (const name of bridgeToolNames) declaredToolNames.add(name);
+  } else {
+    for (const name of [...(selectors.names || []), ...(selectors.shared_names || [])]) declaredToolNames.add(name);
+    for (const prefix of selectors.prefixes || []) declaredPrefixes.add(prefix);
+  }
   for (const name of manifest.internal_tool_names || []) internalToolNames.add(name);
-  skillActions.set(skillId, actions.actions || []);
-  for (const action of actions.actions || []) {
+  const effectiveActions =
+    skillId === 'web_automation'
+      ? [
+          { id: 'list_saved', tool_names: [browserSkillToolNames[0]] },
+          { id: 'run_saved', tool_names: [browserSkillToolNames[1]] },
+        ]
+      : skillId === 'desktop_automation'
+        ? [
+            { id: 'list_saved', tool_names: [desktopSkillToolNames[0]] },
+            { id: 'run_saved', tool_names: [desktopSkillToolNames[1]] },
+            { id: 'cancel', tool_names: ['desktop_automation.cancel'] },
+          ]
+        : actions.actions || [];
+  skillActions.set(skillId, effectiveActions);
+  for (const action of effectiveActions) {
     for (const name of action.tool_names || []) {
       declaredToolNames.add(name);
       const owners = directActionToolOwners.get(name) || new Set();
@@ -177,15 +240,13 @@ for (const aliasName of conflictedCompatibilityAliases) {
   if (!directActionToolOwners.has(aliasName)) declaredToolNames.delete(aliasName);
 }
 
-const runtimeExecutable = runtimeSelection.executablePath;
 const runtimeConfigCandidates = [
-  path.join(process.env.APPDATA || '', 'com.winkgo.desktop', 'inspiration-runtime.yaml'),
   ...['config.local.yaml', 'config.bundle-local.yaml', 'config.yaml'].map((name) =>
     localRuntimeRoot ? path.join(localRuntimeRoot, name) : ''
   ),
+  path.join(process.env.APPDATA || '', 'com.winkgo.desktop', 'inspiration-runtime.yaml'),
 ].filter(Boolean);
 const runtimeConfig = runtimeConfigCandidates.find((candidate) => fs.existsSync(candidate));
-if (runtimeSelection.executablePath) recoverRuntimeLock();
 const runtimeLaunch =
   fs.existsSync(runtimeExecutable) && runtimeConfig
     ? {
@@ -202,6 +263,8 @@ fs.writeFileSync(
     {
       schemaVersion: 1,
       runtimeApi: 'http://127.0.0.1:8121',
+      localBrowserSkillsEnabled: true,
+      localDesktopSkillsEnabled: true,
       runtimeLaunch,
       enabledSkillIds: skillIds,
       allowedToolNames: [...declaredToolNames].sort(),
@@ -282,6 +345,13 @@ const run = async () => {
           smokeFailures.push(`${skillId}:${name}:not-exposed`);
           continue;
         }
+        if (
+          name.startsWith('winkgo.') &&
+          (!process.env.WINKGO_CDP_ACTIVE_PORT || !process.env.WINKGO_CDP_BRIDGE_TOKEN)
+        ) {
+          smokeResults.push(`${skillId}:${name}:exposed-only`);
+          continue;
+        }
         try {
           const callResult = await request('tools/call', { name, arguments: argumentsValue });
           if (callResult && callResult.isError === true) smokeFailures.push(`${skillId}:${name}:mcp-error-result`);
@@ -306,13 +376,15 @@ const run = async () => {
     if (missing.length > 0 || brokenActions.length > 0 || smokeFailures.length > 0) process.exitCode = 1;
   } finally {
     child.kill();
+    await cleanupAuditRuntimeProcesses();
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
   }
 };
 
-run().catch((error) => {
+run().catch(async (error) => {
   process.stderr.write(`${error instanceof Error ? error.stack || error.message : String(error)}\n`);
   process.exitCode = 1;
   child.kill();
+  await cleanupAuditRuntimeProcesses().catch(() => {});
   fs.rmSync(temporaryRoot, { recursive: true, force: true });
 });

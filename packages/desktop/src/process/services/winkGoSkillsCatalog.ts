@@ -238,6 +238,73 @@ const readToolSelectors = (manifest: SourceManifest, actions: SourceActions | nu
   };
 };
 
+const readAgentVisibleToolSelectors = (
+  skillId: string,
+  manifest: SourceManifest,
+  actions: SourceActions | null
+): ToolSelectors => {
+  if (skillId === 'web_automation') {
+    return { names: [...LOCAL_BROWSER_SKILL_TOOL_NAMES], prefixes: [] };
+  }
+  if (skillId === 'desktop_automation') {
+    return {
+      names: [...LOCAL_DESKTOP_SKILL_TOOL_NAMES, 'desktop_automation.cancel'],
+      prefixes: [],
+    };
+  }
+  return readToolSelectors(manifest, actions);
+};
+
+const buildPortableActions = (skillId: string, actions: SourceActions | null): SourceActions | null => {
+  if (skillId === 'web_automation') {
+    return {
+      schema_version: 1,
+      skill_id: skillId,
+      actions: [
+        {
+          id: 'list_saved',
+          phrases: ['列出网页自动化技能', '查看浏览器技能'],
+          tool_names: [LOCAL_BROWSER_SKILL_TOOL_NAMES[0]],
+          default_arguments: {},
+        },
+        {
+          id: 'run_saved',
+          phrases: ['执行网页自动化技能', '运行浏览器技能'],
+          tool_names: [LOCAL_BROWSER_SKILL_TOOL_NAMES[1]],
+          default_arguments: {},
+        },
+      ],
+    } as SourceActions;
+  }
+  if (skillId === 'desktop_automation') {
+    return {
+      schema_version: 1,
+      skill_id: skillId,
+      actions: [
+        {
+          id: 'list_saved',
+          phrases: ['列出电脑自动化技能', '查看桌面技能'],
+          tool_names: [LOCAL_DESKTOP_SKILL_TOOL_NAMES[0]],
+          default_arguments: {},
+        },
+        {
+          id: 'run_saved',
+          phrases: ['执行电脑自动化技能', '运行桌面技能'],
+          tool_names: [LOCAL_DESKTOP_SKILL_TOOL_NAMES[1]],
+          default_arguments: {},
+        },
+        {
+          id: 'cancel',
+          phrases: ['停止桌面控制', '取消电脑控制'],
+          tool_names: ['desktop_automation.cancel'],
+          default_arguments: {},
+        },
+      ],
+    } as SourceActions;
+  }
+  return actions;
+};
+
 const readCompatibilityToolAliases = (manifest: SourceManifest): Record<string, CompatibilityToolAlias> => {
   if (!manifest.compatibility_tool_aliases || typeof manifest.compatibility_tool_aliases !== 'object') return {};
   const aliases: Record<string, CompatibilityToolAlias> = {};
@@ -513,8 +580,22 @@ export const prepareWinkGoSkillImport = (skillId: string): WinkGoPreparedSkillIm
     const description = asString(manifest.description) ?? displayName;
     const sourceSkillPath = path.join(sourcePath, 'SKILL.md');
     const sourceSkillBody = fs.existsSync(sourceSkillPath) ? fs.readFileSync(sourceSkillPath, 'utf8').trim() : '';
-    const actions = readJsonFile<SourceActions>(path.join(sourcePath, 'actions.json'));
-    const toolNames = readToolSelectors(manifest, actions).names;
+    const sourceActions = readJsonFile<SourceActions>(path.join(sourcePath, 'actions.json'));
+    const actions = buildPortableActions(id, sourceActions);
+    const toolNames = readAgentVisibleToolSelectors(id, manifest, actions).names;
+    const portableManifest =
+      id === 'web_automation' || id === 'desktop_automation'
+        ? {
+            ...manifest,
+            tool_selectors: {
+              prefixes: [],
+              exclude_prefixes: [],
+              exclude_names: [],
+              names: toolNames,
+              shared_names: [],
+            },
+          }
+        : manifest;
     const targetPath = path.join(os.tmpdir(), 'winkgo-skill-imports', id);
     const skillDocument = [
       '---',
@@ -540,7 +621,7 @@ export const prepareWinkGoSkillImport = (skillId: string): WinkGoPreparedSkillIm
     fs.writeFileSync(path.join(targetPath, 'SKILL.md'), skillDocument, 'utf8');
     if (actions)
       fs.writeFileSync(path.join(targetPath, 'actions.json'), `${JSON.stringify(actions, null, 2)}\n`, 'utf8');
-    fs.writeFileSync(path.join(targetPath, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(path.join(targetPath, 'manifest.json'), `${JSON.stringify(portableManifest, null, 2)}\n`, 'utf8');
     return { skillPath: targetPath };
   } catch {
     return {};
@@ -578,7 +659,7 @@ export const syncWinkGoSkillBridge = (requestedSkillIds: string[]): WinkGoSkillB
     const manifest = readJsonFile<SourceManifest>(path.join(sourcePath, 'manifest.json'));
     if (!manifest) continue;
     const actions = readJsonFile<SourceActions>(path.join(sourcePath, 'actions.json'));
-    const selectors = readToolSelectors(manifest, actions);
+    const selectors = readAgentVisibleToolSelectors(skillId, manifest, actions);
     selectors.names.forEach((name) => allowedToolNames.add(name));
     selectors.prefixes.forEach((prefix) => allowedToolPrefixes.add(prefix));
     if (Array.isArray(actions?.actions)) {

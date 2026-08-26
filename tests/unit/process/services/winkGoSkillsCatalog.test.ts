@@ -87,6 +87,26 @@ describe('WINK GO Skills catalog', () => {
     expect(manifest.id).toBe(skillId);
   });
 
+  it.each([
+    ['web_automation', 'winkgo.browser_skill.list', 'winkgo.browser_skill.run'],
+    ['desktop_automation', 'winkgo.desktop_skill.list', 'winkgo.desktop_skill.run'],
+  ])(
+    'prepares %s with the in-app bridge tools instead of legacy external-browser tools',
+    (skillId, listTool, runTool) => {
+      const prepared = prepareWinkGoSkillImport(skillId);
+      const skillPath = prepared.skillPath!;
+      const skillDocument = fs.readFileSync(path.join(skillPath, 'SKILL.md'), 'utf8');
+      const actions = fs.readFileSync(path.join(skillPath, 'actions.json'), 'utf8');
+      const manifest = fs.readFileSync(path.join(skillPath, 'manifest.json'), 'utf8');
+      const portableText = `${skillDocument}\n${actions}\n${manifest}`;
+
+      expect(portableText).toContain(listTool);
+      expect(portableText).toContain(runTool);
+      expect(portableText).not.toContain('windows.browser_');
+      expect(portableText).not.toContain('windows.open_url');
+    }
+  );
+
   it('normalizes WeChat favorites and includes them in the filtered bridge config', () => {
     const saved = saveWinkGoWechatPreferences({
       favoriteContacts: [

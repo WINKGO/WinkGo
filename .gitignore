@@ -238,6 +238,7 @@ resources/bundled-bun
 resources/bundled-winkgo-core
 resources/hub
 resources/winkgo-runtime/
+/resources/winkgo-runtime.stale-*/
 /resources/windows/support/_sentry-dsn.generated.nsh
 
 # Server build output

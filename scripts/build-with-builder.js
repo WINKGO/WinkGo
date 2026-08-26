@@ -822,6 +822,13 @@ const builderArgs = args
     return true;
   })
   .join(' ');
+const targetPlatform = builderArgs.includes('--mac')
+  ? 'darwin'
+  : builderArgs.includes('--win')
+    ? 'win32'
+    : builderArgs.includes('--linux')
+      ? 'linux'
+      : process.platform;
 
 // Get target architecture from electron-builder.yml
 function getTargetArchFromConfig(platform) {
@@ -985,7 +992,7 @@ try {
   writeGeneratedSentryDsnInclude(projectRoot);
   prepareWinkGoCore({
     projectRoot,
-    platform: process.platform,
+    platform: targetPlatform,
     arch: targetArch,
     version: resolveWinkGoCoreVersion(projectRoot),
   });

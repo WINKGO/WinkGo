@@ -538,21 +538,26 @@ childProcess.execSync = function mockedExecSync() {
     {
       args: ['arm64', '--win', '--arm64'],
       expectedArch: 'arm64',
+      expectedPlatform: 'win32',
     },
     {
       args: ['auto', '--mac', '--x64'],
       expectedArch: 'x64',
+      expectedPlatform: 'darwin',
     },
-  ])('prepares bundled WinkGoCore for $expectedArch with args $args', { timeout: 900e3 }, ({ args, expectedArch }) => {
-    const tempDir = mkdtempSync(join(tmpdir(), 'winkgo-build-test-'));
-    const hookPath = join(tempDir, 'hook.cjs');
-    const callsPath = join(tempDir, 'prepare-calls.json');
-    const outDir = resolve(repoRoot, 'out');
-    const backupOutDir = resolve(repoRoot, `.tmp-out-backup-${process.pid}-${Date.now()}-${expectedArch}`);
+  ])(
+    'prepares bundled WinkGoCore for $expectedPlatform-$expectedArch with args $args',
+    { timeout: 900e3 },
+    ({ args, expectedArch, expectedPlatform }) => {
+      const tempDir = mkdtempSync(join(tmpdir(), 'winkgo-build-test-'));
+      const hookPath = join(tempDir, 'hook.cjs');
+      const callsPath = join(tempDir, 'prepare-calls.json');
+      const outDir = resolve(repoRoot, 'out');
+      const backupOutDir = resolve(repoRoot, `.tmp-out-backup-${process.pid}-${Date.now()}-${expectedArch}`);
 
-    writeFileSync(
-      hookPath,
-      `
+      writeFileSync(
+        hookPath,
+        `
 const childProcess = require('node:child_process');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -643,45 +648,49 @@ childProcess.spawnSync = function mockedSpawnSync() {
   return { status: 0, stdout: '', stderr: '' };
 };
 `,
-      'utf8'
-    );
-
-    let movedExistingOut = false;
-    try {
-      if (existsSync(outDir)) {
-        moveOutDirectory(outDir, backupOutDir);
-        movedExistingOut = true;
-      }
-
-      const result = spawnSync(process.execPath, ['scripts/build-with-builder.js', ...args], {
-        cwd: repoRoot,
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          WINKGO_PREPARE_CALLS_FILE: callsPath,
-          NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${hookPath}`].filter(Boolean).join(' '),
-        },
-      });
-
-      expect(result.status, result.stderr || result.stdout).toBe(0);
-      expect(readFileSync(resolve(repoRoot, 'resources/windows/support/_sentry-dsn.generated.nsh'), 'utf8')).toBe(
-        '!define WINKGO_SENTRY_DSN ""\n'
+        'utf8'
       );
 
-      if (args.includes('--win')) {
-        const installUtil = readFileSync(resolveAppBuilderInstallUtil(), 'utf8');
-        expect(installUtil).toContain('WINK-GO bundled uninstaller override source');
-        expect(installUtil).toContain('$PLUGINSDIR\\WINK-GO-fixed-uninstaller.exe');
-        expect(installUtil.match(/WINK-GO bundled uninstaller override source/g)).toHaveLength(1);
-        expect(installUtil).not.toContain('WinkGo-bundled-uninstaller override source');
-        expect(installUtil).not.toContain('$PLUGINSDIR\\WinkGo-fixed-uninstaller.exe');
-      }
+      let movedExistingOut = false;
+      try {
+        if (existsSync(outDir)) {
+          moveOutDirectory(outDir, backupOutDir);
+          movedExistingOut = true;
+        }
 
-      const calls = JSON.parse(readFileSync(callsPath, 'utf8')) as Array<{ arch?: string } | null>;
-      expect(calls).toContainEqual(expect.objectContaining({ arch: expectedArch }));
-    } finally {
-      restoreOutDirectory(outDir, backupOutDir, movedExistingOut);
-      rmSync(tempDir, { recursive: true, force: true });
+        const result = spawnSync(process.execPath, ['scripts/build-with-builder.js', ...args], {
+          cwd: repoRoot,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            WINKGO_PREPARE_CALLS_FILE: callsPath,
+            NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require=${hookPath}`].filter(Boolean).join(' '),
+          },
+        });
+
+        expect(result.status, result.stderr || result.stdout).toBe(0);
+        expect(readFileSync(resolve(repoRoot, 'resources/windows/support/_sentry-dsn.generated.nsh'), 'utf8')).toBe(
+          '!define WINKGO_SENTRY_DSN ""\n'
+        );
+
+        if (args.includes('--win')) {
+          const installUtil = readFileSync(resolveAppBuilderInstallUtil(), 'utf8');
+          expect(installUtil).toContain('WINK-GO bundled uninstaller override source');
+          expect(installUtil).toContain('$PLUGINSDIR\\WINK-GO-fixed-uninstaller.exe');
+          expect(installUtil.match(/WINK-GO bundled uninstaller override source/g)).toHaveLength(1);
+          expect(installUtil).not.toContain('WinkGo-bundled-uninstaller override source');
+          expect(installUtil).not.toContain('$PLUGINSDIR\\WinkGo-fixed-uninstaller.exe');
+        }
+
+        const calls = JSON.parse(readFileSync(callsPath, 'utf8')) as Array<{
+          arch?: string;
+          platform?: string;
+        } | null>;
+        expect(calls).toContainEqual(expect.objectContaining({ arch: expectedArch, platform: expectedPlatform }));
+      } finally {
+        restoreOutDirectory(outDir, backupOutDir, movedExistingOut);
+        rmSync(tempDir, { recursive: true, force: true });
+      }
     }
-  });
+  );
 });

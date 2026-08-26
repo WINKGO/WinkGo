@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "skill_id": "desktop_automation",
+  "actions": [
+    {
+      "id": "cancel",
+      "phrases": ["停止桌面控制", "取消电脑控制", "停止 Computer Use"],
+      "tool_names": ["desktop_automation.cancel"],
+      "default_arguments": {}
+    }
+  ]
+}

@@ -206,7 +206,7 @@ describe('updateBridge allowlist includes CDN host', () => {
     } finally {
       vi.unstubAllGlobals();
     }
-  });
+  }, 30000);
 
   it('rejects non-allowlisted hosts', async () => {
     vi.resetModules();

@@ -5128,7 +5128,7 @@ The Apache Software Foundation (http://www.apache.org/).
 
 ================================================================================
 SHA-256: 0e74697a68cebdcd61502c30fe80ab7f9e341d995dcd452023654d57133534b1
-Files: LICENSE.BSD, LICENSE.esprima
+Files: LICENSE.BSD
 Packages:
 - npm:estraverse@5.3.0
 - npm:esutils@2.0.3
@@ -18216,7 +18216,7 @@ Apache License
 
 ================================================================================
 SHA-256: 50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a
-Files: LICENSE, LICENSE-APACHE, LICENSE-APACHE.md, LICENSE-APACHE.txt, LICENSE.closure-compiler, LICENSE.txt, LICENSE_FONT
+Files: LICENSE, LICENSE-APACHE, LICENSE-APACHE.md, LICENSE-APACHE.txt, LICENSE.txt, LICENSE_FONT
 Packages:
 - cargo:cmov@0.5.3
 - cargo:codepage@0.1.2
