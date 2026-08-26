@@ -73,6 +73,10 @@ const INCREMENTAL_CACHE_FILE = 'out/.build-hash';
 const VITE_EDITION_MARKER_FILE = 'out/.winkgo-vite-build.json';
 const VITE_EDITION_MARKER_SCHEMA_VERSION = 1;
 const DEBUG_AUTO_UPDATE_CURRENT_VERSION_ENV = 'WINKGO_DEBUG_AUTO_UPDATE_CURRENT_VERSION';
+const allowMissingRuntimeForPullRequestBuild =
+  process.env.CI === 'true' &&
+  process.env.GITHUB_EVENT_NAME === 'pull_request' &&
+  process.env.WINKGO_BUILD_TEST_ALLOW_MISSING_RUNTIME === '1';
 
 function patchElectronBuilderNsisInstaller() {
   const rootDir = path.resolve(__dirname, '..');
@@ -1013,10 +1017,23 @@ try {
     // A clean customer machine has no historical Runtime under LOCALAPPDATA.
     // Stage and verify the exact signed Runtime payload before electron-builder
     // copies it to resources/winkgo-runtime.
-    execSync('node scripts/prepare-winkgo-runtime-package.cjs', {
-      stdio: 'inherit',
-      env: process.env,
-    });
+    try {
+      execSync('node scripts/prepare-winkgo-runtime-package.cjs', {
+        stdio: 'inherit',
+        env: process.env,
+      });
+    } catch (error) {
+      if (!allowMissingRuntimeForPullRequestBuild) throw error;
+      const runtimeRoot = path.join(projectRoot, 'resources', 'winkgo-runtime');
+      fs.rmSync(runtimeRoot, { recursive: true, force: true });
+      fs.mkdirSync(runtimeRoot, { recursive: true });
+      fs.writeFileSync(
+        path.join(runtimeRoot, 'BUILD_TEST_RUNTIME_OMITTED.txt'),
+        'PR build test only: the private customer Runtime payload is intentionally omitted.\n',
+        'utf8'
+      );
+      console.warn('⚠️ PR build test is continuing without the private WINK GO Runtime payload.');
+    }
   }
 
   // Privacy gate 1/2: inspect the exact Vite/static/backend inputs after every
@@ -1154,7 +1171,11 @@ try {
 
   const packedWindowsExecutable = isWindowsBuild ? resolveWindowsUnpackedExecutable(outDir, targetArch) : '';
   if (packedWindowsExecutable) {
-    verifyPackagedWinkGoRuntime(packedWindowsExecutable);
+    if (allowMissingRuntimeForPullRequestBuild) {
+      console.warn('⚠️ Skipping packaged Runtime integrity verification for the explicit PR build test only.');
+    } else {
+      verifyPackagedWinkGoRuntime(packedWindowsExecutable);
+    }
     verifyWindowsExecutableIcon(packedWindowsExecutable);
   }
 
