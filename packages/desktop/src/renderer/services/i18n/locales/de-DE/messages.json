@@ -2,6 +2,7 @@
   "fileChanges": "Dateiänderungen",
   "fileChangesCount": "{{count}} Dateiänderungen",
   "conversationInProgress": "Ein Gespräch ist derzeit im Gange...",
+  "delivery": { "queued": "Warten, bis die aktuelle Aufgabe abgeschlossen ist" },
   "confirm": "Bestätigen",
   "canceledExecution": "Ausführung abgebrochen",
   "openLinkFailed": "Link konnte nicht geöffnet werden",
@@ -62,6 +63,13 @@
   "processing": "Wird verarbeitet...",
   "responseSentSuccessfully": "Antwort erfolgreich gesendet",
   "permissionResponseFailed": "Antwort konnte nicht gesendet werden. Bitte erneut versuchen.",
+  "askSubmit": "Absenden",
+  "askDecline": "Überspringen",
+  "askAnswered": "Beantwortet",
+  "askDeclined": "Übersprungen",
+  "askOther": "Andere",
+  "askOtherPlaceholder": "Antwort eingeben",
+  "requestDetails": "Anfragedetails:",
   "confirmation": {
     "applyChange": "Diese Änderung anwenden?",
     "allowExecution": "Ausführung erlauben?",
@@ -72,5 +80,14 @@
     "yesAlwaysAllowTool": "Ja, Tool \"{{toolName}}\" vom Server \"{{serverName}}\" immer erlauben",
     "yesAlwaysAllowServer": "Ja, alle Tools vom Server \"{{serverName}}\" immer erlauben",
     "no": "Nein (Esc)"
+  },
+  "fork": {
+    "action": "Ab hier verzweigen",
+    "errorTurnInFlight": "Warten Sie, bis die aktuelle Antwort abgeschlossen ist, bevor Sie verzweigen",
+    "errorParentUnbound": "Diese Unterhaltung hat noch keine Backend-Sitzung zum Verzweigen",
+    "errorPointUnsupported": "Dieser Agent kann nur ab der neuesten Nachricht verzweigen",
+    "errorUnsupported": "Dieser Agent unterstützt kein Verzweigen",
+    "errorGeneric": "Verzweigen fehlgeschlagen: {{message}}",
+    "errorTeamUnsupported": "Team member conversations must be managed from Team mode"
   }
 }

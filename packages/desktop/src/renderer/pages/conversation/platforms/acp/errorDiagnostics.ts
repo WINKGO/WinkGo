@@ -33,6 +33,10 @@ const REDACTION_RULES: ReadonlyArray<readonly [RegExp, string]> = [
   // Bearer tokens. Runs before the key=value rule so the "Bearer" keyword is
   // not mistaken for an `authorization` value.
   [/(Bearer\s+)[a-zA-Z0-9._\-+/=]+/gi, '$1[REDACTED]'],
+  // NetEase session credential used by the opt-in ESP32 music account flow.
+  [/(MUSIC_U\s*=\s*)[^;\s"',}]+/gi, '$1[REDACTED]'],
+  // QQ Music session keys used by the opt-in ESP32 music account flow.
+  [/((?:qm_keyst|qqmusic_key)\s*=\s*)[^;\s"',}]+/gi, '$1[REDACTED]'],
   // Connection-string credentials: scheme://user:password@host -> redact password.
   [/(\b[a-z][a-z0-9+.-]*:\/\/[^:/\s@]+:)[^@\s/]+(@)/gi, '$1[REDACTED]$2'],
   // key=value / "key": "value" secrets (api key, token, password, secret).

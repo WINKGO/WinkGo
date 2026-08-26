@@ -1,4 +1,6 @@
 // Modified from AionCore by WINK GO contributors in 2026.
+use std::collections::BTreeSet;
+
 use tracing::{info, warn};
 use winkgo_common::ErrorChain;
 use winkgo_db::MessageRowUpdate;
@@ -66,6 +68,51 @@ impl ConversationService {
 
         if recovered > 0 {
             info!(recovered, "startup recovery completed for stale runtime messages");
+        }
+
+        self.recover_persisted_boundary_queue_on_startup().await;
+    }
+
+    async fn recover_persisted_boundary_queue_on_startup(&self) {
+        let rows = match self.conversation_repo().list_pending_boundary_messages().await {
+            Ok(rows) => rows,
+            Err(error) => {
+                warn!(
+                    error = %ErrorChain(&error),
+                    "startup boundary queue recovery skipped because query failed"
+                );
+                return;
+            }
+        };
+
+        let mut conversations = BTreeSet::new();
+        let mut recovered = 0usize;
+        for row in rows {
+            match self.restore_persisted_boundary_message(&row).await {
+                Ok(Some(conversation_id)) => {
+                    conversations.insert(conversation_id);
+                    recovered += 1;
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    warn!(
+                        conversation_id = %row.conversation_id,
+                        msg_id = ?row.msg_id,
+                        error = %ErrorChain(&error),
+                        "startup boundary queue message could not be restored"
+                    );
+                }
+            }
+        }
+
+        for conversation_id in conversations {
+            self.resume_persisted_boundary_queue(&conversation_id);
+        }
+        if recovered > 0 {
+            info!(
+                recovered,
+                "startup boundary queue recovery scheduled persisted messages"
+            );
         }
     }
 }

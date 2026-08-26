@@ -21,6 +21,10 @@ tokio.workspace = true
 async-trait.workspace = true
 notify.workspace = true
 ignore.workspace = true
+# Source control uses libgit2 in-process and moves discarded untracked files to
+# the operating-system trash rather than deleting them permanently.
+git2.workspace = true
+trash.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

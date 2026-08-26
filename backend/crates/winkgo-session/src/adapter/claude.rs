@@ -30,6 +30,8 @@ pub struct ClaudeAdapter {
     /// text fragments emit as incremental `MessageDelta`s (typewriter) and the
     /// consolidated `assistant` frame skips re-emitting text it already streamed.
     stream: StreamState,
+    /// Outstanding structured-question request ids, used to resolve the right counter.
+    ask_requests: std::collections::HashSet<String>,
 }
 
 /// Per-message streaming state for `--include-partial-messages`. Reset on each
@@ -271,8 +273,8 @@ impl ClaudeAdapter {
             // retracts a pending one → `PermissionResolved{request_id}`. Other
             // control subtypes (keep_alive / streamlined_* / elicitation) carry no
             // FSM signal → opaque (the manager declines elicitation on the a-side).
-            "control_request" => Self::parse_control_request(v),
-            "control_cancel_request" => Self::parse_control_cancel_request(v),
+            "control_request" => self.parse_control_request(v),
+            "control_cancel_request" => self.parse_control_cancel_request(v),
             // R5 (009): `--include-partial-messages` wraps the streaming Anthropic
             // events in `stream_event`. The ONE we read is `message_delta`, whose
             // `delta.stop_reason` is the REAL-TIME per-turn boundary — it lands as
@@ -710,7 +712,7 @@ impl ClaudeAdapter {
     /// control frame. `request_id` is the TOP-LEVEL field (distinct from the
     /// nested `request.tool_use_id`); a frame missing it cannot be answered, so
     /// it degrades to opaque rather than wedging a request we can't resolve.
-    fn parse_control_request(v: &Value) -> Vec<SessionEvent> {
+    fn parse_control_request(&mut self, v: &Value) -> Vec<SessionEvent> {
         let subtype = v
             .get("request")
             .and_then(|r| r.get("subtype"))
@@ -724,6 +726,18 @@ impl ClaudeAdapter {
                     .and_then(|r| r.get("tool_name"))
                     .and_then(Value::as_str)
                     .map(str::to_string);
+                if tool_name.as_deref() == Some("AskUserQuestion") {
+                    let questions = request
+                        .and_then(|r| r.get("input"))
+                        .and_then(|input| input.get("questions"))
+                        .cloned()
+                        .unwrap_or(Value::Null);
+                    self.ask_requests.insert(request_id.to_string());
+                    return vec![SessionEvent::Ask {
+                        request_id: request_id.to_string(),
+                        questions,
+                    }];
+                }
                 // Carry the raw `input` ONLY for AskUserQuestion — its
                 // `{questions:[…]}` is question CONTENT meant for the user, so the
                 // frontend can render a real question card. For every other tool the
@@ -763,8 +777,11 @@ impl ClaudeAdapter {
     /// requires-action sub-state can clear without a user answer. The host sends
     /// NO control_response for a cancel (the request is gone); the manager drops
     /// the pending card on the a-side.
-    fn parse_control_cancel_request(v: &Value) -> Vec<SessionEvent> {
+    fn parse_control_cancel_request(&mut self, v: &Value) -> Vec<SessionEvent> {
         match v.get("request_id").and_then(Value::as_str) {
+            Some(id) if !id.is_empty() && self.ask_requests.remove(id) => vec![SessionEvent::AskResolved {
+                request_id: id.to_string(),
+            }],
             Some(id) if !id.is_empty() => vec![SessionEvent::PermissionResolved {
                 request_id: id.to_string(),
                 // claude control_cancel_request retracts a TOOL approval (§9.17).
@@ -1029,6 +1046,7 @@ impl BackendAdapter for ClaudeAdapter {
             // layer CAN proactively queue. This (NOT supported_commands.steer,
             // which is false here anyway) is what can_queue gates on.
             accepts_proactive_input: true,
+            supports_midturn_delivery: false,
             // #101: static default empty; the clean-slate ClaudeConnection fills it
             // from the control_request{initialize} response (the legacy adapter has
             // no discovery wire). capabilities() merges the discovered set on read.
@@ -1876,25 +1894,19 @@ mod tests {
                 }
             }
         });
-        let events = ClaudeAdapter::parse_control_request(&frame);
+        let mut adapter = ClaudeAdapter::default();
+        let events = adapter.parse_control_request(&frame);
         match events.as_slice() {
-            [
-                SessionEvent::Permission {
-                    request_id,
-                    tool_name,
-                    input,
-                    ..
-                },
-            ] => {
+            [SessionEvent::Ask { request_id, questions }] => {
                 assert_eq!(request_id, "req-q1");
-                assert_eq!(tool_name.as_deref(), Some("AskUserQuestion"));
-                let questions = input.as_ref().expect("AskUserQuestion carries input");
-                assert_eq!(
-                    questions["questions"][0]["question"], "Pick a color",
-                    "the question text is projected, not dropped"
-                );
+                assert_eq!(questions[0]["question"], "Pick a color");
             }
-            other => panic!("expected one Permission, got {other:?}"),
+            other => panic!("expected one Ask, got {other:?}"),
+        }
+        let cancel = serde_json::json!({ "type": "control_cancel_request", "request_id": "req-q1" });
+        match adapter.parse_control_cancel_request(&cancel).as_slice() {
+            [SessionEvent::AskResolved { request_id }] => assert_eq!(request_id, "req-q1"),
+            other => panic!("expected AskResolved, got {other:?}"),
         }
     }
 
@@ -1913,7 +1925,7 @@ mod tests {
                 "input": { "command": "rm -rf /" }
             }
         });
-        let events = ClaudeAdapter::parse_control_request(&frame);
+        let events = ClaudeAdapter::default().parse_control_request(&frame);
         match events.as_slice() {
             [SessionEvent::Permission { tool_name, input, .. }] => {
                 assert_eq!(tool_name.as_deref(), Some("Bash"));
@@ -2031,7 +2043,7 @@ mod tests {
     fn parse_control_cancel_request_resolves_permission_or_degrades() {
         // Valid retraction → PermissionResolved.
         let frame = serde_json::json!({ "type": "control_cancel_request", "request_id": "req-9" });
-        match ClaudeAdapter::parse_control_cancel_request(&frame).as_slice() {
+        match ClaudeAdapter::default().parse_control_cancel_request(&frame).as_slice() {
             [SessionEvent::PermissionResolved { request_id, kind }] => {
                 assert_eq!(request_id, "req-9");
                 assert_eq!(
@@ -2049,7 +2061,7 @@ mod tests {
             serde_json::json!({ "type": "control_cancel_request" }),
             serde_json::json!({ "type": "control_cancel_request", "request_id": "" }),
         ] {
-            match ClaudeAdapter::parse_control_cancel_request(&frame).as_slice() {
+            match ClaudeAdapter::default().parse_control_cancel_request(&frame).as_slice() {
                 [SessionEvent::AdapterSpecific { tag, .. }] => {
                     assert_eq!(tag, "control_cancel_request", "unidentifiable cancel stays opaque");
                 }

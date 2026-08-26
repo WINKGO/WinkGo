@@ -19,6 +19,9 @@ export type ReplyQuote = {
 };
 
 interface EventTypes {
+  // Open a WINK GO utility directly from the composer. This keeps feature
+  // discovery in the same compact `+` menu as files, skills and MCP tools.
+  'dynamic-island.open-panel': ['browserComputerUse' | 'desktopComputerUse'];
   'winkgo_agent.selected.file': [Array<string | FileOrFolderItem>, targetConversationId?: string];
   'winkgo_agent.selected.file.append': [Array<string | FileOrFolderItem>, targetConversationId?: string];
   'winkgo_agent.selected.file.clear': void;

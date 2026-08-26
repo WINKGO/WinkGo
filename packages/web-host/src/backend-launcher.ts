@@ -158,6 +158,7 @@ export type BackendStartupErrorDetails = {
   serverListeningObserved?: boolean;
   serverListeningObservedAfterMs?: number;
   serverListeningLine?: string;
+  healthTimeoutKeptAlive?: boolean;
 };
 
 export type BackendStartOptions = {
@@ -816,15 +817,17 @@ export class BackendLifecycleManager {
     }
     const health = await Promise.race([this.waitForHealth(port), startupFailure]);
     if (!health.ok) {
+      const healthTimeoutKeptAlive = !!(options?.allowPendingOnHealthTimeout && this.childProcess);
       const healthTimeoutError = makeStartupError(
         'health_timeout',
         'winkgo_core failed to start within timeout',
         undefined,
         {
           ...health.diagnostics,
+          healthTimeoutKeptAlive,
         }
       );
-      if (options?.allowPendingOnHealthTimeout && this.childProcess) {
+      if (healthTimeoutKeptAlive && this.childProcess) {
         startupSettled = true;
         console.warn(`[winkgo_core] health check timed out; keeping process alive on port ${this._port}`);
         void Promise.resolve(options.onHealthTimeout?.(healthTimeoutError)).catch((error) => {

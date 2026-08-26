@@ -14,7 +14,10 @@ import {
   filterAssistants,
   groupAssistantsByEnabled,
   resolveAssistantSourceTag,
+  buildAssistantEditorBackends,
+  filterAssistantEditorBackends,
 } from '@/renderer/pages/settings/AssistantSettings/assistantUtils';
+import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
 import type { AssistantListItem } from '@/renderer/pages/settings/AssistantSettings/types';
 
 vi.mock('@/renderer/utils/platform', () => ({
@@ -239,5 +242,75 @@ describe('resolveAssistantSourceTag', () => {
 
   it('shows the CLI tag for generated assistants', () => {
     expect(resolveAssistantSourceTag('generated')).toBe('cli');
+  });
+});
+
+describe('buildAssistantEditorBackends', () => {
+  const agent = (overrides: Partial<ManagedAgent>): ManagedAgent =>
+    ({
+      id: 'agent-1',
+      name: 'Agent One',
+      agent_type: 'acp',
+      backend: 'claude',
+      status: 'online',
+      enabled: true,
+      ...overrides,
+    }) as ManagedAgent;
+
+  it('exposes supported Agents while excluding retired WINK GO integrations', () => {
+    const backends = buildAssistantEditorBackends(
+      [
+        agent({ id: 'acp-1', name: 'Claude Code' }),
+        agent({ id: 'agy-1', agent_type: 'antigravity', backend: 'antigravity', name: 'Antigravity' }),
+        agent({ id: 'winkgo-1', agent_type: 'winkgo_agent', backend: 'winkgo', name: 'WINK GO CLI' }),
+      ],
+      'zh-CN'
+    );
+
+    expect(backends.map(({ id, name, runtimeKey }) => ({ id, name, runtimeKey }))).toEqual([
+      { id: 'winkgo-1', name: 'WINK GO CLI', runtimeKey: 'winkgo' },
+    ]);
+  });
+
+  it('keeps the current offline Agent visible so the editor never renders a raw id', () => {
+    const backends = buildAssistantEditorBackends(
+      [agent({ id: 'kimi-1', backend: 'kimi', name: 'Kimi', status: 'offline' })],
+      'zh-CN',
+      'kimi-1'
+    );
+
+    expect(backends).toHaveLength(1);
+    expect(backends[0]?.name).toBe('Kimi');
+  });
+
+  it('does not expose legacy non-editor Agent types', () => {
+    const backends = buildAssistantEditorBackends(
+      [agent({ agent_type: 'gemini' }), agent({ id: 'gateway', agent_type: 'openclaw-gateway' })],
+      'zh-CN'
+    );
+
+    expect(backends).toEqual([]);
+  });
+});
+
+describe('filterAssistantEditorBackends', () => {
+  const backends = [
+    { id: 'claude-1', name: 'Claude Code', runtimeKey: 'claude', modelOptions: [] },
+    { id: 'agy-1', name: 'Antigravity', runtimeKey: 'antigravity', modelOptions: [] },
+    { id: 'winkgo-1', name: 'WINK GO CLI', runtimeKey: 'winkgo', modelOptions: [] },
+  ] as Parameters<typeof filterAssistantEditorBackends>[0];
+
+  it('returns all rows for a blank search', () => {
+    expect(filterAssistantEditorBackends(backends, '   ')).toEqual(backends);
+  });
+
+  it('matches name, runtime key, and id without case sensitivity', () => {
+    expect(filterAssistantEditorBackends(backends, 'ANTI').map((item) => item.id)).toEqual(['agy-1']);
+    expect(filterAssistantEditorBackends(backends, 'winkgo').map((item) => item.id)).toEqual(['winkgo-1']);
+    expect(filterAssistantEditorBackends(backends, 'claude-1').map((item) => item.id)).toEqual(['claude-1']);
+  });
+
+  it('does not fall back to unrelated Agents when nothing matches', () => {
+    expect(filterAssistantEditorBackends(backends, 'not-installed')).toEqual([]);
   });
 });

@@ -22,6 +22,7 @@ winkgo-system.workspace = true
 axum.workspace = true
 http.workspace = true
 base64.workspace = true
+mime_guess.workspace = true
 tokio.workspace = true
 tokio-tungstenite.workspace = true
 ed25519-dalek.workspace = true

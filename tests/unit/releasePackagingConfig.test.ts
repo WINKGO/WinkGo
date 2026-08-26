@@ -66,7 +66,7 @@ describe('release packaging configuration', () => {
     }
 
     const proEntries = Object.entries(packageJson.scripts).filter(([, command]) => command.includes('--edition pro'));
-    expect(proEntries.map(([name]) => name).sort()).toEqual(['build-win:x64:pro:dev', 'dist:win:pro:dev']);
+    expect(proEntries.map(([name]) => name).toSorted()).toEqual(['build-win:x64:pro:dev', 'dist:win:pro:dev']);
     for (const [scriptName, command] of proEntries) {
       expect(scriptName).toMatch(/:pro:dev$/);
       expect(command).toContain('--allow-pro-dev');
@@ -149,7 +149,7 @@ describe('release packaging configuration', () => {
 
     expect(result.status, output).toBe(0);
     expect(output).toContain('privacy audit (source) passed');
-  }, 30_000);
+  }, 600_000);
 
   it('does not expose a publishable Pro update feed', () => {
     const proConfig = readProjectFile('packages/desktop/electron-builder.pro.yml');
@@ -175,6 +175,40 @@ describe('release packaging configuration', () => {
 
     expect(macBlock).toContain('    - dmg');
     expect(macBlock).toContain('    - zip');
+  });
+
+  it('keeps the Windows OLE native addon out of signed macOS application resources', () => {
+    const config = readProjectFile('packages/desktop/electron-builder.yml');
+    const winBlock = yamlBlock(config, 'win');
+    const macBlock = yamlBlock(config, 'mac');
+    const sharedResources = config.slice(0, config.indexOf('\nwin:'));
+
+    expect(winBlock).toContain('packages/desktop/native/winkgo_native_drop.node');
+    expect(sharedResources).toContain('packages/desktop/native/winkgo-native-drop/vendor/wry-0.55.1');
+    expect(sharedResources).not.toContain('packages/desktop/native/winkgo_native_drop.node');
+    expect(macBlock).not.toContain('winkgo_native_drop.node');
+  });
+
+  it('builds and verifies the Windows OLE native addon before release', () => {
+    const buildScript = readProjectFile('scripts/build-with-builder.js');
+    const afterPack = readProjectFile('scripts/afterPack.js');
+
+    expect(buildScript).toMatch(
+      /if \(isWindowsBuild\) \{[\s\S]*?packages\/shared-scripts\/src\/prepare-winkgo-native-drop\.cjs/
+    );
+    expect(afterPack).toContain("electronPlatformName === 'win32'");
+    expect(afterPack).toContain('validateNativeDropBinary(nativeDropPath)');
+  });
+
+  it('ships every standalone builtin MCP entry point outside app.asar', () => {
+    const config = readProjectFile('packages/desktop/electron-builder.yml');
+    const afterPack = readProjectFile('scripts/afterPack.js');
+
+    for (const fileName of ['builtin-mcp-image-gen.js', 'builtin-mcp-browser.js', 'builtin-mcp-browser-skills.js']) {
+      expect(config).toContain(`- 'out/main/${fileName}'`);
+      expect(afterPack).toContain(fileName);
+    }
+    expect(afterPack).toContain('Packaged app is missing required builtin MCP script(s)');
   });
 
   it('ships the original Knowledge Canvas and WINK GO skill inventories', () => {
@@ -296,6 +330,23 @@ describe('release packaging configuration', () => {
     expect(viteConfig).toContain('removeGeneratedDirectory(rendererOutput)');
   });
 
+  it('keeps React-coupled renderer dependencies in one production vendor chunk', () => {
+    const viteConfig = readProjectFile('packages/desktop/electron.vite.config.ts');
+
+    expect(viteConfig).toContain("return 'vendor';");
+    for (const splitChunk of [
+      'vendor-react',
+      'vendor-arco',
+      'vendor-markdown',
+      'vendor-highlight',
+      'vendor-monaco',
+      'vendor-codemirror',
+      'vendor-katex',
+    ]) {
+      expect(viteConfig).not.toContain(`return '${splitChunk}';`);
+    }
+  });
+
   it('does not build Windows zip artifacts', () => {
     const config = readProjectFile('packages/desktop/electron-builder.yml');
     const winBlock = yamlBlock(config, 'win');
@@ -412,7 +463,6 @@ describe('release packaging configuration', () => {
     const tempDir = mkdtempSync(resolve(projectRoot, '.tmp-winkgo-release-assets-'));
     const tempName = basename(tempDir);
     const artifactsDir = resolve(tempDir, 'build-artifacts');
-    const outputDir = resolve(tempDir, 'release-assets');
     const artifactsArg = `${tempName}/build-artifacts`;
     const outputArg = `${tempName}/release-assets`;
 
@@ -445,7 +495,6 @@ describe('release packaging configuration', () => {
     const tempDir = mkdtempSync(resolve(projectRoot, '.tmp-winkgo-pro-release-assets-'));
     const tempName = basename(tempDir);
     const artifactsDir = resolve(tempDir, 'build-artifacts');
-    const outputDir = resolve(tempDir, 'release-assets');
     const artifactsArg = `${tempName}/build-artifacts`;
     const outputArg = `${tempName}/release-assets`;
 

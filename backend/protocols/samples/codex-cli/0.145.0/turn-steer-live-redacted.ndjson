@@ -1,0 +1,3 @@
+{"direction":"codex_to_client","frame":{"method":"turn/started","params":{"threadId":"<thread-id>","turn":{"id":"<turn-id>","items":[],"itemsView":"notLoaded","status":"inProgress","error":null,"startedAt":1787331326,"completedAt":null,"durationMs":null}},"emittedAtMs":1787331331696}}
+{"direction":"client_to_codex","frame":{"jsonrpc":"2.0","id":4,"method":"turn/steer","params":{"threadId":"<thread-id>","expectedTurnId":"<turn-id>","input":[{"type":"text","text":"Reply exactly STEER_CAPTURE_OK."}]}}}
+{"direction":"codex_to_client","frame":{"id":4,"result":{"turnId":"<turn-id>"}}}

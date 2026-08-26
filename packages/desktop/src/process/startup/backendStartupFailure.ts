@@ -11,6 +11,8 @@ import type { BackendStartupFailureInfo } from '@/common/types/platform/electron
 type ErrorWithDetails = Error & {
   details?: {
     stage?: unknown;
+    serverListeningObserved?: unknown;
+    healthTimeoutKeptAlive?: unknown;
     isPackaged?: unknown;
     causeMessage?: unknown;
     stderrTail?: unknown;
@@ -34,6 +36,7 @@ const GLIBC_VERSION_RE = /GLIBC_(\d+\.\d+)/g;
 const GLIBC_NOT_FOUND_RE = /GLIBC_\d+\.\d+[\s\S]{0,160}not found|not found[\s\S]{0,160}GLIBC_\d+\.\d+/i;
 const PACKAGED_APP_MARKER_ENTRIES = new Set(['app.asar', 'app.asar.unpacked/']);
 const DATA_MIGRATION_BOUNDARY_STAGES = new Set(['database.migration', 'database.schema_repair']);
+const DATABASE_NEWER_THAN_APP_BOUNDARY_STAGE = 'database.newer_than_app';
 const RECOVERABLE_DATABASE_CORRUPTION_BOUNDARY_STAGE = 'database.recoverable_corruption';
 const LOCAL_DATA_REPAIR_BOUNDARY_CODE = 'BOOTSTRAP_SERVICE_INIT_FAILED';
 const LOCAL_DATA_REPAIR_BOUNDARY_STAGE = 'services.init';
@@ -241,6 +244,30 @@ function classifyStartupDirectoryFailure(
   return undefined;
 }
 
+function classifyPendingSlowStartup(details: ErrorWithDetails['details']): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'health_timeout') return undefined;
+  if (details.serverListeningObserved !== true) return undefined;
+  if (details.healthTimeoutKeptAlive !== true) return undefined;
+
+  return { reason: 'backend_startup_pending_slow' };
+}
+
+function classifyBackendStartupExited(details: ErrorWithDetails['details']): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'early_exit') return undefined;
+  if (details.serverListeningObserved !== true) return undefined;
+
+  return { reason: 'backend_startup_exited' };
+}
+
+function classifyPortReportTimeout(details: ErrorWithDetails['details']): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'listen_timeout') return undefined;
+
+  return { reason: 'backend_startup_port_report_timeout' };
+}
+
 export function classifyBackendStartupFailure(error: unknown): BackendStartupFailureInfo {
   const details = getBackendStartupDetails(error);
   const packageArchitectureMismatch = classifyPackageArchitectureMismatch(details);
@@ -278,6 +305,17 @@ export function classifyBackendStartupFailure(error: unknown): BackendStartupFai
 
   if (
     backendBoundaryCode === 'BOOTSTRAP_DATA_INIT_FAILED' &&
+    backendBoundaryStage === DATABASE_NEWER_THAN_APP_BOUNDARY_STAGE
+  ) {
+    return {
+      reason: 'backend_database_newer_than_app',
+      backendBoundaryCode,
+      backendBoundaryStage,
+    };
+  }
+
+  if (
+    backendBoundaryCode === 'BOOTSTRAP_DATA_INIT_FAILED' &&
     backendBoundaryStage === RECOVERABLE_DATABASE_CORRUPTION_BOUNDARY_STAGE
   ) {
     return {
@@ -298,6 +336,15 @@ export function classifyBackendStartupFailure(error: unknown): BackendStartupFai
       backendBoundaryStage,
     };
   }
+
+  const pendingSlowStartup = classifyPendingSlowStartup(details);
+  if (pendingSlowStartup) return pendingSlowStartup;
+
+  const backendStartupExited = classifyBackendStartupExited(details);
+  if (backendStartupExited) return backendStartupExited;
+
+  const portReportTimeout = classifyPortReportTimeout(details);
+  if (portReportTimeout) return portReportTimeout;
 
   return {
     reason: 'backend_startup_failed',

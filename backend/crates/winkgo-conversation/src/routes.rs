@@ -11,9 +11,9 @@ use winkgo_api_types::{
     ActiveCountResponse, ApiResponse, ApprovalCheckQuery, ApprovalCheckResponse, CancelConversationRequest,
     CancelConversationResponse, CloneConversationRequest, ConfirmRequest, ConfirmationListResponse,
     ConversationArtifactListResponse, ConversationArtifactResponse, ConversationListResponse, ConversationResponse,
-    CreateConversationRequest, EnsureConversationRuntimeResponse, ListConversationsQuery, ListMessagesQuery,
-    MessageListResponse, MessageResponse, MessageSearchResponse, SearchMessagesQuery, SendMessageRequest,
-    SendMessageResponse, UpdateConversationArtifactRequest, UpdateConversationRequest,
+    CreateConversationRequest, EnsureConversationRuntimeResponse, ForkConversationRequest, ListConversationsQuery,
+    ListMessagesQuery, MessageListResponse, MessageResponse, MessageSearchResponse, SearchMessagesQuery,
+    SendMessageRequest, SendMessageResponse, UpdateConversationArtifactRequest, UpdateConversationRequest,
 };
 use winkgo_auth::CurrentUser;
 use winkgo_common::ApiError;
@@ -110,6 +110,7 @@ pub fn conversation_routes(state: ConversationRouterState) -> Router {
     Router::new()
         .route("/api/conversations", post(create).get(list))
         .route("/api/conversations/{id}", get(get_one).patch(update).delete(delete_one))
+        .route("/api/conversations/{id}/fork", post(fork))
         .route("/api/conversations/{id}/reset", post(reset))
         .route("/api/conversations/{id}/associated", get(associated))
         .route("/api/conversations/{id}/messages", get(list_msg).post(send_msg))
@@ -117,11 +118,16 @@ pub fn conversation_routes(state: ConversationRouterState) -> Router {
         .route("/api/conversations/{id}/artifacts", get(list_artifacts))
         .route("/api/conversations/{id}/artifacts/{artifactId}", patch(update_artifact))
         .route("/api/conversations/{id}/cancel", post(cancel))
+        .route(
+            "/api/conversations/{id}/terminals/{terminalId}/kill",
+            post(kill_terminal),
+        )
         .route("/api/conversations/{id}/runtime/ensure", post(ensure_runtime))
         .route("/api/conversations/{id}/active-lease", post(active_lease))
         // Confirmation system
         .route("/api/conversations/{id}/confirmations", get(list_confirmations))
         .route("/api/conversations/{id}/confirmations/{callId}/confirm", post(confirm))
+        .route("/api/conversations/{id}/asks/{requestId}/answer", post(answer_ask))
         .route("/api/conversations/{id}/approvals/check", get(check_approval))
         .route("/api/conversations/active-count", get(active_count))
         .route("/api/conversations/clone", post(clone))
@@ -161,6 +167,17 @@ async fn clone(
         .clone_create(&user.id, req)
         .await
         .map_err(ApiError::from)?;
+    Ok((StatusCode::CREATED, Json(ApiResponse::ok(conversation))))
+}
+
+async fn fork(
+    State(state): State<ConversationRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    Path(id): Path<String>,
+    body: Result<Json<ForkConversationRequest>, JsonRejection>,
+) -> Result<(StatusCode, Json<ApiResponse<ConversationResponse>>), ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    let conversation = state.service.fork(&user.id, &id, req).await.map_err(ApiError::from)?;
     Ok((StatusCode::CREATED, Json(ApiResponse::ok(conversation))))
 }
 
@@ -303,6 +320,19 @@ async fn update_artifact(
     Ok(Json(ApiResponse::ok(artifact)))
 }
 
+async fn kill_terminal(
+    State(state): State<ConversationRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    Path((id, terminal_id)): Path<(String, String)>,
+) -> Result<Json<ApiResponse<()>>, ApiError> {
+    state
+        .service
+        .kill_terminal(&user.id, &id, &terminal_id, &state.task_manager)
+        .await
+        .map_err(ApiError::from)?;
+    Ok(Json(ApiResponse::ok(())))
+}
+
 async fn cancel(
     State(state): State<ConversationRouterState>,
     Extension(user): Extension<CurrentUser>,
@@ -389,6 +419,52 @@ async fn confirm(
     state
         .service
         .confirm(&user.id, &params.id, &params.call_id, req, &state.task_manager)
+        .await
+        .map_err(ApiError::from)?;
+    Ok(Json(ApiResponse::success()))
+}
+
+#[derive(serde::Deserialize)]
+struct AskPathParams {
+    id: String,
+    #[serde(rename = "requestId")]
+    request_id: String,
+}
+
+async fn answer_ask(
+    State(state): State<ConversationRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    Path(params): Path<AskPathParams>,
+    body: Result<Json<winkgo_api_types::AskAnswerRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<()>>, ApiError> {
+    let Json(request) = body.map_err(ApiError::from)?;
+    let answers = if request.decline {
+        if !request.answers.is_empty() {
+            return Err(ApiError::BadRequest(
+                "decline and answers are mutually exclusive".into(),
+            ));
+        }
+        None
+    } else {
+        if request.answers.is_empty() {
+            return Err(ApiError::BadRequest(
+                "answers must not be empty unless decline is true".into(),
+            ));
+        }
+        if request
+            .answers
+            .iter()
+            .any(|answer| answer.question.trim().is_empty() || answer.labels.is_empty())
+        {
+            return Err(ApiError::BadRequest(
+                "every answer must name its question and select at least one value".into(),
+            ));
+        }
+        Some(request.answers)
+    };
+    state
+        .service
+        .answer_ask(&user.id, &params.id, &params.request_id, answers, &state.task_manager)
         .await
         .map_err(ApiError::from)?;
     Ok(Json(ApiResponse::success()))

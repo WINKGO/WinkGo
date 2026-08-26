@@ -7,6 +7,7 @@
  */
 
 import { ipcBridge } from '@/common';
+import { localFileRef } from '@/common/types/chatFile';
 import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import type { ConversationContextValue } from '@/renderer/hooks/context/ConversationContext';
 import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
@@ -73,7 +74,14 @@ export const useAutoPreviewOfficeFiles = (
         openTimersRef.current.delete(normalizedFilePath);
 
         if (!findPreviewTab(contentType, '', { file_path, file_name })) {
-          openPreview('', contentType, { file_path, file_name, title: file_name, workspace, editable: false });
+          openPreview('', contentType, {
+            file_path,
+            fileRef: localFileRef(file_path),
+            file_name,
+            title: file_name,
+            workspace,
+            editable: false,
+          });
         }
       }, OFFICE_OPEN_DELAY_MS);
 

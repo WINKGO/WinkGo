@@ -59,6 +59,8 @@ interface MessageIndex {
   call_idIndex: Map<string, number>; // tool_call.call_id -> index
   tool_call_idIndex: Map<string, number>; // acp_tool_call.update.tool_call_id -> index
   permission_call_idIndex: Map<string, number>; // permission.content.call_id -> index
+  ask_request_idIndex: Map<string, number>; // ask.content.request_id -> index
+  terminal_idIndex: Map<string, number>; // acp_terminal_output.content.terminal_id -> index
 }
 
 function getMessageIndexKey(message: TMessage): string | undefined {
@@ -85,11 +87,14 @@ export function logDroppedToolCallWithoutCallId(message: TMessage | undefined): 
 
 // 构建消息索引
 // Build message index
-function buildMessageIndex(list: TMessage[]): MessageIndex {
+/** Build the stable message lookup used by incremental stream merges. */
+export function buildMessageIndex(list: TMessage[]): MessageIndex {
   const msgIdIndex = new Map<string, number>();
   const call_idIndex = new Map<string, number>();
   const tool_call_idIndex = new Map<string, number>();
   const permission_call_idIndex = new Map<string, number>();
+  const ask_request_idIndex = new Map<string, number>();
+  const terminal_idIndex = new Map<string, number>();
 
   for (let i = 0; i < list.length; i++) {
     const msg = list[i];
@@ -106,9 +111,22 @@ function buildMessageIndex(list: TMessage[]): MessageIndex {
     if (msg.type === 'permission' && msg.content?.call_id) {
       permission_call_idIndex.set(msg.content.call_id, i);
     }
+    if (msg.type === 'ask' && msg.content?.request_id) {
+      ask_request_idIndex.set(msg.content.request_id, i);
+    }
+    if (msg.type === 'acp_terminal_output' && msg.content?.terminal_id) {
+      terminal_idIndex.set(msg.content.terminal_id, i);
+    }
   }
 
-  return { msgIdIndex, call_idIndex, tool_call_idIndex, permission_call_idIndex };
+  return {
+    msgIdIndex,
+    call_idIndex,
+    tool_call_idIndex,
+    permission_call_idIndex,
+    ask_request_idIndex,
+    terminal_idIndex,
+  };
 }
 
 // 获取或构建索引（带缓存）
@@ -129,7 +147,12 @@ const sanitizeMessageForList = (message: TMessage): TMessage =>
 
 // 使用索引优化的消息合并函数
 // Index-optimized message compose function
-function composeMessageWithIndex(message: TMessage | undefined, list: TMessage[], index: MessageIndex): TMessage[] {
+/** Merge one incoming message into a list while maintaining its lookup index. */
+export function composeMessageWithIndex(
+  message: TMessage | undefined,
+  list: TMessage[],
+  index: MessageIndex
+): TMessage[] {
   if (!message) return list || [];
 
   if (logDroppedToolCallWithoutCallId(message)) {
@@ -161,6 +184,8 @@ function composeMessageWithIndex(message: TMessage | undefined, list: TMessage[]
       index.call_idIndex = rebuilt.call_idIndex;
       index.tool_call_idIndex = rebuilt.tool_call_idIndex;
       index.permission_call_idIndex = rebuilt.permission_call_idIndex;
+      index.ask_request_idIndex = rebuilt.ask_request_idIndex;
+      index.terminal_idIndex = rebuilt.terminal_idIndex;
     }
     return result;
   }
@@ -178,11 +203,37 @@ function composeMessageWithIndex(message: TMessage | undefined, list: TMessage[]
         return newList;
       }
     }
+    const status = (message.content as { status?: string }).status;
+    if (status === 'completed' || status === 'error' || status === 'canceled') {
+      console.warn('[tool-call] terminal frame found no card to settle; appending a new one', {
+        conversation_id: message.conversation_id,
+        msg_id: message.msg_id,
+        call_id: message.content.call_id,
+        status,
+        indexed_call_ids: index.call_idIndex.size,
+        list_len: list.length,
+      });
+    }
     // 未找到，添加新消息并更新索引
     const newIdx = list.length;
     index.call_idIndex.set(message.content.call_id, newIdx);
     const msgIndexKey = getMessageIndexKey(message);
     if (msgIndexKey) index.msgIdIndex.set(msgIndexKey, newIdx);
+    return list.concat(message);
+  }
+
+  if (message.type === 'acp_terminal_output' && message.content?.terminal_id) {
+    const existingIdx = index.terminal_idIndex.get(message.content.terminal_id);
+    if (existingIdx !== undefined && existingIdx < list.length) {
+      const existing = list[existingIdx];
+      if (existing.type === 'acp_terminal_output') {
+        const next = list.slice();
+        next[existingIdx] = { ...existing, content: message.content };
+        return next;
+      }
+    }
+    const newIdx = list.length;
+    index.terminal_idIndex.set(message.content.terminal_id, newIdx);
     return list.concat(message);
   }
 
@@ -222,6 +273,20 @@ function composeMessageWithIndex(message: TMessage | undefined, list: TMessage[]
     const msgIndexKey = getMessageIndexKey(message);
     if (msgIndexKey) index.msgIdIndex.set(msgIndexKey, newIdx);
     return list.concat(message);
+  }
+
+  if (message.type === 'ask' && message.content?.request_id) {
+    const existingIdx = index.ask_request_idIndex.get(message.content.request_id);
+    if (existingIdx !== undefined && existingIdx < list.length) {
+      const next = list.slice();
+      next[existingIdx] = sanitizeMessageForList(message);
+      return next;
+    }
+    const newIdx = list.length;
+    index.ask_request_idIndex.set(message.content.request_id, newIdx);
+    const msgIndexKey = getMessageIndexKey(message);
+    if (msgIndexKey) index.msgIdIndex.set(msgIndexKey, newIdx);
+    return [...list, sanitizeMessageForList(message)];
   }
 
   // text message: merge only with the latest contiguous streaming chunk.
@@ -313,6 +378,8 @@ function composeMessageWithIndex(message: TMessage | undefined, list: TMessage[]
       index.call_idIndex = rebuilt.call_idIndex;
       index.tool_call_idIndex = rebuilt.tool_call_idIndex;
       index.permission_call_idIndex = rebuilt.permission_call_idIndex;
+      index.ask_request_idIndex = rebuilt.ask_request_idIndex;
+      index.terminal_idIndex = rebuilt.terminal_idIndex;
       return newList;
     }
     const newIdx = list.length;
@@ -394,6 +461,12 @@ export const useMergeLiveMessage = () => {
           }
           if (msg.type === 'permission' && msg.content?.call_id) {
             index.permission_call_idIndex.set(msg.content.call_id, newIdx);
+          }
+          if (msg.type === 'ask' && msg.content?.request_id) {
+            index.ask_request_idIndex.set(msg.content.request_id, newIdx);
+          }
+          if (msg.type === 'acp_terminal_output' && msg.content?.terminal_id) {
+            index.terminal_idIndex.set(msg.content.terminal_id, newIdx);
           }
           newList = newList.concat(msg);
         } else {
@@ -491,6 +564,36 @@ const normalizePersistedWorkspaceRuntimeError = (
     detail,
     workspacePath,
     retryable: false,
+    feedback_recommended: false,
+  };
+};
+
+const normalizePersistedMcpTargetNotFound = (
+  parsed: Record<string, unknown>,
+  message: string
+): AgentStreamErrorInfo | undefined => {
+  const persistedError = isRecord(parsed.error) ? parsed.error : undefined;
+  const diagnosticText = [
+    message,
+    typeof parsed.detail === 'string' ? parsed.detail : '',
+    typeof persistedError?.message === 'string' ? persistedError.message : '',
+    typeof persistedError?.detail === 'string' ? persistedError.detail : '',
+  ]
+    .join('\n')
+    .toLowerCase();
+  if (
+    !diagnosticText.includes('mcp tool execution') ||
+    (!diagnosticText.includes('target-not-found') && !diagnosticText.includes('target not found'))
+  ) {
+    return undefined;
+  }
+
+  return {
+    message,
+    code: 'USER_AGENT_RESOURCE_NOT_FOUND',
+    ownership: 'user_agent',
+    detail: message,
+    retryable: true,
     feedback_recommended: false,
   };
 };
@@ -636,6 +739,7 @@ const normalizeDbTipsMessage = (msg: TMessage): TMessage => {
   const structuredError =
     tipType === 'error'
       ? (normalizePersistedWorkspaceRuntimeError(parsed, parsed.content) ??
+        normalizePersistedMcpTargetNotFound(parsed, parsed.content) ??
         normalizeAgentStreamError(parsed.error) ??
         classifyPersistedSendFailure(parsed, parsed.content) ??
         normalizeAgentStreamError({ ...parsed, message: parsed.content }))
@@ -857,7 +961,7 @@ export const useMessageLstCache = (key: string) => {
       return;
     }
 
-    return ipcBridge.conversation.userCreated.on((payload) => {
+    const disposeCreated = ipcBridge.conversation.userCreated.on((payload) => {
       if (payload.conversation_id !== key) {
         return;
       }
@@ -883,6 +987,22 @@ export const useMessageLstCache = (key: string) => {
         );
       });
     });
+    const disposeStatus = ipcBridge.conversation.statusChanged.on((payload) => {
+      if (payload.conversation_id !== key) return;
+      update((list) => {
+        const index = getOrBuildIndex(list).msgIdIndex.get(payload.msg_id);
+        if (index === undefined || index >= list.length) return list;
+        const current = list[index];
+        if (current.status === payload.status) return list;
+        const next = list.slice();
+        next[index] = { ...current, status: payload.status };
+        return next;
+      });
+    });
+    return () => {
+      disposeCreated();
+      disposeStatus();
+    };
   }, [key, update]);
 };
 

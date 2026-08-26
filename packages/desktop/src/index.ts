@@ -10,6 +10,7 @@
 // ANY module that calls app.getPath('userData'), because Electron caches the path on first call.
 import './process/utils/configureChromium';
 import { installGpuCrashHandler } from './process/utils/gpuRecovery';
+import { createRendererRecoveryPolicy } from './process/utils/rendererRecovery';
 import { captureBackendStartupFailure, initSentry, scheduleStartupLogReport, setSentryDeviceId } from './sentry';
 
 initSentry();
@@ -29,6 +30,7 @@ import { installQuitCleanup } from './process/startup/quitCleanup';
 import { shouldRegisterBackendStartup } from './process/startup/singleInstanceGating';
 import { installElectronSecurityPolicy, registerTrustedWindowSecurity } from './process/startup/electronSecurity';
 import { ProcessConfig } from './process/utils/initStorage';
+import { resolvePetSize } from './process/pet/petTypes';
 import type { BackendStartupFailureInfo } from './common/types/platform/electron';
 import { isTrustedIpcSender, resolveTrustedDevServerUrl } from './common/platform/electronSecurity';
 import { registerWindowMaximizeListeners } from '@process/bridge';
@@ -42,6 +44,7 @@ import { setupApplicationMenu } from './process/utils/appMenu';
 import { startWebHost } from '@winkgo/web-host';
 import { initializeZoomFactor, setupZoomForWindow } from './process/utils/zoom';
 import { hydrateWindowsProcessPath } from './process/startup/windowsPath';
+import { registerWindowsAppUserModelId } from './process/startup/windowsAppUserModelId';
 import {
   MIN_WINDOW_WIDTH,
   MIN_WINDOW_HEIGHT,
@@ -88,6 +91,7 @@ installElectronSecurityPolicy(app);
 // When a second instance starts (e.g. from protocol URL), it sends its data
 // to the first instance via second-instance event, then quits.
 const isE2ETestMode = process.env.WINKGO_E2E_TEST === '1';
+const enableDesktopIslandInE2E = process.env.WINKGO_E2E_DESKTOP_ISLAND === '1';
 const skipSingleInstanceLock = isE2ETestMode || process.env.WINKGO_MULTI_INSTANCE === '1';
 const deepLinkFromArgv = process.argv.find(isWinkGoDeepLinkUrl);
 const gotTheLock = skipSingleInstanceLock ? true : app.requestSingleInstanceLock({ deepLinkUrl: deepLinkFromArgv });
@@ -145,6 +149,7 @@ if (process.platform === 'darwin' || process.platform === 'linux') {
   }
 } else if (process.platform === 'win32') {
   hydrateWindowsProcessPath();
+  registerWindowsAppUserModelId({ app });
 }
 
 // Handle Squirrel startup events (Windows installer)
@@ -308,10 +313,17 @@ ipcMain.handle('backend:recover-corrupted-database', async (event) => {
   });
 });
 
+function broadcastBackendStartupState(state: BackendStartupFailureInfo | null): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('backend-startup-state', state);
+  }
+}
+
 function markBackendStartupFailed(error: unknown): void {
   backendStartupFailed = true;
-  backendStartupFailureInfo = classifyBackendStartupFailure(error);
+  backendStartupFailureInfo = { ...classifyBackendStartupFailure(error), appVersion: app.getVersion() };
   (globalThis as typeof globalThis & { __backendStartupFailed?: boolean }).__backendStartupFailed = true;
+  broadcastBackendStartupState(backendStartupFailureInfo);
 }
 
 function registerCronResumeBridge(backendPort: number): void {
@@ -385,6 +397,7 @@ function markBackendReady(backendPort: number, source: string): void {
   backendStartupFailed = false;
   backendStartupFailureInfo = null;
   (globalThis as typeof globalThis & { __backendStartupFailed?: boolean }).__backendStartupFailed = false;
+  broadcastBackendStartupState(null);
   void ensureAdminUserOnce(backendPort);
   scheduleBackendMigrations();
 }
@@ -586,7 +599,7 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
     });
   }
 
-  if (!isE2ETestMode) {
+  if (!isE2ETestMode || enableDesktopIslandInE2E) {
     createDesktopIslandWindow({
       rendererUrl: rendererUrl ?? undefined,
       fallbackFile,
@@ -598,13 +611,27 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
     console.error('[WinkGo] did-fail-load:', { errorCode, errorDescription, validatedURL, isMainFrame });
   });
 
+  const rendererRecovery = createRendererRecoveryPolicy();
+
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     console.error('[WinkGo] render-process-gone:', details);
 
-    // Reload the renderer to recover from the crash.
-    // The isDestroyed() guard in adapter/main.ts prevents further sends
-    // to the dead webContents while the reload is in progress.
-    if (!mainWindow.isDestroyed()) {
+    if (mainWindow.isDestroyed()) return;
+    const action = rendererRecovery.onCrash(details.reason);
+
+    if (action.kind === 'relaunch') {
+      console.warn(`[WinkGo] Renderer cannot recover in-place (reason=${details.reason}); relaunching once`);
+      app.relaunch();
+      app.exit(0);
+      return;
+    }
+    if (action.kind === 'give-up') {
+      console.error(`[WinkGo] Renderer recovery throttled (reason=${details.reason}); stopping automatic retries`);
+      return;
+    }
+
+    const reload = () => {
+      if (mainWindow.isDestroyed()) return;
       console.log('[WinkGo] Attempting to recover from renderer crash by reloading...');
 
       if (rendererUrl) {
@@ -616,6 +643,12 @@ const createWindow = ({ showOnReady = true }: { showOnReady?: boolean } = {}): v
           console.error('[WinkGo] Recovery loadFile failed:', error.message || error);
         });
       }
+    };
+
+    if (action.delayMs === 0) {
+      reload();
+    } else {
+      setTimeout(reload, action.delayMs);
     }
   });
 
@@ -699,6 +732,67 @@ const handleAppReady = async (): Promise<void> => {
     console.error('Failed to initialize process:', error);
     app.exit(1);
     return;
+  }
+
+  // Start the single-target browser bridge before the backend. The backend and
+  // its MCP child inherit these environment values at spawn time, so moving
+  // this after startBackendOrExit would silently break Agent browser control.
+  const { cdpStartupEnabled, setActiveCdpPort } = await import('./process/utils/configureChromium');
+  if (cdpStartupEnabled) {
+    try {
+      const { startCdpBridge } = await import('./process/resources/builtinMcp/cdpBridge');
+      const { setCdpBridgeHandle } = await import('./process/utils/cdpBridgeRegistry');
+      const { getWinkGoBrowserRecorderStatus, listWinkGoBrowserSkills, runWinkGoBrowserSkill } =
+        await import('./process/services/winkGoBrowserSkillsService');
+      const { executeWinkGoBrowserAction, inspectWinkGoBrowserPage } =
+        await import('./process/services/winkGoBrowserControlService');
+      const { runWinkGoBrowserAgentTask } = await import('./process/services/winkGoBrowserAgentService');
+      const { listWinkGoDesktopSkills, runWinkGoDesktopSkill } =
+        await import('./process/services/winkGoDesktopSkillsService');
+      const {
+        actWinkGoDesktopForAgent,
+        cancelWinkGoDesktopForAgent,
+        launchWinkGoDesktopApplicationForAgent,
+        observeWinkGoDesktopForAgent,
+        runWinkGoDesktopComputerUseForAgent,
+        waitWinkGoDesktopForAgent,
+      } = await import('./process/services/winkGoDesktopComputerUseRuntimeService');
+      const bridge = await startCdpBridge(
+        {
+          list: listWinkGoBrowserSkills,
+          status: getWinkGoBrowserRecorderStatus,
+          run: runWinkGoBrowserSkill,
+          snapshot: inspectWinkGoBrowserPage,
+          act: executeWinkGoBrowserAction,
+          runAgentTask: runWinkGoBrowserAgentTask,
+        },
+        {
+          list: listWinkGoDesktopSkills,
+          run: runWinkGoDesktopSkill,
+        },
+        {
+          run: runWinkGoDesktopComputerUseForAgent,
+          launch: launchWinkGoDesktopApplicationForAgent,
+          observe: observeWinkGoDesktopForAgent,
+          act: actWinkGoDesktopForAgent,
+          wait: waitWinkGoDesktopForAgent,
+          cancel: cancelWinkGoDesktopForAgent,
+        }
+      );
+      setCdpBridgeHandle(bridge);
+      setActiveCdpPort(bridge.port);
+      process.env.WINKGO_CDP_ACTIVE_PORT = String(bridge.port);
+      process.env.WINKGO_CDP_BRIDGE_TOKEN = bridge.token;
+      console.log(`[CDP] WINK GO single-target browser bridge listening on 127.0.0.1:${bridge.port}`);
+      app.once('will-quit', () => {
+        void bridge.close();
+        setCdpBridgeHandle(null);
+        setActiveCdpPort(null);
+      });
+      mark('cdpBridge');
+    } catch (error) {
+      console.error('[CDP] Failed to start the WINK GO browser bridge.', error);
+    }
   }
 
   const debugBackendStartupFailure = resolveDebugBackendStartupFailure();
@@ -913,9 +1007,14 @@ const handleAppReady = async (): Promise<void> => {
             // Read pet sub-settings before creating the pet so flags are honored
             // on the first createPetWindow() call (which is sync).
             const confirmEnabled = (await ProcessConfig.get('pet.confirmEnabled')) ?? true;
+            const savedPetSize = await ProcessConfig.get('pet.size');
+            const petSize = resolvePetSize(savedPetSize);
+            if (savedPetSize !== petSize) {
+              await ProcessConfig.set('pet.size', petSize);
+            }
             const { createPetWindow, setPetConfirmEnabled } = await import('./process/pet/petManager');
             setPetConfirmEnabled(confirmEnabled);
-            createPetWindow();
+            createPetWindow(petSize);
           }
         } catch (error) {
           console.error('[Pet] Failed to initialize:', error);
@@ -953,20 +1052,6 @@ const handleAppReady = async (): Promise<void> => {
       mainWindow.webContents.once('did-finish-load', () => {
         handleDeepLinkUrl(pendingUrl);
       });
-    }
-  }
-
-  // Verify CDP is ready and log status
-  const { cdpPort, verifyCdpReady } = await import('./process/utils/configureChromium');
-  if (cdpPort) {
-    const cdpReady = await verifyCdpReady(cdpPort);
-    if (cdpReady) {
-      console.log(`[CDP] Remote debugging server ready at http://127.0.0.1:${cdpPort}`);
-      console.log(
-        `[CDP] MCP chrome-devtools: npx chrome-devtools-mcp@0.16.0 --browser-url=http://127.0.0.1:${cdpPort}`
-      );
-    } else {
-      console.warn(`[CDP] Warning: Remote debugging port ${cdpPort} not responding`);
     }
   }
 };

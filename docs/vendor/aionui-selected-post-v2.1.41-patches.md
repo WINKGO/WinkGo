@@ -4,7 +4,7 @@
 
 WINK GO remains based on the complete, commit-pinned AionUI `v2.1.41` and
 AionCore `v0.1.52` inventories recorded in this directory. Later upstream
-history was reviewed through 2026-08-03. Only the changes listed below were
+history was reviewed through 2026-08-21. Only the changes listed below were
 adapted; WINK GO branding, product identity, data model, and WINK GO-only
 features were not replaced by an upstream tree.
 
@@ -32,6 +32,14 @@ features were not replaced by an upstream tree.
 | `1a6be8e7c`, `4edea7c5d` | Add reveal highlighting, Tab completion, and operating-system “show in folder” actions. |
 | `c213c7652` | Add the latest-message anchor rail and its conversation search entry point. |
 | `72784fe4f` | Add the Antigravity conversation UI path, model selection, usage display, and team-chat rendering. |
+| `f2f375c93`, `ab31ac637` | Render Markdown math consistently and avoid duplicate KaTeX output in Shadow DOM. |
+| `3e3385b1a`, `3617681d9` | Preserve all upload bytes through the WebUI TCP splice and select a usable LAN address. |
+| `8b1978321` | Block HTML preview resources from escaping the authenticated workspace root. |
+| `3c02bd681` | Back off renderer crash reloads and throttle whole-app relaunches to prevent recovery storms. |
+| `61ed9cb92`, `be944f4c6` | Resolve relative images for every conversation surface directly from its workspace context. |
+| `036542645` | Preserve heading font size and weight for nested inline Markdown markup. |
+| `6e3416e57`, `a5840af6c` | Add contained Explorer create-file/create-directory and copy/move drag workflows while retaining WINK GO's existing Explorer layout. |
+| `23bc79d04`, `484327dbb` | Adapt the interjection capability vocabulary and message-status contract. WINK GO phase 1 uses a server-owned boundary queue for every Agent; native in-turn delivery remains disabled until each backend passes live verification. |
 
 ## AionCore
 
@@ -44,6 +52,8 @@ features were not replaced by an upstream tree.
 | `b64ab4fd6`, `575feacd9` | Add cancellable project filename search and project-reference resolution for preview and chat-file flows. |
 | `f6977c784` | Add the contained filesystem reveal endpoint used by “show in folder”. |
 | `ddfd76b9a` | Add Antigravity as a direct `agy` CLI backend, including permission-hook, model catalog, usage, resume, team, channel, and scheduled-run compatibility. |
+| `85670aa2e`, `19c7837ba` | Back Explorer copy/move and create-new-file commands with provider containment, collision avoidance, and no-overwrite semantics. |
+| `da91f826b` | Keep native image/audio attachment paths available to Agent file tools while also sending their media bytes. |
 
 ## WINK GO adaptation boundaries
 

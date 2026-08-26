@@ -7,7 +7,7 @@
 import type { UpdateReleaseInfo } from '@/common/update/updateTypes';
 import semver from 'semver';
 
-export const WINKGO_OFFICIAL_SITE_URL = 'https://github.com/WINKGO/wink-go/releases';
+export const WINKGO_OFFICIAL_SITE_URL = 'https://winkgo.top/';
 const BUILD_EDITION =
   String(process.env.WINKGO_EDITION || 'free')
     .trim()
@@ -49,17 +49,9 @@ const normalizeOfficialUrl = (value: unknown): string => {
 
   try {
     const parsed = new URL(text);
-    const winkGoRepositoryPath = '/winkgo/wink-go';
-    const normalizedPath = parsed.pathname.replace(/\/+$/, '').toLowerCase();
-    const isWinkGoReleasePage =
-      parsed.protocol === 'https:' &&
-      parsed.hostname === 'github.com' &&
-      (normalizedPath === winkGoRepositoryPath ||
-        normalizedPath === `${winkGoRepositoryPath}/releases` ||
-        normalizedPath.startsWith(`${winkGoRepositoryPath}/releases/`));
-    if (isWinkGoReleasePage) {
-      return parsed.toString();
-    }
+    const isWinkGoOfficialSite =
+      parsed.protocol === 'https:' && (parsed.hostname === 'winkgo.top' || parsed.hostname === 'www.winkgo.top');
+    if (isWinkGoOfficialSite) return WINKGO_OFFICIAL_SITE_URL;
   } catch {
     // Ignore malformed or non-WINK GO URLs from a damaged manifest.
   }
@@ -99,7 +91,7 @@ export const normalizeWinkGoUpdateManifest = (rawManifest: unknown): UpdateRelea
     publishedAt: firstText(manifest.generatedAt) || undefined,
     prerelease: semver.prerelease(version) !== null,
     draft: false,
-    // The public fallback opens the WINK GO GitHub release page. The standard
+    // The public fallback opens the WINK GO official website. The standard
     // electron-updater feed handles direct binary updates; the manual fallback
     // must never save an HTML page as an executable.
     assets: [],

@@ -137,6 +137,53 @@ function subscribeConversationSetStatus(
   };
 }
 
+const pendingByConversation = new Map<string, Record<string, string>>();
+const pendingListeners = new Map<string, Set<(pending: Record<string, string>) => void>>();
+const EMPTY_PENDING: Record<string, string> = {};
+
+function getConversationPending(conversation_id: string): Record<string, string> {
+  return pendingByConversation.get(conversation_id) ?? EMPTY_PENDING;
+}
+
+function setConversationPending(conversation_id: string, pending: Record<string, string>): void {
+  if (Object.keys(pending).length === 0) pendingByConversation.delete(conversation_id);
+  else pendingByConversation.set(conversation_id, pending);
+  const next = getConversationPending(conversation_id);
+  pendingListeners.get(conversation_id)?.forEach((listener) => listener(next));
+}
+
+function markPending(conversation_id: string, optionId: string, value: string): void {
+  setConversationPending(conversation_id, { ...getConversationPending(conversation_id), [optionId]: value });
+}
+
+function resolvePendingFromSnapshot(conversation_id: string, options: AcpConfigOptionDto[]): void {
+  const pending = getConversationPending(conversation_id);
+  if (Object.keys(pending).length === 0) return;
+  const next = { ...pending };
+  let changed = false;
+  for (const [optionId, value] of Object.entries(pending)) {
+    const option = options.find((candidate) => candidate.id === optionId);
+    if (option && getOptionCurrentValue(option) === value) {
+      delete next[optionId];
+      changed = true;
+    }
+  }
+  if (changed) setConversationPending(conversation_id, next);
+}
+
+function subscribeConversationPending(
+  conversation_id: string,
+  listener: (pending: Record<string, string>) => void
+): () => void {
+  const listeners = pendingListeners.get(conversation_id) ?? new Set<(pending: Record<string, string>) => void>();
+  listeners.add(listener);
+  pendingListeners.set(conversation_id, listeners);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) pendingListeners.delete(conversation_id);
+  };
+}
+
 const ensureRuntimeConfigOptions: AcpConfigOptionsLoader = async (conversation_id: string) =>
   (await ensureConversationRuntime(conversation_id)).config_options;
 
@@ -175,6 +222,9 @@ export function useAcpConfigOptions({
   enabled?: boolean;
 }) {
   const [setStatus, setSetStatus] = useState<AcpConfigSetStatus>(() => getConversationSetStatus(conversation_id));
+  const [pendingValues, setPendingValues] = useState<Record<string, string>>(() =>
+    getConversationPending(conversation_id)
+  );
   const [isReloading, setIsReloading] = useState(false);
   const optionsRef = useRef<AcpConfigOptionDto[] | null>(null);
   const key = useMemo(() => getRuntimeConfigOptionsKey(conversation_id), [conversation_id]);
@@ -198,6 +248,11 @@ export function useAcpConfigOptions({
   useEffect(() => {
     setSetStatus(getConversationSetStatus(conversation_id));
     return subscribeConversationSetStatus(conversation_id, setSetStatus);
+  }, [conversation_id]);
+
+  useEffect(() => {
+    setPendingValues(getConversationPending(conversation_id));
+    return subscribeConversationPending(conversation_id, setPendingValues);
   }, [conversation_id]);
 
   const replaceSnapshot = useCallback(
@@ -238,9 +293,15 @@ export function useAcpConfigOptions({
           value,
         });
         const confirmation = response.confirmation;
+        if (confirmation === 'pending_next_turn') {
+          markPending(conversation_id, optionId, value);
+          if (response.config_options) replaceSnapshot(response.config_options);
+          return response.config_options;
+        }
         if (!hasObservedValue(response, optionId, value)) {
           throw new Error(confirmation === 'command_ack' ? 'command_ack' : 'config_not_observed');
         }
+        resolvePendingFromSnapshot(conversation_id, response.config_options);
         replaceSnapshot(response.config_options);
         return response.config_options;
       } finally {
@@ -262,7 +323,10 @@ export function useAcpConfigOptions({
       if (message.type === 'acp_config_option' && message.data) {
         const optionPayload = message.data as { config_options?: AcpConfigOptionDto[] } | AcpConfigOptionDto[];
         const next = Array.isArray(optionPayload) ? optionPayload : optionPayload.config_options;
-        if (Array.isArray(next)) replaceSnapshot(next);
+        if (Array.isArray(next)) {
+          resolvePendingFromSnapshot(conversation_id, next);
+          replaceSnapshot(next);
+        }
       }
       if (message.type === 'agent_status') {
         const statusPayload = message.data as { status?: string } | undefined;
@@ -276,9 +340,16 @@ export function useAcpConfigOptions({
     configOptions,
     isLoading: enabled && !configOptions && (isLoading || isReloading),
     setStatus,
+    pendingValues,
     mode: deriveSelectOption(configOptions, 'mode', ['mode']),
     model: deriveSelectOption(configOptions, 'model', ['model']),
     thoughtLevel: deriveSelectOption(configOptions, 'thought_level', ['thought_level', 'reasoning_effort']),
+    speed: deriveSelectOption(configOptions, 'speed', [
+      'speed',
+      'response_speed',
+      'service_tier',
+      'latency_preference',
+    ]),
     reload,
     setConfigOption,
   };

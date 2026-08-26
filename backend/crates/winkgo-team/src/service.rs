@@ -12,10 +12,11 @@ use tracing::{debug, info, warn};
 use winkgo_ai_agent::{ActiveLeaseRegistry, AgentError, AgentInstance, IWorkerTaskManager, IdleCleanupCoordinator};
 use winkgo_api_types::ChatFileRef;
 use winkgo_api_types::{
-    AddAgentRequest, CreateTeamRequest, GetConfigOptionsResponse, TeamAgentResponse, TeamAgentRuntimeStatus,
-    TeamResponse, TeamRunAckResponse, TeamRunStateResponse, TeamSessionBinding, TeamSessionPhase, TeamSessionStatus,
-    TeamSessionStatusPayload, TeamToolCall, TeamToolContextResponse, TeamToolErrorCode, TeamToolErrorPayload,
-    TeamToolTransport, WebSocketMessage,
+    AddAgentRequest, CreateTeamRequest, GetConfigOptionsResponse, TeamActivityCursorResponse, TeamActivityItemResponse,
+    TeamActivityPageResponse, TeamAgentResponse, TeamAgentRuntimeStatus, TeamMailboxMessageResponse, TeamResponse,
+    TeamRunAckResponse, TeamRunStateResponse, TeamSessionBinding, TeamSessionPhase, TeamSessionStatus,
+    TeamSessionStatusPayload, TeamTaskResponse, TeamToolCall, TeamToolContextResponse, TeamToolErrorCode,
+    TeamToolErrorPayload, TeamToolTransport, WebSocketMessage,
 };
 use winkgo_common::{AgentKillReason, ConversationStatus, TimestampMs, generate_id, now_ms};
 use winkgo_db::models::TeamRow;
@@ -43,7 +44,7 @@ use crate::runtime_tools::{
 };
 use crate::session::{AgentMessageQueueResult, TeamSession, attach_member_runtime, spawn_attach_agent_process_bg};
 use crate::team_run::TeamRunManager;
-use crate::types::{Team, TeamAgent, TeammateRole};
+use crate::types::{MailboxMessage, Team, TeamAgent, TeamTask, TeammateRole};
 use crate::work_source::WorkSource;
 use crate::workspace::validate_create_workspace_path;
 
@@ -453,6 +454,158 @@ impl TeamSessionService {
         self.backfill_team_binding_best_effort(&row).await;
         let team = Team::from_row(&row)?;
         self.build_team_response(&team).await
+    }
+
+    /// Read-only mailbox projection for the Team activity UI.
+    pub async fn list_mailbox(
+        &self,
+        user_id: &str,
+        team_id: &str,
+        limit: usize,
+    ) -> Result<Vec<TeamMailboxMessageResponse>, TeamError> {
+        self.load_owned_team(user_id, team_id).await?;
+        let rows = self.repo.list_mailbox(team_id, None).await?;
+        let mut messages = rows
+            .iter()
+            .filter_map(MailboxMessage::from_row)
+            .map(Self::mailbox_message_response)
+            .collect::<Vec<_>>();
+        if messages.len() > limit {
+            messages.drain(..messages.len() - limit);
+        }
+        Ok(messages)
+    }
+
+    /// Read-only task projection for the Team activity UI and blocker labels.
+    pub async fn list_activity_tasks(
+        &self,
+        user_id: &str,
+        team_id: &str,
+        limit: usize,
+        ids: Option<&HashSet<String>>,
+    ) -> Result<Vec<TeamTaskResponse>, TeamError> {
+        self.load_owned_team(user_id, team_id).await?;
+        let rows = self.repo.list_tasks(team_id).await?;
+        let mut tasks = rows
+            .iter()
+            .map(TeamTask::from_row)
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .filter(|task| ids.is_none_or(|ids| ids.contains(&task.id)))
+            .map(Self::team_task_response)
+            .collect::<Vec<_>>();
+        if ids.is_none() && tasks.len() > limit {
+            tasks.drain(..tasks.len() - limit);
+        }
+        Ok(tasks)
+    }
+
+    /// Unified keyset-paginated stream of mailbox messages and tasks.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn list_activity(
+        &self,
+        user_id: &str,
+        team_id: &str,
+        limit: usize,
+        cursor: Option<(TimestampMs, String)>,
+        direction: &str,
+        kind: &str,
+    ) -> Result<TeamActivityPageResponse, TeamError> {
+        self.load_owned_team(user_id, team_id).await?;
+        let mut items = Vec::new();
+
+        if kind != "task" {
+            let rows = self.repo.list_mailbox(team_id, None).await?;
+            items.extend(rows.iter().filter_map(MailboxMessage::from_row).map(|message| {
+                let response = Self::mailbox_message_response(message);
+                TeamActivityItemResponse::Message {
+                    created_at: response.created_at,
+                    id: response.id.clone(),
+                    message: response,
+                }
+            }));
+        }
+
+        if kind != "message" {
+            let rows = self.repo.list_tasks(team_id).await?;
+            let tasks = rows.iter().map(TeamTask::from_row).collect::<Result<Vec<_>, _>>()?;
+            items.extend(tasks.into_iter().map(|task| {
+                let response = Self::team_task_response(task);
+                TeamActivityItemResponse::Task {
+                    created_at: response.created_at,
+                    id: response.id.clone(),
+                    task: response,
+                }
+            }));
+        }
+
+        items.sort_by(|left, right| {
+            let ordering = left
+                .created_at()
+                .cmp(&right.created_at())
+                .then_with(|| left.id().cmp(right.id()));
+            if direction == "desc" {
+                ordering.reverse()
+            } else {
+                ordering
+            }
+        });
+
+        if let Some((cursor_ts, cursor_id)) = cursor {
+            items.retain(|item| {
+                let ordering = item
+                    .created_at()
+                    .cmp(&cursor_ts)
+                    .then_with(|| item.id().cmp(cursor_id.as_str()));
+                if direction == "desc" {
+                    ordering.is_lt()
+                } else {
+                    ordering.is_gt()
+                }
+            });
+        }
+
+        let has_more = items.len() > limit;
+        items.truncate(limit);
+        let next_cursor = items.last().map(|item| TeamActivityCursorResponse {
+            ts: item.created_at(),
+            id: item.id().to_owned(),
+        });
+        Ok(TeamActivityPageResponse {
+            items,
+            next_cursor,
+            has_more,
+        })
+    }
+
+    fn mailbox_message_response(message: MailboxMessage) -> TeamMailboxMessageResponse {
+        TeamMailboxMessageResponse {
+            id: message.id,
+            team_id: message.team_id,
+            from_agent_id: message.from_agent_id,
+            to_agent_id: message.to_agent_id,
+            msg_type: message.msg_type.to_string(),
+            content: message.content,
+            summary: message.summary,
+            files: message.files.unwrap_or_default(),
+            read: message.read,
+            created_at: message.created_at,
+        }
+    }
+
+    fn team_task_response(task: TeamTask) -> TeamTaskResponse {
+        TeamTaskResponse {
+            id: task.id,
+            team_id: task.team_id,
+            subject: task.subject,
+            description: task.description,
+            status: task.status.to_string(),
+            owner: task.owner,
+            blocked_by: task.blocked_by,
+            blocks: task.blocks,
+            created_at: task.created_at,
+            updated_at: task.updated_at,
+        }
     }
 
     pub async fn remove_team(&self, user_id: &str, team_id: &str) -> Result<(), TeamError> {
@@ -1828,7 +1981,7 @@ impl TeamSessionService {
             .ok_or_else(|| {
                 TeamError::InvalidRequest("project service unavailable; cannot resolve file attachments".into())
             })?;
-        let upload_root = std::env::temp_dir().join("aionui");
+        let upload_root = std::env::temp_dir().join("winkgo");
         let resolved = project
             .resolve_chat_message(content, &files, &upload_root)
             .await

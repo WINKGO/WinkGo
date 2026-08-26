@@ -58,6 +58,11 @@ pub enum Command {
         selected: Option<String>,
         answers: Vec<QuestionAnswer>,
     },
+    /// Answer a structured question. `None` means the user dismissed it.
+    AnswerAsk {
+        request_id: String,
+        answers: Option<Vec<QuestionAnswer>>,
+    },
     /// Answer a mid-session re-auth challenge (waiting_on_auth). Gated by
     /// `supported_commands.answer_auth`.
     AnswerAuth {
@@ -217,6 +222,10 @@ pub enum BackendError {
     CommandNotSupported { command: &'static str },
     #[error("backend transport error: {0}")]
     Transport(String),
+    /// Bytes may have reached the backend, but no authoritative acceptance or
+    /// rejection was observed. Callers must not automatically replay actions.
+    #[error("backend delivery result is uncertain: {0}")]
+    DeliveryUncertain(String),
     /// The session workspace (spawn cwd) is missing, not a directory, or not
     /// accessible. Carried as its own class (not `Transport`) so the app layer
     /// can keep the legacy #410 workspace-unavailable UX instead of an opaque
@@ -374,6 +383,7 @@ pub fn command_name(cmd: &Command) -> &'static str {
         Command::Cancel { .. } => "cancel",
         Command::Steer { .. } => "steer",
         Command::AnswerPermission { .. } => "answer_permission",
+        Command::AnswerAsk { .. } => "answer_ask",
         Command::AnswerAuth { .. } => "answer_auth",
         Command::Acknowledge { .. } => "acknowledge",
         Command::SetMode { .. } => "set_mode",

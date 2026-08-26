@@ -5,7 +5,7 @@
  * packaged WINK GO Runtime; the Electron app ships only manifests, actions,
  * and agent instructions.
  */
-import { copyFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -23,15 +23,31 @@ const wechatFavoritesAction = {
   default_arguments: {},
 };
 
+await rm(targetRoot, { recursive: true, force: true });
+await mkdir(targetRoot, { recursive: true });
+
 const entries = await readdir(sourceRoot, { withFileTypes: true });
 let copied = 0;
 
 for (const entry of entries) {
   if (!entry.isDirectory() || excluded.has(entry.name) || entry.name.startsWith('.')) continue;
   const sourceDirectory = path.join(sourceRoot, entry.name);
-  const manifest = JSON.parse(await readFile(path.join(sourceDirectory, 'manifest.json'), 'utf8'));
+  let manifestText = '';
+  try {
+    manifestText = await readFile(path.join(sourceDirectory, 'manifest.json'), 'utf8');
+  } catch (error) {
+    if (error?.code === 'ENOENT') continue;
+    throw error;
+  }
+  const manifest = JSON.parse(manifestText);
   const skillId = typeof manifest.id === 'string' && manifest.id.trim() ? manifest.id.trim() : entry.name;
   if (excluded.has(skillId)) continue;
+  try {
+    await Promise.all(requiredFiles.map((filename) => access(path.join(sourceDirectory, filename))));
+  } catch (error) {
+    if (error?.code === 'ENOENT') continue;
+    throw error;
+  }
 
   const targetDirectory = path.join(targetRoot, skillId);
   await mkdir(targetDirectory, { recursive: true });

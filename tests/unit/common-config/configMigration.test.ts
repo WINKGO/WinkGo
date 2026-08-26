@@ -72,7 +72,7 @@ describe('configMigration', () => {
       const configFile: ConfigFile = {
         get: vi.fn((key: string) => {
           if (key === 'language') return Promise.resolve('zh-CN');
-          if (key === 'theme') return Promise.resolve('dark');
+          if (key === 'pet.enabled') return Promise.resolve(true);
           return Promise.reject(new Error('not found'));
         }),
         set: vi.fn(),
@@ -87,7 +87,7 @@ describe('configMigration', () => {
 
       expect(httpRequest).toHaveBeenCalledWith('PUT', '/api/settings/client', {
         language: 'zh-CN',
-        theme: 'dark',
+        'pet.enabled': true,
       });
       expect(configFile.set).not.toHaveBeenCalled();
     });
@@ -282,6 +282,43 @@ describe('configMigration', () => {
       expect(ipcBridge.channel.setAssistantSetting.invoke).not.toHaveBeenCalled();
       expect(ipcBridge.channel.setDefaultModelSetting.invoke).not.toHaveBeenCalled();
       expect(ipcBridge.channel.syncChannelSettings.invoke).not.toHaveBeenCalled();
+    });
+
+    it('does not send extension-owned WeCom settings to the built-in channel API', async () => {
+      const configFile: ConfigFile = {
+        get: vi.fn((key: string) => {
+          if (key === 'assistant.wecom.agent') return Promise.resolve({ backend: 'codex' });
+          if (key === 'assistant.wecom.defaultModel') {
+            return Promise.resolve({ id: 'provider_1', use_model: 'gpt-5' });
+          }
+          return Promise.reject(new Error('not found'));
+        }),
+        set: vi.fn(),
+      };
+      (httpRequest as ReturnType<typeof vi.fn>).mockImplementation((method: string) => {
+        if (method === 'GET') return Promise.resolve({});
+        return Promise.resolve(undefined);
+      });
+      (ipcBridge.assistants.list.invoke as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          id: 'bare_codex',
+          source: 'generated',
+          agent_id: 'agent-codex',
+          agent: { type: 'acp', source: 'builtin', acp_backend: 'codex' },
+        },
+      ]);
+      vi.spyOn(console, 'info').mockImplementation(() => {});
+
+      await migrateConfigStorage(configFile);
+
+      expect(ipcBridge.channel.getPlatformSettings.invoke).not.toHaveBeenCalledWith({ platform: 'wecom' });
+      expect(ipcBridge.channel.setAssistantSetting.invoke).not.toHaveBeenCalledWith(
+        expect.objectContaining({ platform: 'wecom' })
+      );
+      expect(ipcBridge.channel.setDefaultModelSetting.invoke).not.toHaveBeenCalledWith(
+        expect.objectContaining({ platform: 'wecom' })
+      );
+      expect(ipcBridge.channel.syncChannelSettings.invoke).not.toHaveBeenCalledWith({ platform: 'wecom' });
     });
   });
 

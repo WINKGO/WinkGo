@@ -194,7 +194,11 @@ export interface AcpSessionConfigOption {
 
 export type AcpConfigOptionType = 'select' | 'boolean' | 'string';
 
-export type AcpConfigOptionConfirmation = 'observed' | 'command_ack';
+/**
+ * `pending_next_turn` means the agent accepted the value but will not apply it
+ * until the next turn. The UI must keep showing the value currently in force.
+ */
+export type AcpConfigOptionConfirmation = 'observed' | 'pending_next_turn' | 'command_ack';
 
 export type AcpConfigSelectOptionDto = {
   value: string;

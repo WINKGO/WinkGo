@@ -92,10 +92,12 @@ export function fromApiConversation<T>(raw: T): T {
   const r = raw as T & {
     model?: ApiProviderWithModel | null;
     extra?: Record<string, unknown> | null;
+    fork_capability?: { at_turn: boolean };
   };
   const next = { ...r } as unknown as T & {
     model?: TProviderWithModel;
     extra?: Record<string, unknown> | null;
+    fork_capability?: { at_turn: boolean };
   };
 
   if ('model' in r) {
@@ -103,6 +105,8 @@ export function fromApiConversation<T>(raw: T): T {
   }
 
   const extra = r.extra;
+  const isTeamConversation = Boolean(extra && typeof extra === 'object' && ('teamId' in extra || 'team_id' in extra));
+  next.fork_capability = isTeamConversation ? undefined : { at_turn: true };
   if (extra && typeof extra === 'object' && !('custom_workspace' in extra)) {
     const workspace = typeof extra.workspace === 'string' ? extra.workspace : '';
     const isTemporary = extra.is_temporary_workspace === true;

@@ -164,7 +164,11 @@ const Layout: React.FC<{
   // Project Explorer and preview live above the per-conversation subtree, so
   // same-project switches preserve monitor state and preview tabs. The legacy
   // workspace panel remains available when a conversation has no project_id.
-  const { closePreview: closePreviewOnRouteChange, isOpen: isPreviewOpen } = usePreviewContext();
+  const {
+    closePreview: closePreviewOnRouteChange,
+    isOpen: isPreviewOpen,
+    tabs: previewTabs = [],
+  } = usePreviewContext();
   const currentProject = useCurrentProject();
   const { containerRef: mainRowRef, containerWidth: mainRowWidth } = useContainerWidth();
   const explorerActive = Boolean(currentProject) && !isMobile;
@@ -183,7 +187,10 @@ const Layout: React.FC<{
     dispatchWorkspaceToggleEvent();
   }, []);
   const explorerMobileWidthPx = Math.min(420, Math.max(280, Math.round(viewportWidth * 0.85)));
-  const previewRegionActive = Boolean(currentProject) && !isMobile && isPreviewOpen;
+  const hasLiveBrowserPreview = previewTabs.some((tab) => tab.content_type === 'browser');
+  const previewHasHostContext = Boolean(currentProject) || hasLiveBrowserPreview;
+  const previewRegionActive = previewHasHostContext && !isMobile && isPreviewOpen;
+  const projectPreviewRegionMounted = previewHasHostContext && !isMobile && (isPreviewOpen || hasLiveBrowserPreview);
   const { widthPx: previewWidthPx, createDragHandle: createPreviewRegionDragHandle } = useProjectPreviewRegionWidth(
     mainRowWidth,
     explorerCollapsed ? 0 : explorerWidthPx,
@@ -481,27 +488,43 @@ const Layout: React.FC<{
                 <PwaPullToRefresh />
               </ArcoLayout.Content>
 
-              {previewRegionActive && (
+              {projectPreviewRegionMounted && (
                 <div
                   data-project-preview-region
-                  className='preview-panel flex flex-col relative overflow-visible rounded-[15px] mb-[12px] mr-[12px] ml-[8px]'
+                  className={classNames(
+                    'preview-panel flex flex-col relative overflow-visible rounded-[15px]',
+                    isPreviewOpen && 'mb-[12px] mr-[12px] ml-[8px]'
+                  )}
                   style={{
-                    width: `${Math.round(previewWidthPx)}px`,
-                    flexGrow: 0,
-                    flexShrink: 0,
                     border: '1px solid var(--bg-3)',
-                    minWidth: `${MIN_PREVIEW_PANEL_PX}px`,
                     boxSizing: 'border-box',
+                    ...(isPreviewOpen
+                      ? {
+                          width: `${Math.round(previewWidthPx)}px`,
+                          flexGrow: 0,
+                          flexShrink: 0,
+                          minWidth: `${MIN_PREVIEW_PANEL_PX}px`,
+                        }
+                      : {
+                          position: 'fixed',
+                          left: '-10000px',
+                          top: 0,
+                          width: `${Math.max(MIN_PREVIEW_PANEL_PX, Math.round(previewWidthPx))}px`,
+                          height: '720px',
+                          visibility: 'hidden',
+                          pointerEvents: 'none',
+                        }),
                   }}
                 >
-                  {createPreviewRegionDragHandle({
-                    className: 'absolute top-0 bottom-0 z-30',
-                    style: { width: '20px', left: '-20px' },
-                    reverse: true,
-                    linePlacement: 'end',
-                    lineClassName: 'opacity-30 group-hover:opacity-100 group-active:opacity-100',
-                    lineStyle: { width: '2px' },
-                  })}
+                  {isPreviewOpen &&
+                    createPreviewRegionDragHandle({
+                      className: 'absolute top-0 bottom-0 z-30',
+                      style: { width: '20px', left: '-20px' },
+                      reverse: true,
+                      linePlacement: 'end',
+                      compact: true,
+                      ariaLabel: '调整浏览器面板宽度',
+                    })}
                   <div className='h-full w-full overflow-hidden rounded-[15px]'>
                     <PreviewPanel />
                   </div>

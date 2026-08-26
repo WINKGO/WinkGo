@@ -21,11 +21,29 @@ import {
   useReplaceWithAnchorWindow,
 } from '@/renderer/pages/conversation/Messages/hooks';
 
+const messageEvents = vi.hoisted(() => ({
+  userCreated: null as null | ((payload: Record<string, unknown>) => void),
+  statusChanged: null as null | ((payload: Record<string, unknown>) => void),
+}));
+
 vi.mock('@/common', () => ({
   ipcBridge: {
     conversation: {
       userCreated: {
-        on: vi.fn().mockReturnValue(() => {}),
+        on: vi.fn((handler: (payload: Record<string, unknown>) => void) => {
+          messageEvents.userCreated = handler;
+          return () => {
+            if (messageEvents.userCreated === handler) messageEvents.userCreated = null;
+          };
+        }),
+      },
+      statusChanged: {
+        on: vi.fn((handler: (payload: Record<string, unknown>) => void) => {
+          messageEvents.statusChanged = handler;
+          return () => {
+            if (messageEvents.statusChanged === handler) messageEvents.statusChanged = null;
+          };
+        }),
       },
     },
     database: {
@@ -131,6 +149,11 @@ function useAnchorMessageHarness() {
   };
 }
 
+function useCachedMessageHarness() {
+  useMessageLstCache(CONVERSATION_ID);
+  return useMessageList();
+}
+
 async function flushMessageQueue(): Promise<void> {
   await act(async () => {
     vi.runAllTimers();
@@ -140,6 +163,8 @@ async function flushMessageQueue(): Promise<void> {
 describe('message merging', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    messageEvents.userCreated = null;
+    messageEvents.statusChanged = null;
   });
 
   afterEach(() => {
@@ -276,5 +301,51 @@ describe('message merging', () => {
       limit: 50,
       content_mode: 'compact',
     });
+  });
+
+  it('updates a queued user bubble by msg_id through work and finish states', async () => {
+    vi.mocked(ipcBridge.database.getConversationMessages.invoke).mockResolvedValue({
+      items: [],
+      oldest_cursor: null,
+      newest_cursor: null,
+      has_more_before: false,
+      has_more_after: false,
+    });
+    const { result } = renderHook(() => useCachedMessageHarness(), { wrapper: CacheWrapper });
+    await act(async () => Promise.resolve());
+
+    act(() => {
+      messageEvents.userCreated?.({
+        conversation_id: CONVERSATION_ID,
+        msg_id: 'queued-1',
+        content: 'follow up',
+        position: 'right',
+        status: 'pending',
+        hidden: false,
+        created_at: 1,
+      });
+    });
+    expect(result.current[0]?.status).toBe('pending');
+
+    act(() => {
+      messageEvents.statusChanged?.({
+        user_id: 'user-1',
+        conversation_id: CONVERSATION_ID,
+        msg_id: 'queued-1',
+        status: 'work',
+        turn_id: 'turn-queued',
+      });
+    });
+    expect(result.current[0]?.status).toBe('work');
+
+    act(() => {
+      messageEvents.statusChanged?.({
+        user_id: 'user-1',
+        conversation_id: CONVERSATION_ID,
+        msg_id: 'queued-1',
+        status: 'finish',
+      });
+    });
+    expect(result.current[0]?.status).toBe('finish');
   });
 });

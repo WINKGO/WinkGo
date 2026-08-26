@@ -131,6 +131,13 @@ pub trait IConversationRepository: Send + Sync {
         Ok(Vec::new())
     }
 
+    /// Lists user-side messages that may represent a persisted boundary queue.
+    /// Callers must still validate the versioned marker in `content`; ordinary
+    /// right-side pending messages are not automatically executable.
+    async fn list_pending_boundary_messages(&self) -> Result<Vec<MessageRow>, DbError> {
+        Ok(Vec::new())
+    }
+
     /// Full-text search across messages, joining conversation name.
     async fn search_messages(
         &self,

@@ -7,7 +7,9 @@
  */
 
 import { ipcBridge } from '@/common';
+import type { ChatFileRef } from '@/common/types/chatFile';
 import { base64ToBlob, BINARY_MIME_MAP } from './base64';
+import { buildFileStreamUrl } from './fileUrls';
 
 function triggerBlobDownload(blob: Blob, file_name: string): void {
   const url = URL.createObjectURL(blob);
@@ -32,6 +34,15 @@ export async function downloadFileFromPath(file_path: string, file_name: string,
   const ext = file_name.split('.').pop()?.toLowerCase() ?? '';
   const mimeType = BINARY_MIME_MAP[ext] ?? 'application/octet-stream';
   const blob = base64ToBlob(dataUrl, mimeType);
+  triggerBlobDownload(blob, file_name);
+}
+
+/** Download an original binary file through its renderer-safe reference. */
+export async function downloadFileFromRef(file: ChatFileRef, file_name: string): Promise<void> {
+  const response = await fetch(buildFileStreamUrl(file));
+  if (!response.ok) throw new Error(`File download failed (${response.status})`);
+  const blob = await response.blob();
+  if (blob.size === 0) throw new Error('File data is empty');
   triggerBlobDownload(blob, file_name);
 }
 

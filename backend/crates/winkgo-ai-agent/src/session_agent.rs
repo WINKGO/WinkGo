@@ -31,7 +31,7 @@ use crate::protocol::events::{
 };
 use crate::protocol::send_error::AgentSendError;
 use crate::shared_kernel::PersistedSessionState;
-use crate::types::SendMessageData;
+use crate::types::{PromptMediaCaps, SendMessageData};
 use winkgo_api_types::AcpBuildExtra;
 use winkgo_common::AgentType;
 use winkgo_db::{IAcpSessionRepository, IMcpServerRepository, SaveRuntimeStateParams};
@@ -457,7 +457,11 @@ impl SessionAgentTask {
             .map(|p| {
                 let is_ask = p.tool_name == "AskUserQuestion";
                 let options = if is_ask {
-                    ask_user_question_options(p.questions.as_ref())
+                    let input = p
+                        .questions
+                        .as_ref()
+                        .map(|questions| serde_json::json!({ "questions": questions }));
+                    ask_user_question_options(input.as_ref())
                 } else {
                     Vec::new()
                 };
@@ -473,6 +477,7 @@ impl SessionAgentTask {
                     action: None,
                     description: String::new(),
                     command_type: None,
+                    questions: if is_ask { p.questions.clone() } else { None },
                     options: options
                         .into_iter()
                         .map(|o| winkgo_common::ConfirmationOption {
@@ -531,6 +536,47 @@ impl SessionAgentTask {
                     answers: Vec::new(),
                 })
                 .await;
+        });
+        Ok(())
+    }
+
+    pub fn answer_ask(
+        &self,
+        request_id: &str,
+        answers: Option<Vec<winkgo_api_types::AskQuestionAnswer>>,
+    ) -> Result<(), AgentError> {
+        let answers = answers.map(|items| {
+            items
+                .into_iter()
+                .map(|answer| winkgo_session::QuestionAnswer {
+                    question: answer.question,
+                    labels: answer.labels,
+                })
+                .collect()
+        });
+        let backend = self.backend.clone();
+        let request_id = request_id.to_string();
+        let conversation_id = self.conversation_id.clone();
+        tokio::spawn(async move {
+            match backend
+                .dispatch(Command::AnswerAsk {
+                    request_id: request_id.clone(),
+                    answers,
+                })
+                .await
+            {
+                Ok(_) => tracing::info!(
+                    conversation_id = %conversation_id,
+                    request_id = %request_id,
+                    "structured question answer delivered to backend"
+                ),
+                Err(error) => tracing::error!(
+                    conversation_id = %conversation_id,
+                    request_id = %request_id,
+                    error = %error,
+                    "structured question answer failed after REST response"
+                ),
+            }
         });
         Ok(())
     }
@@ -916,19 +962,115 @@ impl IAgentTask for SessionAgentTask {
         self.runtime.tx.subscribe()
     }
 
+    fn prompt_media_caps(&self) -> PromptMediaCaps {
+        let blocks = self.backend.capabilities().prompt_blocks;
+        PromptMediaCaps {
+            image: blocks.image,
+            audio: blocks.audio,
+        }
+    }
+
+    fn supports_midturn_delivery(&self) -> bool {
+        self.backend.capabilities().supports_midturn_delivery
+    }
+
+    async fn deliver_midturn(&self, data: SendMessageData) -> Result<(), crate::agent_task::MidturnDeliveryError> {
+        self.runtime.touch();
+        let partition = crate::media::partition_media(&data.content, &data.files, self.prompt_media_caps());
+        let mut content: Vec<ContentBlock> = Vec::new();
+        if !partition.content.is_empty() {
+            content.push(ContentBlock::Text(partition.content));
+        }
+        for path in partition.path_files {
+            content.push(ContentBlock::ResourceLink {
+                uri: path,
+                mime_type: None,
+            });
+        }
+        for attachment in &partition.media {
+            match crate::media::read_media_bytes(attachment).await {
+                Some(bytes) => content.push(match attachment.kind {
+                    crate::media::MediaKind::Image => ContentBlock::Image {
+                        data: bytes,
+                        media_type: attachment.mime.clone(),
+                    },
+                    crate::media::MediaKind::Audio => ContentBlock::Audio {
+                        data: bytes,
+                        media_type: attachment.mime.clone(),
+                    },
+                }),
+                None => content.push(ContentBlock::ResourceLink {
+                    uri: attachment.path.clone(),
+                    mime_type: Some(attachment.mime.clone()),
+                }),
+            }
+        }
+        self.backend
+            .dispatch(Command::Steer { content })
+            .await
+            .map(|_| ())
+            .map_err(|error| {
+                let send_error = AgentSendError::from_agent_error(match &error {
+                    BackendError::DeliveryUncertain(_) => AgentError::timeout(error.to_string()),
+                    _ => AgentError::bad_gateway(error.to_string()),
+                });
+                match error {
+                    BackendError::DeliveryUncertain(_) => {
+                        crate::agent_task::MidturnDeliveryError::Uncertain(send_error)
+                    }
+                    _ => crate::agent_task::MidturnDeliveryError::Rejected(send_error),
+                }
+            })
+    }
+
     async fn send_message(&self, data: SendMessageData) -> Result<(), AgentSendError> {
         self.runtime.touch();
+        let partition = crate::media::partition_media(&data.content, &data.files, self.prompt_media_caps());
         let mut content: Vec<ContentBlock> = Vec::new();
-        if !data.content.is_empty() {
-            content.push(ContentBlock::Text(data.content));
+        if !partition.content.is_empty() {
+            content.push(ContentBlock::Text(partition.content));
         }
-        for path in data.files {
+        for path in partition.path_files {
             // File paths ride as resource links; the claude/codex adapters resolve
             // them (Read tool / base64) at dispatch time.
             content.push(ContentBlock::ResourceLink {
                 uri: path,
                 mime_type: None,
             });
+        }
+        for attachment in &partition.media {
+            match crate::media::read_media_bytes(attachment).await {
+                Some(bytes) => content.push(match attachment.kind {
+                    crate::media::MediaKind::Image => ContentBlock::Image {
+                        data: bytes,
+                        media_type: attachment.mime.clone(),
+                    },
+                    crate::media::MediaKind::Audio => ContentBlock::Audio {
+                        data: bytes,
+                        media_type: attachment.mime.clone(),
+                    },
+                }),
+                None => content.push(ContentBlock::ResourceLink {
+                    uri: attachment.path.clone(),
+                    mime_type: Some(attachment.mime.clone()),
+                }),
+            }
+        }
+        if !partition.media.is_empty() {
+            let (images, audios) = content
+                .iter()
+                .fold((0usize, 0usize), |(images, audios), block| match block {
+                    ContentBlock::Image { .. } => (images + 1, audios),
+                    ContentBlock::Audio { .. } => (images, audios + 1),
+                    _ => (images, audios),
+                });
+            tracing::info!(
+                conversation_id = %self.conversation_id,
+                msg_id = %data.msg_id,
+                images,
+                audios,
+                "session prompt carries native media blocks"
+            );
         }
         // DEV (`--dump-prompts`): borrow the final blocks BEFORE they move into
         // Command::Send. No-op / best-effort — never affects the dispatch.
@@ -1300,11 +1442,44 @@ pub async fn build_session_instance(
         mcp_servers = coordination;
     }
 
+    // The browser bridge address and bearer token are generated by Electron for
+    // this process lifetime. They must never be persisted in the conversation
+    // snapshot, but Codex 0.145 does not reliably pass its own inherited process
+    // environment through to an MCP child. Add the two ephemeral values to the
+    // in-memory MCP launch spec so the browser server can complete its handshake.
+    let browser_bridge_env_injected =
+        inject_winkgo_browser_bridge_env(&mut mcp_servers, |name| std::env::var(name).ok());
+    let browser_conversation_env_injected = inject_winkgo_browser_conversation_env(&mut mcp_servers, &conversation_id);
+
+    // Codex ships with a browser connector skill that targets the Codex host's
+    // `agent.browsers` registry. WINK GO intentionally does not expose its
+    // signed-in Electron webview through that registry; it exposes the visible
+    // webview through the scoped `winkgo-browser` MCP instead. Without this
+    // host-specific routing note, Codex can ignore an already-loaded MCP, call
+    // `agent.browsers.list()`, and incorrectly report "No browser is available".
+    let preset_context =
+        compose_direct_cli_preset_context(backend_label, config.preset_context.as_deref(), &mcp_servers);
+    let mcp_server_names = mcp_servers
+        .iter()
+        .map(|server| server.name.as_str())
+        .collect::<Vec<_>>();
+    tracing::info!(
+        conversation_id = %conversation_id,
+        backend = backend_label,
+        mcp_servers = ?mcp_server_names,
+        browser_bridge_env_injected,
+        browser_conversation_env_injected,
+        winkgo_browser_routing = preset_context
+            .as_deref()
+            .is_some_and(|value| value.contains(WINKGO_BROWSER_ROUTING_RULES)),
+        "direct CLI session initialization surface resolved"
+    );
+
     // GAP #4 — preset_context + skills carried into the init surface.
     let init = SessionInit {
         mcp_servers,
         skills: config.skills.clone(),
-        preset_context: config.preset_context.clone(),
+        preset_context,
         // acp/codex resume via SessionSpec::Resume; no in-band snapshot needed.
         session_snapshot: None,
         resume: matches!(spec, SessionSpec::Resume { .. }),
@@ -1486,6 +1661,94 @@ Install it separately from {vendor}; WINK GO does not bundle or download externa
         prompt_dump,
     );
     Ok(Some(crate::agent_task::AgentInstance::Session(task)))
+}
+
+const WINKGO_BROWSER_MCP_SERVER_NAME: &str = "winkgo-browser";
+const WINKGO_CDP_ACTIVE_PORT_ENV: &str = "WINKGO_CDP_ACTIVE_PORT";
+const WINKGO_CDP_BRIDGE_TOKEN_ENV: &str = "WINKGO_CDP_BRIDGE_TOKEN";
+const WINKGO_CONVERSATION_ID_ENV: &str = "WINKGO_CONVERSATION_ID";
+const WINKGO_BROWSER_ROUTING_RULES: &str = r#"[WINK GO Browser Routing]
+When the user asks to open, browse, inspect, search, or interact with a web page, always use the already-loaded `winkgo-browser` MCP so the work stays inside WINK GO. You are the browser planner: use the `browser_action` tool from `winkgo-browser` for each concrete action and its `inspect_browser_page` tool whenever you need to observe or verify the visible page. For multi-step goals, repeat the observe-act-verify loop yourself instead of delegating to `run_browser_task`; that nested planner is reserved for non-agent one-shot clients. The MCP automatically opens and attaches the visible WINK GO browser, so do not ask the user to open it first. Never execute `start`, `explorer`, `open`, `xdg-open`, a shell command, or a command-execution tool to launch a URL, and never fall back to the operating system's default browser or an agent host browser connector. Such launcher commands are intentionally rejected by WINK GO; if one is rejected, immediately retry the request with the `winkgo-browser` MCP. If the WINK GO browser tool is temporarily unavailable, report that failure instead of opening Chrome, Edge, or another external browser. Never claim navigation or an interaction succeeded unless the corresponding WINK GO MCP call returns `ok: true`, and verify the final page when the goal depends on page state."#;
+
+fn inject_winkgo_browser_bridge_env(
+    mcp_servers: &mut [winkgo_session::McpServerSpec],
+    mut env_value: impl FnMut(&str) -> Option<String>,
+) -> bool {
+    let Some(port) = env_value(WINKGO_CDP_ACTIVE_PORT_ENV)
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+    else {
+        return false;
+    };
+    let Some(token) = env_value(WINKGO_CDP_BRIDGE_TOKEN_ENV)
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+    else {
+        return false;
+    };
+
+    let mut injected = false;
+    for server in mcp_servers {
+        if server.name != WINKGO_BROWSER_MCP_SERVER_NAME {
+            continue;
+        }
+        let winkgo_session::McpTransport::Stdio { env, .. } = &mut server.transport else {
+            continue;
+        };
+        upsert_mcp_env(env, WINKGO_CDP_ACTIVE_PORT_ENV, &port);
+        upsert_mcp_env(env, WINKGO_CDP_BRIDGE_TOKEN_ENV, &token);
+        injected = true;
+    }
+    injected
+}
+
+fn upsert_mcp_env(env: &mut Vec<(String, String)>, name: &str, value: &str) {
+    if let Some((_, current)) = env.iter_mut().find(|(key, _)| key == name) {
+        *current = value.to_owned();
+    } else {
+        env.push((name.to_owned(), value.to_owned()));
+    }
+}
+
+fn inject_winkgo_browser_conversation_env(
+    mcp_servers: &mut [winkgo_session::McpServerSpec],
+    conversation_id: &str,
+) -> bool {
+    let conversation_id = conversation_id.trim();
+    if conversation_id.is_empty() {
+        return false;
+    }
+    let mut injected = false;
+    for server in mcp_servers {
+        if server.name != WINKGO_BROWSER_MCP_SERVER_NAME {
+            continue;
+        }
+        let winkgo_session::McpTransport::Stdio { env, .. } = &mut server.transport else {
+            continue;
+        };
+        upsert_mcp_env(env, WINKGO_CONVERSATION_ID_ENV, conversation_id);
+        injected = true;
+    }
+    injected
+}
+
+fn compose_direct_cli_preset_context(
+    _backend_label: &str,
+    base: Option<&str>,
+    mcp_servers: &[winkgo_session::McpServerSpec],
+) -> Option<String> {
+    let base = base.map(str::trim).filter(|value| !value.is_empty());
+    let has_winkgo_browser = mcp_servers
+        .iter()
+        .any(|server| server.name == WINKGO_BROWSER_MCP_SERVER_NAME);
+    if !has_winkgo_browser {
+        return base.map(str::to_owned);
+    }
+
+    Some(match base {
+        Some(base) => format!("{base}\n\n{WINKGO_BROWSER_ROUTING_RULES}"),
+        None => WINKGO_BROWSER_ROUTING_RULES.to_owned(),
+    })
 }
 
 fn resolve_external_cli_program(
@@ -1903,6 +2166,8 @@ fn session_event_name(e: &SessionEvent) -> &'static str {
         SessionEvent::Detached { .. } => "Detached",
         SessionEvent::Permission { .. } => "Permission",
         SessionEvent::PermissionResolved { .. } => "PermissionResolved",
+        SessionEvent::Ask { .. } => "Ask",
+        SessionEvent::AskResolved { .. } => "AskResolved",
         SessionEvent::UsageDelta { .. } => "UsageDelta",
         SessionEvent::ConfigChanged { .. } => "ConfigChanged",
         SessionEvent::BackendBound { .. } => "BackendBound",
@@ -2546,6 +2811,7 @@ fn event_is_user_visible_output(event: &AgentStreamEvent) -> bool {
             | AgentStreamEvent::Plan(_)
             | AgentStreamEvent::Permission(_)
             | AgentStreamEvent::AcpPermission(_)
+            | AgentStreamEvent::Ask(_)
     )
 }
 
@@ -2770,6 +3036,12 @@ fn translate_event(event: SessionEvent, conversation_id: &str, terminal_result_s
                 ),
             )]
         }
+        SessionEvent::Ask { request_id, questions } => vec![AgentStreamEvent::Ask(serde_json::json!({
+            "session_id": conversation_id,
+            "request_id": request_id,
+            "questions": questions,
+        }))],
+        SessionEvent::AskResolved { .. } => Vec::new(),
         // Per-turn usage/cost → the AcpContextUsage passthrough frame the frontend
         // usage indicator reads (shape: cumulative token counters).
         SessionEvent::UsageDelta {
@@ -2911,6 +3183,93 @@ mod build_mapping_tests {
     use super::*;
     use crate::shared_kernel::{ModeId, ModelId};
     use winkgo_session::SessionSpec;
+
+    fn mcp_server(name: &str) -> winkgo_session::McpServerSpec {
+        winkgo_session::McpServerSpec {
+            name: name.to_owned(),
+            transport: winkgo_session::McpTransport::Stdio {
+                command: "node".to_owned(),
+                args: Vec::new(),
+                env: Vec::new(),
+            },
+        }
+    }
+
+    #[test]
+    fn browser_bridge_env_is_injected_only_into_runtime_browser_mcp() {
+        let mut servers = vec![mcp_server("winkgo-browser"), mcp_server("other")];
+        let injected = inject_winkgo_browser_bridge_env(&mut servers, |name| match name {
+            WINKGO_CDP_ACTIVE_PORT_ENV => Some(" 61234 ".to_owned()),
+            WINKGO_CDP_BRIDGE_TOKEN_ENV => Some("temporary-secret".to_owned()),
+            _ => None,
+        });
+
+        assert!(injected);
+        let winkgo_session::McpTransport::Stdio { env, .. } = &servers[0].transport else {
+            panic!("browser MCP must remain stdio");
+        };
+        assert!(env.contains(&(WINKGO_CDP_ACTIVE_PORT_ENV.to_owned(), "61234".to_owned())));
+        assert!(env.contains(&(WINKGO_CDP_BRIDGE_TOKEN_ENV.to_owned(), "temporary-secret".to_owned())));
+        let winkgo_session::McpTransport::Stdio { env, .. } = &servers[1].transport else {
+            panic!("other MCP must remain stdio");
+        };
+        assert!(env.is_empty());
+    }
+
+    #[test]
+    fn browser_bridge_env_is_not_partially_injected() {
+        let mut servers = vec![mcp_server("winkgo-browser")];
+        let injected = inject_winkgo_browser_bridge_env(&mut servers, |name| {
+            (name == WINKGO_CDP_ACTIVE_PORT_ENV).then(|| "61234".to_owned())
+        });
+
+        assert!(!injected);
+        let winkgo_session::McpTransport::Stdio { env, .. } = &servers[0].transport else {
+            panic!("browser MCP must remain stdio");
+        };
+        assert!(env.is_empty());
+    }
+
+    #[test]
+    fn browser_conversation_env_is_runtime_only_and_browser_scoped() {
+        let mut servers = vec![mcp_server("winkgo-browser"), mcp_server("other")];
+        let injected = inject_winkgo_browser_conversation_env(&mut servers, " f4c97126 ");
+
+        assert!(injected);
+        let winkgo_session::McpTransport::Stdio { env, .. } = &servers[0].transport else {
+            panic!("browser MCP must remain stdio");
+        };
+        assert!(env.contains(&(WINKGO_CONVERSATION_ID_ENV.to_owned(), "f4c97126".to_owned())));
+        let winkgo_session::McpTransport::Stdio { env, .. } = &servers[1].transport else {
+            panic!("other MCP must remain stdio");
+        };
+        assert!(env.is_empty());
+    }
+
+    #[test]
+    fn every_direct_cli_with_winkgo_browser_gets_internal_browser_routing() {
+        for backend in ["codex", "claude", "codebuddy", "antigravity"] {
+            let context = compose_direct_cli_preset_context(
+                backend,
+                Some("Keep the user's existing instructions."),
+                &[mcp_server("winkgo-browser")],
+            )
+            .expect("routing context");
+
+            assert!(context.contains("Keep the user's existing instructions."));
+            assert!(context.contains("use the `browser_action` tool from `winkgo-browser`"));
+            assert!(context.contains("Never execute `start`"));
+            assert!(context.contains("never fall back to the operating system's default browser"));
+        }
+    }
+
+    #[test]
+    fn browser_routing_is_not_added_without_the_winkgo_browser_mcp() {
+        assert_eq!(
+            compose_direct_cli_preset_context("codebuddy", Some("base"), &[mcp_server("other")]),
+            Some("base".to_owned())
+        );
+    }
 
     fn snapshot(mode: Option<&str>, model: Option<&str>) -> PersistedSessionState {
         PersistedSessionState {
@@ -4417,6 +4776,91 @@ mod pump_tests {
         }
     }
 
+    struct NativeSteerBackend {
+        commands: Arc<std::sync::Mutex<Vec<Command>>>,
+        error: Option<BackendError>,
+    }
+
+    #[async_trait::async_trait]
+    impl SessionBackend for NativeSteerBackend {
+        async fn dispatch(&self, command: Command) -> Result<CommandReceipt, BackendError> {
+            self.commands.lock().unwrap().push(command);
+            if let Some(error) = &self.error {
+                return Err(error.clone());
+            }
+            Ok(CommandReceipt {
+                accepted: true,
+                admission: Admission::NoTurn,
+                turn_gen: 1,
+            })
+        }
+        fn events(&self) -> BoxStream<'static, SessionEnvelope> {
+            use futures_util::StreamExt as _;
+            futures_util::stream::pending().boxed()
+        }
+        fn capabilities(&self) -> Capabilities {
+            Capabilities {
+                supports_midturn_delivery: true,
+                ..Default::default()
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn deliver_midturn_uses_the_backend_steer_command() {
+        let commands = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let backend: Arc<dyn SessionBackend> = Arc::new(NativeSteerBackend {
+            commands: commands.clone(),
+            error: None,
+        });
+        let task = SessionAgentTask::new(AgentType::Acp, "conv-1".into(), "/w".into(), backend, None);
+
+        assert!(crate::agent_task::IAgentTask::supports_midturn_delivery(task.as_ref()));
+        crate::agent_task::IAgentTask::deliver_midturn(
+            task.as_ref(),
+            SendMessageData {
+                content: "follow up".into(),
+                msg_id: "msg-follow-up".into(),
+                turn_id: Some("turn-active".into()),
+                files: Vec::new(),
+                inject_skills: Vec::new(),
+            },
+        )
+        .await
+        .expect("backend acknowledgement should complete native delivery");
+
+        let commands = commands.lock().unwrap();
+        assert!(matches!(
+            commands.as_slice(),
+            [Command::Steer { content }]
+                if content == &vec![ContentBlock::Text("follow up".into())]
+        ));
+    }
+
+    #[tokio::test]
+    async fn deliver_midturn_preserves_uncertain_delivery_classification() {
+        let backend: Arc<dyn SessionBackend> = Arc::new(NativeSteerBackend {
+            commands: Arc::new(std::sync::Mutex::new(Vec::new())),
+            error: Some(BackendError::DeliveryUncertain("ack timed out".into())),
+        });
+        let task = SessionAgentTask::new(AgentType::Acp, "conv-1".into(), "/w".into(), backend, None);
+
+        let error = crate::agent_task::IAgentTask::deliver_midturn(
+            task.as_ref(),
+            SendMessageData {
+                content: "follow up".into(),
+                msg_id: "msg-follow-up".into(),
+                turn_id: Some("turn-active".into()),
+                files: Vec::new(),
+                inject_skills: Vec::new(),
+            },
+        )
+        .await
+        .expect_err("uncertain backend delivery must remain uncertain");
+
+        assert!(matches!(error, crate::agent_task::MidturnDeliveryError::Uncertain(_)));
+    }
+
     fn env(event: SessionEvent) -> SessionEnvelope {
         SessionEnvelope {
             session_id: "conv-1".into(),
@@ -5086,12 +5530,10 @@ mod pump_tests {
         let backend: Arc<dyn SessionBackend> = Arc::new(PendingPermBackend(winkgo_session::PendingPermissionView {
             request_id: "req-recover".into(),
             tool_name: "AskUserQuestion".into(),
-            questions: Some(serde_json::json!({
-                "questions": [{
-                    "question": "Which?",
-                    "options": [{"label": "A"}, {"label": "B"}]
-                }]
-            })),
+            questions: Some(serde_json::json!([{
+                "question": "Which?",
+                "options": [{"label": "A"}, {"label": "B"}]
+            }])),
         }));
         let task = SessionAgentTask::new(AgentType::Acp, "conv-1".into(), "/w".into(), backend, None);
         let confs = task.get_confirmations();
@@ -5105,6 +5547,10 @@ mod pump_tests {
             labels,
             vec!["A", "B"],
             "recovered as the question's options, not allow/deny"
+        );
+        assert!(
+            confs[0].questions.as_ref().is_some_and(serde_json::Value::is_array),
+            "the full bare question array must survive recovery for the structured frontend card"
         );
     }
 

@@ -28,6 +28,7 @@ const REMEMBERED_USERNAME_KEY = 'rememberedUsername';
 const REMEMBERED_PASSWORD_KEY = 'rememberedPassword';
 const normalizePhone = (value: string): string => value.replace(/[\s()-]/g, '');
 const VALID_PHONE = /^(?:1[3-9]\d{9}|\+[1-9]\d{7,14})$/;
+const PURE_NUMERIC_USERNAME = /^\d+$/;
 
 // Simple obfuscation for the remembered username (not cryptographically secure)
 const obfuscate = (text: string): string => {
@@ -161,6 +162,10 @@ const LoginPage: React.FC = () => {
       }
       if (!trimmedUsername || !password) {
         showMessage({ type: 'error', text: t('login.errors.empty') });
+        return;
+      }
+      if (mode === 'register' && PURE_NUMERIC_USERNAME.test(trimmedUsername)) {
+        showMessage({ type: 'error', text: t('login.errors.usernameNumeric') });
         return;
       }
       const normalizedPhone = normalizePhone(phone);

@@ -36,6 +36,7 @@ export type UseAcpModelInfoResult = {
   isSetting: boolean;
   selectModel: (model_id: string) => void;
   thoughtLevel: AcpDerivedOption | null;
+  speed: AcpDerivedOption | null;
   setStatus: AcpConfigSetStatus;
   setConfigOption: (optionId: string, value: string) => Promise<AcpConfigOptionDto[]>;
 };
@@ -76,7 +77,7 @@ export const useAcpModelInfo = ({
   onSelectModelSuccess,
   onSelectModelFailed,
 }: UseAcpModelInfoArgs): UseAcpModelInfoResult => {
-  const { model, thoughtLevel, setStatus, setConfigOption, isLoading } = useAcpConfigOptions({
+  const { model, thoughtLevel, speed, setStatus, setConfigOption, isLoading } = useAcpConfigOptions({
     conversation_id,
     prepareRuntime,
     prepareSetRuntime,
@@ -157,6 +158,7 @@ export const useAcpModelInfo = ({
     isSetting: setStatus.state === 'setting' && setStatus.optionId === model?.id,
     selectModel,
     thoughtLevel,
+    speed,
     setStatus,
     setConfigOption,
   };

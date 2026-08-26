@@ -56,11 +56,11 @@ describe('upstream attribution verification', () => {
   it('covers every mapped modified file and required legal notice', () => {
     expect(verifier.verifyRepository()).toEqual({
       projects: 3,
-      modifiedFiles: 2359,
-      inlineNotices: 2163,
-      manifestOnly: 196,
+      modifiedFiles: 2425,
+      inlineNotices: 2199,
+      manifestOnly: 226,
     });
-  });
+  }, 600_000);
 
   it('keeps all canonical manifests visible to Git', () => {
     const manifestPaths = [

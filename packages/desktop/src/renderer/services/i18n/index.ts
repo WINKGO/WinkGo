@@ -14,20 +14,10 @@ import {
   type SupportedLanguage,
 } from '@/common/config/i18n';
 
-// Static imports for all locales to ensure packaged app can always switch language.
+// Keep only the fallback locale in the entry chunk. Every other locale is an
+// explicit local dynamic import, so packaged builds still contain all languages
+// without making the renderer parse roughly 2.8 MB of translations at startup.
 import enUS from './locales/en-US/index';
-import zhCN from './locales/zh-CN/index';
-import jaJP from './locales/ja-JP/index';
-import zhTW from './locales/zh-TW/index';
-import koKR from './locales/ko-KR/index';
-import trTR from './locales/tr-TR/index';
-import ruRU from './locales/ru-RU/index';
-import ukUA from './locales/uk-UA/index';
-import ptBR from './locales/pt-BR/index';
-import deDE from './locales/de-DE/index';
-import esES from './locales/es-ES/index';
-import frFR from './locales/fr-FR/index';
-import faIR from './locales/fa-IR/index';
 export type { I18nKey, I18nModule } from './i18n-keys';
 
 // Re-exports
@@ -36,36 +26,30 @@ export type { SupportedLanguage } from '@/common/config/i18n';
 
 export const supportedLanguages = i18nConfig.supportedLanguages;
 
-const localeData: LocaleData = {
-  'en-US': enUS,
-  'zh-CN': zhCN,
-  'ja-JP': jaJP,
-  'zh-TW': zhTW,
-  'ko-KR': koKR,
-  'tr-TR': trTR,
-  'ru-RU': ruRU,
-  'uk-UA': ukUA,
-  'pt-BR': ptBR,
-  'de-DE': deDE,
-  'es-ES': esES,
-  'fr-FR': frFR,
-  'fa-IR': faIR,
+type LocaleModule = { default: LocaleData };
+
+const localeLoaders: Partial<Record<SupportedLanguage, () => Promise<LocaleModule>>> = {
+  'zh-CN': () => import('./locales/zh-CN/index'),
+  'ja-JP': () => import('./locales/ja-JP/index'),
+  'zh-TW': () => import('./locales/zh-TW/index'),
+  'ko-KR': () => import('./locales/ko-KR/index'),
+  'tr-TR': () => import('./locales/tr-TR/index'),
+  'ru-RU': () => import('./locales/ru-RU/index'),
+  'uk-UA': () => import('./locales/uk-UA/index'),
+  'pt-BR': () => import('./locales/pt-BR/index'),
+  'de-DE': () => import('./locales/de-DE/index'),
+  'es-ES': () => import('./locales/es-ES/index'),
+  'fr-FR': () => import('./locales/fr-FR/index'),
+  'fa-IR': () => import('./locales/fa-IR/index'),
 };
 
-const fallbackLocale = localeData[DEFAULT_LANGUAGE] ?? {};
+const fallbackLocale = enUS as LocaleData;
 
 // Cache for loaded translations
 const loadedTranslations = new Map<string, Record<string, unknown>>();
 
 // Pre-populate cache with the synchronously loaded fallback locale
 loadedTranslations.set(DEFAULT_LANGUAGE, fallbackLocale as Record<string, unknown>);
-
-function getLocaleModules(locale: string): Record<string, unknown> {
-  const normalized = normalizeLanguageCode(locale);
-  const modules = localeData[normalized] ?? fallbackLocale;
-  if (normalized === DEFAULT_LANGUAGE) return modules;
-  return mergeWithFallback(fallbackLocale, modules);
-}
 
 function getLocalStorageLanguageHint(): string | null {
   if (typeof localStorage === 'undefined') return null;
@@ -100,9 +84,16 @@ async function loadLocaleModules(locale: string): Promise<Record<string, unknown
   const cached = loadedTranslations.get(normalized);
   if (cached) return cached;
 
-  const modules = getLocaleModules(normalized);
-  loadedTranslations.set(normalized, modules);
-  return modules;
+  if (normalized === DEFAULT_LANGUAGE) {
+    loadedTranslations.set(normalized, fallbackLocale);
+    return fallbackLocale;
+  }
+
+  const loader = localeLoaders[normalized];
+  const modules = loader ? (await loader()).default : fallbackLocale;
+  const translation = mergeWithFallback(fallbackLocale, modules);
+  loadedTranslations.set(normalized, translation);
+  return translation;
 }
 
 const initialLanguage = getInitialLanguage();
@@ -111,11 +102,6 @@ const initialResources: Record<string, { translation: Record<string, unknown> }>
     translation: fallbackLocale,
   },
 };
-if (initialLanguage !== DEFAULT_LANGUAGE) {
-  initialResources[initialLanguage] = {
-    translation: getLocaleModules(initialLanguage),
-  };
-}
 
 // Initialize i18n with fallback and initial locale loaded synchronously to avoid FOUC.
 // NOTE: We intentionally do NOT use i18next-browser-languagedetector here.
@@ -124,11 +110,11 @@ if (initialLanguage !== DEFAULT_LANGUAGE) {
 // and fall back to navigator.language, causing a language mismatch (Issue #1176).
 // Instead, we use localStorage and Electron's injected local config language
 // only as hints for the initial render, then let configService be the source of truth.
-i18n
+const i18nInitialization = i18n
   .use(initReactI18next)
   .init({
     resources: initialResources,
-    lng: initialLanguage,
+    lng: DEFAULT_LANGUAGE,
     fallbackLng: DEFAULT_LANGUAGE,
     debug: false,
     interpolation: { escapeValue: false },
@@ -136,6 +122,13 @@ i18n
   .catch((error: Error) => {
     console.error('Failed to initialize i18n:', error);
   });
+
+async function initializeHintedLanguage(): Promise<void> {
+  await i18nInitialization;
+  if (initialLanguage !== DEFAULT_LANGUAGE) {
+    await ensureAndSwitch(i18n, initialLanguage, loadLocaleModules);
+  }
+}
 
 // Load initial language from configService (single source of truth).
 // Wait until configService.whenReady() so we observe the authoritative value
@@ -173,8 +166,12 @@ i18n.on('languageChanged', async (lang: string) => {
   }
 });
 
-// Initialize on module load
-void initLanguage();
+// Load the fast local/injected hint before React renders, then reconcile with
+// the authoritative backend setting without blocking the initial UI.
+export const i18nStartup = initializeHintedLanguage();
+void i18nStartup.then(initLanguage).catch((error) => {
+  console.error('Failed to initialize startup language:', error);
+});
 
 // Listen for language changes broadcast by the main process (from other renderers).
 // This enables real-time sync between desktop and WebUI — when one changes language,

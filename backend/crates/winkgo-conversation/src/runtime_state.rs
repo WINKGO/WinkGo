@@ -6,7 +6,7 @@ use std::{
 
 use tokio::sync::Notify;
 use tracing::{info, warn};
-use winkgo_api_types::{ConversationRuntimeStateKind, ConversationRuntimeSummary};
+use winkgo_api_types::{ConversationRuntimeStateKind, ConversationRuntimeSummary, InterjectionMode};
 use winkgo_common::ConversationStatus;
 
 use crate::ConversationError;
@@ -248,6 +248,7 @@ impl ConversationRuntimeStateService {
         task_status: Option<ConversationStatus>,
         has_task: bool,
         pending_confirmations: usize,
+        interjection_mode: InterjectionMode,
     ) -> ConversationRuntimeSummary {
         let (active_turn_id, cancelling) = self
             .state
@@ -283,6 +284,7 @@ impl ConversationRuntimeStateService {
             is_processing,
             pending_confirmations,
             turn_id: active_turn_id,
+            interjection_mode,
         }
     }
 
@@ -385,7 +387,7 @@ mod tests {
 
         assert_eq!(state.active_turn_id_for("conv-1").as_deref(), Some("turn-a"));
 
-        let summary = state.summary_from_parts("conv-1", None, false, 0);
+        let summary = state.summary_from_parts("conv-1", None, false, 0, InterjectionMode::BoundaryQueue);
         assert_eq!(summary.turn_id.as_deref(), Some("turn-a"));
         assert_eq!(summary.state, ConversationRuntimeStateKind::Starting);
     }
@@ -538,7 +540,7 @@ mod tests {
             .try_claim_turn("conv-1", "turn-1")
             .expect("claim should be created");
 
-        let summary = state.summary_from_parts("conv-1", None, false, 0);
+        let summary = state.summary_from_parts("conv-1", None, false, 0, InterjectionMode::BoundaryQueue);
 
         assert_eq!(summary.state, ConversationRuntimeStateKind::Starting);
         assert!(summary.is_processing);
@@ -552,7 +554,13 @@ mod tests {
             .try_claim_turn("conv-1", "turn-1")
             .expect("claim should be created");
 
-        let summary = state.summary_from_parts("conv-1", Some(ConversationStatus::Running), true, 1);
+        let summary = state.summary_from_parts(
+            "conv-1",
+            Some(ConversationStatus::Running),
+            true,
+            1,
+            InterjectionMode::BoundaryQueue,
+        );
 
         assert_eq!(summary.state, ConversationRuntimeStateKind::WaitingConfirmation);
         assert!(summary.is_processing);
@@ -567,7 +575,13 @@ mod tests {
             .expect("claim should be created");
         state.mark_cancelling("conv-1");
 
-        let summary = state.summary_from_parts("conv-1", Some(ConversationStatus::Running), true, 0);
+        let summary = state.summary_from_parts(
+            "conv-1",
+            Some(ConversationStatus::Running),
+            true,
+            0,
+            InterjectionMode::BoundaryQueue,
+        );
 
         assert_eq!(summary.state, ConversationRuntimeStateKind::Cancelling);
         assert_eq!(summary.turn_id.as_deref(), Some("turn-a"));
@@ -579,18 +593,31 @@ mod tests {
     fn summary_uses_running_task_without_claim() {
         let state = Arc::new(ConversationRuntimeStateService::default());
 
-        let summary = state.summary_from_parts("conv-1", Some(ConversationStatus::Running), true, 0);
+        let summary = state.summary_from_parts(
+            "conv-1",
+            Some(ConversationStatus::Running),
+            true,
+            0,
+            InterjectionMode::Native,
+        );
 
         assert_eq!(summary.state, ConversationRuntimeStateKind::Running);
         assert!(summary.is_processing);
         assert!(!summary.can_send_message);
+        assert_eq!(summary.interjection_mode, InterjectionMode::Native);
     }
 
     #[test]
     fn summary_idle_when_no_claim_running_task_or_confirmation() {
         let state = Arc::new(ConversationRuntimeStateService::default());
 
-        let summary = state.summary_from_parts("conv-1", Some(ConversationStatus::Finished), true, 0);
+        let summary = state.summary_from_parts(
+            "conv-1",
+            Some(ConversationStatus::Finished),
+            true,
+            0,
+            InterjectionMode::BoundaryQueue,
+        );
 
         assert_eq!(summary.state, ConversationRuntimeStateKind::Idle);
         assert!(!summary.is_processing);

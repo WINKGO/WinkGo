@@ -39,6 +39,7 @@
     "agreementRequired": "Leia e aceite os Termos de Serviço e a Política de Privacidade antes de continuar",
     "empty": "Por favor, insira nome de usuário e senha",
     "phoneRequired": "Um número de celular é obrigatório para o cadastro",
+    "usernameNumeric": "O nome de usuário não pode conter apenas números",
     "phoneInvalid": "Digite um número chinês válido ou internacional começando com +",
     "invalidCredentials": "Nome de usuário ou senha inválidos",
     "accountExists": "Esta conta ou número de celular talvez já esteja cadastrado. Entre ou use outros dados",

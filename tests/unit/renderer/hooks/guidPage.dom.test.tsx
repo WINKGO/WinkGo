@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LayoutContext } from '@/renderer/hooks/context/LayoutContext';
@@ -364,19 +364,21 @@ describe('GuidPage', () => {
     expect(capturedGuidInputCardProps.at(-1)?.focusRequestKey).toBeUndefined();
   });
 
-  it('keeps replacing attachments supplied by an ordinary Guid prefill', () => {
+  it('preserves the local source of backend-machine files supplied by a Guid prefill', () => {
     locationMock.state = {
       prefillPrompt: 'Replace prompt and attachments',
-      prefillFiles: ['/tmp/one.png', '/tmp/two.png'],
+      prefillFiles: [
+        { kind: 'local', path: 'C:\\Users\\Administrator\\Desktop\\page.html' },
+        { kind: 'local', path: 'C:\\Users\\Administrator\\Desktop\\notes.txt' },
+      ],
     };
     guidInputMock.setFiles.mockClear();
 
     render(<GuidPage />);
 
-    // Prefill attachments carry no source tag → seeded as `upload` refs.
     expect(guidInputMock.setFiles).toHaveBeenCalledWith([
-      { kind: 'upload', path: '/tmp/one.png' },
-      { kind: 'upload', path: '/tmp/two.png' },
+      { kind: 'local', path: 'C:\\Users\\Administrator\\Desktop\\page.html' },
+      { kind: 'local', path: 'C:\\Users\\Administrator\\Desktop\\notes.txt' },
     ]);
   });
 
@@ -647,6 +649,59 @@ describe('GuidPage', () => {
     expect(agentSelectionMock.setSelectedAcpModel).not.toHaveBeenCalledWith('default', {
       persistPreference: false,
     });
+  });
+
+  it('does not overwrite a manual MCP selection when late Agent capabilities refresh', async () => {
+    swrMock.useSWRMock.mockReturnValue({ data: assistantDetailFixture });
+    resolveGuidAssistantDefaultsMock.mockReturnValue({
+      disabledBuiltinSkillIds: [],
+      skillIds: [],
+      mcpIds: ['default-mcp'],
+    });
+
+    const { rerender } = render(<GuidPage />);
+
+    await waitFor(() => {
+      expect(capturedGuidActionRowProps.at(-1)?.selectedMcpServerIds).toEqual(['default-mcp']);
+    });
+
+    await act(async () => {
+      const toggle = capturedGuidActionRowProps.at(-1)?.onToggleMcpServer as (serverId: string) => void;
+      toggle('winkgo-browser-id');
+    });
+    expect(capturedGuidActionRowProps.at(-1)?.selectedMcpServerIds).toEqual(['default-mcp', 'winkgo-browser-id']);
+
+    agentSelectionMock.currentAgentModeOptions = [{ value: 'default', label: 'Default' }];
+    rerender(<GuidPage />);
+
+    await waitFor(() => {
+      expect(capturedGuidActionRowProps.at(-1)?.selectedMcpServerIds).toEqual(['default-mcp', 'winkgo-browser-id']);
+    });
+  });
+
+  it('keeps a manual MCP selection made before assistant defaults finish loading', async () => {
+    swrMock.useSWRMock.mockReturnValue({ data: null });
+    resolveGuidAssistantDefaultsMock.mockImplementation((detail) => ({
+      disabledBuiltinSkillIds: [],
+      skillIds: [],
+      mcpIds: detail ? ['default-mcp'] : [],
+    }));
+
+    const { rerender } = render(<GuidPage />);
+    await act(async () => {
+      const toggle = capturedGuidActionRowProps.at(-1)?.onToggleMcpServer as (serverId: string) => void;
+      toggle('winkgo-desktop-computer-use-id');
+    });
+    expect(capturedGuidActionRowProps.at(-1)?.selectedMcpServerIds).toEqual(['winkgo-desktop-computer-use-id']);
+
+    swrMock.useSWRMock.mockReturnValue({ data: assistantDetailFixture });
+    rerender(<GuidPage />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(capturedGuidActionRowProps.at(-1)?.selectedMcpServerIds).toEqual(['winkgo-desktop-computer-use-id']);
   });
 });
 

@@ -10,12 +10,13 @@ use std::sync::{Arc, OnceLock};
 use tower_http::limit::RequestBodyLimitLayer;
 
 use winkgo_api_types::{
-    ApiResponse, BrowseDirectoryQuery, BrowseDirectoryResponse, CancelZipRequest, CopyFilesRequest, CopyFilesResponse,
-    CreateTempFileRequest, DirOrFileResponse, FetchRemoteImageRequest, FileChangeInfoResponse, FileMetadataResponse,
-    FileWatchRequest, GetFileMetadataRequest, GetFilesByDirRequest, GetImageBase64Request, ListWorkspaceFilesRequest,
-    ReadFileBufferRequest, ReadFileRequest, RemoveEntryRequest, RenameRequest, RenameResponse, RevealItemRequest,
-    SnapshotBaselineRequest, SnapshotCompareResponse, SnapshotDiscardRequest, SnapshotInfoResponse,
-    SnapshotStageRequest, SnapshotWorkspaceRequest, WorkspaceFlatFileResponse, WorkspaceOfficeWatchRequest,
+    ApiResponse, BrowseDirectoryQuery, BrowseDirectoryResponse, CancelZipRequest, ContentMetadataRequest,
+    CopyFilesRequest, CopyFilesResponse, CreateTempFileRequest, DirOrFileResponse, FetchRemoteImageRequest,
+    FileChangeInfoResponse, FileMetadataResponse, FileWatchRequest, GetFileMetadataRequest, GetFilesByDirRequest,
+    GetImageBase64Request, ListWorkspaceFilesRequest, ReadContentRequest, ReadFileBufferRequest, ReadFileRequest,
+    RemoveEntryRequest, RenameRequest, RenameResponse, RevealItemRequest, SnapshotBaselineRequest,
+    SnapshotCompareResponse, SnapshotDiscardRequest, SnapshotInfoResponse, SnapshotStageRequest,
+    SnapshotWorkspaceRequest, WorkspaceFlatFileResponse, WorkspaceOfficeWatchRequest, WriteContentRequest,
     WriteFileRequest, ZipRequest,
 };
 use winkgo_common::ApiError;
@@ -125,6 +126,8 @@ pub struct FileRouterState {
 ///
 /// All routes require authentication (applied by the caller).
 pub fn file_routes(state: FileRouterState) -> Router {
+    const CONTENT_MAX_SIZE: usize = 256 * 1024 * 1024;
+
     // Upload route carries its own body-size limit (UPLOAD_MAX_SIZE, 30 MB).
     // We first disable the global `DefaultBodyLimit` that `winkgo-app`
     // installs (otherwise the `Multipart` extractor would cap the body at
@@ -136,8 +139,18 @@ pub fn file_routes(state: FileRouterState) -> Router {
         .layer(RequestBodyLimitLayer::new(UPLOAD_MAX_SIZE))
         .with_state(state.clone());
 
+    // ChatFileRef content I/O accepts large editor payloads. Existing file
+    // endpoints remain available for compatibility with WINK GO's current
+    // WebSocket and extension integrations.
+    let content_router = Router::new()
+        .route("/api/fs/content", post(read_content).put(write_content))
+        .layer(DefaultBodyLimit::disable())
+        .layer(RequestBodyLimitLayer::new(CONTENT_MAX_SIZE))
+        .with_state(state.clone());
+
     Router::new()
         // A. Core file operations
+        .route("/api/fs/content/metadata", post(content_metadata))
         .route("/api/fs/browse", get(browse_directory))
         .route("/api/fs/dir", post(get_files_by_dir))
         .route("/api/fs/list", post(list_workspace_files))
@@ -174,12 +187,110 @@ pub fn file_routes(state: FileRouterState) -> Router {
         .route("/api/fs/snapshot/branches", post(snapshot_branches))
         .route("/api/fs/snapshot/dispose", post(snapshot_dispose))
         .with_state(state)
+        .merge(content_router)
         .merge(upload_router)
 }
 
 // ---------------------------------------------------------------------------
 // A. Core file operations — handlers
 // ---------------------------------------------------------------------------
+
+fn content_upload_root() -> PathBuf {
+    std::env::temp_dir().join("winkgo")
+}
+
+fn parse_if_match(headers: &axum::http::HeaderMap) -> Option<i64> {
+    headers
+        .get(axum::http::header::IF_MATCH)?
+        .to_str()
+        .ok()?
+        .trim()
+        .parse::<i64>()
+        .ok()
+}
+
+fn enforce_if_match(headers: &axum::http::HeaderMap, current: i64) -> Result<(), ApiError> {
+    if let Some(expected) = parse_if_match(headers)
+        && current != expected
+    {
+        return Err(ApiError::Conflict(
+            "The file changed on disk after it was opened. Reload it before saving again.".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+/// Identity resolution errors are deliberately collapsed to a path-free
+/// response. The detailed cause remains in local logs for diagnostics.
+fn chat_file_resolve_error(error: winkgo_project::ProjectError) -> ApiError {
+    let code = error.code();
+    tracing::warn!(target: "chat_file", error = %error, code, "could not resolve chat file reference");
+    match error {
+        winkgo_project::ProjectError::Database(_) => ApiError::Internal("failed to resolve target".to_owned()),
+        _ => ApiError::coded(
+            axum::http::StatusCode::NOT_FOUND,
+            "FILE_NOT_FOUND",
+            "The requested file no longer exists.",
+            None::<serde_json::Value>,
+        ),
+    }
+}
+
+async fn read_content(
+    State(state): State<FileRouterState>,
+    body: Result<Json<ReadContentRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<String>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    let absolute_path = state
+        .project
+        .resolve_chat_file_ref(&req.file, &content_upload_root(), winkgo_project::FileOp::Read)
+        .await
+        .map_err(chat_file_resolve_error)?;
+    let content = state
+        .file_service
+        .read_resolved_content(Path::new(&absolute_path), req.encoding)
+        .await?;
+    Ok(Json(ApiResponse::ok(content)))
+}
+
+async fn write_content(
+    State(state): State<FileRouterState>,
+    headers: axum::http::HeaderMap,
+    body: Result<Json<WriteContentRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<bool>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    let absolute_path = state
+        .project
+        .resolve_chat_file_ref(&req.file, &content_upload_root(), winkgo_project::FileOp::Write)
+        .await
+        .map_err(chat_file_resolve_error)?;
+    let path = Path::new(&absolute_path);
+
+    if parse_if_match(&headers).is_some() {
+        let current = state.file_service.resolved_metadata(path).await?.last_modified;
+        enforce_if_match(&headers, current)?;
+    }
+
+    state
+        .file_service
+        .write_resolved_content(path, req.data.as_bytes())
+        .await?;
+    Ok(Json(ApiResponse::ok(true)))
+}
+
+async fn content_metadata(
+    State(state): State<FileRouterState>,
+    body: Result<Json<ContentMetadataRequest>, JsonRejection>,
+) -> Result<Json<ApiResponse<FileMetadataResponse>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    let absolute_path = state
+        .project
+        .resolve_chat_file_ref(&req.file, &content_upload_root(), winkgo_project::FileOp::Read)
+        .await
+        .map_err(chat_file_resolve_error)?;
+    let metadata = state.file_service.resolved_metadata(Path::new(&absolute_path)).await?;
+    Ok(Json(ApiResponse::ok(to_metadata_response(metadata))))
+}
 
 /// `GET /api/fs/browse` — shallow directory listing for the WebUI host-file
 /// picker. Runs on the Tokio blocking pool because it does synchronous
@@ -294,18 +405,23 @@ async fn copy_files(
     body: Result<Json<CopyFilesRequest>, JsonRejection>,
 ) -> Result<Json<ApiResponse<CopyFilesResponse>>, ApiError> {
     let Json(req) = body.map_err(ApiError::from)?;
-    let resolved = state
-        .project
-        .resolve_reference(winkgo_project::ReferenceInput {
-            pe_id: req.target.pe_id,
-            relative_path: req.target.relative_path,
-            op: winkgo_project::FileOp::Write,
-        })
-        .await
-        .map_err(ApiError::from)?;
-    let target_dir = resolved
-        .absolute_path
-        .ok_or_else(|| ApiError::BadRequest("copy target is not a local path".to_owned()))?;
+    let target_dir = if let Some(target) = req.target {
+        state
+            .project
+            .resolve_reference(winkgo_project::ReferenceInput {
+                pe_id: target.pe_id,
+                relative_path: target.relative_path,
+                op: winkgo_project::FileOp::Write,
+            })
+            .await
+            .map_err(ApiError::from)?
+            .absolute_path
+            .ok_or_else(|| ApiError::BadRequest("copy target is not a local path".to_owned()))?
+    } else {
+        req.workspace
+            .filter(|workspace| !workspace.trim().is_empty())
+            .ok_or_else(|| ApiError::BadRequest("copy target or workspace is required".to_owned()))?
+    };
     let result = state
         .file_service
         .copy_files_to_workspace(&req.file_paths, &target_dir, req.source_root.as_deref())
@@ -790,6 +906,24 @@ mod tests {
     use super::*;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn if_match_accepts_current_version_and_rejects_stale_version() {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(axum::http::header::IF_MATCH, "1700000000000".parse().unwrap());
+
+        assert!(enforce_if_match(&headers, 1700000000000).is_ok());
+        let error = enforce_if_match(&headers, 1700000000001).unwrap_err();
+        assert_eq!(error.status_code(), axum::http::StatusCode::CONFLICT);
+    }
+
+    #[test]
+    fn malformed_if_match_remains_backward_compatible() {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(axum::http::header::IF_MATCH, "not-a-version".parse().unwrap());
+
+        assert!(enforce_if_match(&headers, 1700000000000).is_ok());
+    }
 
     #[test]
     fn file_path_outside_sandbox_maps_to_explicit_api_code() {

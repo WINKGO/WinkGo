@@ -12,7 +12,7 @@
   "generatedFrom": [
     {
       "path": "bun.lock",
-      "sha256": "9a807970f5e193326fe750b8a39570bf9e3f8a3c5f326bc9ab43083e660716d2"
+      "sha256": "70cbb611471c83315f772b029a25054b59305cbdadda5dee896e1618c45a77a6"
     },
     {
       "path": "mobile/bun.lock",
@@ -20,7 +20,7 @@
     },
     {
       "path": "backend/Cargo.lock",
-      "sha256": "66c4754c37bdba18a3508f95ea6ab4e045805afaf4b33e78c9cb7ca235bf745b"
+      "sha256": "de930894ad1745b6de1cb1a99b50c9ca59079f62f5905de22f0e1803465b9142"
     },
     {
       "path": "backend/agent-runtime/Cargo.lock",
@@ -32,11 +32,11 @@
     }
   ],
   "summary": {
-    "packages": 2873,
-    "npmPackages": 2231,
-    "cargoPackages": 642,
+    "packages": 2878,
+    "npmPackages": 2227,
+    "cargoPackages": 651,
     "lockOnlyNpmPackages": 197,
-    "uniqueLicenseTexts": 1127
+    "uniqueLicenseTexts": 1129
   },
   "packages": [
     {
@@ -3874,6 +3874,33 @@
       ]
     },
     {
+      "id": "cargo:objc2-encode@4.1.0",
+      "ecosystem": "cargo",
+      "name": "objc2-encode",
+      "version": "4.1.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT",
+      "licenseTextHashes": []
+    },
+    {
+      "id": "cargo:objc2-foundation@0.3.2",
+      "ecosystem": "cargo",
+      "name": "objc2-foundation",
+      "version": "0.3.2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT",
+      "licenseTextHashes": []
+    },
+    {
+      "id": "cargo:objc2@0.6.4",
+      "ecosystem": "cargo",
+      "name": "objc2",
+      "version": "0.6.4",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT",
+      "licenseTextHashes": []
+    },
+    {
       "id": "cargo:once_cell_polyfill@1.70.2",
       "ecosystem": "cargo",
       "name": "once_cell_polyfill",
@@ -6375,6 +6402,17 @@
       ]
     },
     {
+      "id": "cargo:trash@5.2.6",
+      "ecosystem": "cargo",
+      "name": "trash",
+      "version": "5.2.6",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "1ea4646aa1951cfea62ddd5aaac4dc3dbb84fa31feb66a8b3a51fc0cd395d0e9"
+      ]
+    },
+    {
       "id": "cargo:try-lock@0.2.5",
       "ecosystem": "cargo",
       "name": "try-lock",
@@ -6930,6 +6968,18 @@
       ]
     },
     {
+      "id": "cargo:windows-core@0.56.0",
+      "ecosystem": "cargo",
+      "name": "windows-core",
+      "version": "0.56.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT OR Apache-2.0",
+      "licenseTextHashes": [
+        "3d4ada4e04d153d74f5bc4e5e6aebd12ef20077716529c36089dc07f14fd0dcf",
+        "cb3b46a575dd9b39f881706288addc2e61e94c54658993da30cee083c0bb336f"
+      ]
+    },
+    {
       "id": "cargo:windows-core@0.58.0",
       "ecosystem": "cargo",
       "name": "windows-core",
@@ -6954,6 +7004,18 @@
       ]
     },
     {
+      "id": "cargo:windows-implement@0.56.0",
+      "ecosystem": "cargo",
+      "name": "windows-implement",
+      "version": "0.56.0",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT OR Apache-2.0",
+      "licenseTextHashes": [
+        "3d4ada4e04d153d74f5bc4e5e6aebd12ef20077716529c36089dc07f14fd0dcf",
+        "cb3b46a575dd9b39f881706288addc2e61e94c54658993da30cee083c0bb336f"
+      ]
+    },
+    {
       "id": "cargo:windows-implement@0.58.0",
       "ecosystem": "cargo",
       "name": "windows-implement",
@@ -6970,6 +7032,18 @@
       "ecosystem": "cargo",
       "name": "windows-implement",
       "version": "0.60.2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT OR Apache-2.0",
+      "licenseTextHashes": [
+        "3d4ada4e04d153d74f5bc4e5e6aebd12ef20077716529c36089dc07f14fd0dcf",
+        "cb3b46a575dd9b39f881706288addc2e61e94c54658993da30cee083c0bb336f"
+      ]
+    },
+    {
+      "id": "cargo:windows-interface@0.56.0",
+      "ecosystem": "cargo",
+      "name": "windows-interface",
+      "version": "0.56.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "license": "MIT OR Apache-2.0",
       "licenseTextHashes": [
@@ -7006,6 +7080,18 @@
       "ecosystem": "cargo",
       "name": "windows-link",
       "version": "0.2.1",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT OR Apache-2.0",
+      "licenseTextHashes": [
+        "3d4ada4e04d153d74f5bc4e5e6aebd12ef20077716529c36089dc07f14fd0dcf",
+        "cb3b46a575dd9b39f881706288addc2e61e94c54658993da30cee083c0bb336f"
+      ]
+    },
+    {
+      "id": "cargo:windows-result@0.1.2",
+      "ecosystem": "cargo",
+      "name": "windows-result",
+      "version": "0.1.2",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "license": "MIT OR Apache-2.0",
       "licenseTextHashes": [
@@ -7138,6 +7224,18 @@
       "ecosystem": "cargo",
       "name": "windows-targets",
       "version": "0.53.5",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT OR Apache-2.0",
+      "licenseTextHashes": [
+        "3d4ada4e04d153d74f5bc4e5e6aebd12ef20077716529c36089dc07f14fd0dcf",
+        "cb3b46a575dd9b39f881706288addc2e61e94c54658993da30cee083c0bb336f"
+      ]
+    },
+    {
+      "id": "cargo:windows@0.56.0",
+      "ecosystem": "cargo",
+      "name": "windows",
+      "version": "0.56.0",
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "license": "MIT OR Apache-2.0",
       "licenseTextHashes": [
@@ -19410,10 +19508,10 @@
       ]
     },
     {
-      "id": "npm:dompurify@3.4.12",
+      "id": "npm:dompurify@3.4.13",
       "ecosystem": "npm",
       "name": "dompurify",
-      "version": "3.4.12",
+      "version": "3.4.13",
       "source": "git://github.com/cure53/DOMPurify.git",
       "license": "(MPL-2.0 OR Apache-2.0)",
       "licenseTextHashes": [
@@ -20605,10 +20703,10 @@
       ]
     },
     {
-      "id": "npm:fast-uri@3.1.4",
+      "id": "npm:fast-uri@3.1.5",
       "ecosystem": "npm",
       "name": "fast-uri",
-      "version": "3.1.4",
+      "version": "3.1.5",
       "source": "git+https://github.com/fastify/fast-uri.git",
       "license": "BSD-3-Clause",
       "licenseTextHashes": [
@@ -21711,10 +21809,10 @@
       ]
     },
     {
-      "id": "npm:hono@4.12.32",
+      "id": "npm:hono@4.13.1",
       "ecosystem": "npm",
       "name": "hono",
-      "version": "4.12.32",
+      "version": "4.13.1",
       "source": "git+https://github.com/honojs/hono.git",
       "license": "MIT",
       "licenseTextHashes": [
@@ -22197,17 +22295,6 @@
       "license": "MIT",
       "licenseTextHashes": [
         "f657f99d3fb9647db92628e96007aabb46e5f04f33e49999075aab8e250ca7ce"
-      ]
-    },
-    {
-      "id": "npm:ip-address@10.1.0",
-      "ecosystem": "npm",
-      "name": "ip-address",
-      "version": "10.1.0",
-      "source": "git://github.com/beaugunderson/ip-address.git",
-      "license": "MIT",
-      "licenseTextHashes": [
-        "f8d791359a50cbcac82c29cb7b0b1b889b28be76fdd35b8ee33f0f7c8704702a"
       ]
     },
     {
@@ -23290,10 +23377,10 @@
       ]
     },
     {
-      "id": "npm:js-yaml@3.15.0",
+      "id": "npm:js-yaml@3.15.1",
       "ecosystem": "npm",
       "name": "js-yaml",
-      "version": "3.15.0",
+      "version": "3.15.1",
       "source": "nodeca/js-yaml",
       "license": "MIT",
       "licenseTextHashes": [
@@ -23305,17 +23392,6 @@
       "ecosystem": "npm",
       "name": "js-yaml",
       "version": "4.1.1",
-      "source": "nodeca/js-yaml",
-      "license": "MIT",
-      "licenseTextHashes": [
-        "a07bc24468b9654ce76a547d47a2db282d07733b715db4c73a98bd63961f9550"
-      ]
-    },
-    {
-      "id": "npm:js-yaml@4.3.0",
-      "ecosystem": "npm",
-      "name": "js-yaml",
-      "version": "4.3.0",
       "source": "nodeca/js-yaml",
       "license": "MIT",
       "licenseTextHashes": [
@@ -24769,10 +24845,10 @@
       ]
     },
     {
-      "id": "npm:mermaid@11.16.0",
+      "id": "npm:mermaid@11.16.1",
       "ecosystem": "npm",
       "name": "mermaid",
-      "version": "11.16.0",
+      "version": "11.16.1",
       "source": "https://github.com/mermaid-js/mermaid",
       "license": "MIT",
       "licenseTextHashes": [
@@ -25681,25 +25757,14 @@
       ]
     },
     {
-      "id": "npm:nanoid@3.3.16",
+      "id": "npm:nanoid@5.1.16",
       "ecosystem": "npm",
       "name": "nanoid",
-      "version": "3.3.16",
+      "version": "5.1.16",
       "source": "ai/nanoid",
       "license": "MIT",
       "licenseTextHashes": [
-        "da4db1480d9beea3483a2eda5c53b22238d0827d57da162b48f122e04d2d9987"
-      ]
-    },
-    {
-      "id": "npm:nanoid@5.1.7",
-      "ecosystem": "npm",
-      "name": "nanoid",
-      "version": "5.1.7",
-      "source": "ai/nanoid",
-      "license": "MIT",
-      "licenseTextHashes": [
-        "da4db1480d9beea3483a2eda5c53b22238d0827d57da162b48f122e04d2d9987"
+        "4383cb2c3608397ce7a4159502614ed66890f8999c2a9c056dd3b1024d6721f0"
       ]
     },
     {
@@ -30643,21 +30708,10 @@
       ]
     },
     {
-      "id": "npm:undici@6.27.0",
+      "id": "npm:undici@6.28.0",
       "ecosystem": "npm",
       "name": "undici",
-      "version": "6.27.0",
-      "source": "git+https://github.com/nodejs/undici.git",
-      "license": "MIT",
-      "licenseTextHashes": [
-        "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27"
-      ]
-    },
-    {
-      "id": "npm:undici@7.29.0",
-      "ecosystem": "npm",
-      "name": "undici",
-      "version": "7.29.0",
+      "version": "6.28.0",
       "source": "git+https://github.com/nodejs/undici.git",
       "license": "MIT",
       "licenseTextHashes": [

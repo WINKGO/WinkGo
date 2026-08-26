@@ -22,6 +22,12 @@ describe('redactErrorText', () => {
     expect(out).toBe('Authorization: Bearer [REDACTED]');
   });
 
+  it('masks a NetEase MUSIC_U credential', () => {
+    const secret = 'm'.repeat(64);
+    const out = redactErrorText(`provider rejected MUSIC_U=${secret}`);
+    expect(out).toBe('provider rejected MUSIC_U=[REDACTED]');
+  });
+
   it('masks key=value secrets regardless of casing', () => {
     expect(redactErrorText('api_key=mysecret123')).toBe('api_key=[REDACTED]');
     expect(redactErrorText('"token": "abc123"')).toBe('"token": "[REDACTED]"');

@@ -27,9 +27,14 @@
     "configureFirst": "Veuillez d'abord configurer un agent dans les Paramètres.",
     "switching": "Changement d'agent..."
   },
+  "runtime": {
+    "managedByAgent": "Géré par l’Agent"
+  },
   "model": {
     "switchSuccess": "Le modèle a changé avec succès",
-    "switchFailed": "Échec du changement de modèle"
+    "switchFailed": "Échec du changement de modèle",
+    "searchPlaceholder": "Rechercher des modèles",
+    "noResults": "Aucun modèle correspondant"
   },
   "warmup": {
     "clickToWake": "Cliquez pour démarrer ce membre de l’équipe"
@@ -45,5 +50,31 @@
     "label": "Niveau de réflexion",
     "switchSuccess": "Niveau de réflexion changé",
     "switchFailed": "Échec du changement de niveau de réflexion"
+  },
+  "speed": {
+    "label": "Vitesse",
+    "switchSuccess": "Vitesse de réponse mise à jour",
+    "switchFailed": "Échec de la mise à jour de la vitesse de réponse"
+  },
+  "voiceTask": {
+    "emptyCommand": "La tâche est vide et n’a pas été envoyée à l’Agent.",
+    "noAgent": "Aucun WINK GO Agent n’est disponible ou la compétence Agent de bureau demandée a été retirée.",
+    "noModel": "WINK GO CLI ne dispose d’aucun modèle. Configurez et activez d’abord un modèle dans la page Modèles.",
+    "conversationName": "XiaoZhi : {{command}}",
+    "createFailed": "Impossible de créer la conversation WINK GO Agent.",
+    "queued": "La tâche est en attente pour {{assistant}} et sera exécutée après la tâche actuelle.",
+    "accepted": "La tâche a été envoyée à {{assistant}}. Vous pouvez suivre sa progression dans WINK GO.",
+    "none": "Aucune tâche d’assistant n’est en cours.",
+    "waitingConfirmation": "{{assistant}} attend votre confirmation.",
+    "queuedStatus": "{{assistant}} a reçu la tâche en attente et l’exécutera après la tâche actuelle.",
+    "running": "{{assistant}} exécute la tâche.",
+    "finishedWithResult": "{{assistant}} a terminé la tâche : {{result}}",
+    "finishedNoResult": "{{assistant}} a terminé la tâche, mais aucune réponse finale n’a été trouvée.",
+    "failed": "Échec de {{assistant}} : {{error}}",
+    "acceptedStatus": "{{assistant}} a accepté la tâche.",
+    "noCancelable": "Aucune tâche d’assistant en cours ne peut être annulée.",
+    "cancelling": "{{assistant}} termine encore la tâche. Réessayez dans un instant.",
+    "cancelled": "La tâche actuelle de {{assistant}} a été annulée.",
+    "history": "Il y a {{count}} tâches Agent récentes : {{tasks}}."
   }
 }

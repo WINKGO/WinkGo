@@ -18,6 +18,8 @@ import remarkMath from 'remark-math';
 import 'katex/dist/katex.min.css';
 
 import { openExternalUrl } from '@/renderer/utils/platform';
+import { parseHttpUrl } from '@/renderer/utils/url';
+import { useOptionalPreviewContext } from '@/renderer/pages/conversation/Preview/context/PreviewContext';
 import classNames from 'classnames';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -51,6 +53,7 @@ type MarkdownViewProps = {
 const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
   ({ hiddenCodeCopyButton, codeStyle, className, onRef, onLocalFileLink, allowHtml, children: childrenProp }) => {
     const { t } = useTranslation();
+    const preview = useOptionalPreviewContext();
 
     const normalizedChildren = useMemo(() => {
       if (typeof childrenProp === 'string') {
@@ -67,11 +70,16 @@ const MarkdownView: React.FC<MarkdownViewProps> = React.memo(
         e.stopPropagation();
         const href = (e.currentTarget as HTMLAnchorElement).href;
         if (!href) return;
+        const httpUrl = parseHttpUrl(href);
+        if (httpUrl && preview) {
+          preview.openBrowserTab(httpUrl);
+          return;
+        }
         openExternalUrl(href).catch((error: unknown) => {
           console.error(t('messages.openLinkFailed'), error);
         });
       },
-      [t]
+      [t, preview]
     );
 
     // Memoize components so React preserves component identity across re-renders.

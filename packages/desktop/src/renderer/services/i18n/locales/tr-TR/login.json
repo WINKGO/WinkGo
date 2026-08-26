@@ -39,6 +39,7 @@
     "agreementRequired": "Devam etmeden önce Hizmet Koşulları ve Gizlilik Politikası'nı okuyup kabul edin",
     "empty": "Lütfen kullanıcı adı ve şifre girin",
     "phoneRequired": "Kayıt için cep telefonu numarası gereklidir",
+    "usernameNumeric": "Kullanıcı adı yalnızca rakamlardan oluşamaz",
     "phoneInvalid": "Geçerli bir Çin numarası veya + ile başlayan uluslararası numara girin",
     "invalidCredentials": "Geçersiz kullanıcı adı veya şifre",
     "accountExists": "Bu hesap veya telefon numarası zaten kayıtlı olabilir. Oturum açın ya da farklı bilgiler kullanın",

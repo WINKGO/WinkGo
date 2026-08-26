@@ -12,7 +12,6 @@ import { uuid } from '@/common/utils';
 import addChatIcon from '@/renderer/assets/icons/add-chat.svg';
 import { CronJobManager } from '@/renderer/pages/cron';
 import { resolveCronJobId } from '@/renderer/pages/cron/cronUtils';
-import { classifyConfigSetError, useAcpConfigOptions } from '@/renderer/hooks/agent/useAcpConfigOptions';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { usePresetAssistantInfo } from '@/renderer/hooks/agent/usePresetAssistantInfo';
 import { iconColors } from '@/renderer/styles/colors';
@@ -26,12 +25,10 @@ import { emitter } from '../../../utils/emitter';
 import AcpChat from '../platforms/acp/AcpChat';
 import ChatLayout from './ChatLayout';
 import ChatSlider from './ChatSlider.tsx';
-import AcpModelSelector from '@/renderer/components/agent/AcpModelSelector';
 import { getConversationOrNull } from '@/renderer/pages/conversation/utils/conversationCache';
 import { getConversationCreateErrorMessage } from '@/renderer/pages/conversation/utils/conversationCreateError';
 import GoogleModelSelector from '../platforms/gemini/GoogleModelSelector';
 import WinkGoAgentChat from '../platforms/winkgo_agent/WinkGoAgentChat';
-import WinkGoAgentModelSelector from '../platforms/winkgo_agent/WinkGoAgentModelSelector';
 import { useWinkGoAgentModelSelection } from '../platforms/winkgo_agent/useWinkGoAgentModelSelection';
 import { useConversationRuntimeView } from '../runtime/useConversationRuntimeView';
 import { isLegacyReadOnlyConversationType } from '../utils/conversationRuntime';
@@ -39,14 +36,6 @@ import { resolveConversationBackend } from '../utils/conversationAssistantIdenti
 import LegacyReadOnlyConversation from '../platforms/legacy/LegacyReadOnlyConversation';
 import { useActiveLease } from '../hooks/useActiveLease';
 // import SkillRuleGenerator from './components/SkillRuleGenerator'; // Temporarily hidden
-
-const configErrorMessageKey = (error: unknown) => {
-  const errorKind = classifyConfigSetError(error);
-  if (errorKind === 'command_ack') return 'agent.config.commandAck';
-  if (errorKind === 'confirmation_timeout') return 'agent.config.timeout';
-  if (errorKind === 'config_update_in_progress') return 'agent.config.busy';
-  return 'agent.config.failed';
-};
 
 const _AssociatedConversation: React.FC<{ conversation_id: string }> = ({ conversation_id }) => {
   const { data } = useSWR(['getAssociateConversation', conversation_id], () =>
@@ -176,29 +165,6 @@ const WinkGoAgentConversationPanel: React.FC<{
   const cronJobId = resolveCronJobId(conversation.extra);
   const { info: presetAssistantInfo } = usePresetAssistantInfo(conversation);
   const winkgo_agentAssistantId = presetAssistantInfo?.assistantId;
-  const layout = useLayoutContext();
-  // Mobile: model selection moved into the sendbox `+` action sheet to free up
-  // header space; the dropdown stays available on desktop and tablets ≥768px.
-  const isMobile = Boolean(layout?.isMobile);
-  const { t } = useTranslation();
-  const runtimeConfig = useAcpConfigOptions({
-    conversation_id: conversation.id,
-    enabled: !isMobile,
-  });
-  const handleThoughtLevelSetOption = useCallback(
-    async (optionId: string, value: string) => {
-      try {
-        const result = await runtimeConfig.setConfigOption(optionId, value);
-        Message.success(t('agent.thoughtLevel.switchSuccess'));
-        return result;
-      } catch (error) {
-        Message.error(t(configErrorMessageKey(error)));
-        throw error;
-      }
-    },
-    [runtimeConfig, t]
-  );
-
   const chatLayoutProps = {
     title: conversation.name,
     siderTitle: sliderTitle,
@@ -206,14 +172,6 @@ const WinkGoAgentConversationPanel: React.FC<{
     headerExtra: (
       <div className='flex items-center gap-8px'>
         <CronJobManager conversation_id={conversation.id} cron_job_id={cronJobId} />
-        {!isMobile && (
-          <WinkGoAgentModelSelector
-            selection={modelSelection}
-            thoughtLevel={runtimeConfig.thoughtLevel}
-            setStatus={runtimeConfig.setStatus}
-            onSetThoughtLevel={handleThoughtLevelSetOption}
-          />
-        )}
       </div>
     ),
     workspaceEnabled,
@@ -247,6 +205,7 @@ const WinkGoAgentConversationPanel: React.FC<{
         }
         agent_name={presetAssistantInfo?.name}
         assistantId={winkgo_agentAssistantId}
+        forkCapability={conversation.fork_capability}
       />
     </ChatLayout>
   );
@@ -291,6 +250,7 @@ const ChatConversation: React.FC<{
             conversation_id={conversation.id}
             workspace={conversation.extra?.workspace}
             backend={resolvedConversationBackend || 'claude'}
+            initialModelId={(conversation.extra as { current_model_id?: string } | undefined)?.current_model_id}
             session_mode={conversation.extra?.session_mode}
             agent_name={assistantDisplayName}
             cron_job_id={cronJobId}
@@ -301,6 +261,8 @@ const ChatConversation: React.FC<{
               (conversation.extra as { mcp_statuses?: IConversationMcpStatus[] } | undefined)?.mcp_statuses
             }
             assistantId={acpAssistantId}
+            promptCapability={conversation.prompt_capability}
+            forkCapability={conversation.fork_capability}
           ></AcpChat>
         );
       default:
@@ -315,6 +277,7 @@ const ChatConversation: React.FC<{
     cronJobId,
     resolvedHideSendBox,
     acpAssistantId,
+    conversation?.prompt_capability,
   ]);
 
   const sliderTitle = useMemo(() => {
@@ -325,25 +288,14 @@ const ChatConversation: React.FC<{
     );
   }, [t]);
 
-  // For ACP/Codex conversations, use AcpModelSelector that can show/switch models.
-  // For other conversations, show disabled model selector.
-  // Mobile: model selection moves into the sendbox `+` action sheet, so the
-  // header selector is suppressed to free up vertical space.
+  // Runtime model/strength/speed selection is rendered inside the composer for
+  // ACP and WINK GO conversations. Keep only the legacy Google read-only pill
+  // in the titlebar until its sendbox migrates to the shared composer controls.
   const modelSelector = useMemo(() => {
     if (!conversation || isWinkGoAgentConversation) return undefined;
     if (isMobile) return undefined;
     if (isLegacyReadOnlyConversation) return undefined;
-    if (conversation.type === 'acp' || conversation.type === 'antigravity') {
-      const extra = conversation.extra as { current_model_id?: string };
-      return (
-        <AcpModelSelector
-          conversation_id={conversation.id}
-          backend={resolvedConversationBackend}
-          initialModelId={extra.current_model_id}
-          waitForWarmup
-        />
-      );
-    }
+    if (conversation.type === 'acp' || conversation.type === 'antigravity') return undefined;
     return <GoogleModelSelector disabled={true} />;
   }, [conversation, isWinkGoAgentConversation, isMobile, isLegacyReadOnlyConversation, resolvedConversationBackend]);
 

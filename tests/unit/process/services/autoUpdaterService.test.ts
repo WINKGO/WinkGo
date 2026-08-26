@@ -100,6 +100,7 @@ describe('AutoUpdaterService', () => {
       configurable: true,
       value: { version: '2.1.13' },
     });
+    appMock.getVersion.mockReturnValue('2.1.13');
   });
 
   afterEach(() => {
@@ -129,6 +130,42 @@ describe('AutoUpdaterService', () => {
 
     expect(result).toEqual({ success: true });
     expect(autoUpdaterMock.checkForUpdates).not.toHaveBeenCalled();
+  });
+
+  it('ignores a feed version that is not newer than the installed WINK GO build', async () => {
+    appMock.getVersion.mockReturnValue('2.2.12');
+    autoUpdaterMock.checkForUpdates.mockResolvedValue({
+      isUpdateAvailable: true,
+      updateInfo: {
+        version: '2.2.11',
+        files: [{ url: 'WINK-GO-2.2.11.exe', sha512: 'sha512-value' }],
+        path: 'WINK-GO-2.2.11.exe',
+        sha512: 'sha512-value',
+        releaseDate: '2026-08-12T00:00:00.000Z',
+      },
+    });
+
+    const { autoUpdaterService } = await import('@/process/services/autoUpdaterService');
+    autoUpdaterService.initialize();
+
+    await expect(autoUpdaterService.checkForUpdates()).resolves.toEqual({ success: true });
+  });
+
+  it('reports a feed version that is strictly newer than the installed WINK GO build', async () => {
+    appMock.getVersion.mockReturnValue('2.2.12');
+    const updateInfo = {
+      version: '2.2.13',
+      files: [{ url: 'WINK-GO-2.2.13.exe', sha512: 'sha512-value' }],
+      path: 'WINK-GO-2.2.13.exe',
+      sha512: 'sha512-value',
+      releaseDate: '2026-08-13T00:00:00.000Z',
+    };
+    autoUpdaterMock.checkForUpdates.mockResolvedValue({ isUpdateAvailable: true, updateInfo });
+
+    const { autoUpdaterService } = await import('@/process/services/autoUpdaterService');
+    autoUpdaterService.initialize();
+
+    await expect(autoUpdaterService.checkForUpdates()).resolves.toEqual({ success: true, updateInfo });
   });
 
   it('configures electron-updater to read stable metadata from the CDN', async () => {

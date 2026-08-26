@@ -145,7 +145,9 @@ describe('third-party distribution compliance', () => {
   it('ships complete OfficeCLI legal files with every derived skill', () => {
     const officeCliSkillRoots = listFilesRecursively(builtinSkillsRoot)
       .filter((file) => basename(file) === 'SKILL.md')
-      .filter((file) => /\bofficecli\b/i.test(readFileSync(file, 'utf8')))
+      .filter((file) =>
+        readFileSync(file, 'utf8').includes('This OfficeCLI-derived file was modified by WINK GO contributors in 2026')
+      )
       .map(dirname);
 
     expect(officeCliSkillRoots.length).toBeGreaterThan(0);

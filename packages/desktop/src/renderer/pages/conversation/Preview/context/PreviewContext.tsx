@@ -7,10 +7,25 @@
  */
 
 import { ipcBridge } from '@/common';
+import type { ChatFileRef, ContentEncoding } from '@/common/types/chatFile';
+import { chatFileRefKey, isChatFileRef } from '@/common/types/chatFile';
 import type { PreviewContentType } from '@/common/types/office/preview';
+import { useCurrentConversation } from '@/renderer/pages/conversation/explorer/currentConversationStore';
 import { emitter } from '@/renderer/utils/emitter';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { PreviewScopeKey } from './previewScope';
+import { BROWSER_BLANK_URL, BROWSER_TAB_FALLBACK_TITLE, MAX_BROWSER_TABS } from '../browser/constants';
+import { isBrowserMcpActivity, isBrowserMcpSettled } from '../browser/agentActivity';
+import { maybeNotifyFirstAgentBrowserUse } from '../browser/firstUseNotice';
 
 /** DOM 片段数据结构 / DOM snippet data structure */
 export interface DomSnippet {
@@ -27,6 +42,8 @@ export interface PreviewMetadata {
   title?: string;
   diff?: string;
   file_name?: string;
+  /** Stable identity used by the official /api/fs/content API. */
+  fileRef?: ChatFileRef;
   file_path?: string; // 工作空间文件的绝对路径 / Absolute file path in workspace
   workspace?: string; // 工作空间根目录 / Workspace root directory
   editable?: boolean; // 是否可编辑 / Whether editable
@@ -34,6 +51,9 @@ export interface PreviewMetadata {
   targetLine?: number; // 打开文件后定位到的目标行 / Target line to reveal after opening
   targetColumn?: number; // 打开文件后定位到的目标列 / Target column to reveal after opening
   missingFile?: boolean; // 文件不存在或无法读取 / Whether the referenced file is missing or unreadable
+  favicon?: string; // 浏览器站点图标 / Browser site icon
+  agentActive?: boolean; // Agent 正在操作浏览器 / Agent is driving the browser
+  conversation_id?: string; // Agent 请求来源会话；仅用于把可见浏览器切回正确对话
 }
 
 export interface PreviewTab {
@@ -45,6 +65,12 @@ export interface PreviewTab {
   isDirty?: boolean; // 是否有未保存的修改 / Whether there are unsaved changes
   originalContent?: string; // 原始内容，用于对比 / Original content for comparison
 }
+
+export type PreviewTabPatch = {
+  title?: string;
+  content?: string;
+  metadata?: Partial<PreviewMetadata>;
+};
 
 export interface OpenPreviewOptions {
   /**
@@ -72,11 +98,17 @@ export interface PreviewContextValue {
     metadata?: PreviewMetadata,
     options?: OpenPreviewOptions
   ) => void;
+  openBrowserTab: (url?: string) => void;
+  /** Collapse the panel without destroying its tabs or live browser state. */
+  hidePreview: () => void;
   closePreview: () => void;
   closeTab: (tabId: string) => void;
   switchTab: (tabId: string) => void;
   updateContent: (content: string) => void;
+  updateTab: (tabId: string, patch: PreviewTabPatch) => void;
+  browserTabLimitHitAt: number | null;
   saveContent: (tabId?: string) => Promise<boolean>; // 保存内容 / Save content
+  reloadContent: (tabId?: string) => Promise<boolean>; // 丢弃本地修改并重新读取磁盘内容 / Reload from disk
   findPreviewTab: (type: PreviewContentType, content?: string, metadata?: PreviewMetadata) => PreviewTab | null; // 查找匹配的 tab
   closePreviewByIdentity: (type: PreviewContentType, content?: string, metadata?: PreviewMetadata) => void; // 根据内容关闭指定 tab
   closePreviewIfScopeChanged: (scopeKey: PreviewScopeKey) => void; // 切换项目时保存并恢复各自的预览状态
@@ -98,10 +130,16 @@ const previewScopeStorageKey = (scope: string): string => `winkgo_preview:${scop
 
 type PersistedScopeState = { isOpen: boolean; tabs: PreviewTab[]; activeTabId: string | null };
 
+type AgentBrowserOpenRequest = {
+  content: string;
+  content_type: PreviewContentType;
+  metadata?: PreviewMetadata;
+};
+
 // 仅持久化小体积文本预览，避免大文本导致 localStorage 写入卡顿
 // Persist only lightweight text previews to avoid localStorage jank on large files
 const MAX_PERSISTED_TAB_CONTENT_LENGTH = 80_000;
-const PERSISTABLE_CONTENT_TYPES = new Set<PreviewContentType>(['markdown', 'html', 'code', 'diff']);
+const PERSISTABLE_CONTENT_TYPES = new Set<PreviewContentType>(['markdown', 'html', 'code', 'diff', 'browser']);
 
 const sanitizeTabsForPersistence = (input: PreviewTab[]): PreviewTab[] => {
   return input
@@ -109,8 +147,8 @@ const sanitizeTabsForPersistence = (input: PreviewTab[]): PreviewTab[] => {
     .filter((tab) => tab.content.length <= MAX_PERSISTED_TAB_CONTENT_LENGTH)
     .map((tab) => ({
       ...tab,
-      isDirty: false,
-      originalContent: tab.content,
+      isDirty: tab.isDirty === true,
+      originalContent: typeof tab.originalContent === 'string' ? tab.originalContent : tab.content,
     }));
 };
 
@@ -130,11 +168,18 @@ const parsePersistedTabs = (value: unknown): PreviewTab[] => {
     })
     .filter((tab) => PERSISTABLE_CONTENT_TYPES.has(tab.content_type))
     .filter((tab) => tab.content.length <= MAX_PERSISTED_TAB_CONTENT_LENGTH)
-    .map((tab) => ({
-      ...tab,
-      originalContent: typeof tab.originalContent === 'string' ? tab.originalContent : tab.content,
-      isDirty: false,
-    }));
+    .map((tab) => {
+      const metadata =
+        tab.metadata?.fileRef && !isChatFileRef(tab.metadata.fileRef)
+          ? { ...tab.metadata, fileRef: undefined }
+          : tab.metadata;
+      return {
+        ...tab,
+        metadata,
+        originalContent: typeof tab.originalContent === 'string' ? tab.originalContent : tab.content,
+        isDirty: tab.isDirty === true,
+      };
+    });
 };
 
 const EMPTY_SCOPE_STATE: PersistedScopeState = { isOpen: false, tabs: [], activeTabId: null };
@@ -164,13 +209,17 @@ const persistScopeState = (scope: string, state: PersistedScopeState): void => {
 };
 
 export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const currentConversationId = useCurrentConversation();
   const [isOpen, setIsOpen] = useState(false);
   const [tabs, setTabs] = useState<PreviewTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [browserTabLimitHitAt, setBrowserTabLimitHitAt] = useState<number | null>(null);
   const currentScopeRef = useRef<PreviewScopeKey>(null);
   // Mirror activeTabId in a ref so setTabs updaters can read the latest value
   // without adding activeTabId to their dependencies.
   const activeTabIdRef = useRef<string | null>(null);
+  const pendingPreviewActivationRef = useRef<string | null>(null);
+  const pendingAgentBrowserOpenRef = useRef<AgentBrowserOpenRequest | null>(null);
   // const [sendBoxHandler, setSendBoxHandlerState] = useState<((text: string) => void) | null>(null);
   const sendBoxHandler = useRef<((text: string) => void) | null>(null);
   const [domSnippets, setDomSnippets] = useState<DomSnippet[]>([]);
@@ -184,6 +233,14 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, 150);
     return () => clearTimeout(timer);
   }, [tabs, activeTabId, isOpen]);
+
+  useLayoutEffect(() => {
+    const pendingTabId = pendingPreviewActivationRef.current;
+    if (!pendingTabId || !tabs.some((tab) => tab.id === pendingTabId)) return;
+    pendingPreviewActivationRef.current = null;
+    activeTabIdRef.current = pendingTabId;
+    setActiveTabId(pendingTabId);
+  }, [tabs]);
 
   // 追踪是否正在保存（避免与流式更新冲突）/ Track if currently saving (to avoid conflicts with streaming updates)
   const savingFilesRef = useRef<Set<string>>(new Set());
@@ -205,9 +262,12 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const findPreviewTabInList = useCallback(
     (tabList: PreviewTab[], type: PreviewContentType, content?: string, meta?: PreviewMetadata) => {
+      // Every browser tab owns a separate webview and must never be deduplicated by URL.
+      if (type === 'browser') return null;
       const normalizedFileName = normalize(meta?.file_name);
       const normalizedTitle = normalize(meta?.title);
       const normalizedFilePath = normalize(meta?.file_path);
+      const refKey = meta?.fileRef ? chatFileRefKey(meta.fileRef) : '';
 
       return (
         tabList.find((tab) => {
@@ -215,6 +275,10 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const tabFileName = normalize(tab.metadata?.file_name);
           const tabTitle = normalize(tab.metadata?.title);
           const tabFilePath = normalize(tab.metadata?.file_path);
+          const tabRefKey = tab.metadata?.fileRef ? chatFileRefKey(tab.metadata.fileRef) : '';
+
+          // Stable ChatFileRef identity is stronger than any display path.
+          if (refKey && tabRefKey && refKey === tabRefKey) return true;
 
           // 优先通过 file_path 匹配（最可靠）/ Prefer matching by file_path (most reliable)
           if (normalizedFilePath && tabFilePath && normalizedFilePath === tabFilePath) return true;
@@ -264,14 +328,12 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const openPreview = useCallback(
     (new_content: string, type: PreviewContentType, meta?: PreviewMetadata, options?: OpenPreviewOptions) => {
-      let nextActiveTabId: string | null = null;
-
       setTabs((prevTabs) => {
         // 如果同一个文件已经打开，则直接激活现有 tab，避免重复 / Focus existing tab when the same file is opened again
         const existingTab = findPreviewTabInList(prevTabs, type, new_content, meta);
 
         if (existingTab) {
-          nextActiveTabId = existingTab.id;
+          pendingPreviewActivationRef.current = existingTab.id;
           return prevTabs.map((tab) => {
             if (tab.id !== existingTab.id) return tab;
 
@@ -297,6 +359,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (type === 'diff') return 'Diff';
           if (type === 'code') return `${meta?.language || 'Code'}`;
           if (type === 'image') return 'Image'; // 图片预览默认标题 / Default title for image preview
+          if (type === 'browser') return BROWSER_TAB_FALLBACK_TITLE;
           return 'Preview';
         })();
 
@@ -322,25 +385,65 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const activeIdx = activeTabIdRef.current
             ? prevTabs.findIndex((tab) => tab.id === activeTabIdRef.current)
             : -1;
-          const activeTab = activeIdx >= 0 ? prevTabs[activeIdx] : null;
-          if (activeTab && !activeTab.isDirty) {
-            nextActiveTabId = activeTab.id;
-            const replacedTab: PreviewTab = { ...newTab, id: activeTab.id };
+          const currentActiveTab = activeIdx >= 0 ? prevTabs[activeIdx] : null;
+          if (currentActiveTab && !currentActiveTab.isDirty) {
+            pendingPreviewActivationRef.current = currentActiveTab.id;
+            const replacedTab: PreviewTab = { ...newTab, id: currentActiveTab.id };
             return prevTabs.map((tab, idx) => (idx === activeIdx ? replacedTab : tab));
           }
         }
 
-        nextActiveTabId = tabId;
+        pendingPreviewActivationRef.current = tabId;
         return [...prevTabs, newTab];
       });
-
-      if (nextActiveTabId) {
-        setActiveTabId(nextActiveTabId);
-      }
       setIsOpen(true);
     },
     [extractFileName, findPreviewTabInList]
   );
+
+  // An Agent browser request can arrive while React Router is still mounting
+  // the originating conversation. Opening the tab before that conversation
+  // publishes its preview scope lets closePreviewIfScopeChanged immediately
+  // replace the new tab with the destination scope's persisted state. Wait for
+  // the authoritative conversation store instead of relying on a fixed delay.
+  useEffect(() => {
+    const pending = pendingAgentBrowserOpenRef.current;
+    const conversationId = pending?.metadata?.conversation_id?.trim();
+    if (!pending || !conversationId || currentConversationId !== conversationId) return;
+    pendingAgentBrowserOpenRef.current = null;
+    openPreview(pending.content, pending.content_type, pending.metadata);
+  }, [currentConversationId, openPreview]);
+
+  const openBrowserTab = useCallback(
+    (url?: string) => {
+      const browserTabs = tabs.filter((tab) => tab.content_type === 'browser');
+      // The launcher doubles as the restore button for a collapsed browser.
+      // Re-creating an about:blank tab here used to discard the page the user
+      // (or an Agent) was working in immediately before collapsing the panel.
+      if (!isOpen && browserTabs.length > 0 && !url?.trim()) {
+        const browserTabToRestore = browserTabs.find((tab) => tab.id === activeTabId) ?? browserTabs.at(-1)!;
+        activeTabIdRef.current = browserTabToRestore.id;
+        setActiveTabId(browserTabToRestore.id);
+        setIsOpen(true);
+        return;
+      }
+      if (browserTabs.length >= MAX_BROWSER_TABS) {
+        setBrowserTabLimitHitAt(Date.now());
+        setActiveTabId(browserTabs[0].id);
+        setIsOpen(true);
+        return;
+      }
+      openPreview(url?.trim() || BROWSER_BLANK_URL, 'browser');
+    },
+    [activeTabId, isOpen, openPreview, tabs]
+  );
+
+  const hidePreview = useCallback(() => {
+    // Keep tabs and the active id intact. Layout parks the mounted browser
+    // WebView off-screen while collapsed so navigation, forms and scroll state
+    // survive until the user expands it again.
+    setIsOpen(false);
+  }, []);
 
   const closePreview = useCallback(() => {
     setIsOpen(false);
@@ -373,7 +476,9 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setTabs((prevTabs) => {
         // Clean up mtime record for the closed tab
         const tabToClose = prevTabs.find((tab) => tab.id === tabId);
-        if (tabToClose?.metadata?.file_path) {
+        if (tabToClose?.metadata?.fileRef) {
+          fileMtimeRef.current.delete(chatFileRefKey(tabToClose.metadata.fileRef));
+        } else if (tabToClose?.metadata?.file_path) {
           fileMtimeRef.current.delete(tabToClose.metadata.file_path);
         }
 
@@ -437,6 +542,21 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [activeTabId]
   );
 
+  const updateTab = useCallback((tabId: string, patch: PreviewTabPatch) => {
+    setTabs((current) =>
+      current.map((tab) =>
+        tab.id === tabId
+          ? {
+              ...tab,
+              ...(patch.title !== undefined ? { title: patch.title } : {}),
+              ...(patch.content !== undefined ? { content: patch.content, originalContent: patch.content } : {}),
+              ...(patch.metadata ? { metadata: { ...tab.metadata, ...patch.metadata } } : {}),
+            }
+          : tab
+      )
+    );
+  }, []);
+
   const saveContent = useCallback(
     async (tabId?: string) => {
       const targetTabId = tabId || activeTabId;
@@ -444,6 +564,36 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const tab = tabs.find((t) => t.id === targetTabId);
       if (!tab) return false;
+
+      const fileRef = tab.metadata?.fileRef;
+      if (fileRef) {
+        const saveKey = chatFileRefKey(fileRef);
+        try {
+          savingFilesRef.current.add(saveKey);
+          const ifMatch = fileMtimeRef.current.get(saveKey);
+          const success = await ipcBridge.fs.writeContent.invoke({ file: fileRef, data: tab.content, ifMatch });
+
+          if (success) {
+            setTabs((prevTabs) =>
+              prevTabs.map((current) =>
+                current.id === targetTabId ? { ...current, isDirty: false, originalContent: current.content } : current
+              )
+            );
+            void ipcBridge.fs.getContentMetadata
+              .invoke({ file: fileRef })
+              .then((metadata) => fileMtimeRef.current.set(saveKey, metadata.lastModified))
+              .catch(() => {
+                // Best effort: a stale If-Match can only cause a safe 409.
+              });
+          }
+
+          setTimeout(() => savingFilesRef.current.delete(saveKey), 500);
+          return success;
+        } catch (error) {
+          savingFilesRef.current.delete(saveKey);
+          throw error;
+        }
+      }
 
       // 如果有 file_path 和 workspace，写回工作空间文件 / If file_path and workspace exist, write back to workspace file
       if (tab.metadata?.file_path && tab.metadata?.workspace) {
@@ -486,6 +636,50 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
           throw error;
         }
       }
+      return false;
+    },
+    [activeTabId, tabs]
+  );
+
+  const reloadContent = useCallback(
+    async (tabId?: string) => {
+      const targetTabId = tabId || activeTabId;
+      if (!targetTabId) return false;
+
+      const tab = tabs.find((candidate) => candidate.id === targetTabId);
+      if (!tab) return false;
+
+      const fileRef = tab.metadata?.fileRef;
+      if (fileRef) {
+        const [content, metadata] = await Promise.all([
+          ipcBridge.fs.readContent.invoke({ file: fileRef, encoding: 'utf8' }),
+          ipcBridge.fs.getContentMetadata.invoke({ file: fileRef }),
+        ]);
+        fileMtimeRef.current.set(chatFileRefKey(fileRef), metadata.lastModified);
+        setTabs((currentTabs) =>
+          currentTabs.map((current) =>
+            current.id === targetTabId ? { ...current, content, originalContent: content, isDirty: false } : current
+          )
+        );
+        return true;
+      }
+
+      if (tab.metadata?.file_path) {
+        const filePath = tab.metadata.file_path;
+        const [content, metadata] = await Promise.all([
+          ipcBridge.fs.readFile.invoke({ path: filePath, workspace: tab.metadata.workspace }),
+          ipcBridge.fs.getFileMetadata.invoke({ path: filePath, workspace: tab.metadata.workspace }),
+        ]);
+        if (typeof content !== 'string') return false;
+        fileMtimeRef.current.set(filePath, metadata.lastModified);
+        setTabs((currentTabs) =>
+          currentTabs.map((current) =>
+            current.id === targetTabId ? { ...current, content, originalContent: content, isDirty: false } : current
+          )
+        );
+        return true;
+      }
+
       return false;
     },
     [activeTabId, tabs]
@@ -565,7 +759,8 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (tab.metadata?.file_path !== file_path) return tab;
 
             // 如果正在保存或用户已编辑，不更新 / Don't update if saving or user has edited
-            if (savingFilesRef.current.has(file_path) || tab.isDirty) {
+            const savingKey = tab.metadata?.fileRef ? chatFileRefKey(tab.metadata.fileRef) : file_path;
+            if (savingFilesRef.current.has(savingKey) || tab.isDirty) {
               return tab;
             }
 
@@ -599,6 +794,42 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // is unreliable after the first emission in Electron (only the first event reaches the renderer).
   const checkFileUpdate = useCallback(
     (tab: PreviewTab) => {
+      const fileRef = tab.metadata?.fileRef;
+      if (fileRef) {
+        if (tab.isDirty) return;
+        const refKey = chatFileRefKey(fileRef);
+        if (savingFilesRef.current.has(refKey)) return;
+
+        void ipcBridge.fs.getContentMetadata
+          .invoke({ file: fileRef })
+          .then((metadata) => {
+            const prevMtime = fileMtimeRef.current.get(refKey);
+            fileMtimeRef.current.set(refKey, metadata.lastModified);
+            if (prevMtime === undefined || metadata.lastModified === prevMtime) return;
+
+            const encoding: ContentEncoding = tab.content_type === 'image' ? 'dataurl' : 'utf8';
+            void ipcBridge.fs.readContent
+              .invoke({ file: fileRef, encoding })
+              .then((content) => {
+                setTabs((latest) =>
+                  latest.map((current) => {
+                    const currentRef = current.metadata?.fileRef;
+                    if (!currentRef || chatFileRefKey(currentRef) !== refKey) return current;
+                    if (savingFilesRef.current.has(refKey) || current.isDirty) return current;
+                    return { ...current, content, originalContent: content, isDirty: false };
+                  })
+                );
+              })
+              .catch((error) => {
+                console.error('[PreviewContext] Failed to read content after mtime change:', refKey, error);
+              });
+          })
+          .catch((error) => {
+            console.error('[PreviewContext] Failed to get content metadata:', refKey, error);
+          });
+        return;
+      }
+
       const file_path = tab.metadata?.file_path;
       if (!file_path || tab.isDirty || savingFilesRef.current.has(file_path)) return;
 
@@ -642,11 +873,13 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const activeTabRef = useRef<PreviewTab | null>(null);
   activeTabRef.current = activeTab;
 
-  const activeFilePath = activeTab?.metadata?.file_path;
+  const activeFileKey = activeTab?.metadata?.fileRef
+    ? chatFileRefKey(activeTab.metadata.fileRef)
+    : activeTab?.metadata?.file_path;
 
   // Poll active tab every 1s
   useEffect(() => {
-    if (!activeFilePath) return;
+    if (!activeFileKey) return;
 
     const pollId = setInterval(() => {
       const current = activeTabRef.current;
@@ -660,7 +893,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       clearInterval(pollId);
     };
-  }, [activeFilePath, checkFileUpdate]);
+  }, [activeFileKey, checkFileUpdate]);
 
   // 监听 preview.open 事件（用于 agent 打开网页预览）/ Listen to preview.open event (for agent to open web preview)
   // 同时监听 IPC 和 renderer emitter 两种方式 / Listen to both IPC and renderer emitter
@@ -675,11 +908,7 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     };
 
-    const handleIpcPreviewOpen = (data: {
-      content: string;
-      content_type: PreviewContentType;
-      metadata?: PreviewMetadata;
-    }) => {
+    const handleIpcPreviewOpen = (data: AgentBrowserOpenRequest) => {
       if (data && data.content) {
         openPreview(data.content, data.content_type, data.metadata);
       }
@@ -691,11 +920,73 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // 监听 IPC 事件（来自主进程，如 chrome-devtools MCP 导航）/ Listen to IPC event (from main process, e.g., chrome-devtools MCP navigation)
     const unsubscribeIpc = ipcBridge.preview.open.on(handleIpcPreviewOpen);
 
+    // Browser MCP calls originate in the main process.  A provider gives that
+    // process a positive acknowledgement that this app-root PreviewContext has
+    // accepted the request, instead of relying on a one-shot event that may be
+    // emitted during route hydration.
+    const requestOpenProvider = ipcBridge.preview?.requestOpen?.provider;
+    const unsubscribeRequestOpen = requestOpenProvider
+      ? requestOpenProvider((data) => {
+          const conversationId = data?.metadata?.conversation_id?.trim();
+          const targetHash = conversationId ? `#/conversation/${encodeURIComponent(conversationId)}` : '';
+          const conversationReady = !conversationId || currentConversationId === conversationId;
+          console.info('[PreviewContext] Agent browser open request.', {
+            hasConversation: Boolean(conversationId),
+            requiresRouteChange: Boolean(conversationId && !conversationReady),
+          });
+          if (conversationId && !conversationReady) {
+            pendingAgentBrowserOpenRef.current = data;
+            if (targetHash && !window.location.hash.startsWith(targetHash)) window.location.hash = targetHash;
+          } else {
+            pendingAgentBrowserOpenRef.current = null;
+            handleIpcPreviewOpen(data);
+          }
+          return { accepted: Boolean(data?.content) };
+        })
+      : () => {};
+
     return () => {
       emitter.off('preview.open', handleEmitterPreviewOpen);
       unsubscribeIpc();
+      unsubscribeRequestOpen();
     };
-  }, [openPreview]);
+  }, [currentConversationId, openPreview]);
+
+  // Agent 通过 CDP 操作应用内浏览器时，在所有浏览器标签上展示活动状态。
+  // 该状态只用于反馈，不参与浏览器控制；消息流不可用时不能影响预览主功能。
+  useEffect(() => {
+    const markBrowserTabs = (agentActive: boolean) => {
+      setTabs((currentTabs) => {
+        if (
+          !currentTabs.some(
+            (tab) => tab.content_type === 'browser' && Boolean(tab.metadata?.agentActive) !== agentActive
+          )
+        ) {
+          return currentTabs;
+        }
+
+        return currentTabs.map((tab) =>
+          tab.content_type === 'browser' ? { ...tab, metadata: { ...tab.metadata, agentActive } } : tab
+        );
+      });
+    };
+
+    const stream = ipcBridge.conversation?.responseStream;
+    if (!stream?.on) return;
+
+    const unsubscribe = stream.on((message) => {
+      if (isBrowserMcpActivity(message.type, message.data)) {
+        markBrowserTabs(true);
+        maybeNotifyFirstAgentBrowserUse();
+        return;
+      }
+      if (isBrowserMcpSettled(message.type, message.data)) {
+        markBrowserTabs(false);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   const previewContextValue = useMemo(() => {
     return {
@@ -704,11 +995,16 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
       activeTabId,
       activeTab,
       openPreview,
+      openBrowserTab,
+      hidePreview,
       closePreview,
       closeTab,
       switchTab: setActiveTabId,
       updateContent,
+      updateTab,
+      browserTabLimitHitAt,
       saveContent,
+      reloadContent,
       findPreviewTab,
       closePreviewByIdentity,
       closePreviewIfScopeChanged,
@@ -725,11 +1021,16 @@ export const PreviewProvider: React.FC<{ children: React.ReactNode }> = ({ child
     activeTabId,
     activeTab,
     openPreview,
+    openBrowserTab,
+    hidePreview,
     closePreview,
     closeTab,
     setActiveTabId,
     updateContent,
+    updateTab,
+    browserTabLimitHitAt,
     saveContent,
+    reloadContent,
     findPreviewTab,
     closePreviewByIdentity,
     closePreviewIfScopeChanged,
@@ -750,4 +1051,12 @@ export const usePreviewContext = () => {
     throw new Error('usePreviewContext must be used within PreviewProvider');
   }
   return context;
+};
+
+/**
+ * Optional preview context for controls whose primary behavior does not depend on
+ * the preview panel. Outside PreviewProvider it returns null instead of throwing.
+ */
+export const useOptionalPreviewContext = (): PreviewContextValue | null => {
+  return useContext(PreviewContext);
 };

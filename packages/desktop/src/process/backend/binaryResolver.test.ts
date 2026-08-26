@@ -17,11 +17,20 @@ vi.mock('node:fs', () => ({
 const originalResourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
 const originalBackendBin = process.env.WINKGO_BACKEND_BIN;
 const originalRendererUrl = process.env.ELECTRON_RENDERER_URL;
+const originalE2ETest = process.env.WINKGO_E2E_TEST;
+const originalDefaultApp = (process as NodeJS.Process & { defaultApp?: boolean }).defaultApp;
 
 function setResourcesPath(resourcesPath: string | undefined): void {
   Object.defineProperty(process, 'resourcesPath', {
     configurable: true,
     value: resourcesPath,
+  });
+}
+
+function setDefaultApp(defaultApp: boolean | undefined): void {
+  Object.defineProperty(process, 'defaultApp', {
+    configurable: true,
+    value: defaultApp,
   });
 }
 
@@ -37,6 +46,8 @@ describe('resolveBinaryPath', () => {
     vi.clearAllMocks();
     delete process.env.WINKGO_BACKEND_BIN;
     delete process.env.ELECTRON_RENDERER_URL;
+    delete process.env.WINKGO_E2E_TEST;
+    setDefaultApp(undefined);
   });
 
   afterEach(() => {
@@ -45,6 +56,9 @@ describe('resolveBinaryPath', () => {
     else process.env.WINKGO_BACKEND_BIN = originalBackendBin;
     if (originalRendererUrl === undefined) delete process.env.ELECTRON_RENDERER_URL;
     else process.env.ELECTRON_RENDERER_URL = originalRendererUrl;
+    if (originalE2ETest === undefined) delete process.env.WINKGO_E2E_TEST;
+    else process.env.WINKGO_E2E_TEST = originalE2ETest;
+    setDefaultApp(originalDefaultApp);
   });
 
   it('uses an explicit source-built Core only in electron-vite development', () => {
@@ -54,6 +68,27 @@ describe('resolveBinaryPath', () => {
     vi.mocked(existsSync).mockImplementation((path) => path === resolve(configured));
 
     expect(resolveBinaryPath()).toBe(resolve(configured));
+    expect(execSync).not.toHaveBeenCalled();
+  });
+
+  it('uses an explicit source-built Core in the isolated E2E runtime', () => {
+    const configured = 'backend/target/debug/winkgo_core.exe';
+    process.env.WINKGO_E2E_TEST = '1';
+    process.env.WINKGO_BACKEND_BIN = configured;
+    vi.mocked(existsSync).mockImplementation((path) => path === resolve(configured));
+
+    expect(resolveBinaryPath()).toBe(resolve(configured));
+    expect(execSync).not.toHaveBeenCalled();
+  });
+
+  it('uses the repository-bundled Core when launching the checkout with electron dot', () => {
+    const runtimeKey = `${process.platform}-${process.arch}`;
+    const binaryName = process.platform === 'win32' ? 'winkgo_core.exe' : 'winkgo_core';
+    const expected = join(process.cwd(), 'resources', 'bundled-winkgo-core', runtimeKey, binaryName);
+    setDefaultApp(true);
+    vi.mocked(existsSync).mockImplementation((path) => path === expected);
+
+    expect(resolveBinaryPath()).toBe(expected);
     expect(execSync).not.toHaveBeenCalled();
   });
 

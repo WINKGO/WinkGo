@@ -17,5 +17,6 @@
   "permission": "Permission",
   "switchMode": "Changer de mode",
   "switchSuccess": "Mode changé avec succès",
-  "switchFailed": "Échec du changement de mode"
+  "switchFailed": "Échec du changement de mode",
+  "switchPendingNextTurn": "Prend effet au prochain tour"
 }

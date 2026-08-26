@@ -5,10 +5,16 @@
  */
 
 import { ipcBridge } from '@/common';
-import type { WinkGoXiaozhiConfig, WinkGoXiaozhiSaveRequest, WinkGoXiaozhiSnapshot } from '@/common/adapter/ipcBridge';
+import type {
+  WinkGoNeteaseAccountStatus,
+  WinkGoQqMusicAccountStatus,
+  WinkGoXiaozhiConfig,
+  WinkGoXiaozhiSaveRequest,
+  WinkGoXiaozhiSnapshot,
+} from '@/common/adapter/ipcBridge';
 import { WINK_GO_BRAND_ICON as winkGoLogo, WINK_GO_DISPLAY_NAME } from '@/renderer/utils/model/winkGoBranding';
 import { openExternalUrl } from '@/renderer/utils/platform';
-import { Button, Input, InputNumber, Message, Switch, Tag, Tooltip } from '@arco-design/web-react';
+import { Button, Input, InputNumber, Message, Popconfirm, Switch, Tag, Tooltip } from '@arco-design/web-react';
 import {
   Api,
   Broadcast,
@@ -18,6 +24,7 @@ import {
   Help,
   Key,
   LinkCloud,
+  Music,
   Phone,
   Play,
   Refresh,
@@ -198,6 +205,14 @@ const XiaozhiMcpConnection: React.FC = () => {
   const [bindingSeconds, setBindingSeconds] = useState(0);
   const activeBindingCodeRef = useRef('');
   const [flowAnimating, setFlowAnimating] = useState(false);
+  const [neteaseAccount, setNeteaseAccount] = useState<WinkGoNeteaseAccountStatus | null>(null);
+  const [neteaseMusicU, setNeteaseMusicU] = useState('');
+  const [neteaseBusy, setNeteaseBusy] = useState(false);
+  const [neteaseError, setNeteaseError] = useState('');
+  const [qqMusicAccount, setQqMusicAccount] = useState<WinkGoQqMusicAccountStatus | null>(null);
+  const [qqMusicCookie, setQqMusicCookie] = useState('');
+  const [qqMusicBusy, setQqMusicBusy] = useState(false);
+  const [qqMusicError, setQqMusicError] = useState('');
   const flowAnimationTimerRef = useRef<number | null>(null);
 
   const config = snapshot?.config ?? DEFAULT_CONFIG;
@@ -218,15 +233,22 @@ const XiaozhiMcpConnection: React.FC = () => {
             : '等待启动';
   const cloudChannelOk =
     (!config.hardwareEnabled || hardwareOk) && (!config.mobileEnabled || mobileOk) && (hardwareOk || mobileOk);
+  const runtimePending = !snapshot || loading || testing || starting;
   const connectionSteps = useMemo<ConnectionStep[]>(
     () => [
       {
         id: 'runtime',
         title: 'Runtime',
-        status: snapshot?.runtime.ok ? '已就绪' : snapshot?.runtimeInstalled ? '等待启动' : '尚未安装',
+        status: snapshot?.runtime.ok
+          ? '已就绪'
+          : runtimePending
+            ? '正在检测'
+            : snapshot?.runtimeInstalled
+              ? '等待启动'
+              : '尚未安装',
         detail: snapshot?.runtime.detail || '等待检测本机 8121',
         icon: <Server theme='outline' size='18' />,
-        tone: snapshot?.runtime.ok ? 'success' : testing ? 'checking' : 'error',
+        tone: snapshot?.runtime.ok ? 'success' : runtimePending ? 'checking' : 'error',
       },
       {
         id: 'host',
@@ -289,7 +311,18 @@ const XiaozhiMcpConnection: React.FC = () => {
         tone: !config.mobileEnabled ? 'muted' : mobileOk ? 'success' : testing ? 'checking' : 'warning',
       },
     ],
-    [cloudChannelOk, config, firewallBusy, hardwareOk, mobileOk, relayOk, relayStatus, snapshot, testing]
+    [
+      cloudChannelOk,
+      config,
+      firewallBusy,
+      hardwareOk,
+      mobileOk,
+      relayOk,
+      relayStatus,
+      runtimePending,
+      snapshot,
+      testing,
+    ]
   );
 
   const connectionIssue = !snapshot
@@ -310,6 +343,130 @@ const XiaozhiMcpConnection: React.FC = () => {
     setForm(toForm(next.config));
   }, []);
 
+  const neteaseErrorMessage = useCallback(
+    (error: string): string => {
+      if (error.includes('winkgo_account_login_required')) {
+        return t('settings.mcpWorkspace.neteaseAccount.loginRequired');
+      }
+      if (error.includes('desktop_miniapp_binding_required')) {
+        return t('settings.mcpWorkspace.neteaseAccount.desktopBindingRequired');
+      }
+      if (error.includes('netease_music_u_invalid')) {
+        return t('settings.mcpWorkspace.neteaseAccount.inputInvalid');
+      }
+      if (error.includes('needs_rebind') || error.includes('登录已失效')) {
+        return t('settings.mcpWorkspace.neteaseAccount.statusNeedsRebind');
+      }
+      return t('settings.mcpWorkspace.neteaseAccount.serviceUnavailable');
+    },
+    [t]
+  );
+
+  const runNeteaseAccountAction = useCallback(
+    async (
+      action: () => Promise<{
+        success: boolean;
+        data?: WinkGoNeteaseAccountStatus | null;
+        error?: string;
+      }>,
+      options: {
+        fallbackError: string;
+        notifyError?: boolean;
+        successMessage?: string;
+      }
+    ): Promise<void> => {
+      setNeteaseBusy(true);
+      setNeteaseError('');
+      try {
+        const result = await action();
+        if (!result.success || !result.data) {
+          throw new Error(result.error || options.fallbackError);
+        }
+        setNeteaseAccount(result.data);
+        if (options.successMessage) Message.success(options.successMessage);
+      } catch (error) {
+        const message = neteaseErrorMessage(error instanceof Error ? error.message : String(error));
+        setNeteaseError(message);
+        if (options.notifyError) Message.error(message);
+      } finally {
+        setNeteaseBusy(false);
+      }
+    },
+    [neteaseErrorMessage]
+  );
+
+  const loadNeteaseAccount = useCallback(
+    async (notify = false): Promise<void> => {
+      await runNeteaseAccountAction(() => ipcBridge.winkGoXiaozhi.getNeteaseAccount.invoke(), {
+        fallbackError: 'music_account_status_failed',
+        notifyError: notify,
+      });
+    },
+    [runNeteaseAccountAction]
+  );
+
+  const qqMusicErrorMessage = useCallback(
+    (error: string): string => {
+      if (error.includes('winkgo_account_login_required')) {
+        return t('settings.mcpWorkspace.qqMusicAccount.loginRequired');
+      }
+      if (error.includes('desktop_miniapp_binding_required')) {
+        return t('settings.mcpWorkspace.qqMusicAccount.desktopBindingRequired');
+      }
+      if (error.includes('qq_music_cookie_invalid')) {
+        return t('settings.mcpWorkspace.qqMusicAccount.inputInvalid');
+      }
+      if (error.includes('needs_rebind') || error.includes('登录已失效')) {
+        return t('settings.mcpWorkspace.qqMusicAccount.statusNeedsRebind');
+      }
+      return t('settings.mcpWorkspace.qqMusicAccount.serviceUnavailable');
+    },
+    [t]
+  );
+
+  const runQqMusicAccountAction = useCallback(
+    async (
+      action: () => Promise<{
+        success: boolean;
+        data?: WinkGoQqMusicAccountStatus | null;
+        error?: string;
+      }>,
+      options: {
+        fallbackError: string;
+        notifyError?: boolean;
+        successMessage?: string;
+      }
+    ): Promise<void> => {
+      setQqMusicBusy(true);
+      setQqMusicError('');
+      try {
+        const result = await action();
+        if (!result.success || !result.data) {
+          throw new Error(result.error || options.fallbackError);
+        }
+        setQqMusicAccount(result.data);
+        if (options.successMessage) Message.success(options.successMessage);
+      } catch (error) {
+        const message = qqMusicErrorMessage(error instanceof Error ? error.message : String(error));
+        setQqMusicError(message);
+        if (options.notifyError) Message.error(message);
+      } finally {
+        setQqMusicBusy(false);
+      }
+    },
+    [qqMusicErrorMessage]
+  );
+
+  const loadQqMusicAccount = useCallback(
+    async (notify = false): Promise<void> => {
+      await runQqMusicAccountAction(() => ipcBridge.winkGoXiaozhi.getQqMusicAccount.invoke(), {
+        fallbackError: 'music_account_status_failed',
+        notifyError: notify,
+      });
+    },
+    [runQqMusicAccountAction]
+  );
+
   const loadSnapshot = useCallback(async () => {
     setLoading(true);
     const result = await ipcBridge.winkGoXiaozhi.getSnapshot.invoke();
@@ -327,6 +484,20 @@ const XiaozhiMcpConnection: React.FC = () => {
     }, 60);
     return () => window.clearTimeout(timer);
   }, [loadSnapshot]);
+
+  useEffect(() => {
+    const timer = window.setTimeout((): void => {
+      void loadNeteaseAccount();
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [loadNeteaseAccount]);
+
+  useEffect(() => {
+    const timer = window.setTimeout((): void => {
+      void loadQqMusicAccount();
+    }, 160);
+    return () => window.clearTimeout(timer);
+  }, [loadQqMusicAccount]);
 
   useEffect(
     () =>
@@ -463,6 +634,42 @@ const XiaozhiMcpConnection: React.FC = () => {
     }
     applySnapshot(result.data);
     Message.success('正在向云端申请新的 10 位设备绑定码。');
+  };
+
+  const bindNeteaseAccount = async (): Promise<void> => {
+    const musicU = neteaseMusicU;
+    setNeteaseMusicU('');
+    await runNeteaseAccountAction(() => ipcBridge.winkGoXiaozhi.bindNeteaseAccount.invoke({ musicU }), {
+      fallbackError: 'music_account_bind_failed',
+      notifyError: true,
+      successMessage: t('settings.mcpWorkspace.neteaseAccount.bindSuccess'),
+    });
+  };
+
+  const unbindNeteaseAccount = async (): Promise<void> => {
+    await runNeteaseAccountAction(() => ipcBridge.winkGoXiaozhi.unbindNeteaseAccount.invoke(), {
+      fallbackError: 'music_account_unbind_failed',
+      notifyError: true,
+      successMessage: t('settings.mcpWorkspace.neteaseAccount.unbindSuccess'),
+    });
+  };
+
+  const bindQqMusicAccount = async (): Promise<void> => {
+    const cookie = qqMusicCookie;
+    setQqMusicCookie('');
+    await runQqMusicAccountAction(() => ipcBridge.winkGoXiaozhi.bindQqMusicAccount.invoke({ cookie }), {
+      fallbackError: 'music_account_bind_failed',
+      notifyError: true,
+      successMessage: t('settings.mcpWorkspace.qqMusicAccount.bindSuccess'),
+    });
+  };
+
+  const unbindQqMusicAccount = async (): Promise<void> => {
+    await runQqMusicAccountAction(() => ipcBridge.winkGoXiaozhi.unbindQqMusicAccount.invoke(), {
+      fallbackError: 'music_account_unbind_failed',
+      notifyError: true,
+      successMessage: t('settings.mcpWorkspace.qqMusicAccount.unbindSuccess'),
+    });
   };
 
   const bindingCodeValid = Boolean(snapshot?.remoteGateway.bindingCode && bindingSeconds > 0);
@@ -810,6 +1017,204 @@ const XiaozhiMcpConnection: React.FC = () => {
             手机 Agent MCP、ESP32 MCP 与设备绑定中转彼此独立；这里不会读取或展示任何小智 Token。
           </p>
         )}
+      </section>
+
+      <section className='xiaozhi-panel rd-20px bg-1 p-18px' data-testid='winkgo-netease-account'>
+        <div className='flex items-start justify-between gap-12px border-b border-border-2 pb-11px'>
+          <div className='flex min-w-0 items-start gap-10px'>
+            <span className='size-38px shrink-0 flex items-center justify-center rd-12px bg-red-1 text-red-6'>
+              <Music theme='outline' size='20' fill='currentColor' />
+            </span>
+            <div className='min-w-0'>
+              <h3 className='m-0 text-15px text-t-primary'>{t('settings.mcpWorkspace.neteaseAccount.title')}</h3>
+              <p className='m-0 mt-3px text-10px leading-16px text-t-tertiary'>
+                {t('settings.mcpWorkspace.neteaseAccount.description')}
+              </p>
+            </div>
+          </div>
+          <Tag
+            color={
+              neteaseAccount?.state === 'active'
+                ? 'green'
+                : neteaseAccount?.state === 'needs_rebind'
+                  ? 'orange'
+                  : 'gray'
+            }
+          >
+            {neteaseAccount?.state === 'active'
+              ? t('settings.mcpWorkspace.neteaseAccount.statusActive')
+              : neteaseAccount?.state === 'needs_rebind'
+                ? t('settings.mcpWorkspace.neteaseAccount.statusNeedsRebind')
+                : t('settings.mcpWorkspace.neteaseAccount.statusUnbound')}
+          </Tag>
+        </div>
+
+        {neteaseAccount?.state === 'active' ? (
+          <div className='mt-12px grid grid-cols-3 gap-10px max-md:grid-cols-1'>
+            <div className='xiaozhi-binding-value rd-12px bg-2 px-13px py-11px'>
+              <small className='block text-10px text-t-tertiary'>
+                {t('settings.mcpWorkspace.neteaseAccount.accountLabel')}
+              </small>
+              <strong className='mt-4px block truncate text-12px text-t-primary'>{neteaseAccount.displayName}</strong>
+            </div>
+            <div className='xiaozhi-binding-value rd-12px bg-2 px-13px py-11px'>
+              <small className='block text-10px text-t-tertiary'>
+                {t('settings.mcpWorkspace.neteaseAccount.uidLabel')}
+              </small>
+              <strong className='mt-4px block truncate font-mono text-12px text-t-primary'>{neteaseAccount.uid}</strong>
+            </div>
+            <div className='xiaozhi-binding-value rd-12px bg-2 px-13px py-11px'>
+              <small className='block text-10px text-t-tertiary'>
+                {t('settings.mcpWorkspace.neteaseAccount.membershipLabel')}
+              </small>
+              <strong className='mt-4px block truncate text-12px text-t-primary'>
+                {neteaseAccount.membershipLevel || t('settings.mcpWorkspace.neteaseAccount.unknownMembership')}
+              </strong>
+            </div>
+          </div>
+        ) : null}
+
+        <div className='mt-12px grid grid-cols-[minmax(0,1fr)_auto] items-end gap-10px max-md:grid-cols-1'>
+          <label className='block min-w-0'>
+            <span className='mb-6px block text-11px font-600 text-t-secondary'>
+              {t('settings.mcpWorkspace.neteaseAccount.inputLabel')}
+            </span>
+            <Input.Password
+              autoComplete='off'
+              className='xiaozhi-secret-input'
+              maxLength={8 * 1024}
+              placeholder={t('settings.mcpWorkspace.neteaseAccount.placeholder')}
+              value={neteaseMusicU}
+              onChange={setNeteaseMusicU}
+            />
+          </label>
+          <div className='flex flex-wrap justify-end gap-8px max-md:justify-start'>
+            <Button loading={neteaseBusy} onClick={() => void loadNeteaseAccount(true)}>
+              {t('settings.mcpWorkspace.neteaseAccount.refresh')}
+            </Button>
+            <Button
+              disabled={neteaseMusicU.trim().length < 64}
+              loading={neteaseBusy}
+              type='primary'
+              onClick={() => void bindNeteaseAccount()}
+            >
+              {neteaseAccount?.state === 'active'
+                ? t('settings.mcpWorkspace.neteaseAccount.rebind')
+                : t('settings.mcpWorkspace.neteaseAccount.bind')}
+            </Button>
+            {neteaseAccount?.state === 'active' ? (
+              <Popconfirm
+                content={t('settings.mcpWorkspace.neteaseAccount.unbindConfirm')}
+                onOk={() => void unbindNeteaseAccount()}
+              >
+                <Button status='danger'>{t('settings.mcpWorkspace.neteaseAccount.unbind')}</Button>
+              </Popconfirm>
+            ) : null}
+          </div>
+        </div>
+        <p className='m-0 mt-9px text-10px leading-16px text-t-tertiary'>
+          {t('settings.mcpWorkspace.neteaseAccount.disclosure')}
+        </p>
+        {neteaseError ? <p className='m-0 mt-7px text-10px text-red-6'>{neteaseError}</p> : null}
+      </section>
+
+      <section className='xiaozhi-panel rd-20px bg-1 p-18px' data-testid='winkgo-qq-music-account'>
+        <div className='flex items-start justify-between gap-12px border-b border-border-2 pb-11px'>
+          <div className='flex min-w-0 items-start gap-10px'>
+            <span className='size-38px shrink-0 flex items-center justify-center rd-12px bg-green-1 text-green-6'>
+              <Music theme='outline' size='20' fill='currentColor' />
+            </span>
+            <div className='min-w-0'>
+              <h3 className='m-0 text-15px text-t-primary'>{t('settings.mcpWorkspace.qqMusicAccount.title')}</h3>
+              <p className='m-0 mt-3px text-10px leading-16px text-t-tertiary'>
+                {t('settings.mcpWorkspace.qqMusicAccount.description')}
+              </p>
+            </div>
+          </div>
+          <Tag
+            color={
+              qqMusicAccount?.state === 'active'
+                ? 'green'
+                : qqMusicAccount?.state === 'needs_rebind'
+                  ? 'orange'
+                  : 'gray'
+            }
+          >
+            {qqMusicAccount?.state === 'active'
+              ? t('settings.mcpWorkspace.qqMusicAccount.statusActive')
+              : qqMusicAccount?.state === 'needs_rebind'
+                ? t('settings.mcpWorkspace.qqMusicAccount.statusNeedsRebind')
+                : t('settings.mcpWorkspace.qqMusicAccount.statusUnbound')}
+          </Tag>
+        </div>
+
+        {qqMusicAccount?.state === 'active' ? (
+          <div className='mt-12px grid grid-cols-3 gap-10px max-md:grid-cols-1'>
+            <div className='xiaozhi-binding-value rd-12px bg-2 px-13px py-11px'>
+              <small className='block text-10px text-t-tertiary'>
+                {t('settings.mcpWorkspace.qqMusicAccount.accountLabel')}
+              </small>
+              <strong className='mt-4px block truncate text-12px text-t-primary'>{qqMusicAccount.displayName}</strong>
+            </div>
+            <div className='xiaozhi-binding-value rd-12px bg-2 px-13px py-11px'>
+              <small className='block text-10px text-t-tertiary'>
+                {t('settings.mcpWorkspace.qqMusicAccount.uidLabel')}
+              </small>
+              <strong className='mt-4px block truncate font-mono text-12px text-t-primary'>{qqMusicAccount.uid}</strong>
+            </div>
+            <div className='xiaozhi-binding-value rd-12px bg-2 px-13px py-11px'>
+              <small className='block text-10px text-t-tertiary'>
+                {t('settings.mcpWorkspace.qqMusicAccount.membershipLabel')}
+              </small>
+              <strong className='mt-4px block truncate text-12px text-t-primary'>
+                {qqMusicAccount.membershipLevel || t('settings.mcpWorkspace.qqMusicAccount.unknownMembership')}
+              </strong>
+            </div>
+          </div>
+        ) : null}
+
+        <div className='mt-12px grid grid-cols-[minmax(0,1fr)_auto] items-end gap-10px max-md:grid-cols-1'>
+          <label className='block min-w-0'>
+            <span className='mb-6px block text-11px font-600 text-t-secondary'>
+              {t('settings.mcpWorkspace.qqMusicAccount.inputLabel')}
+            </span>
+            <Input.Password
+              autoComplete='off'
+              className='xiaozhi-secret-input'
+              maxLength={16 * 1024}
+              placeholder={t('settings.mcpWorkspace.qqMusicAccount.placeholder')}
+              value={qqMusicCookie}
+              onChange={setQqMusicCookie}
+            />
+          </label>
+          <div className='flex flex-wrap justify-end gap-8px max-md:justify-start'>
+            <Button loading={qqMusicBusy} onClick={() => void loadQqMusicAccount(true)}>
+              {t('settings.mcpWorkspace.qqMusicAccount.refresh')}
+            </Button>
+            <Button
+              disabled={qqMusicCookie.trim().length < 32}
+              loading={qqMusicBusy}
+              type='primary'
+              onClick={() => void bindQqMusicAccount()}
+            >
+              {qqMusicAccount?.state === 'active'
+                ? t('settings.mcpWorkspace.qqMusicAccount.rebind')
+                : t('settings.mcpWorkspace.qqMusicAccount.bind')}
+            </Button>
+            {qqMusicAccount?.state === 'active' ? (
+              <Popconfirm
+                content={t('settings.mcpWorkspace.qqMusicAccount.unbindConfirm')}
+                onOk={() => void unbindQqMusicAccount()}
+              >
+                <Button status='danger'>{t('settings.mcpWorkspace.qqMusicAccount.unbind')}</Button>
+              </Popconfirm>
+            ) : null}
+          </div>
+        </div>
+        <p className='m-0 mt-9px text-10px leading-16px text-t-tertiary'>
+          {t('settings.mcpWorkspace.qqMusicAccount.disclosure')}
+        </p>
+        {qqMusicError ? <p className='m-0 mt-7px text-10px text-red-6'>{qqMusicError}</p> : null}
       </section>
 
       <section className='grid grid-cols-2 gap-12px max-md:grid-cols-1'>

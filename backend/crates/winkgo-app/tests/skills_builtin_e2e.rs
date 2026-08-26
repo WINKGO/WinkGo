@@ -136,6 +136,10 @@ async fn unified_skill_list_includes_auto_inject_entries_from_embedded_corpus() 
         "winkgo-config should be shipped as an auto-inject builtin skill: {names:?}",
     );
     assert!(
+        names.contains(&"computer-use"),
+        "computer-use should be shipped as an auto-inject builtin skill: {names:?}",
+    );
+    assert!(
         !names.contains(&"winkgo-skills"),
         "winkgo-skills should not be shipped as an auto-inject builtin skill: {names:?}",
     );

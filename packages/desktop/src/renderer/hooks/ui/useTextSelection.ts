@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { resolveSelectionHttpUrl } from '@/renderer/utils/url';
 
 // 选中文本的位置信息 / Selection position information
 export interface SelectionPosition {
@@ -25,6 +26,7 @@ export interface SelectionPosition {
  */
 export const useTextSelection = (containerRef: React.RefObject<HTMLElement>, enabled = true) => {
   const [selectedText, setSelectedText] = useState('');
+  const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
   const [selectionPosition, setSelectionPosition] = useState<SelectionPosition | null>(null);
 
   // 处理选择变化事件 / Handle selection change event
@@ -35,6 +37,7 @@ export const useTextSelection = (containerRef: React.RefObject<HTMLElement>, ena
     // 如果没有选中文本，清空状态 / Clear state if no text selected
     if (!text) {
       setSelectedText('');
+      setSelectedUrl(null);
       setSelectionPosition(null);
       return;
     }
@@ -46,11 +49,13 @@ export const useTextSelection = (containerRef: React.RefObject<HTMLElement>, ena
 
       if (!container.contains(range.commonAncestorContainer)) {
         setSelectedText('');
+        setSelectedUrl(null);
         setSelectionPosition(null);
         return;
       }
 
       setSelectedText(text);
+      setSelectedUrl(resolveSelectionHttpUrl(text, selection.anchorNode, selection.focusNode));
       // 位置由 mouseup 事件设置 / Position is set by mouseup event
     }
   }, [containerRef]);
@@ -85,6 +90,7 @@ export const useTextSelection = (containerRef: React.RefObject<HTMLElement>, ena
   useEffect(() => {
     if (!enabled) {
       setSelectedText('');
+      setSelectedUrl(null);
       setSelectionPosition(null);
       return;
     }
@@ -101,9 +107,10 @@ export const useTextSelection = (containerRef: React.RefObject<HTMLElement>, ena
   // 清除选择 / Clear selection
   const clearSelection = useCallback(() => {
     setSelectedText('');
+    setSelectedUrl(null);
     setSelectionPosition(null);
     window.getSelection()?.removeAllRanges();
   }, []);
 
-  return { selectedText, selectionPosition, clearSelection };
+  return { selectedText, selectedUrl, selectionPosition, clearSelection };
 };

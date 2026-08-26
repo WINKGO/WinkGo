@@ -20,6 +20,6 @@ export { default as PreviewContextMenu } from './PreviewContextMenu';
 export type { ContextMenuState } from './PreviewContextMenu';
 
 export { default as PreviewConfirmModals } from './PreviewConfirmModals';
-export type { CloseTabConfirmState } from './PreviewConfirmModals';
+export type { CloseTabConfirmState, SaveConflictState } from './PreviewConfirmModals';
 
 export { default as PreviewHistoryDropdown } from './PreviewHistoryDropdown';

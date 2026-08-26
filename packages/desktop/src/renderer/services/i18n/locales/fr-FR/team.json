@@ -35,6 +35,22 @@
   },
   "create": {
     "title": "Créer une équipe",
+    "selectedMembers": "Membres sélectionnés",
+    "teamLeader": "Chef d'équipe",
+    "currentLeader": "Chef actuel",
+    "setAsLeader": "Définir comme chef",
+    "teammate": "Coéquipier",
+    "selectAtLeastOneMember": "Sélectionnez au moins un assistant comme chef d'équipe.",
+    "selectOneLeader": "Sélectionnez un chef d'équipe",
+    "subtitle": "Faites collaborer plusieurs assistants IA. Nous recommandons de consacrer chaque équipe à un seul objectif et de créer des équipes distinctes pour les autres tâches.",
+    "nameLabel": "Nom de l'équipe",
+    "workspaceLabel": "Espace de travail",
+    "allAssistantsWithCount": "Tous les assistants ({{count}})",
+    "selectedMembersWithCount": "{{count}} membres sélectionnés · ⚑ = chef",
+    "selectedMembersTitleWithCount": "{{count}} membres sélectionnés",
+    "leaderLegend": "= chef",
+    "membersHelper": "Choisissez les membres et désignez un chef. Un même assistant peut être sélectionné plusieurs fois.",
+    "memberHint": "Aucun assistant ne convient comme membre ? Après la création, demandez au chef de créer des membres temporaires dans la conversation.",
     "namePlaceholder": "Nom de l'équipe",
     "dispatchAgentPlaceholder": "Sélectionner le chef d'équipe",
     "subAgentsPlaceholder": "Sélectionner les sous-agents",
@@ -58,15 +74,83 @@
   },
   "removeAgent": {
     "confirmTitle": "Retirer un membre de l'équipe",
-    "confirmContent": "Ce membre est actuellement actif. Forcer la suppression ?"
+    "confirmContent": "Ce membre est actuellement actif. Forcer la suppression ?",
+    "confirmContentActive": "Ce membre travaille actuellement. Voulez-vous vraiment le retirer ? Son travail en cours sera interrompu."
   },
   "emptyState": {
     "subtitle": "Décrivez votre objectif et je mettrai l'équipe au travail",
     "suggestions": {
       "debate": "Organiser un débat avec des agents prenant des positions différentes",
       "interview": "Planifier une interview approfondie entre agents",
-      "expert_review": "Faire analyser le même problème par plusieurs experts"
-    }
+      "expert_review": "Faire analyser le même problème par plusieurs experts",
+      "add_member": "Aide-moi à ajouter à l'équipe un membre compétent en ___"
+    },
+    "leaderGreeting": "Bonjour, je suis le chef d'équipe. Je comprends votre objectif et coordonne l'équipe : décrivez ce que vous souhaitez accomplir et je m'en charge.",
+    "memberGreeting": "Bonjour, je suis membre de l'équipe. Je suis les instructions du chef et les vôtres."
   },
-  "reorderMember": "Faites glisser pour réorganiser le membre"
+  "addMember": {
+    "title": "Ajouter un membre",
+    "subtitle": "Un même assistant peut être ajouté plusieurs fois",
+    "searchAssistants": "Rechercher des assistants...",
+    "addFailed": "Impossible d'ajouter le membre",
+    "noSearchResults": "Aucun résultat trouvé",
+    "tellLeaderHint": "Aucun ne convient ? Vous pouvez aussi demander au chef de s'en charger.",
+    "tellLeaderCta": "Demander au chef →",
+    "tellLeaderPrefill": "Aide-moi à ajouter à l'équipe un membre compétent en ___"
+  },
+  "warmup": {
+    "title": "Réveil de l'équipe…",
+    "subtitle": "Préparation des membres",
+    "memberFailedTitle": "Le membre {{name}} n'a pas pu démarrer",
+    "leaderFailedTitle": "Le chef {{name}} n'a pas pu démarrer",
+    "genericFailedTitle": "L'équipe n'a pas pu démarrer",
+    "multiFailedTitle": "{{count}} membres n'ont pas pu démarrer",
+    "leaderSuffix": " (chef)",
+    "unknownError": "échec du démarrage",
+    "memberFailedHint": "Changez son modèle ci-dessus ou retirez-le de la barre supérieure, puis réessayez.",
+    "leaderFailedHint": "Changez son modèle ci-dessus, puis réessayez.",
+    "retry": "Réessayer"
+  },
+  "view": {
+    "label": "Vue",
+    "parallel": "Parallèle",
+    "single": "Individuelle",
+    "board": "Tableau"
+  },
+  "reorderMember": "Faites glisser pour réorganiser le membre",
+  "activity": {
+    "control": {
+      "sortNewest": "Récent",
+      "sortOldest": "Ancien",
+      "filterAll": "Tout",
+      "filterMessages": "Messages",
+      "filterTasks": "Tâches",
+      "allMembers": "Tous les membres",
+      "showSystem": "Messages système",
+      "showTerminal": "Tâches terminées"
+    },
+    "fallbackLane": "Non attribué / externe",
+    "empty": "Aucune activité",
+    "userIdentity": "Utilisateur / externe",
+    "broadcast": "Diffusion à tous",
+    "read": "Lu",
+    "unread": "Non lu",
+    "attachments": "{{count}} fichiers",
+    "expand": "Développer",
+    "collapse": "Réduire",
+    "blockedBy": "bloqué par #{{id}}",
+    "blockedByNamed": "bloqué par {{name}}",
+    "blockerUnknown": "Tâche indisponible",
+    "status": {
+      "pending": "En attente",
+      "in_progress": "En cours",
+      "completed": "Terminé",
+      "deleted": "Supprimé"
+    },
+    "msgType": {
+      "message": "Message",
+      "idle_notification": "Notif. d’inactivité",
+      "shutdown_request": "Demande d’arrêt"
+    }
+  }
 }

@@ -2,6 +2,7 @@
   "fileChanges": "Alterações de Arquivo",
   "fileChangesCount": "{{count}} Alterações de Arquivo",
   "conversationInProgress": "Uma conversa está em andamento no momento...",
+  "delivery": { "queued": "Aguardando a tarefa atual terminar" },
   "confirm": "Confirmar",
   "canceledExecution": "Execução cancelada",
   "openLinkFailed": "Falha ao abrir o link",
@@ -62,6 +63,13 @@
   "processing": "Processando...",
   "responseSentSuccessfully": "Resposta enviada com sucesso",
   "permissionResponseFailed": "Não foi possível enviar a resposta. Tente novamente.",
+  "askSubmit": "Enviar",
+  "askDecline": "Ignorar",
+  "askAnswered": "Respondido",
+  "askDeclined": "Ignorado",
+  "askOther": "Outro",
+  "askOtherPlaceholder": "Digite sua resposta",
+  "requestDetails": "Detalhes da solicitação:",
   "confirmation": {
     "applyChange": "Aplicar esta alteração?",
     "allowExecution": "Permitir execução?",
@@ -72,5 +80,14 @@
     "yesAlwaysAllowTool": "Sim, sempre permitir a ferramenta \"{{toolName}}\" do servidor \"{{serverName}}\"",
     "yesAlwaysAllowServer": "Sim, sempre permitir todas as ferramentas do servidor \"{{serverName}}\"",
     "no": "Não (esc)"
+  },
+  "fork": {
+    "action": "Bifurcar a partir daqui",
+    "errorTurnInFlight": "Aguarde a resposta atual terminar antes de bifurcar",
+    "errorParentUnbound": "Esta conversa ainda não tem uma sessão de backend para bifurcar",
+    "errorPointUnsupported": "Este agente só pode bifurcar a partir da mensagem mais recente",
+    "errorUnsupported": "Este agente não oferece suporte a bifurcação",
+    "errorGeneric": "Falha ao bifurcar: {{message}}",
+    "errorTeamUnsupported": "Team member conversations must be managed from Team mode"
   }
 }

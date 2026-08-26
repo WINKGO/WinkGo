@@ -14,10 +14,13 @@ import { getChatSurfaceWidthClass } from '@/renderer/pages/conversation/utils/ch
 import { useTeamPermission } from '@/renderer/pages/team/hooks/TeamPermissionContext';
 import { iconColors } from '@/renderer/styles/colors';
 import { CHAT_MESSAGE_JUMP_EVENT, type ChatMessageJumpDetail } from '@/renderer/utils/chat/chatMinimapEvents';
+import { collectAiCopyRows, type TurnCopyItem } from '@/renderer/utils/chat/turnCopy';
 import { Image } from '@arco-design/web-react';
 import { Down } from '@icon-park/react';
 import MessageAcpPermission from '@renderer/pages/conversation/Messages/acp/MessageAcpPermission';
+import MessageQuestion from './MessageQuestion';
 import MessagePermission from './components/MessagePermission';
+import MessageAcpTerminalOutput from '@renderer/pages/conversation/Messages/acp/MessageAcpTerminalOutput';
 import MessageAcpToolCall from '@renderer/pages/conversation/Messages/acp/MessageAcpToolCall';
 import classNames from 'classnames';
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -236,6 +239,9 @@ const MessageItem: React.FC<{
   highlighted?: boolean;
   rowWidthClass: string;
   showCopyRow?: boolean;
+  isLastMessage?: boolean;
+  hasForkAnchor?: boolean;
+  turnTexts?: string[];
 }> = React.memo(
   HOC((props) => {
     const { message, highlighted, rowWidthClass } = props as {
@@ -267,16 +273,30 @@ const MessageItem: React.FC<{
     ({
       message,
       showCopyRow,
+      isLastMessage,
+      hasForkAnchor,
+      turnTexts,
     }: {
       message: TMessage;
       highlighted?: boolean;
       rowWidthClass: string;
       showCopyRow?: boolean;
+      isLastMessage?: boolean;
+      hasForkAnchor?: boolean;
+      turnTexts?: string[];
     }) => {
       const { t } = useTranslation();
       switch (message.type) {
         case 'text':
-          return <MessageText message={message} showCopyRow={showCopyRow}></MessageText>;
+          return (
+            <MessageText
+              message={message}
+              showCopyRow={showCopyRow}
+              isLastMessage={isLastMessage}
+              hasForkAnchor={hasForkAnchor}
+              turnTexts={turnTexts}
+            />
+          );
         case 'tips':
           return <MessageTips message={message}></MessageTips>;
         case 'tool_call':
@@ -289,6 +309,10 @@ const MessageItem: React.FC<{
           return <MessagePermission message={message}></MessagePermission>;
         case 'acp_permission':
           return <MessageAcpPermission message={message}></MessageAcpPermission>;
+        case 'ask':
+          return <MessageQuestion message={message}></MessageQuestion>;
+        case 'acp_terminal_output':
+          return <MessageAcpTerminalOutput message={message}></MessageAcpTerminalOutput>;
         case 'acp_tool_call':
           return <MessageAcpToolCall message={message}></MessageAcpToolCall>;
         case 'plan':
@@ -309,7 +333,12 @@ const MessageItem: React.FC<{
     prev.message.type === next.message.type &&
     prev.highlighted === next.highlighted &&
     prev.rowWidthClass === next.rowWidthClass &&
-    prev.showCopyRow === next.showCopyRow
+    prev.showCopyRow === next.showCopyRow &&
+    prev.isLastMessage === next.isLastMessage &&
+    prev.hasForkAnchor === next.hasForkAnchor &&
+    (prev.turnTexts === next.turnTexts ||
+      (prev.turnTexts?.length === next.turnTexts?.length &&
+        (prev.turnTexts ?? []).every((segment, index) => segment === next.turnTexts?.[index])))
 );
 
 const MessageList: React.FC<{ className?: string; emptySlot?: React.ReactNode }> = ({ emptySlot }) => {
@@ -449,36 +478,24 @@ const MessageList: React.FC<{ className?: string; emptySlot?: React.ReactNode }>
   // by tool blocks. While the conversation is still streaming, the final turn's
   // row is withheld (it would otherwise appear then shift down as more text
   // streams in); earlier, already-finished turns always keep their row.
-  const aiCopyRowTextIds = useMemo(() => {
-    const ids = new Set<string>();
-    let pendingTextId: string | undefined;
-    let lastTurnTextId: string | undefined;
-    const flush = () => {
-      if (pendingTextId) ids.add(pendingTextId);
-      pendingTextId = undefined;
-    };
-    for (const item of processedList) {
+  const { copyRowIds: aiCopyRowTextIds, turnTextsById: aiTurnTextsById } = useMemo(
+    () => collectAiCopyRows(processedList as TurnCopyItem[], isProcessing),
+    [processedList, isProcessing]
+  );
+
+  const lastMessageId = useMemo(() => {
+    for (let index = processedList.length - 1; index >= 0; index -= 1) {
+      const item = processedList[index];
       if (
         'type' in item &&
         (item.type === 'file_summary' || item.type === 'tool_summary' || item.type === 'artifact')
       ) {
         continue;
       }
-      const message = item as TMessage;
-      if (message.position === 'right') {
-        flush();
-        continue;
-      }
-      if (message.type === 'text') {
-        pendingTextId = message.id;
-      }
+      return (item as TMessage).id;
     }
-    lastTurnTextId = pendingTextId;
-    flush();
-    // The final turn is the one that may still be streaming; hide its row until done.
-    if (isProcessing && lastTurnTextId) ids.delete(lastTurnTextId);
-    return ids;
-  }, [processedList, isProcessing]);
+    return undefined;
+  }, [processedList]);
 
   // Use auto-scroll hook
   const {
@@ -687,6 +704,9 @@ const MessageList: React.FC<{ className?: string; emptySlot?: React.ReactNode }>
         highlighted={highlighted}
         rowWidthClass={rowWidthClass}
         showCopyRow={showCopyRow}
+        isLastMessage={message.id === lastMessageId}
+        hasForkAnchor
+        turnTexts={aiTurnTextsById.get(message.id)}
       ></MessageItem>
     );
   };

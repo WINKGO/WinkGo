@@ -7,7 +7,8 @@
  */
 
 import { ipcBridge } from '@/common';
-import { downloadFileFromPath, downloadTextContent } from '@/renderer/utils/file/download';
+import { isBackendHttpError } from '@/common/adapter/httpBridge';
+import { downloadFileFromPath, downloadFileFromRef, downloadTextContent } from '@/renderer/utils/file/download';
 import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { toLocalFileHref } from '@/renderer/components/Markdown/markdownUtils';
 import { PreviewToolbarExtrasProvider, type PreviewToolbarExtras } from '../../context/PreviewToolbarExtrasContext';
@@ -15,18 +16,7 @@ import { usePreviewContext } from '../../context/PreviewContext';
 import { useResizableSplit } from '@/renderer/hooks/ui/useResizableSplit';
 import { Link } from '@arco-design/web-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import DiffPreview from '../viewers/DiffViewer';
-import ExcelPreview from '../viewers/ExcelViewer';
-import HTMLEditor from '../editors/HTMLEditor';
-import HTMLRenderer from '../renderers/HTMLRenderer';
-import ImagePreview from '../viewers/ImageViewer';
-import MarkdownEditor from '../editors/MarkdownEditor';
-import MarkdownPreview from '../viewers/MarkdownViewer';
-import PDFPreview from '../viewers/PDFViewer';
-import OfficeDocPreview from '../viewers/OfficeDocViewer';
-import PptViewer from '../viewers/PptViewer';
-import CodeEditor from '../editors/CodeEditor';
-import URLViewer from '../viewers/URLViewer';
+import { MAX_BROWSER_TABS } from '../../browser/constants';
 import {
   PreviewTabs,
   PreviewToolbar,
@@ -36,8 +26,9 @@ import {
   type ContextMenuState,
   type CloseTabConfirmState,
   type PreviewTab,
+  type SaveConflictState,
 } from '.';
-import { DEFAULT_SPLIT_RATIO, FILE_TYPES_WITH_BUILTIN_OPEN, MAX_SPLIT_WIDTH, MIN_SPLIT_WIDTH } from '../../constants';
+import { DEFAULT_SPLIT_RATIO, EDITABLE_CONTENT_TYPES, MAX_SPLIT_WIDTH, MIN_SPLIT_WIDTH } from '../../constants';
 import {
   usePreviewHistory,
   usePreviewKeyboardShortcuts,
@@ -47,6 +38,20 @@ import {
 } from '../../hooks';
 import { useTranslation } from 'react-i18next';
 import './preview.css';
+
+const DiffPreview = React.lazy(() => import('../viewers/DiffViewer'));
+const ExcelPreview = React.lazy(() => import('../viewers/ExcelViewer'));
+const HTMLEditor = React.lazy(() => import('../editors/HTMLEditor'));
+const HTMLRenderer = React.lazy(() => import('../renderers/HTMLRenderer'));
+const ImagePreview = React.lazy(() => import('../viewers/ImageViewer'));
+const MarkdownEditor = React.lazy(() => import('../editors/MarkdownEditor'));
+const MarkdownPreview = React.lazy(() => import('../viewers/MarkdownViewer'));
+const PDFPreview = React.lazy(() => import('../viewers/PDFViewer'));
+const OfficeDocPreview = React.lazy(() => import('../viewers/OfficeDocViewer'));
+const PptViewer = React.lazy(() => import('../viewers/PptViewer'));
+const CodeEditor = React.lazy(() => import('../editors/CodeEditor'));
+const URLViewer = React.lazy(() => import('../viewers/URLViewer'));
+const BrowserTabLayer = React.lazy(() => import('../../browser/BrowserTabLayer'));
 
 /**
  * 预览面板主组件
@@ -58,15 +63,18 @@ import './preview.css';
 const PreviewPanel: React.FC = () => {
   const { t } = useTranslation();
   const {
-    isOpen,
     tabs,
     activeTabId,
     activeTab,
     closeTab,
     switchTab,
-    closePreview,
+    hidePreview,
     updateContent,
+    updateTab,
+    openBrowserTab,
+    browserTabLimitHitAt,
     saveContent,
+    reloadContent,
     addDomSnippet,
   } = usePreviewContext();
   const layout = useLayoutContext();
@@ -89,6 +97,7 @@ const PreviewPanel: React.FC = () => {
 
   // 确认对话框状态 / Confirmation dialog states
   const [closeTabConfirm, setCloseTabConfirm] = useState<CloseTabConfirmState>({ show: false, tabId: null });
+  const [saveConflict, setSaveConflict] = useState<SaveConflictState>({ show: false, tabId: null });
 
   // 右键菜单状态 / Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ show: false, x: 0, y: 0, tabId: null });
@@ -123,14 +132,35 @@ const PreviewPanel: React.FC = () => {
     updateContent,
   });
 
+  const handleSaveError = useCallback(
+    (error: unknown, tabId: string | null) => {
+      if (isBackendHttpError(error) && error.status === 409) {
+        setSaveConflict({ show: true, tabId });
+        return;
+      }
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      messageApi.error(`${t('common.saveFailed')}: ${errorMsg}`);
+    },
+    [messageApi, t]
+  );
+
   usePreviewKeyboardShortcuts({
     isDirty: activeTab?.isDirty,
-    onSave: () => void saveContent(),
+    onSave: () => {
+      void saveContent().catch((error: unknown) => handleSaveError(error, activeTabId));
+    },
   });
 
   const setToolbarExtrasCallback = useCallback((extras: PreviewToolbarExtras | null) => {
     setToolbarExtras(extras);
   }, []);
+
+  const handleNewBrowserTab = useCallback(() => openBrowserTab(), [openBrowserTab]);
+
+  useEffect(() => {
+    if (!browserTabLimitHitAt) return;
+    messageApi.warning(t('preview.browser.tabLimitReached', { count: MAX_BROWSER_TABS }));
+  }, [browserTabLimitHitAt, messageApi, t]);
 
   // 处理 HTML 审核模式元素选中 / Handle HTML inspect mode element selection
   const handleElementSelected = useCallback(
@@ -175,7 +205,7 @@ const PreviewPanel: React.FC = () => {
   // 处理关闭tab / Handle close tab
   const handleCloseTab = useCallback(
     (tabId: string) => {
-      const tab = tabs.find((t) => t.id === tabId);
+      const tab = tabs.find((candidate) => candidate.id === tabId);
       // 如果tab有未保存的修改，显示确认对话框 / If tab has unsaved changes, show confirmation dialog
       if (tab?.isDirty) {
         setCloseTabConfirm({ show: true, tabId });
@@ -199,10 +229,12 @@ const PreviewPanel: React.FC = () => {
       closeTab(closeTabConfirm.tabId);
       setCloseTabConfirm({ show: false, tabId: null });
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : t('common.unknownError');
-      messageApi.error(`${t('common.saveFailed')}: ${errorMsg}`);
+      if (isBackendHttpError(error) && error.status === 409) {
+        setCloseTabConfirm({ show: false, tabId: null });
+      }
+      handleSaveError(error, closeTabConfirm.tabId);
     }
-  }, [closeTabConfirm.tabId, saveContent, closeTab, messageApi, t]);
+  }, [closeTabConfirm.tabId, saveContent, closeTab, handleSaveError, t]);
 
   // 不保存直接关闭tab / Close tab without saving
   const handleCloseWithoutSave = useCallback(() => {
@@ -215,6 +247,33 @@ const PreviewPanel: React.FC = () => {
   const handleCancelCloseTab = useCallback(() => {
     setCloseTabConfirm({ show: false, tabId: null });
   }, []);
+
+  const handleReloadConflict = useCallback(async () => {
+    const tabId = saveConflict.tabId;
+    if (!tabId) return;
+    try {
+      const success = await reloadContent(tabId);
+      if (!success) throw new Error(t('preview.reloadFailed'));
+      setSaveConflict({ show: false, tabId: null });
+      messageApi.success(t('preview.reloadSuccess'));
+    } catch {
+      messageApi.error(t('preview.reloadFailed'));
+    }
+  }, [saveConflict.tabId, reloadContent, messageApi, t]);
+
+  const handleCancelConflict = useCallback(() => {
+    setSaveConflict({ show: false, tabId: null });
+  }, []);
+
+  const handleSaveActiveTab = useCallback(async () => {
+    try {
+      const success = await saveContent();
+      if (!success) throw new Error(t('common.saveFailed'));
+      messageApi.success(t('common.saveSuccess'));
+    } catch (error) {
+      handleSaveError(error, activeTabId);
+    }
+  }, [activeTabId, handleSaveError, messageApi, saveContent, t]);
 
   // 处理 tab 右键菜单 / Handle tab context menu
   const handleTabContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
@@ -231,7 +290,7 @@ const PreviewPanel: React.FC = () => {
   // 关闭左侧 tabs / Close tabs to the left
   const handleCloseLeft = useCallback(
     (tabId: string) => {
-      const currentIndex = tabs.findIndex((t) => t.id === tabId);
+      const currentIndex = tabs.findIndex((candidate) => candidate.id === tabId);
       if (currentIndex <= 0) return;
 
       const tabsToClose = tabs.slice(0, currentIndex);
@@ -244,7 +303,7 @@ const PreviewPanel: React.FC = () => {
   // 关闭右侧 tabs / Close tabs to the right
   const handleCloseRight = useCallback(
     (tabId: string) => {
-      const currentIndex = tabs.findIndex((t) => t.id === tabId);
+      const currentIndex = tabs.findIndex((candidate) => candidate.id === tabId);
       if (currentIndex < 0 || currentIndex >= tabs.length - 1) return;
 
       const tabsToClose = tabs.slice(currentIndex + 1);
@@ -257,7 +316,7 @@ const PreviewPanel: React.FC = () => {
   // 关闭其他 tabs / Close other tabs
   const handleCloseOthers = useCallback(
     (tabId: string) => {
-      const tabsToClose = tabs.filter((t) => t.id !== tabId);
+      const tabsToClose = tabs.filter((candidate) => candidate.id !== tabId);
       tabsToClose.forEach((tab) => closeTab(tab.id));
       setContextMenu({ show: false, x: 0, y: 0, tabId: null });
     },
@@ -270,18 +329,17 @@ const PreviewPanel: React.FC = () => {
     setContextMenu({ show: false, x: 0, y: 0, tabId: null });
   }, [tabs, closeTab]);
 
-  // 如果预览面板未打开，不渲染 / Don't render if preview panel is not open
-  if (!isOpen || !activeTab) return null;
-
-  const { content, content_type, metadata } = activeTab;
+  // Keep the hook order stable while a newly-created tab is waiting for its
+  // activation effect. Dynamic Browser opening briefly renders `isOpen=true`
+  // with no active tab; returning before the callbacks below caused React #310
+  // on the next render. Defaults are never displayed because the null render is
+  // deferred until after every hook has run.
+  const content = activeTab?.content ?? '';
+  const content_type = activeTab?.content_type ?? 'code';
+  const metadata = activeTab?.metadata;
   const isMarkdown = content_type === 'markdown';
   const isHTML = content_type === 'html';
   const isEditable = metadata?.editable !== false; // 默认可编辑 / Default editable
-
-  // 检查文件类型是否已有内置的打开按钮（Word、PPT、PDF、Excel 组件内部已提供）
-  // Check if file type already has built-in open button
-  // (Word, PPT, PDF, Excel components provide their own)
-  const hasBuiltInOpenButton = (FILE_TYPES_WITH_BUILTIN_OPEN as readonly string[]).includes(content_type);
 
   // 对所有有 file_path 的文件显示"在系统中打开"按钮（统一在工具栏显示）
   // Show "Open in System" button for all files with file_path (unified in toolbar)
@@ -295,6 +353,15 @@ const PreviewPanel: React.FC = () => {
       if (metadata?.file_path) {
         // All files with a disk path (binary, image, zip, etc.) — unified path
         await downloadFileFromPath(metadata.file_path, rawFileName, metadata.workspace);
+        return;
+      }
+
+      if (['pdf', 'word', 'excel', 'ppt'].includes(content_type)) {
+        if (metadata?.fileRef) {
+          await downloadFileFromRef(metadata.fileRef, rawFileName);
+          return;
+        }
+        messageApi.error(t('messages.downloadFailed', { defaultValue: 'Failed to download' }));
         return;
       }
 
@@ -356,7 +423,16 @@ const PreviewPanel: React.FC = () => {
       console.error('[PreviewPanel] Failed to download file:', error);
       messageApi.error(t('messages.downloadFailed', { defaultValue: 'Failed to download' }));
     }
-  }, [content, content_type, metadata?.file_name, metadata?.file_path, metadata?.language, messageApi, t]);
+  }, [
+    content,
+    content_type,
+    metadata?.file_name,
+    metadata?.file_path,
+    metadata?.fileRef,
+    metadata?.language,
+    messageApi,
+    t,
+  ]);
 
   // 在系统默认应用中打开文件 / Open file in system default application
   const handleOpenInSystem = useCallback(async () => {
@@ -377,7 +453,7 @@ const PreviewPanel: React.FC = () => {
       } catch {
         // Context holder may be unmounted after async operation
       }
-    } catch (err) {
+    } catch {
       try {
         messageApi.error(t('preview.openInSystemFailed'));
       } catch {
@@ -385,6 +461,13 @@ const PreviewPanel: React.FC = () => {
       }
     }
   }, [metadata?.file_path, messageApi, t]);
+
+  // The parent keeps a collapsed browser preview mounted in an off-screen
+  // parking slot. Rendering it here preserves the live WebView instead of
+  // reloading the last URL and losing transient page state on every expand.
+  // This must stay below all hooks so first-open and hydrated-open renders use
+  // the same hook sequence.
+  if (!activeTab) return null;
 
   // 渲染历史下拉菜单 / Render history dropdown
   const renderHistoryDropdown = () => {
@@ -425,6 +508,7 @@ const PreviewPanel: React.FC = () => {
   // 渲染预览内容 / Render preview content
   const renderContent = () => {
     if (metadata?.missingFile) return renderMissingFile();
+    if (content_type === 'browser') return null;
 
     // Markdown 模式 / Markdown mode
     if (isMarkdown) {
@@ -434,7 +518,12 @@ const PreviewPanel: React.FC = () => {
         if (layout?.isMobile) {
           return (
             <div className='flex-1 overflow-hidden'>
-              <MarkdownPreview content={content} file_path={metadata?.file_path} workspace={metadata?.workspace} />
+              <MarkdownPreview
+                content={content}
+                file_path={metadata?.file_path}
+                workspace={metadata?.workspace}
+                fileRef={metadata?.fileRef}
+              />
             </div>
           );
         }
@@ -472,6 +561,7 @@ const PreviewPanel: React.FC = () => {
                   onScroll={handlePreviewScroll}
                   file_path={metadata?.file_path}
                   workspace={metadata?.workspace}
+                  fileRef={metadata?.fileRef}
                 />
               </div>
             </div>
@@ -488,6 +578,7 @@ const PreviewPanel: React.FC = () => {
           onContentChange={updateContent}
           file_path={metadata?.file_path}
           workspace={metadata?.workspace}
+          fileRef={metadata?.fileRef}
         />
       );
     }
@@ -647,7 +738,11 @@ const PreviewPanel: React.FC = () => {
     id: tab.id,
     title: tab.title,
     isDirty: tab.isDirty,
+    favicon: tab.content_type === 'browser' ? tab.metadata?.favicon : undefined,
+    agentActive: tab.content_type === 'browser' ? tab.metadata?.agentActive : undefined,
   }));
+
+  const browserTabs = tabs.filter((tab) => tab.content_type === 'browser');
 
   return (
     <PreviewToolbarExtrasProvider value={toolbarExtrasContextValue}>
@@ -661,6 +756,9 @@ const PreviewPanel: React.FC = () => {
           onSaveAndCloseTab={handleSaveAndCloseTab}
           onCloseWithoutSave={handleCloseWithoutSave}
           onCancelCloseTab={handleCancelCloseTab}
+          saveConflict={saveConflict}
+          onReloadConflict={handleReloadConflict}
+          onCancelConflict={handleCancelConflict}
         />
 
         {/* Tab 栏 / Tab bar */}
@@ -673,11 +771,12 @@ const PreviewPanel: React.FC = () => {
           onSwitchTab={switchTab}
           onCloseTab={handleCloseTab}
           onContextMenu={handleTabContextMenu}
-          onClosePanel={closePreview}
+          onClosePanel={hidePreview}
+          onNewBrowserTab={previewTabs.length > 0 ? handleNewBrowserTab : undefined}
         />
 
         {/* 工具栏（URL 类型不显示工具栏，因为不需要下载/编辑等功能）/ Toolbar (hidden for URL type as it doesn't need download/edit features) */}
-        {content_type !== 'url' && !metadata?.missingFile && (
+        {content_type !== 'url' && content_type !== 'browser' && !metadata?.missingFile && (
           <PreviewToolbar
             content_type={content_type}
             isMarkdown={isMarkdown}
@@ -698,7 +797,10 @@ const PreviewPanel: React.FC = () => {
             renderHistoryDropdown={renderHistoryDropdown}
             onOpenInSystem={handleOpenInSystem}
             onDownload={handleDownload}
-            onClose={closePreview}
+            showSave={isEditable && (EDITABLE_CONTENT_TYPES as readonly string[]).includes(content_type)}
+            saveActionable={Boolean(activeTab?.isDirty)}
+            onSave={() => void handleSaveActiveTab()}
+            onClose={hidePreview}
             inspectMode={inspectMode}
             onInspectModeToggle={() => setInspectMode(!inspectMode)}
             leftExtra={toolbarExtras?.left}
@@ -712,8 +814,14 @@ const PreviewPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 预览内容 / Preview content */}
-        {renderContent()}
+        <React.Suspense fallback={<div className='flex-1 min-h-0' aria-busy='true' />}>
+          {/* 预览内容 / Preview content */}
+          {renderContent()}
+
+          {browserTabs.length > 0 && (
+            <BrowserTabLayer browserTabs={browserTabs} activeTabId={activeTabId} updateTab={updateTab} />
+          )}
+        </React.Suspense>
 
         {/* Tab 右键菜单 / Tab context menu */}
         {/* eslint-disable-next-line max-len */}

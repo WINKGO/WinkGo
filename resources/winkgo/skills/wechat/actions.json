@@ -39,12 +39,6 @@
       "default_arguments": {}
     },
     {
-      "id": "favorites",
-      "phrases": ["常用联系人", "常用群聊", "我的微信常用目标"],
-      "tool_names": ["winkgo.wechat.list_favorites"],
-      "default_arguments": {}
-    },
-    {
       "id": "status",
       "phrases": ["微信状态", "登录状态", "自动化状态"],
       "tool_names": ["wechat.get_client_status"],
@@ -60,6 +54,12 @@
       "id": "cancel",
       "phrases": ["取消微信操作", "停止微信搜索", "别执行了"],
       "tool_names": ["wechat.cancel_current", "tools.cancel_all"],
+      "default_arguments": {}
+    },
+    {
+      "id": "favorites",
+      "phrases": ["常用联系人", "常用群聊", "我的微信常用目标"],
+      "tool_names": ["winkgo.wechat.list_favorites"],
       "default_arguments": {}
     }
   ]

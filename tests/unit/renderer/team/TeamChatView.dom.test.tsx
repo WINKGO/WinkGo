@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const usePresetAssistantInfoMock = vi.fn();
 const acpChatMock = vi.fn(() => <div data-testid='mock-acp-chat' />);
 const winkgo_agentChatMock = vi.fn(() => <div data-testid='mock-winkgo_agent-chat' />);
+const switchTabMock = vi.fn();
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -15,6 +16,10 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/renderer/hooks/agent/usePresetAssistantInfo', () => ({
   usePresetAssistantInfo: (...args: unknown[]) => usePresetAssistantInfoMock(...args),
+}));
+
+vi.mock('@/renderer/pages/team/hooks/TeamTabsContext', () => ({
+  useTeamTabs: () => ({ activeSlotId: null, switchTab: switchTabMock }),
 }));
 
 vi.mock('@/renderer/pages/conversation/platforms/acp/AcpChat', () => ({
@@ -39,6 +44,7 @@ describe('TeamChatView', () => {
     usePresetAssistantInfoMock.mockReset();
     acpChatMock.mockClear();
     winkgo_agentChatMock.mockClear();
+    switchTabMock.mockClear();
   });
 
   it('prefers preset assistant backend over legacy conversation extra backend', async () => {

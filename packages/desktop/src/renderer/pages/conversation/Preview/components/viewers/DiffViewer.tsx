@@ -63,7 +63,7 @@ const DiffPreview: React.FC<DiffPreviewProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  const { selectedText, selectionPosition, clearSelection } = useTextSelection(containerRef);
+  const { selectedText, selectedUrl, selectionPosition, clearSelection } = useTextSelection(containerRef);
 
   const diffHtmlContent = useMemo(() => {
     return html(content, {
@@ -214,7 +214,12 @@ const DiffPreview: React.FC<DiffPreviewProps> = ({
         )}
 
       {selectedText && (
-        <SelectionToolbar selectedText={selectedText} position={selectionPosition} onClear={clearSelection} />
+        <SelectionToolbar
+          selectedText={selectedText}
+          selectedUrl={selectedUrl}
+          position={selectionPosition}
+          onClear={clearSelection}
+        />
       )}
     </div>
   );

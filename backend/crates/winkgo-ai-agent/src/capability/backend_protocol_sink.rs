@@ -40,6 +40,7 @@ impl BackendProtocolSink {
             action: Some(tool_name.to_string()),
             description: description.to_string(),
             command_type,
+            questions: None,
             options: vec![
                 ConfirmationOption {
                     label: "messages.confirmation.yesAllowOnce".to_string(),

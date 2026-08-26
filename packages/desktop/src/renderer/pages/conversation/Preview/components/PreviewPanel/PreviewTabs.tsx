@@ -7,7 +7,7 @@
  */
 
 import { iconColors } from '@/renderer/styles/colors';
-import { Close } from '@icon-park/react';
+import { Close, Plus } from '@icon-park/react';
 import { IconShrink } from '@arco-design/web-react/icon';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +34,8 @@ export interface PreviewTab {
    * Whether there are unsaved changes
    */
   isDirty?: boolean;
+  favicon?: string;
+  agentActive?: boolean;
 }
 
 /**
@@ -88,6 +90,7 @@ interface PreviewTabsProps {
    * Close preview panel callback
    */
   onClosePanel?: () => void;
+  onNewBrowserTab?: () => void;
 }
 
 /**
@@ -109,6 +112,7 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
   onCloseTab,
   onContextMenu,
   onClosePanel,
+  onNewBrowserTab,
 }) => {
   const { t } = useTranslation();
   const { left: showLeftFade, right: showRightFade } = tabFadeState;
@@ -129,8 +133,26 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
                 onClick={() => onSwitchTab(tab.id)}
                 onContextMenu={(e) => onContextMenu(e, tab.id)}
               >
-                <span className='text-12px whitespace-nowrap flex items-center gap-4px'>
-                  {tab.title}
+                <span className='text-12px flex items-center gap-4px min-w-0'>
+                  {tab.favicon && (
+                    <img
+                      src={tab.favicon}
+                      alt=''
+                      className='w-12px h-12px flex-shrink-0 rd-2px'
+                      onError={(event) => {
+                        event.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
+                  <span className='truncate max-w-160px' title={tab.title}>
+                    {tab.title}
+                  </span>
+                  {tab.agentActive && (
+                    <span
+                      className='w-6px h-6px rd-full bg-success animate-pulse flex-shrink-0'
+                      title={t('preview.browser.agentActiveTooltip')}
+                    />
+                  )}
                   {/* 未保存指示器 / Unsaved indicator */}
                   {tab.isDirty && (
                     <span className='w-6px h-6px rd-full bg-primary' title={t('preview.unsavedChangesTitle')} />
@@ -150,6 +172,15 @@ const PreviewTabs: React.FC<PreviewTabsProps> = ({
             ))
           ) : (
             <div className='text-12px text-t-tertiary px-10px'>{t('preview.noTabs')}</div>
+          )}
+          {onNewBrowserTab && (
+            <div
+              className='flex items-center justify-center w-24px h-24px ml-4px rd-4px cursor-pointer flex-shrink-0 hover:bg-bg-3 transition-colors'
+              onClick={onNewBrowserTab}
+              title={t('preview.browser.newTab')}
+            >
+              <Plus theme='outline' size='14' fill={iconColors.secondary} />
+            </div>
           )}
         </div>
 

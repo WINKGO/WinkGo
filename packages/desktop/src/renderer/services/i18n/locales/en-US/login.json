@@ -38,6 +38,7 @@
   "errors": {
     "agreementRequired": "Read and agree to the Terms of Service and Privacy Policy before continuing",
     "empty": "Please enter username and password",
+    "usernameNumeric": "Username cannot contain digits only",
     "phoneRequired": "A mobile number is required to register",
     "phoneInvalid": "Enter a valid Chinese mainland number or an international number beginning with +",
     "invalidCredentials": "Invalid username or password",

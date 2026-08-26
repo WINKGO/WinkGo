@@ -1,6 +1,41 @@
 // Modified from AionCore by WINK GO contributors in 2026.
+use crate::ChatFileRef;
 use serde::{Deserialize, Serialize};
 use winkgo_common::FileChangeOperation;
+
+/// Encoding used by the ChatFileRef-addressed content API.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ContentEncoding {
+    /// UTF-8 text (fails for binary/non-UTF-8 input).
+    #[default]
+    Utf8,
+    /// Raw bytes encoded as base64 without a data-URL prefix.
+    Base64,
+    /// Base64 data URL with a MIME type inferred from the file name.
+    DataUrl,
+}
+
+/// Request body for `POST /api/fs/content`.
+#[derive(Debug, Deserialize)]
+pub struct ReadContentRequest {
+    pub file: ChatFileRef,
+    #[serde(default)]
+    pub encoding: ContentEncoding,
+}
+
+/// Request body for `PUT /api/fs/content`.
+#[derive(Debug, Deserialize)]
+pub struct WriteContentRequest {
+    pub file: ChatFileRef,
+    pub data: String,
+}
+
+/// Request body for `POST /api/fs/content/metadata`.
+#[derive(Debug, Deserialize)]
+pub struct ContentMetadataRequest {
+    pub file: ChatFileRef,
+}
 
 // ---------------------------------------------------------------------------
 // A. Core file operations — Request DTOs
@@ -66,12 +101,16 @@ pub struct CopyTarget {
 }
 
 /// Request body for `POST /api/fs/copy` — copy device files into a project
-/// folder (add-to-chat "paste into workspace", pe-addressed).
+/// folder. New callers address the destination through `target`; retained
+/// workspace surfaces may still send an absolute `workspace` path.
 #[derive(Debug, Deserialize)]
 pub struct CopyFilesRequest {
     /// Absolute device paths of external OS files to copy in.
     pub file_paths: Vec<String>,
-    pub target: CopyTarget,
+    #[serde(default)]
+    pub target: Option<CopyTarget>,
+    #[serde(default)]
+    pub workspace: Option<String>,
     #[serde(default)]
     pub source_root: Option<String>,
 }
@@ -389,8 +428,9 @@ mod tests {
         });
         let req: CopyFilesRequest = serde_json::from_value(raw).unwrap();
         assert_eq!(req.file_paths, vec!["/a.txt", "/b.txt"]);
-        assert_eq!(req.target.pe_id, "pe1");
-        assert_eq!(req.target.relative_path, "sub");
+        let target = req.target.expect("target");
+        assert_eq!(target.pe_id, "pe1");
+        assert_eq!(target.relative_path, "sub");
         assert_eq!(req.source_root.as_deref(), Some("/src"));
     }
 
@@ -402,6 +442,17 @@ mod tests {
         });
         let req: CopyFilesRequest = serde_json::from_value(raw).unwrap();
         assert!(req.source_root.is_none());
+    }
+
+    #[test]
+    fn copy_files_request_accepts_legacy_workspace_destination() {
+        let raw = json!({
+            "file_paths": ["/a.txt"],
+            "workspace": "/workspace"
+        });
+        let req: CopyFilesRequest = serde_json::from_value(raw).unwrap();
+        assert!(req.target.is_none());
+        assert_eq!(req.workspace.as_deref(), Some("/workspace"));
     }
 
     #[test]

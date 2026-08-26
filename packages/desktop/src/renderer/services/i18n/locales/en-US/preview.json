@@ -38,6 +38,15 @@
   "closeTabMessage": "The current content has not been saved. Do you want to save before closing?",
   "saveAndClose": "Save and Close",
   "closeWithoutSave": "Don't Save",
+  "saveConflictTitle": "File changed outside WINK GO",
+  "saveConflictMessage": "The file on disk changed after it was opened. Reload the latest content before continuing so other changes are not overwritten.",
+  "reloadFile": "Reload file",
+  "reloadSuccess": "Loaded the latest content from disk",
+  "reloadFailed": "Failed to reload the file",
+  "save": {
+    "tooltip": "Save changes (Ctrl/Cmd+S)",
+    "clean": "No unsaved changes"
+  },
   "pptTitle": "PowerPoint Presentation",
   "pptOpenHint": "Click the button below to open in system application to view full content",
   "pptOpenFile": "Open File",
@@ -133,6 +142,15 @@
     "inspectElement": "Inspect element",
     "inspectElementEnable": "Enable element inspector",
     "inspectElementDisable": "Disable element inspector"
+  },
+  "browser": {
+    "newTab": "New tab",
+    "addressPlaceholder": "Enter a URL or search",
+    "agentActiveTooltip": "The agent is operating this tab",
+    "tabLimitReached": "Browser tab limit reached ({{count}}). The oldest tab was reused.",
+    "agentFirstUseTitle": "The agent is using the in-app browser",
+    "agentFirstUseContent": "It can open pages, click and read content in this panel. Your sign-in state is kept between sessions.",
+    "agentFirstUseAction": "Open settings"
   },
   "ppt": {
     "loading": "Starting PPT preview...",

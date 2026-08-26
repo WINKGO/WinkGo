@@ -1,3 +1,4 @@
+/* Modified from AionUI by WINK GO contributors in 2026. */
 /* Sendbox component styles */
 
 /* Send button disabled state - override Arco Design default disabled styles */
@@ -106,7 +107,9 @@
   transform: none !important;
 }
 
-/* Conversation sendbox model/permission pills: blend into background */
+/* Codex-style conversation controls: clearly clickable, still quiet enough to
+   sit inside the composer toolbar. Model, reasoning and speed live in the
+   nested runtime menu; permission remains a separate runtime-backed control. */
 .sendbox-tools .sendbox-model-btn,
 .sendbox-tools .sendbox-model-btn:hover,
 .sendbox-tools .sendbox-model-btn:active,
@@ -117,10 +120,17 @@
 .sendbox-actions .sendbox-model-btn:active,
 .sendbox-actions .sendbox-model-btn:focus,
 .sendbox-actions .sendbox-model-btn:focus-visible {
-  background: transparent !important;
-  border: none !important;
+  min-height: 30px !important;
+  padding-inline: 10px !important;
+  background: color-mix(in srgb, var(--color-fill-2) 72%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--color-border-2) 72%, transparent) !important;
+  border-radius: 999px !important;
   box-shadow: none !important;
   color: var(--text-secondary) !important;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease !important;
 }
 
 .sendbox-tools .sendbox-model-btn:hover,
@@ -131,7 +141,60 @@
 .sendbox-actions .sendbox-model-btn:active,
 .sendbox-actions .sendbox-model-btn:focus,
 .sendbox-actions .sendbox-model-btn:focus-visible {
+  background: color-mix(in srgb, var(--color-fill-3) 88%, transparent) !important;
+  border-color: color-mix(in srgb, rgb(var(--primary-6)) 28%, var(--color-border-2)) !important;
   color: var(--text-primary) !important;
+}
+
+.sendbox-add-capability-btn,
+.sendbox-add-capability-btn.arco-btn {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  border: 1px solid color-mix(in srgb, var(--color-border-2) 76%, transparent) !important;
+  background: color-mix(in srgb, var(--color-fill-2) 76%, transparent) !important;
+  color: var(--color-text-2) !important;
+  box-shadow: none !important;
+}
+
+.sendbox-add-capability-btn:hover,
+.sendbox-add-capability-btn:focus-visible {
+  background: color-mix(in srgb, var(--color-fill-3) 90%, transparent) !important;
+  border-color: color-mix(in srgb, rgb(var(--primary-6)) 28%, var(--color-border-2)) !important;
+  color: var(--color-text-1) !important;
+}
+
+.winkgo-runtime-menu,
+.winkgo-permission-menu {
+  min-width: 260px !important;
+  padding: 6px !important;
+  border: 1px solid color-mix(in srgb, var(--color-border-2) 84%, transparent) !important;
+  border-radius: 12px !important;
+  background: color-mix(in srgb, var(--color-bg-popup) 96%, transparent) !important;
+  box-shadow: 0 16px 42px rgba(23, 32, 51, 0.15) !important;
+  backdrop-filter: blur(18px);
+}
+
+.winkgo-runtime-menu .arco-menu-item,
+.winkgo-runtime-menu .arco-menu-pop-header,
+.winkgo-permission-menu .arco-menu-item {
+  min-height: 36px;
+  border-radius: 8px !important;
+}
+
+.runtime-selector-menu-row {
+  min-width: 214px;
+}
+
+.runtime-selector-menu-label {
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+
+.runtime-selector-menu-value {
+  max-width: 132px;
+  color: var(--color-text-3);
+  font-size: 12px;
 }
 
 .speech-input-control {

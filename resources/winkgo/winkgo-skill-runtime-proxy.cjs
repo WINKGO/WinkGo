@@ -17,6 +17,17 @@ const nativeSmartHome = require('./winkgo-native-smart-home.cjs');
 const MAX_CONFIG_BYTES = 512 * 1024;
 const REQUEST_TIMEOUT_MS = 90_000;
 const WECHAT_FAVORITES_TOOL = 'winkgo.wechat.list_favorites';
+const BROWSER_SKILL_LIST_TOOL = 'winkgo.browser_skill.list';
+const BROWSER_SKILL_RUN_TOOL = 'winkgo.browser_skill.run';
+const BROWSER_SKILL_TOOL_NAMES = new Set([BROWSER_SKILL_LIST_TOOL, BROWSER_SKILL_RUN_TOOL]);
+const DESKTOP_SKILL_LIST_TOOL = 'winkgo.desktop_skill.list';
+const DESKTOP_SKILL_RUN_TOOL = 'winkgo.desktop_skill.run';
+const DESKTOP_SKILL_TOOL_NAMES = new Set([DESKTOP_SKILL_LIST_TOOL, DESKTOP_SKILL_RUN_TOOL]);
+// The product has a dedicated WINK GO in-app Browser Computer Use MCP.  These
+// legacy Runtime tools operate the Windows/default browser and must never be
+// exposed to an Agent, even when an old enabled-skills.json or a broad
+// `windows.` prefix still contains them.
+const isLegacyExternalBrowserTool = (name) => name === 'windows.open_url' || name.startsWith('windows.browser_');
 const configPath = process.argv[2];
 
 if (!configPath) {
@@ -87,6 +98,8 @@ const readConfig = () => {
       .slice(0, 10);
   return {
     runtimeApi: typeof value.runtimeApi === 'string' ? value.runtimeApi : 'http://127.0.0.1:8121',
+    localBrowserSkillsEnabled: value.localBrowserSkillsEnabled === true,
+    localDesktopSkillsEnabled: value.localDesktopSkillsEnabled === true,
     runtimeLaunch:
       value.runtimeLaunch && typeof value.runtimeLaunch === 'object'
         ? {
@@ -96,6 +109,8 @@ const readConfig = () => {
             workingDirectory:
               typeof value.runtimeLaunch.workingDirectory === 'string' ? value.runtimeLaunch.workingDirectory : '',
             ownerPid: Number.isInteger(value.runtimeLaunch.ownerPid) ? value.runtimeLaunch.ownerPid : process.ppid,
+            desktopSkillsRoot:
+              typeof value.runtimeLaunch.desktopSkillsRoot === 'string' ? value.runtimeLaunch.desktopSkillsRoot : '',
           }
         : null,
     enabledSkillIds: enabledSkillIds.filter((item) => typeof item === 'string'),
@@ -231,6 +246,9 @@ const validateRuntimeLaunch = (launch) => {
     configPath: configFile,
     workingDirectory,
     ownerPid: Number.isInteger(launch.ownerPid) && launch.ownerPid > 0 ? launch.ownerPid : process.ppid,
+    desktopSkillsRoot: path.resolve(
+      launch.desktopSkillsRoot || path.join(process.env.LOCALAPPDATA || '', 'Wink Go', 'winkgo-desktop-skills')
+    ),
   };
 };
 
@@ -268,6 +286,7 @@ const startManagedRuntime = async (config, token) => {
       WINKGO_EXIT_WHEN_OWNER_GONE: '1',
       WINKGO_RUNTIME_ROOT: launch.workingDirectory,
       WINKGO_SKILLS_ROOT: path.join(launch.workingDirectory, 'skills'),
+      WINKGO_DESKTOP_SKILLS_ROOT: launch.desktopSkillsRoot,
       SPARKBOT_SKILLS_ROOT: path.join(launch.workingDirectory, 'skills'),
       PYTHONUTF8: '1',
       PYTHONIOENCODING: 'utf-8',
@@ -398,7 +417,8 @@ let runtimeToolNames = new Set();
 let runtimeToolNamesReady = false;
 const output = (message) => process.stdout.write(`${JSON.stringify(message)}\n`);
 const isAllowed = (name, config) =>
-  config.allowedToolNames.has(name) || config.allowedToolPrefixes.some((prefix) => name.startsWith(prefix));
+  !isLegacyExternalBrowserTool(name) &&
+  (config.allowedToolNames.has(name) || config.allowedToolPrefixes.some((prefix) => name.startsWith(prefix)));
 const transformCompatibilityCall = (name, rawArguments, config) => {
   const alias = config.compatibilityToolAliases[name];
   // A number of current Runtime tools intentionally keep their old public
@@ -456,12 +476,32 @@ const appendNativeTools = (tools, config) => {
     selectedTools.push(tool);
     selectedNames.add(tool.name);
   }
+  if (config.localBrowserSkillsEnabled) {
+    for (const tool of browserSkillTools) {
+      if (!isAllowed(tool.name, config) || selectedNames.has(tool.name)) continue;
+      selectedTools.push(tool);
+      selectedNames.add(tool.name);
+    }
+  }
+  if (config.localDesktopSkillsEnabled) {
+    for (const tool of desktopSkillTools) {
+      if (!isAllowed(tool.name, config) || selectedNames.has(tool.name)) continue;
+      selectedTools.push(tool);
+      selectedNames.add(tool.name);
+    }
+  }
   return selectedTools;
 };
 const hasRuntimeBackedTools = (config) => {
   const nativeNames = new Set(nativeSmartHome.tools.map((tool) => tool.name));
   for (const name of config.allowedToolNames) {
-    if (name !== WECHAT_FAVORITES_TOOL && !nativeNames.has(name) && !config.compatibilityToolAliases[name]) {
+    if (
+      name !== WECHAT_FAVORITES_TOOL &&
+      !BROWSER_SKILL_TOOL_NAMES.has(name) &&
+      !DESKTOP_SKILL_TOOL_NAMES.has(name) &&
+      !nativeNames.has(name) &&
+      !config.compatibilityToolAliases[name]
+    ) {
       return true;
     }
     const alias = config.compatibilityToolAliases[name];
@@ -481,6 +521,145 @@ const wechatFavoritesTool = {
   },
 };
 
+const browserSkillTools = [
+  {
+    name: BROWSER_SKILL_LIST_TOOL,
+    description: '列出用户在 WINK GO 内置浏览器中录制并保存的确定性网页技能。',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: BROWSER_SKILL_RUN_TOOL,
+    description: '在当前可见的 WINK GO 内置浏览器中执行一个已保存的网页技能。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        skill_id: { type: 'string', description: '网页技能 ID。调用前先使用 list 获取。' },
+        parameters: {
+          type: 'object',
+          description: '录制时定义的运行参数；键和值都必须是字符串。',
+          additionalProperties: { type: 'string' },
+        },
+      },
+      required: ['skill_id'],
+      additionalProperties: false,
+    },
+  },
+];
+
+const desktopSkillTools = [
+  {
+    name: DESKTOP_SKILL_LIST_TOOL,
+    description: '列出用户在本机录制并保存的 WINK GO 电脑自动化技能。',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: DESKTOP_SKILL_RUN_TOOL,
+    description: '执行一个已保存的本机电脑自动化技能；只传技能 ID 与参数，不发送完整流程。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        skill_id: { type: 'string', description: '电脑自动化技能 ID。调用前先使用 list 获取。' },
+        parameters: {
+          type: 'object',
+          description: '录制时定义的运行参数；键和值都必须是字符串。',
+          additionalProperties: { type: 'string' },
+        },
+      },
+      required: ['skill_id'],
+      additionalProperties: false,
+    },
+  },
+];
+
+const requestBrowserSkillBridge = async (pathname, init = {}) => {
+  const port = Number.parseInt(process.env.WINKGO_CDP_ACTIVE_PORT || '', 10);
+  const token = process.env.WINKGO_CDP_BRIDGE_TOKEN || '';
+  if (!Number.isInteger(port) || port <= 0 || !token) {
+    throw new Error('WINK GO 内置浏览器尚未连接，请先打开一个内置浏览器页面。');
+  }
+  const response = await fetch(`http://127.0.0.1:${port}${pathname}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...(init.headers || {}),
+    },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  const value = await response.json();
+  if (!response.ok) {
+    throw new Error(value && value.message ? value.message : `Browser Skill bridge returned HTTP ${response.status}.`);
+  }
+  return value;
+};
+
+const callBrowserSkillTool = async (name, rawArguments) => {
+  const args = rawArguments && typeof rawArguments === 'object' ? rawArguments : {};
+  if (name === BROWSER_SKILL_LIST_TOOL) {
+    const value = await requestBrowserSkillBridge('/winkgo/browser-skills');
+    return {
+      content: [{ type: 'text', text: JSON.stringify(value.skills || [], null, 2) }],
+      structuredContent: { skills: value.skills || [] },
+    };
+  }
+  const skillId = typeof args.skill_id === 'string' ? args.skill_id.trim() : '';
+  if (!skillId) throw new Error('skill_id is required.');
+  const parameters = {};
+  if (args.parameters && typeof args.parameters === 'object') {
+    for (const [key, value] of Object.entries(args.parameters)) {
+      if (typeof value === 'string') parameters[key] = value;
+    }
+  }
+  const value = await requestBrowserSkillBridge('/winkgo/browser-skills/run', {
+    method: 'POST',
+    body: JSON.stringify({ skillId, parameters }),
+  });
+  return {
+    isError: value.ok !== true,
+    content: [
+      {
+        type: 'text',
+        text: value.message || (value.ok ? 'Browser Skill completed.' : 'Browser Skill failed.'),
+      },
+    ],
+    structuredContent: value,
+  };
+};
+
+const callDesktopSkillTool = async (name, rawArguments) => {
+  const args = rawArguments && typeof rawArguments === 'object' ? rawArguments : {};
+  if (name === DESKTOP_SKILL_LIST_TOOL) {
+    const value = await requestBrowserSkillBridge('/winkgo/desktop-skills');
+    return {
+      content: [{ type: 'text', text: JSON.stringify(value.skills || [], null, 2) }],
+      structuredContent: { skills: value.skills || [] },
+    };
+  }
+  const skillId = typeof args.skill_id === 'string' ? args.skill_id.trim() : '';
+  if (!skillId) throw new Error('skill_id is required.');
+  const parameters = {};
+  if (args.parameters && typeof args.parameters === 'object') {
+    for (const [key, value] of Object.entries(args.parameters)) {
+      if (typeof value === 'string') parameters[key] = value;
+    }
+  }
+  const value = await requestBrowserSkillBridge('/winkgo/desktop-skills/run', {
+    method: 'POST',
+    body: JSON.stringify({ skillId, parameters, source: 'agent' }),
+  });
+  return {
+    isError: value.ok !== true,
+    content: [
+      { type: 'text', text: value.message || (value.ok ? 'Desktop Skill completed.' : 'Desktop Skill failed.') },
+    ],
+    structuredContent: value,
+  };
+};
+
 const handleRequest = async (message) => {
   const { id, method, params } = message;
   if (method === 'initialize') {
@@ -493,7 +672,8 @@ const handleRequest = async (message) => {
   if (method === 'ping') return {};
   if (method === 'tools/list') {
     const config = readConfig();
-    if (config.enabledSkillIds.length === 0) return { tools: [] };
+    if (config.enabledSkillIds.length === 0 && !config.localBrowserSkillsEnabled && !config.localDesktopSkillsEnabled)
+      return { tools: [] };
     let result = { tools: [] };
     if (hasRuntimeBackedTools(config)) {
       try {
@@ -522,6 +702,12 @@ const handleRequest = async (message) => {
     const config = readConfig();
     const name = params && typeof params.name === 'string' ? params.name : '';
     if (!name || !isAllowed(name, config)) throw new Error(`Tool "${name || 'unknown'}" is not enabled.`);
+    if (config.localBrowserSkillsEnabled && BROWSER_SKILL_TOOL_NAMES.has(name)) {
+      return callBrowserSkillTool(name, params && params.arguments);
+    }
+    if (config.localDesktopSkillsEnabled && DESKTOP_SKILL_TOOL_NAMES.has(name)) {
+      return callDesktopSkillTool(name, params && params.arguments);
+    }
     if (name === WECHAT_FAVORITES_TOOL) {
       const favorites = config.skillPreferences.wechat;
       return {

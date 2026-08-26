@@ -12,10 +12,31 @@ import { Down, Robot } from '@icon-park/react';
 import { Button } from '@arco-design/web-react';
 import { WinkGoSearchInput } from '@/renderer/components/base';
 import { useAssistantOrder } from '@/renderer/hooks/assistant/useAssistantOrder';
+import { useManagedAgentRuntimeCatalog } from '@/renderer/hooks/agent/useManagedAgents';
+import { managedAgentSearchText } from '@/renderer/utils/model/agentTypes';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { resolveAssistantAvatar } from '@/renderer/utils/model/assistantAvatar';
 import { selectableAssistants } from '@/renderer/utils/model/assistantSelection';
 import { useTranslation } from 'react-i18next';
+
+export function assistantMatchesSearch(
+  assistant: Assistant,
+  localeKey: string,
+  query: string,
+  agentSearchText?: string
+): boolean {
+  return [
+    assistant.name,
+    assistant.name_i18n?.[localeKey],
+    assistant.description,
+    assistant.description_i18n?.[localeKey],
+    agentSearchText,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+    .includes(query);
+}
 
 export function resolveAssistantVisibleLimit(width: number): number {
   if (width >= 900) return 6;
@@ -173,14 +194,26 @@ const AssistantSelectionArea: React.FC<AssistantSelectionAreaProps> = ({
   const overflowColumns = widthVisibleLimit;
   // Search only earns its row when the unfiltered list is long enough to scan.
   const showOverflowSearch = Math.ceil(overflowAssistants.length / overflowColumns) > 5;
+  const managedAgentRuntimeCatalog = useManagedAgentRuntimeCatalog();
+  const agentSearchTextById = useMemo(() => {
+    const values = new Map<string, string>();
+    for (const agent of managedAgentRuntimeCatalog) {
+      values.set(agent.id, managedAgentSearchText(agent, localeKey));
+    }
+    return values;
+  }, [localeKey, managedAgentRuntimeCatalog]);
   const filteredOverflowAssistants = useMemo(() => {
     const query = showOverflowSearch ? search.trim().toLowerCase() : '';
     if (!query) return overflowAssistants;
-    return overflowAssistants.filter((assistant) => {
-      const label = assistant.name_i18n?.[localeKey] || assistant.name;
-      return label.toLowerCase().includes(query);
-    });
-  }, [localeKey, overflowAssistants, search, showOverflowSearch]);
+    return overflowAssistants.filter((assistant) =>
+      assistantMatchesSearch(
+        assistant,
+        localeKey,
+        query,
+        assistant.agent_id ? agentSearchTextById.get(assistant.agent_id) : undefined
+      )
+    );
+  }, [agentSearchTextById, localeKey, overflowAssistants, search, showOverflowSearch]);
 
   if (enabledAssistants.length === 0) return null;
 

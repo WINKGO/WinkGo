@@ -777,6 +777,22 @@ impl IConversationRepository for SqliteConversationRepository {
         Ok(rows)
     }
 
+    async fn list_pending_boundary_messages(&self) -> Result<Vec<MessageRow>, DbError> {
+        let rows = sqlx::query_as::<_, MessageRow>(
+            "SELECT m.* FROM messages m \
+             INNER JOIN conversations c ON c.id = m.conversation_id \
+             WHERE m.position = 'right' \
+               AND m.status IN ('pending', 'work') \
+               AND m.type = 'text' \
+               AND m.content LIKE '%\"_winkgo_delivery\"%' \
+             ORDER BY m.created_at ASC, m.id ASC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
     async fn search_messages(
         &self,
         user_id: &str,
@@ -1794,6 +1810,48 @@ mod tests {
             .await
             .unwrap();
         assert!(not_found.is_none());
+    }
+
+    #[tokio::test]
+    async fn list_pending_boundary_messages_returns_right_pending_text_in_order() {
+        let (repo, _db) = setup().await;
+        let conv = sample_conversation(SYSTEM_USER_ID);
+        repo.create(&conv).await.unwrap();
+
+        let mut later = sample_message(&conv.id);
+        later.id = "boundary-later".into();
+        later.msg_id = Some(later.id.clone());
+        later.status = Some("work".into());
+        later.content = r#"{"content":"later","_winkgo_delivery":{"version":1,"kind":"boundary_queue"}}"#.into();
+        later.created_at = 20;
+        repo.insert_message(&later).await.unwrap();
+
+        let mut earlier = sample_message(&conv.id);
+        earlier.id = "boundary-earlier".into();
+        earlier.msg_id = Some(earlier.id.clone());
+        earlier.status = Some("pending".into());
+        earlier.content = r#"{"content":"earlier","_winkgo_delivery":{"version":1,"kind":"boundary_queue"}}"#.into();
+        earlier.created_at = 10;
+        repo.insert_message(&earlier).await.unwrap();
+
+        let mut finished = sample_message(&conv.id);
+        finished.id = "finished".into();
+        finished.msg_id = Some(finished.id.clone());
+        finished.created_at = 5;
+        repo.insert_message(&finished).await.unwrap();
+
+        let mut ordinary_pending = sample_message(&conv.id);
+        ordinary_pending.id = "ordinary-pending".into();
+        ordinary_pending.msg_id = Some(ordinary_pending.id.clone());
+        ordinary_pending.status = Some("pending".into());
+        ordinary_pending.created_at = 1;
+        repo.insert_message(&ordinary_pending).await.unwrap();
+
+        let rows = repo.list_pending_boundary_messages().await.unwrap();
+        assert_eq!(
+            rows.into_iter().map(|row| row.id).collect::<Vec<_>>(),
+            vec!["boundary-earlier", "boundary-later"]
+        );
     }
 
     #[tokio::test]

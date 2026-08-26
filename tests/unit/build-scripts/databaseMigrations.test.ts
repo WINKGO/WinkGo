@@ -28,9 +28,9 @@ describe('database migration release verification', () => {
   it('locks every migration already shipped to WINK GO users', () => {
     const result = verifier.verifyDatabaseMigrations(projectRoot);
 
-    expect(result.latestVersion).toBe(34);
+    expect(result.latestVersion).toBe(35);
     expect(result.minimumAppVersion).toBe('2.2.12');
-    expect(result.versions).toContain(34);
+    expect(result.versions).toContain(35);
     expect(result.count).toBe(result.versions.length);
   });
 

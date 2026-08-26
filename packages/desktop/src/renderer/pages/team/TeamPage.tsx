@@ -22,6 +22,7 @@ import TeamTabs from './components/TeamTabs';
 import TeamChatView from './components/TeamChatView';
 import TeamAgentIdentity from './components/TeamAgentIdentity';
 import TeamViewToggle from './components/TeamViewToggle';
+import TeamActivityView from './activity/TeamActivityView';
 import TeamWarmupOverlay from './components/TeamWarmupOverlay';
 import { useTeamViewMode } from './hooks/useTeamViewMode';
 import { useTeamWarmup, type TeamWarmupMemberState, type TeamWarmupPhase } from './hooks/useTeamWarmup';
@@ -38,6 +39,7 @@ import { usePreviewContext } from '@/renderer/pages/conversation/Preview';
 import { previewScopeKey } from '@/renderer/pages/conversation/Preview/context/previewScope';
 import { setCurrentProject } from '@/renderer/pages/conversation/explorer/currentProjectStore';
 import { setCurrentConversation } from '@/renderer/pages/conversation/explorer/currentConversationStore';
+import { getSnapshotConversationProjectId } from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
 
 type Props = {
   team: TTeam;
@@ -273,7 +275,11 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
     () => getConversationOrNull(leadAssistant!.conversation_id)
   );
   const leaderConversationIdForProject = leadAssistant?.conversation_id;
-  const teamProjectId = dispatchConversation?.project_id ?? null;
+  const snapshotTeamProjectId = leaderConversationIdForProject
+    ? getSnapshotConversationProjectId(leaderConversationIdForProject)
+    : undefined;
+  const teamProjectId =
+    snapshotTeamProjectId !== undefined ? snapshotTeamProjectId : (dispatchConversation?.project_id ?? null);
 
   // Publish the team's project so the Layout-level Explorer host renders it —
   // mirrors conversation/index.tsx (project-scoped, persistent across agent-tab
@@ -508,7 +514,11 @@ const TeamPageContent: React.FC<TeamPageContentProps> = ({
               colorOf={colorOf}
               onRetry={onRetryWarmup}
             />
-            {isSingleView ? (
+            {viewMode === 'board' ? (
+              <div className='flex-1 h-full min-w-0'>
+                <TeamActivityView team={team} />
+              </div>
+            ) : isSingleView ? (
               // 单聊视图：全屏显示当前选中成员（activeSlotId），找不到时回退到 Leader。
               (() => {
                 const assistant =

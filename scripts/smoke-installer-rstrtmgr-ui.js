@@ -155,7 +155,7 @@ SectionEnd
     console.log(`[rstrtmgr-ui] locked file: ${lockedFile}`);
     console.log('[rstrtmgr-ui] compiling harness...');
 
-    const compile = spawnSync(makensis, [nsiPath], { encoding: 'utf8' });
+    const compile = spawnSync(makensis, ['/INPUTCHARSET', 'UTF8', nsiPath], { encoding: 'utf8' });
     if (compile.status !== 0) {
       process.stdout.write(compile.stdout || '');
       process.stderr.write(compile.stderr || '');

@@ -26,6 +26,9 @@ export type ChatFileRef =
   | { kind: 'upload'; path: string }
   | { kind: 'local'; path: string };
 
+/** Wire encoding accepted by the ChatFileRef-addressed content endpoint. */
+export type ContentEncoding = 'utf8' | 'base64' | 'dataurl';
+
 /** Build a project-scoped file ref from an Explorer tree node's identity. */
 export const projectFileRef = (pe_id: string, relative_path: string): ChatFileRef => ({
   kind: 'project',

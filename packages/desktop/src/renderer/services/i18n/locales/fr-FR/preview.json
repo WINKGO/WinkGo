@@ -38,6 +38,15 @@
   "closeTabMessage": "Le contenu actuel n'a pas été enregistré. Voulez-vous enregistrer avant de fermer ?",
   "saveAndClose": "Enregistrer et fermer",
   "closeWithoutSave": "Ne pas enregistrer",
+  "saveConflictTitle": "Fichier modifié en dehors de WINK GO",
+  "saveConflictMessage": "Le fichier sur le disque a été modifié après son ouverture. Rechargez le contenu le plus récent avant de continuer afin de ne pas écraser d'autres modifications.",
+  "reloadFile": "Recharger le fichier",
+  "reloadSuccess": "Contenu le plus récent chargé depuis le disque",
+  "reloadFailed": "Impossible de recharger le fichier",
+  "save": {
+    "tooltip": "Enregistrer les modifications (Ctrl/Cmd+S)",
+    "clean": "Aucune modification non enregistrée"
+  },
   "pptTitle": "Présentation PowerPoint",
   "pptOpenHint": "Cliquez sur le bouton ci-dessous pour ouvrir dans l'application système et voir le contenu complet",
   "pptOpenFile": "Ouvrir le fichier",
@@ -133,6 +142,15 @@
     "inspectElement": "Inspecter l'élément",
     "inspectElementEnable": "Activer l'inspecteur d'éléments",
     "inspectElementDisable": "Désactiver l'inspecteur d'éléments"
+  },
+  "browser": {
+    "newTab": "Nouvel onglet",
+    "addressPlaceholder": "Saisissez une URL ou recherchez",
+    "agentActiveTooltip": "L'agent utilise cet onglet",
+    "tabLimitReached": "Limite d'onglets atteinte ({{count}}). L'onglet le plus ancien a été réutilisé.",
+    "agentFirstUseTitle": "L'agent utilise le navigateur intégré",
+    "agentFirstUseContent": "Il peut ouvrir des pages, cliquer et lire du contenu dans ce panneau. Votre connexion est conservée.",
+    "agentFirstUseAction": "Ouvrir les paramètres"
   },
   "ppt": {
     "loading": "Démarrage de l'aperçu PPT...",

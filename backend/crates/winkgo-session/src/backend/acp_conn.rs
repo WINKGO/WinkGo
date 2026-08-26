@@ -273,6 +273,7 @@ pub fn acp_capabilities() -> Capabilities {
         // 009 R2: ACP is one session/prompt at a time — no proactive next-turn
         // input path from the conv layer. can_queue degrades to false (= can_send).
         accepts_proactive_input: false,
+        supports_midturn_delivery: false,
         // #101: static default empty; filled from the `available_commands_update`
         // session/update (capabilities() merges the discovered set on read).
         slash_commands: Vec::new(),
@@ -2403,6 +2404,7 @@ impl SessionBackend for AcpSessionBackend {
                     turn_gen: cur_gen,
                 })
             }
+            Command::AnswerAsk { .. } => Err(BackendError::CommandNotSupported { command: "answer_ask" }),
             Command::Acknowledge { .. } => {
                 // Conversation-side fold (done-unseen → seen). No ACP wire. Accept.
                 Ok(CommandReceipt {

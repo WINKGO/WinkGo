@@ -16,6 +16,7 @@ const platformSend = vi.fn();
 const { FakeElectronNotification } = vi.hoisted(() => {
   class FakeElectronNotification {
     static instances: FakeElectronNotification[] = [];
+    static isSupported = () => true;
     handlers: Record<string, () => void> = {};
     show = vi.fn();
     constructor(public options: { title: string; body: string; icon?: string }) {

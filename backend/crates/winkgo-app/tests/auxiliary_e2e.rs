@@ -299,6 +299,74 @@ async fn confirm_call_no_task() {
 }
 
 #[tokio::test]
+async fn answer_ask_no_task_is_404() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "user1", "pass123").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Ask Test", "acp").await;
+
+    let req = json_with_token(
+        "POST",
+        &format!("/api/conversations/{conv_id}/asks/req-1/answer"),
+        json!({ "answers": [{ "question": "Which?", "labels": ["A"] }] }),
+        &token,
+        &csrf,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn answer_ask_rejects_empty_answers() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "user1", "pass123").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Ask Test", "acp").await;
+
+    let req = json_with_token(
+        "POST",
+        &format!("/api/conversations/{conv_id}/asks/req-1/answer"),
+        json!({}),
+        &token,
+        &csrf,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn answer_ask_rejects_decline_with_answers() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "user1", "pass123").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Ask Test", "acp").await;
+
+    let req = json_with_token(
+        "POST",
+        &format!("/api/conversations/{conv_id}/asks/req-1/answer"),
+        json!({ "decline": true, "answers": [{ "question": "Which?", "labels": ["A"] }] }),
+        &token,
+        &csrf,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn kill_terminal_without_active_agent_is_400() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "user1", "pass123").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Terminal Test", "acp").await;
+
+    let req = json_with_token(
+        "POST",
+        &format!("/api/conversations/{conv_id}/terminals/winkgo-term-404/kill"),
+        json!({}),
+        &token,
+        &csrf,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn check_approval_no_task() {
     let (mut app, services) = build_app().await;
     let (token, csrf) = setup_and_login(&mut app, &services, "user1", "pass123").await;

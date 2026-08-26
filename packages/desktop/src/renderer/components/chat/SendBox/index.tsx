@@ -31,6 +31,7 @@ import { filterWorkspaceMentionItems, workspaceMentionItemFromListing } from '@/
 import { useProjectMentionSearch } from '@/renderer/pages/conversation/explorer/search/useProjectMentionSearch';
 import { peLabeledPath } from '@/renderer/pages/conversation/explorer/search/searchModel';
 import { copyText } from '@/renderer/utils/ui/clipboard';
+import { chatFileRefKey } from '@/common/types/chatFile';
 import { blurActiveElement, shouldBlockMobileInputFocus } from '@/renderer/utils/ui/focus';
 import { Button, Input, Message, Tag } from '@arco-design/web-react';
 import { ArrowUp, CloseSmall, Plus, Quote } from '@icon-park/react';
@@ -73,11 +74,12 @@ const getSelectedItemMatchKeys = (item: FileSelectionItem): string[] => {
   return [item.relativePath, item.path].filter((value): value is string => Boolean(value));
 };
 
-const getSelectedItemPath = (item: FileSelectionItem): string | undefined => {
+/** Stable attachment identity, including project roots whose relative path is empty. */
+const getSelectedItemKey = (item: FileSelectionItem): string | undefined => {
   if (typeof item === 'string') {
     return item;
   }
-  return item.path;
+  return item.chatRef ? chatFileRefKey(item.chatRef) : item.path || undefined;
 };
 
 const getSelectedItemDisplayLabel = (item: FileSelectionItem): string => {
@@ -88,7 +90,7 @@ const getSelectedItemDisplayLabel = (item: FileSelectionItem): string => {
 };
 
 const rememberSelectedItem = (itemsByPath: Map<string, FileSelectionItem>, item: FileSelectionItem): void => {
-  const path = getSelectedItemPath(item);
+  const path = getSelectedItemKey(item);
   if (!path) {
     return;
   }
@@ -120,7 +122,7 @@ const areSelectionItemsEquivalent = (left: FileSelectionItem[], right: FileSelec
       return false;
     }
 
-    if (getSelectedItemPath(leftItem) !== getSelectedItemPath(rightItem)) {
+    if (getSelectedItemKey(leftItem) !== getSelectedItemKey(rightItem)) {
       return false;
     }
   }
@@ -139,7 +141,7 @@ const buildOwnedSelectionItems = (
   const seenPaths = new Set<string>();
 
   for (const item of currentItems) {
-    const path = getSelectedItemPath(item);
+    const path = getSelectedItemKey(item);
     if (!path || seenPaths.has(path) || !ownedPaths.has(path)) {
       continue;
     }
@@ -197,6 +199,10 @@ const SendBox: React.FC<{
    * `tools` and `rightTools` are not rendered inline on mobile.
    */
   onMobilePlusClick?: () => void;
+  /** Whether this send box currently owns focus in a multi-column team view. */
+  active?: boolean;
+  /** Reports user focus so the team tab selection can follow the focused column. */
+  onFocused?: () => void;
 }> = ({
   onSend,
   onStop,
@@ -224,6 +230,8 @@ const SendBox: React.FC<{
   onSelectedWorkspaceItemsChange,
   bottomHint,
   onMobilePlusClick,
+  active = true,
+  onFocused,
 }) => {
   const layout = useLayoutContext();
   const isMobile = layout?.isMobile ?? false;
@@ -435,7 +443,10 @@ const SendBox: React.FC<{
 
     const mentionQueries = new Set(allAtFileQueries.map((item) => item.query));
     return selectedWorkspaceItems.filter((item) => {
-      if (typeof item !== 'string' && !item.isFile) {
+      // Project references can point to folders (including a project root with
+      // an empty relative path). Keep those as valid chat attachments; only a
+      // folder-shaped value with no backend-resolvable ref is discarded.
+      if (typeof item !== 'string' && !item.isFile && !item.chatRef) {
         return false;
       }
       return !getSelectedItemMatchKeys(item).some((key) => mentionQueries.has(key));
@@ -598,6 +609,26 @@ const SendBox: React.FC<{
     textarea.setSelectionRange(end, end);
     setCaretPosition(end);
   }, [getTextareaElement, input, isMobile, prefillFocusRequest]);
+
+  // Grant focus once for each inactive -> active transition. This prevents the
+  // multiple send boxes in a team view from racing for autofocus.
+  const activeFocusGrantedRef = useRef(false);
+
+  useEffect(() => {
+    if (!active) activeFocusGrantedRef.current = false;
+  }, [active]);
+
+  useEffect(() => {
+    if (!active || isMobile || disabled || activeFocusGrantedRef.current) return;
+    const textarea = getTextareaElement();
+    if (!textarea) return;
+    activeFocusGrantedRef.current = true;
+    if (document.activeElement === textarea) return;
+    textarea.focus();
+    const end = textarea.value.length;
+    textarea.setSelectionRange(end, end);
+    setCaretPosition(end);
+  }, [active, disabled, getTextareaElement, isMobile]);
 
   const syncCaretPosition = useCallback(
     (target?: EventTarget | null) => {
@@ -824,7 +855,7 @@ const SendBox: React.FC<{
     }
 
     for (const item of selectedWorkspaceItems) {
-      const path = getSelectedItemPath(item);
+      const path = getSelectedItemKey(item);
       if (!path) {
         continue;
       }
@@ -836,7 +867,7 @@ const SendBox: React.FC<{
 
     const incomingPaths = new Set<string>();
     for (const item of selectedWorkspaceItems) {
-      const path = getSelectedItemPath(item);
+      const path = getSelectedItemKey(item);
       if (path) {
         incomingPaths.add(path);
       }
@@ -871,7 +902,7 @@ const SendBox: React.FC<{
 
   const handleExternalSelectionAppend = useCallback((items: FileSelectionItem[]) => {
     for (const item of items) {
-      const path = getSelectedItemPath(item);
+      const path = getSelectedItemKey(item);
       if (!path) {
         continue;
       }
@@ -946,7 +977,7 @@ const SendBox: React.FC<{
       const nextValue = input.slice(0, activeAtFileQuery.start) + nextInsertion + input.slice(activeAtFileQuery.end);
       const nextCaret = activeAtFileQuery.start + nextInsertion.length;
       const insertedTokenKey = `${activeAtFileQuery.start}:${nextInsertion.slice(1)}`;
-      const path = getSelectedItemPath(item);
+      const path = getSelectedItemKey(item);
 
       setDismissedAtFileToken(insertedTokenKey);
       setInput(nextValue);
@@ -1034,7 +1065,8 @@ const SendBox: React.FC<{
     mobileUserFocusIntentUntilRef.current = 0;
     handlePasteFocus();
     setIsInputFocused(true);
-  }, [handlePasteFocus, isMobile]);
+    onFocused?.();
+  }, [handlePasteFocus, isMobile, onFocused]);
   const handleInputBlur = useCallback(() => {
     setIsInputFocused(false);
   }, []);
@@ -1544,11 +1576,11 @@ const SendBox: React.FC<{
             <div className='flex flex-wrap gap-6px mb-8px'>
               {unmatchedSelectedWorkspaceItems.map((item) => (
                 <Tag
-                  key={typeof item === 'string' ? item : item.path}
+                  key={getSelectedItemKey(item) ?? getSelectedItemDisplayLabel(item)}
                   closable
                   closeIcon={<CloseSmall theme='outline' size='12' />}
                   onClose={() => {
-                    const path = getSelectedItemPath(item);
+                    const path = getSelectedItemKey(item);
                     if (!path) {
                       return;
                     }
@@ -1607,7 +1639,7 @@ const SendBox: React.FC<{
               {renderHighlightedInputValue()}
             </div>
             <Input.TextArea
-              autoFocus={!isMobile}
+              autoFocus={active && !isMobile}
               disabled={disabled}
               spellCheck={false}
               value={input}

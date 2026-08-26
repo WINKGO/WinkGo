@@ -76,6 +76,76 @@ fn build_acp_final_input_dump_value(
     })
 }
 
+const WINKGO_BROWSER_MCP_SERVER_NAME: &str = "winkgo-browser";
+const WINKGO_BROWSER_TURN_GUARD: &str = r#"[MANDATORY WINK GO BROWSER ROUTE FOR THIS TURN]
+This user message is a browser task. Your first tool-related action MUST use the already-loaded `winkgo-browser` MCP. Use `mcp__winkgo-browser__browser_action` for navigation/actions and `mcp__winkgo-browser__inspect_browser_page` to observe and verify the visible page. If this agent defers MCP schemas, load those exact two tool names with ToolSearch and then execute them. Do not use Bash, PowerShell, command execution, `start`, `open`, `explorer`, a helper binary, filesystem search, the OS default browser, Chrome, Edge, or an agent-host browser connector for this request. Do not merely describe the action. Only report success after the WINK GO MCP returns `ok: true` and the final page has been inspected.
+[/MANDATORY WINK GO BROWSER ROUTE FOR THIS TURN]"#;
+
+fn has_winkgo_browser_mcp(params: &AcpSessionParams) -> bool {
+    params.mcp_servers.iter().any(|server| {
+        let name = match server {
+            agent_client_protocol::schema::McpServer::Http(server) => &server.name,
+            agent_client_protocol::schema::McpServer::Sse(server) => &server.name,
+            agent_client_protocol::schema::McpServer::Stdio(server) => &server.name,
+            _ => return false,
+        };
+        name == WINKGO_BROWSER_MCP_SERVER_NAME
+    })
+}
+
+fn is_browser_intent(raw_user_input: &str) -> bool {
+    let lower = raw_user_input.to_lowercase();
+    if lower.contains("http://") || lower.contains("https://") {
+        return true;
+    }
+
+    let has_action = [
+        "打开", "访问", "浏览", "进入", "搜索", "查找", "open", "visit", "browse", "navigate", "search",
+    ]
+    .iter()
+    .any(|term| lower.contains(term));
+    let has_web_target = [
+        "浏览器",
+        "网页",
+        "网站",
+        "百度",
+        "必应",
+        "谷歌",
+        "携程",
+        "b站",
+        "哔哩哔哩",
+        "知乎",
+        "微博",
+        "淘宝",
+        "京东",
+        "browser",
+        "webpage",
+        "website",
+        "web page",
+        "baidu",
+        "bing",
+        "google",
+        "ctrip",
+        "bilibili",
+    ]
+    .iter()
+    .any(|term| lower.contains(term));
+
+    has_action && has_web_target
+}
+
+fn append_winkgo_browser_turn_guard(
+    raw_user_input: &str,
+    transformed_prompt: String,
+    params: &AcpSessionParams,
+) -> String {
+    if !has_winkgo_browser_mcp(params) || !is_browser_intent(raw_user_input) {
+        return transformed_prompt;
+    }
+
+    format!("{transformed_prompt}\n\n{WINKGO_BROWSER_TURN_GUARD}")
+}
+
 use super::config_option_catalog::{extract_models_from_value, extract_modes_from_value};
 use super::config_options::{ConfigSetPath, ConfigSetPathError, ConfigSnapshot, resolve_set_path};
 use super::mode_normalize::normalize_requested_mode;
@@ -215,7 +285,15 @@ async fn spawn_and_connect_acp_once(
     // 70ms in — ELECTRON-1BT), so we explicitly watch the child. If
     // it dies before init completes, surface a `StartupCrash` carrying
     // the buffered stderr instead of waiting out the timeout.
-    let connect_fut = AcpProtocol::connect(stdin, stdout, runtime.event_sender(), permission_tx, notification_tx);
+    let connect_fut = AcpProtocol::connect(
+        stdin,
+        stdout,
+        runtime.event_sender(),
+        permission_tx,
+        notification_tx,
+        &params.conversation_id,
+        Some(std::path::PathBuf::from(&params.workspace.path)),
+    );
     tokio::pin!(connect_fut);
     let protocol = tokio::select! {
         biased;
@@ -640,6 +718,11 @@ impl AcpAgentManager {
     fn record_user_cancel_request(runtime: &AgentRuntime, session: &mut AcpSession) {
         session.record_close_reason(Some(CloseReason::UserCancel));
         runtime.bump_activity();
+    }
+
+    /// Stop one client-hosted command without stopping the owning Agent turn.
+    pub async fn kill_client_terminal(&self, terminal_id: &str) -> bool {
+        self.protocol.terminal_registry().kill(terminal_id, "user").await
     }
 
     fn ensure_protocol_connected_for_operation(&self, operation: &'static str) -> Result<(), AgentError> {
@@ -1150,7 +1233,7 @@ impl AcpAgentManager {
             };
             let transformed = self.pipeline.pre_send(&mut ctx, data.content.clone()).await;
             self.commit_session_changes(&mut s).await;
-            transformed
+            append_winkgo_browser_turn_guard(&raw_user_input, transformed, &self.params)
         };
 
         self.dump_acp_final_input(&sid, data, &content);
@@ -1295,6 +1378,18 @@ impl crate::agent_task::IAgentTask for AcpAgentManager {
 
     fn subscribe(&self) -> broadcast::Receiver<AgentStreamEvent> {
         self.runtime.subscribe()
+    }
+
+    fn prompt_media_caps(&self) -> crate::types::PromptMediaCaps {
+        let caps = self
+            .protocol
+            .agent_capabilities()
+            .map(|value| value.prompt_capabilities)
+            .unwrap_or_default();
+        crate::types::PromptMediaCaps {
+            image: caps.image,
+            audio: caps.audio,
+        }
     }
 
     #[tracing::instrument(skip_all, fields(conversation_id = %self.params.conversation_id, msg_id = %data.msg_id))]
@@ -1548,7 +1643,8 @@ impl AcpAgentManager {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_acp_final_input_dump_value, exit_status_parts, normalize_config_option_request_value, user_facing_message,
+        build_acp_final_input_dump_value, exit_status_parts, is_browser_intent, normalize_config_option_request_value,
+        user_facing_message,
     };
     use crate::agent_runtime::AgentRuntime;
     use crate::error::AgentError;
@@ -1685,6 +1781,25 @@ mod tests {
             normalize_config_option_request_value(&metadata, &snapshot, "mode", "full-access"),
             "agent-full-access"
         );
+    }
+
+    #[test]
+    fn browser_intent_matches_explicit_web_navigation_requests() {
+        for prompt in [
+            "帮我打开百度",
+            "帮我用浏览器打开携程",
+            "访问 https://www.bilibili.com 并告诉我标题",
+            "Open the Bing website",
+        ] {
+            assert!(is_browser_intent(prompt), "expected browser intent: {prompt}");
+        }
+    }
+
+    #[test]
+    fn browser_intent_ignores_unrelated_open_requests() {
+        for prompt in ["打开本地文件", "搜索项目里的 TODO", "帮我进入设置页面"] {
+            assert!(!is_browser_intent(prompt), "unexpected browser intent: {prompt}");
+        }
     }
 
     #[test]

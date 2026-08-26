@@ -12,7 +12,7 @@
   "icon_key": "tv",
   "color": "linear-gradient(135deg, #00a1d6, #f25d8e)",
   "description": "独立控制 BILIBILI 桌面客户端，支持搜索、选集、播放和窗口读取。",
-  "strong_aliases": ["哔哩哔哩", "BILIBILI", "B站"],
+  "strong_aliases": ["哔哩哔哩", "BILIBILI", "BIBIBI", "B站"],
   "weak_aliases": ["视频", "追剧", "下一集", "上一集", "播放"],
   "capability_labels": ["搜索视频", "分集跳转", "播放控制", "页面读取"],
   "related_skill_ids": [],

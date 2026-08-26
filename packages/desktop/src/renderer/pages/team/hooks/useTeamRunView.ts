@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { ipcBridge } from '@/common';
 import type {
   ITeamChildTurnEvent,
@@ -67,9 +68,9 @@ const debugTeamChildTurnEvent = (source: string, event: ITeamChildTurnEvent) => 
   });
 };
 
-const indexSlotWork = (slotWork: ITeamSlotWork[]): Record<string, ITeamSlotWork | undefined> => {
+const indexSlotWork = (slotWork?: ITeamSlotWork[] | null): Record<string, ITeamSlotWork | undefined> => {
   const indexed: Record<string, ITeamSlotWork | undefined> = {};
-  for (const work of slotWork) {
+  for (const work of slotWork ?? []) {
     indexed[work.slot_id] = work;
   }
   return indexed;

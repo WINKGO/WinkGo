@@ -2,13 +2,13 @@
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use winkgo_ai_agent::session_context::{AgentSessionContext, AgentSessionKind};
-use winkgo_ai_agent::types::BuildTaskOptions;
+use winkgo_ai_agent::types::{BuildTaskOptions, SendMessageData};
 use winkgo_ai_agent::{
     ActiveLeaseRegistry, AgentAvailabilityFeedbackPort, AgentError, AgentInstance, AgentSendError, IWorkerTaskManager,
-    RuntimeTokenScope, RuntimeTokenService, TEAM_RUNTIME_TOKEN_SESSION_GENERATION,
+    MidturnDeliveryError, RuntimeTokenScope, RuntimeTokenService, TEAM_RUNTIME_TOKEN_SESSION_GENERATION,
 };
 
 use crate::message_cursor::{decode_message_cursor, encode_message_cursor};
@@ -16,7 +16,7 @@ use crate::runtime_completion::RuntimeCompletionPublisher;
 use crate::runtime_persistence::{RuntimePersistenceCoordinator, RuntimeWriteKind};
 use crate::runtime_state::ConversationRuntimeStateService;
 use chrono::Datelike;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::Duration;
 use tracing::{debug, error, info, warn};
 use winkgo_api_types::ChatFileRef;
@@ -25,22 +25,24 @@ use winkgo_api_types::{
     ConfirmRequest, ConfirmationListResponse, ConversationArtifactKind, ConversationArtifactListResponse,
     ConversationArtifactResponse, ConversationArtifactStatus, ConversationListResponse, ConversationMcpStatus,
     ConversationMcpStatusKind, ConversationResponse, ConversationRuntimeSummary, CreateConversationRequest,
-    EnsureConversationRuntimeResponse, ListConversationsQuery, ListMessagesQuery, MessageListResponse, MessageResponse,
-    MessageSearchResponse, SearchMessagesQuery, SendMessageRequest, SendMessageResponse, SessionMcpServer,
-    SessionMcpTransport, TeamSessionBinding, UpdateConversationArtifactRequest, UpdateConversationRequest,
-    WebSocketMessage, assistant_avatar_response_value, assistant_avatar_response_value_with_version,
+    EnsureConversationRuntimeResponse, ForkConversationRequest, ListConversationsQuery, ListMessagesQuery,
+    MessageListResponse, MessageResponse, MessageSearchResponse, PromptCapabilityView, SearchMessagesQuery,
+    SendMessageRequest, SendMessageResponse, SessionMcpServer, SessionMcpTransport, TeamSessionBinding,
+    UpdateConversationArtifactRequest, UpdateConversationRequest, WebSocketMessage, assistant_avatar_response_value,
+    assistant_avatar_response_value_with_version,
 };
 use winkgo_common::{
     AgentKillReason, AgentType, ConversationSource, ConversationStatus, ErrorChain, MessageType, OnConversationDelete,
-    PaginatedResult, WorkspacePathValidationError, generate_short_id, now_ms, validate_workspace_path_availability,
+    PaginatedResult, WorkspacePathValidationError, generate_id, generate_short_id, now_ms,
+    validate_workspace_path_availability,
 };
 use winkgo_db::models::{AssistantDefinitionRow, ConversationAssistantSnapshotRow, ConversationRow, MessageRow};
 use winkgo_db::{
     AgentBindingResolution, ConversationFilters, ConversationRowUpdate, CreateAcpSessionParams, IAcpSessionRepository,
     IAgentMetadataRepository, IAssistantDefinitionRepository, IAssistantOverlayRepository,
     IAssistantPreferenceRepository, IConversationRepository, IMcpServerRepository, MessagePageCursor,
-    MessagePageDirection, MessagePageParams, SaveRuntimeStateParams, UpsertConversationAssistantSnapshotParams,
-    resolve_agent_binding_from_rows,
+    MessagePageDirection, MessagePageParams, MessageRowUpdate, SaveRuntimeStateParams,
+    UpsertConversationAssistantSnapshotParams, resolve_agent_binding_from_rows,
 };
 use winkgo_extension::AssistantRuleDispatcher;
 use winkgo_mcp::{AcpMcpCapabilities, parse_acp_mcp_capabilities};
@@ -61,6 +63,9 @@ use std::sync::RwLock;
 
 pub(crate) const MAX_SYSTEM_RESPONSE_CONTINUATIONS_PER_TURN: usize = 4;
 const ACP_CANCEL_DRAIN_TIMEOUT: Duration = Duration::from_secs(15);
+pub(crate) const MAX_BOUNDARY_QUEUED_MESSAGES: usize = 20;
+const PERSISTED_BOUNDARY_DELIVERY_KIND: &str = "boundary_queue";
+const PERSISTED_BOUNDARY_DELIVERY_VERSION: u8 = 1;
 const LEGACY_CONVERSATION_ARCHIVED_MESSAGE: &str =
     "This historical conversation can no longer be continued. Please start a new conversation.";
 const DEPRECATED_AGENT_TYPE_MESSAGE: &str = "This agent type is no longer supported for new conversations.";
@@ -328,11 +333,100 @@ pub struct ConversationService {
     runtime_helper_bin: Option<String>,
     runtime_base_url: Option<String>,
     runtime_token_service: Option<Arc<RuntimeTokenService>>,
+    boundary_queue: Arc<Mutex<BoundaryQueueStorage>>,
 
     // Repos for conversation, acp_session and agent_metadata access.
     conversation_repo: Arc<dyn IConversationRepository>,
     agent_metadata_repo: Arc<dyn IAgentMetadataRepository>,
     acp_session_repo: Arc<dyn IAcpSessionRepository>,
+}
+
+#[derive(Debug, Clone)]
+struct QueuedBoundaryMessage {
+    user_id: String,
+    conversation_id: String,
+    msg_id: String,
+    content: String,
+    files: Vec<String>,
+    inject_skills: Vec<String>,
+    hidden: bool,
+    delivery_retries: u8,
+}
+
+#[derive(Default)]
+struct BoundaryQueueStorage {
+    queues: HashMap<String, VecDeque<QueuedBoundaryMessage>>,
+    reservations: HashMap<String, usize>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct PersistedBoundaryDelivery {
+    version: u8,
+    kind: String,
+    user_id: String,
+    #[serde(default)]
+    files: Vec<String>,
+    #[serde(default)]
+    inject_skills: Vec<String>,
+}
+
+fn persisted_boundary_content(content: &str, item: &QueuedBoundaryMessage) -> String {
+    serde_json::json!({
+        "content": content,
+        "_winkgo_delivery": PersistedBoundaryDelivery {
+            version: PERSISTED_BOUNDARY_DELIVERY_VERSION,
+            kind: PERSISTED_BOUNDARY_DELIVERY_KIND.to_owned(),
+            user_id: item.user_id.clone(),
+            files: item.files.clone(),
+            inject_skills: item.inject_skills.clone(),
+        }
+    })
+    .to_string()
+}
+
+fn queued_boundary_message_from_row(row: &MessageRow) -> Option<QueuedBoundaryMessage> {
+    if row.position.as_deref() != Some("right")
+        || !matches!(row.status.as_deref(), Some("pending" | "work"))
+        || row.r#type != "text"
+    {
+        return None;
+    }
+    let value = serde_json::from_str::<serde_json::Value>(&row.content).ok()?;
+    let content = value.get("content")?.as_str()?.to_owned();
+    let delivery = serde_json::from_value::<PersistedBoundaryDelivery>(value.get("_winkgo_delivery")?.clone()).ok()?;
+    if delivery.version != PERSISTED_BOUNDARY_DELIVERY_VERSION
+        || delivery.kind != PERSISTED_BOUNDARY_DELIVERY_KIND
+        || delivery.user_id.trim().is_empty()
+    {
+        return None;
+    }
+    Some(QueuedBoundaryMessage {
+        user_id: delivery.user_id,
+        conversation_id: row.conversation_id.clone(),
+        msg_id: row.msg_id.clone().unwrap_or_else(|| row.id.clone()),
+        content,
+        files: delivery.files,
+        inject_skills: delivery.inject_skills,
+        hidden: row.hidden,
+        delivery_retries: 0,
+    })
+}
+
+fn inert_fork_message_content(raw_content: &str) -> (String, bool) {
+    let Ok(mut value) = serde_json::from_str::<serde_json::Value>(raw_content) else {
+        return (raw_content.to_owned(), false);
+    };
+    let removed = value
+        .as_object_mut()
+        .and_then(|object| object.remove("_winkgo_delivery"))
+        .is_some();
+    if !removed {
+        return (raw_content.to_owned(), false);
+    }
+    (
+        serde_json::to_string(&value).unwrap_or_else(|_| raw_content.to_owned()),
+        true,
+    )
 }
 
 #[derive(Clone)]
@@ -402,6 +496,7 @@ impl ConversationService {
             runtime_helper_bin: None,
             runtime_base_url: None,
             runtime_token_service: None,
+            boundary_queue: Arc::new(Mutex::new(BoundaryQueueStorage::default())),
 
             conversation_repo,
             agent_metadata_repo,
@@ -662,9 +757,20 @@ impl ConversationService {
         let has_task = agent.is_some();
         let task_status = agent.as_ref().and_then(|agent| agent.status());
         let pending_confirmations = agent.as_ref().map(|agent| agent.get_confirmations().len()).unwrap_or(0);
+        let interjection_mode =
+            if pending_confirmations == 0 && agent.as_ref().is_some_and(AgentInstance::supports_midturn_delivery) {
+                winkgo_api_types::InterjectionMode::Native
+            } else {
+                winkgo_api_types::InterjectionMode::BoundaryQueue
+            };
 
-        self.runtime_state
-            .summary_from_parts(conversation_id, task_status, has_task, pending_confirmations)
+        self.runtime_state.summary_from_parts(
+            conversation_id,
+            task_status,
+            has_task,
+            pending_confirmations,
+            interjection_mode,
+        )
     }
 
     async fn send_message_response(
@@ -676,8 +782,379 @@ impl ConversationService {
         SendMessageResponse {
             msg_id,
             turn_id,
+            delivered_midturn: false,
+            queued_at_boundary: false,
             runtime: self.runtime_summary_for(conversation_id).await,
         }
+    }
+
+    async fn enqueue_boundary_message(
+        &self,
+        user_id: &str,
+        conversation_id: &str,
+        active_turn_id: String,
+        resolved: ResolvedChatMessage,
+        req: SendMessageRequest,
+    ) -> Result<SendMessageResponse, ConversationError> {
+        self.reserve_boundary_slot(conversation_id)?;
+
+        let msg_id = Self::mint_msg_id();
+        let item = QueuedBoundaryMessage {
+            user_id: user_id.to_owned(),
+            conversation_id: conversation_id.to_owned(),
+            msg_id: msg_id.clone(),
+            content: resolved.content.clone(),
+            files: resolved.files,
+            inject_skills: req.inject_skills,
+            hidden: req.hidden,
+            delivery_retries: 0,
+        };
+        if let Err(error) = self.persist_pending_interjection(&item).await {
+            self.release_boundary_reservation(conversation_id);
+            return Err(error);
+        }
+        self.commit_boundary_reservation(item)?;
+        if !self.runtime_state.is_claimed(conversation_id) {
+            self.resume_persisted_boundary_queue(conversation_id);
+        }
+
+        Ok(SendMessageResponse {
+            msg_id,
+            turn_id: active_turn_id,
+            delivered_midturn: false,
+            queued_at_boundary: true,
+            runtime: self.runtime_summary_for(conversation_id).await,
+        })
+    }
+
+    fn reserve_boundary_slot(&self, conversation_id: &str) -> Result<(), ConversationError> {
+        let mut storage = self
+            .boundary_queue
+            .lock()
+            .map_err(|_| ConversationError::internal("boundary queue lock poisoned"))?;
+        let queued = storage.queues.get(conversation_id).map_or(0, VecDeque::len);
+        let reserved = storage.reservations.get(conversation_id).copied().unwrap_or(0);
+        if queued + reserved >= MAX_BOUNDARY_QUEUED_MESSAGES {
+            return Err(ConversationError::Busy {
+                reason: format!("conversation {conversation_id} boundary queue is full"),
+            });
+        }
+        *storage.reservations.entry(conversation_id.to_owned()).or_default() += 1;
+        Ok(())
+    }
+
+    fn release_boundary_reservation(&self, conversation_id: &str) {
+        if let Ok(mut storage) = self.boundary_queue.lock()
+            && let Some(reserved) = storage.reservations.get_mut(conversation_id)
+        {
+            *reserved = reserved.saturating_sub(1);
+            if *reserved == 0 {
+                storage.reservations.remove(conversation_id);
+            }
+        }
+    }
+
+    fn commit_boundary_reservation(&self, item: QueuedBoundaryMessage) -> Result<(), ConversationError> {
+        let conversation_id = item.conversation_id.clone();
+        let mut storage = self
+            .boundary_queue
+            .lock()
+            .map_err(|_| ConversationError::internal("boundary queue lock poisoned"))?;
+        if let Some(reserved) = storage.reservations.get_mut(&conversation_id) {
+            *reserved = reserved.saturating_sub(1);
+            if *reserved == 0 {
+                storage.reservations.remove(&conversation_id);
+            }
+        }
+        storage.queues.entry(conversation_id).or_default().push_back(item);
+        Ok(())
+    }
+
+    async fn persist_pending_interjection(
+        &self,
+        item: &QueuedBoundaryMessage,
+    ) -> Result<(String, i64), ConversationError> {
+        let created_at = now_ms();
+        let row = MessageRow {
+            id: item.msg_id.clone(),
+            conversation_id: item.conversation_id.clone(),
+            msg_id: Some(item.msg_id.clone()),
+            r#type: "text".into(),
+            content: persisted_boundary_content(&item.content, item),
+            position: Some("right".into()),
+            status: Some("pending".into()),
+            hidden: item.hidden,
+            created_at,
+        };
+        self.conversation_repo.insert_message(&row).await?;
+        self.broadcaster.broadcast(WebSocketMessage::new(
+            "message.userCreated",
+            serde_json::json!({
+                "conversation_id": item.conversation_id,
+                "msg_id": item.msg_id,
+                "content": item.content,
+                "position": "right",
+                "status": "pending",
+                "hidden": item.hidden,
+                "created_at": created_at,
+            }),
+        ));
+        Ok((item.msg_id.clone(), created_at))
+    }
+
+    fn enqueue_existing_boundary_message(&self, item: QueuedBoundaryMessage) -> Result<(), ConversationError> {
+        let mut storage = self
+            .boundary_queue
+            .lock()
+            .map_err(|_| ConversationError::internal("boundary queue lock poisoned"))?;
+        let reserved = storage.reservations.get(&item.conversation_id).copied().unwrap_or(0);
+        let conversation_queue = storage.queues.entry(item.conversation_id.clone()).or_default();
+        if conversation_queue.iter().any(|queued| queued.msg_id == item.msg_id) {
+            return Ok(());
+        }
+        if conversation_queue.len() + reserved >= MAX_BOUNDARY_QUEUED_MESSAGES {
+            return Err(ConversationError::Busy {
+                reason: format!("conversation {} boundary queue is full", item.conversation_id),
+            });
+        }
+        conversation_queue.push_back(item);
+        Ok(())
+    }
+
+    async fn try_native_interjection(
+        &self,
+        agent: &AgentInstance,
+        user_id: &str,
+        conversation_id: &str,
+        active_turn_id: String,
+        resolved: ResolvedChatMessage,
+        req: SendMessageRequest,
+    ) -> Result<SendMessageResponse, ConversationError> {
+        let msg_id = Self::mint_msg_id();
+        let item = QueuedBoundaryMessage {
+            user_id: user_id.to_owned(),
+            conversation_id: conversation_id.to_owned(),
+            msg_id: msg_id.clone(),
+            content: resolved.content.clone(),
+            files: resolved.files.clone(),
+            inject_skills: req.inject_skills.clone(),
+            hidden: req.hidden,
+            delivery_retries: 0,
+        };
+        self.persist_pending_interjection(&item).await?;
+        self.update_boundary_message_status(&item, "work", Some(&active_turn_id))
+            .await?;
+        let data = SendMessageData {
+            content: resolved.content,
+            msg_id: msg_id.clone(),
+            turn_id: Some(active_turn_id.clone()),
+            files: resolved.files,
+            inject_skills: req.inject_skills,
+        };
+
+        match agent.deliver_midturn(data).await {
+            Ok(()) => {
+                self.update_boundary_message_status(&item, "finish", Some(&active_turn_id))
+                    .await?;
+                Ok(SendMessageResponse {
+                    msg_id,
+                    turn_id: active_turn_id,
+                    delivered_midturn: true,
+                    queued_at_boundary: false,
+                    runtime: self.runtime_summary_for(conversation_id).await,
+                })
+            }
+            Err(MidturnDeliveryError::Rejected(error)) => {
+                warn!(
+                    conversation_id,
+                    msg_id,
+                    error = %error,
+                    "native mid-turn delivery failed; falling back to boundary queue"
+                );
+                self.update_boundary_message_status(&item, "pending", None).await?;
+                if let Err(queue_error) = self.enqueue_existing_boundary_message(item.clone()) {
+                    self.update_boundary_message_status(&item, "error", None).await?;
+                    return Err(queue_error);
+                }
+                let mut runtime = self.runtime_summary_for(conversation_id).await;
+                runtime.interjection_mode = winkgo_api_types::InterjectionMode::BoundaryQueue;
+                Ok(SendMessageResponse {
+                    msg_id,
+                    turn_id: active_turn_id,
+                    delivered_midturn: false,
+                    queued_at_boundary: true,
+                    runtime,
+                })
+            }
+            Err(MidturnDeliveryError::Uncertain(error)) => {
+                warn!(
+                    conversation_id,
+                    msg_id,
+                    error = %error,
+                    "native mid-turn delivery result is uncertain; refusing automatic replay"
+                );
+                self.update_boundary_message_status(&item, "error", Some(&active_turn_id))
+                    .await?;
+                Err(ConversationError::Timeout {
+                    reason: send_error_display_message(&error),
+                })
+            }
+        }
+    }
+
+    async fn update_boundary_message_status(
+        &self,
+        item: &QueuedBoundaryMessage,
+        status: &str,
+        turn_id: Option<&str>,
+    ) -> Result<(), ConversationError> {
+        let update = MessageRowUpdate {
+            status: Some(Some(status.to_owned())),
+            ..Default::default()
+        };
+        self.conversation_repo.update_message(&item.msg_id, &update).await?;
+        let mut payload = serde_json::json!({
+            "user_id": item.user_id,
+            "conversation_id": item.conversation_id,
+            "msg_id": item.msg_id,
+            "status": status,
+        });
+        if let Some(turn_id) = turn_id {
+            payload["turn_id"] = serde_json::Value::String(turn_id.to_owned());
+        }
+        self.broadcaster
+            .broadcast(WebSocketMessage::new("message.statusChanged", payload));
+        Ok(())
+    }
+
+    fn pop_boundary_message(&self, conversation_id: &str) -> Option<QueuedBoundaryMessage> {
+        let mut storage = self.boundary_queue.lock().ok()?;
+        let item = storage.queues.get_mut(conversation_id)?.pop_front();
+        if storage.queues.get(conversation_id).is_some_and(VecDeque::is_empty) {
+            storage.queues.remove(conversation_id);
+        }
+        item
+    }
+
+    fn push_boundary_message_front(&self, item: QueuedBoundaryMessage) {
+        if let Ok(mut storage) = self.boundary_queue.lock() {
+            storage
+                .queues
+                .entry(item.conversation_id.clone())
+                .or_default()
+                .push_front(item);
+        }
+    }
+
+    fn schedule_boundary_retry(&self, mut item: QueuedBoundaryMessage) {
+        if item.delivery_retries >= 3 {
+            warn!(msg_id = %item.msg_id, "boundary message persistence retry limit reached; leaving row for startup recovery");
+            return;
+        }
+        item.delivery_retries += 1;
+        let conversation_id = item.conversation_id.clone();
+        let delay_ms = 150_u64 * (1_u64 << (item.delivery_retries - 1));
+        self.push_boundary_message_front(item);
+        let service = self.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+            service.resume_persisted_boundary_queue(&conversation_id);
+        });
+    }
+
+    pub(crate) async fn restore_persisted_boundary_message(
+        &self,
+        row: &MessageRow,
+    ) -> Result<Option<String>, ConversationError> {
+        let Some(item) = queued_boundary_message_from_row(row) else {
+            return Ok(None);
+        };
+        if row.status.as_deref() == Some("work") {
+            self.update_boundary_message_status(&item, "error", None).await?;
+            return Ok(None);
+        }
+        let conversation_id = item.conversation_id.clone();
+        if let Err(error) = self.enqueue_existing_boundary_message(item.clone()) {
+            self.update_boundary_message_status(&item, "error", None).await?;
+            return Err(error);
+        }
+        Ok(Some(conversation_id))
+    }
+
+    pub(crate) fn resume_persisted_boundary_queue(&self, conversation_id: &str) {
+        if self.runtime_state.is_claimed(conversation_id) {
+            return;
+        }
+        if let Some(item) = self.pop_boundary_message(conversation_id) {
+            let service = self.clone();
+            tokio::spawn(service.run_boundary_message(item));
+        }
+    }
+
+    fn run_boundary_message(self, item: QueuedBoundaryMessage) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>> {
+        Box::pin(async move {
+            if let Err(error) = self.update_boundary_message_status(&item, "work", None).await {
+                warn!(msg_id = %item.msg_id, error = %ErrorChain(&error), "boundary message could not enter delivering state");
+                self.schedule_boundary_retry(item);
+                return;
+            }
+            let started_service = self.clone();
+            let started_item = item.clone();
+            let on_started: ConversationAgentTurnStartedCallback = Arc::new(move |started| {
+                let service = started_service.clone();
+                let item = started_item.clone();
+                Box::pin(async move {
+                    service.broadcaster.broadcast(WebSocketMessage::new(
+                        "message.statusChanged",
+                        serde_json::json!({
+                            "user_id": item.user_id,
+                            "conversation_id": item.conversation_id,
+                            "msg_id": item.msg_id,
+                            "status": "work",
+                            "turn_id": started.turn_id,
+                        }),
+                    ));
+                })
+            });
+            let request = ConversationAgentTurnRequest {
+                user_id: item.user_id.clone(),
+                conversation_id: item.conversation_id.clone(),
+                content: item.content.clone(),
+                files: item.files.clone(),
+                inject_skills: item.inject_skills.clone(),
+                required_runtime_mode: None,
+                persist_user_message: false,
+                user_message_hidden: item.hidden,
+                on_started: Some(on_started),
+            };
+            match self.run_agent_turn(request).await {
+                Ok(outcome) => {
+                    let status = match outcome.status {
+                        ConversationAgentTurnStatus::Completed => "finish",
+                        ConversationAgentTurnStatus::Failed => "error",
+                    };
+                    if let Err(error) = self
+                        .update_boundary_message_status(&item, status, Some(&outcome.turn_id))
+                        .await
+                    {
+                        warn!(msg_id = %item.msg_id, error = %ErrorChain(&error), "boundary message terminal status update failed");
+                    }
+                }
+                Err(ConversationError::Busy { .. }) => {
+                    if let Err(error) = self.update_boundary_message_status(&item, "pending", None).await {
+                        warn!(msg_id = %item.msg_id, error = %ErrorChain(&error), "busy boundary message could not return to pending state");
+                        return;
+                    }
+                    self.push_boundary_message_front(item);
+                }
+                Err(error) => {
+                    warn!(msg_id = %item.msg_id, error = %ErrorChain(&error), "boundary message execution failed");
+                    if let Err(status_error) = self.update_boundary_message_status(&item, "error", None).await {
+                        warn!(msg_id = %item.msg_id, error = %ErrorChain(&status_error), "boundary message error status update failed");
+                    }
+                }
+            }
+        })
     }
 
     pub async fn complete_turn(&self, conversation_id: &str, turn_id: &str) {
@@ -697,6 +1174,10 @@ impl ConversationService {
         }
 
         self.complete_turn(conversation_id, turn_id).await;
+        if let Some(item) = self.pop_boundary_message(conversation_id) {
+            let service = self.clone();
+            tokio::spawn(service.run_boundary_message(item));
+        }
     }
 }
 
@@ -1855,6 +2336,10 @@ impl ConversationService {
         let mut response = row_to_response_with_extra(row, extra, &self.workspace_root)?;
         self.attach_assistant_identity(&mut response).await?;
         response.runtime = Some(self.runtime_summary_for(id).await);
+        response.prompt_capability =
+            resolve_prompt_capability(&self.agent_metadata_repo, &response.r#type, &response.extra)
+                .await
+                .unwrap_or(None);
         if project_backfilled {
             self.broadcast_list_changed(id, "updated", response.source.as_ref());
         }
@@ -2162,6 +2647,10 @@ impl ConversationService {
         let auto_workspace_to_delete = auto_provisioned_workspace_to_delete(&self.workspace_root, &existing, id);
 
         let had_active_turn = self.runtime_state.mark_deleting(id);
+        if let Ok(mut storage) = self.boundary_queue.lock() {
+            storage.queues.remove(id);
+            storage.reservations.remove(id);
+        }
 
         // Snapshot the hook list under the read lock, then drop the guard
         // before awaiting — `RwLockReadGuard` is not `Send`, so holding it
@@ -2234,6 +2723,153 @@ impl ConversationService {
         req: CloneConversationRequest,
     ) -> Result<ConversationResponse, ConversationError> {
         self.create(user_id, req.conversation).await
+    }
+
+    /// Fork a local conversation at a selected persisted message.
+    ///
+    /// This is deliberately a data-level branch: WINK GO copies the visible
+    /// history through the anchor into a new conversation and strips every
+    /// parent runtime/session identifier. The new branch therefore cannot
+    /// mutate or resume the parent's process, while still retaining the
+    /// selected context for agents that rebuild from local history.
+    pub async fn fork(
+        &self,
+        user_id: &str,
+        parent_id: &str,
+        req: ForkConversationRequest,
+    ) -> Result<ConversationResponse, ConversationError> {
+        let parent = self
+            .conversation_repo
+            .get(parent_id)
+            .await?
+            .filter(|row| row.user_id == user_id)
+            .ok_or_else(|| ConversationError::NotFound {
+                id: parent_id.to_owned(),
+            })?;
+        let mut extra: serde_json::Value = serde_json::from_str(&parent.extra)
+            .map_err(|error| ConversationError::internal(format!("Invalid extra JSON: {error}")))?;
+        if extra.get("teamId").is_some() || extra.get("team_id").is_some() {
+            return Err(ConversationError::bad_request(
+                "FORK_TEAM_UNSUPPORTED: team member conversations must be managed from Team mode",
+            ));
+        }
+
+        let page = self
+            .conversation_repo
+            .list_messages_page(
+                parent_id,
+                &MessagePageParams {
+                    limit: 10_000,
+                    direction: MessagePageDirection::InitialLatest,
+                },
+            )
+            .await?;
+        let anchor_index = page
+            .items
+            .iter()
+            .position(|row| row.id == req.message_id || row.msg_id.as_deref() == Some(req.message_id.as_str()))
+            .ok_or_else(|| ConversationError::MessageNotFound {
+                id: req.message_id.clone(),
+            })?;
+
+        if let Some(object) = extra.as_object_mut() {
+            for key in [
+                "sessionId",
+                "session_id",
+                "threadId",
+                "thread_id",
+                "codex_thread_id",
+                "runtime_session_id",
+            ] {
+                object.remove(key);
+            }
+            object.insert(
+                "fork".to_owned(),
+                serde_json::json!({
+                    "parent_conversation_id": parent_id,
+                    "parent_message_id": req.message_id,
+                }),
+            );
+        }
+
+        let fork_id = generate_id();
+        let now = now_ms();
+        let fork_row = ConversationRow {
+            id: fork_id.clone(),
+            user_id: user_id.to_owned(),
+            name: format!("{} · Branch", parent.name),
+            r#type: parent.r#type.clone(),
+            extra: serde_json::to_string(&extra)
+                .map_err(|error| ConversationError::internal(format!("Failed to serialize fork extra: {error}")))?,
+            model: parent.model.clone(),
+            status: Some("pending".into()),
+            source: parent.source.clone(),
+            channel_chat_id: None,
+            pinned: false,
+            pinned_at: None,
+            created_at: now,
+            updated_at: now,
+            project_id: parent.project_id.clone(),
+            folder_id: parent.folder_id.clone(),
+        };
+        self.conversation_repo.create(&fork_row).await?;
+
+        let populate_result: Result<(), ConversationError> = async {
+            if let Some(snapshot) = self.conversation_repo.get_assistant_snapshot(parent_id).await? {
+                self.conversation_repo
+                    .upsert_assistant_snapshot(&UpsertConversationAssistantSnapshotParams {
+                        conversation_id: &fork_id,
+                        assistant_definition_id: &snapshot.assistant_definition_id,
+                        assistant_id: &snapshot.assistant_id,
+                        assistant_source: &snapshot.assistant_source,
+                        agent_id: &snapshot.agent_id,
+                        rules_content: &snapshot.rules_content,
+                        default_model_mode: &snapshot.default_model_mode,
+                        resolved_model_id: snapshot.resolved_model_id.as_deref(),
+                        default_permission_mode: &snapshot.default_permission_mode,
+                        resolved_permission_value: snapshot.resolved_permission_value.as_deref(),
+                        default_thought_level_mode: &snapshot.default_thought_level_mode,
+                        resolved_thought_level_value: snapshot.resolved_thought_level_value.as_deref(),
+                        default_skills_mode: &snapshot.default_skills_mode,
+                        resolved_skill_ids: &snapshot.resolved_skill_ids,
+                        resolved_disabled_builtin_skill_ids: &snapshot.resolved_disabled_builtin_skill_ids,
+                        default_mcps_mode: &snapshot.default_mcps_mode,
+                        resolved_mcp_ids: &snapshot.resolved_mcp_ids,
+                    })
+                    .await?;
+            }
+
+            for original in &page.items[..=anchor_index] {
+                let (content, removed_delivery_marker) = inert_fork_message_content(&original.content);
+                let copied = MessageRow {
+                    id: generate_id(),
+                    conversation_id: fork_id.clone(),
+                    msg_id: original.msg_id.as_ref().map(|_| generate_id()),
+                    r#type: original.r#type.clone(),
+                    content,
+                    position: original.position.clone(),
+                    status: if removed_delivery_marker {
+                        Some("finish".into())
+                    } else {
+                        original.status.clone()
+                    },
+                    hidden: original.hidden,
+                    created_at: original.created_at,
+                };
+                self.conversation_repo.insert_message(&copied).await?;
+            }
+            Ok(())
+        }
+        .await;
+
+        if let Err(error) = populate_result {
+            let _ = self.conversation_repo.delete(&fork_id).await;
+            return Err(error);
+        }
+
+        let response = self.get(user_id, &fork_id).await?;
+        self.broadcast_list_changed(&fork_id, "created", response.source.as_ref());
+        Ok(response)
     }
 
     /// Reset a conversation: clear messages and set status back to pending.
@@ -2646,6 +3282,45 @@ impl ConversationService {
         Ok(())
     }
 
+    /// Answer a pending structured question over its dedicated channel.
+    pub async fn answer_ask(
+        &self,
+        user_id: &str,
+        conversation_id: &str,
+        request_id: &str,
+        answers: Option<Vec<winkgo_api_types::AskQuestionAnswer>>,
+        task_manager: &Arc<dyn IWorkerTaskManager>,
+    ) -> Result<(), ConversationError> {
+        self.conversation_repo
+            .get(conversation_id)
+            .await?
+            .filter(|row| row.user_id == user_id)
+            .ok_or_else(|| ConversationError::NotFound {
+                id: conversation_id.to_owned(),
+            })?;
+
+        let agent = task_manager
+            .get_task(conversation_id)
+            .ok_or_else(|| ConversationError::ActiveAgentNotFound {
+                conversation_id: conversation_id.to_owned(),
+            })?;
+        let confirmation_id = agent
+            .get_confirmations()
+            .iter()
+            .find(|confirmation| confirmation.call_id == request_id)
+            .map(|confirmation| confirmation.id.clone());
+
+        agent.answer_ask(request_id, answers)?;
+
+        if let Some(id) = confirmation_id {
+            self.broadcaster.broadcast(WebSocketMessage::new(
+                "confirmation.remove",
+                serde_json::json!({ "conversation_id": conversation_id, "id": id }),
+            ));
+        }
+        Ok(())
+    }
+
     /// Check whether an action has been auto-approved in the current session.
     pub async fn check_approval(
         &self,
@@ -2722,6 +3397,20 @@ impl ConversationService {
         reject_deprecated_runtime_row(&row)?;
 
         let resolved = self.resolve_message_attachments(&req.content, &req.files).await?;
+
+        if let Some(active_turn_id) = self.runtime_state.active_turn_id_for(conversation_id) {
+            if let Some(agent) = task_manager.get_task(conversation_id)
+                && agent.supports_midturn_delivery()
+                && agent.get_confirmations().is_empty()
+            {
+                return self
+                    .try_native_interjection(&agent, user_id, conversation_id, active_turn_id, resolved, req)
+                    .await;
+            }
+            return self
+                .enqueue_boundary_message(user_id, conversation_id, active_turn_id, resolved, req)
+                .await;
+        }
 
         let turn_id = Self::mint_turn_id();
         let turn_claim = self.runtime_state.try_claim_turn(conversation_id, &turn_id)?;
@@ -3025,6 +3714,39 @@ impl ConversationService {
         });
         self.broadcaster
             .broadcast(WebSocketMessage::new("message.stream", payload));
+        Ok(())
+    }
+
+    /// Stop one WINK GO-hosted ACP terminal command while its Agent turn continues.
+    pub async fn kill_terminal(
+        &self,
+        user_id: &str,
+        conversation_id: &str,
+        terminal_id: &str,
+        task_manager: &Arc<dyn IWorkerTaskManager>,
+    ) -> Result<(), ConversationError> {
+        self.conversation_repo
+            .get(conversation_id)
+            .await?
+            .filter(|row| row.user_id == user_id)
+            .ok_or_else(|| ConversationError::NotFound {
+                id: conversation_id.to_owned(),
+            })?;
+        let Some(agent) = task_manager.get_task(conversation_id) else {
+            return Err(ConversationError::BadRequest {
+                reason: "no running agent for conversation".to_owned(),
+            });
+        };
+        let killed = match &agent {
+            AgentInstance::Acp(manager) => manager.kill_client_terminal(terminal_id).await,
+            _ => false,
+        };
+        if !killed {
+            return Err(ConversationError::NotFound {
+                id: format!("terminal {terminal_id}"),
+            });
+        }
+        info!(conversation_id, terminal_id, "client terminal killed by user");
         Ok(())
     }
 
@@ -3937,6 +4659,70 @@ async fn resolve_acp_mcp_support_policy(
     Ok(McpSupportPolicy::from_acp_capabilities(capabilities))
 }
 
+/// Resolve prompt media support for the single-conversation detail response.
+/// The same metadata lookup rules as MCP capability resolution keep legacy
+/// conversations (which only persisted a backend name) working.
+async fn resolve_prompt_capability(
+    repo: &Arc<dyn IAgentMetadataRepository>,
+    agent_type: &AgentType,
+    extra: &serde_json::Value,
+) -> Result<Option<PromptCapabilityView>, ConversationError> {
+    if !matches!(agent_type, AgentType::Acp | AgentType::Antigravity) {
+        return Ok(None);
+    }
+
+    let agent_id = extra
+        .get("agent_id")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty());
+    let backend = extra
+        .get("backend")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty());
+    let agent_source = extra
+        .get("agent_source")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("builtin");
+
+    let row = match agent_id {
+        Some(id) => repo
+            .get(id)
+            .await
+            .map_err(|error| ConversationError::internal(format!("agent metadata lookup failed: {error}")))?,
+        None if agent_source == "builtin" => match backend {
+            Some(value) => repo
+                .find_builtin_by_backend(value)
+                .await
+                .map_err(|error| ConversationError::internal(format!("agent metadata lookup failed: {error}")))?,
+            None => None,
+        },
+        None => None,
+    };
+
+    let capability = row
+        .and_then(|row| row.agent_capabilities)
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+        .and_then(|value| prompt_capability_view(&value));
+    Ok(capability)
+}
+
+fn prompt_capability_view(capabilities: &serde_json::Value) -> Option<PromptCapabilityView> {
+    let prompt = capabilities.get("prompt_capabilities")?;
+    if !prompt.is_object() {
+        return None;
+    }
+    Some(PromptCapabilityView {
+        image: prompt
+            .get("image")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false),
+        audio: prompt
+            .get("audio")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false),
+    })
+}
+
 fn upsert_conversation_mcp_status(
     statuses: &mut Vec<ConversationMcpStatus>,
     status_index_by_name: &mut HashMap<String, usize>,
@@ -4299,6 +5085,28 @@ mod tests {
         assert_eq!(base, json!({"a": 1}));
     }
 
+    #[test]
+    fn prompt_capability_projection_is_explicit_and_safe() {
+        assert_eq!(
+            prompt_capability_view(&json!({
+                "prompt_capabilities": {"image": true, "audio": true}
+            })),
+            Some(PromptCapabilityView {
+                image: true,
+                audio: true,
+            })
+        );
+        assert_eq!(
+            prompt_capability_view(&json!({"prompt_capabilities": {"image": true}})),
+            Some(PromptCapabilityView {
+                image: true,
+                audio: false,
+            })
+        );
+        assert_eq!(prompt_capability_view(&json!({})), None);
+        assert_eq!(prompt_capability_view(&json!({"prompt_capabilities": "invalid"})), None);
+    }
+
     fn response_with_type(agent_type: winkgo_common::AgentType) -> ConversationResponse {
         ConversationResponse {
             id: "conv-1".into(),
@@ -4312,6 +5120,7 @@ mod tests {
             pinned_at: None,
             channel_chat_id: None,
             project_id: None,
+            prompt_capability: None,
             assistant: None,
             created_at: 0,
             modified_at: 0,

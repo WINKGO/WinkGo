@@ -1,7 +1,7 @@
 // Modified from AionUI by WINK GO contributors in 2026.
 import { ipcBridge } from '@/common';
 import { Message, Spin } from '@arco-design/web-react';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import useSWR from 'swr';
@@ -12,6 +12,7 @@ import { setCurrentProject } from '@/renderer/pages/conversation/explorer/curren
 import { setCurrentConversation } from '@/renderer/pages/conversation/explorer/currentConversationStore';
 import { useAutoTitle } from '@/renderer/hooks/chat/useAutoTitle';
 import { getConversationOrNull, peekConversationCache } from '@/renderer/pages/conversation/utils/conversationCache';
+import { getSnapshotConversationProjectId } from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
 
 const ChatConversationIndex: React.FC = () => {
   const { id } = useParams();
@@ -39,10 +40,16 @@ const ChatConversationIndex: React.FC = () => {
     closePreviewIfScopeChanged(previewScopeKey(data.project_id ?? null, workspace));
   }, [data, closePreviewIfScopeChanged]);
 
-  // Publish the active project to the module store so the Layout-level Explorer
-  // column (above this per-conversation route subtree) renders it. Not cleared on
-  // unmount — same-project conversation switches keep the value, so the column
-  // does not remount; Layout clears it when leaving the conversation route.
+  // Publish before paint from the already-loaded conversation list. Rapidly
+  // switching between projects must show an empty placeholder or the correct
+  // project immediately, never the prior conversation's Explorer tree.
+  useLayoutEffect(() => {
+    if (!id) return;
+    setCurrentProject(getSnapshotConversationProjectId(id) ?? null);
+  }, [id]);
+
+  // The per-conversation request remains authoritative and corrects the snapshot
+  // after project backfill or other backend changes.
   useEffect(() => {
     if (data) setCurrentProject(data.project_id ?? null);
   }, [data]);

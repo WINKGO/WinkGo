@@ -402,6 +402,17 @@ describe('getInstallationIntegrityModalActions', () => {
     expect(failure.backendBoundaryStage).toBe('database.migration');
   });
 
+  it('offers only the latest WINK GO download when the database is newer than the app', () => {
+    const t = vi.fn((key: string) => key) as any;
+
+    const actions = getInstallationIntegrityModalActions(t, {
+      diagnosticsKind: 'database_newer_than_app',
+    } as any);
+
+    expect(actions.downloadText).toBe('common.backendStartup.incompleteInstallation.downloadLatest');
+    expect(actions.reportText).toBeUndefined();
+  });
+
   it('uses local data repair copy and diagnostics-only actions for local cache corruption', () => {
     const t = vi.fn((key: string) => key) as any;
 

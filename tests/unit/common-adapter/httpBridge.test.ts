@@ -502,6 +502,30 @@ describe('httpBridge', () => {
 
       expect(fetchSpy.mock.calls[0][1]?.method).toBe('PUT');
     });
+
+    it('forwards mapped If-Match headers without putting them in the JSON body', async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ data: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+      vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+      await httpPut<boolean, { file: string; ifMatch: number }>(
+        '/api/fs/content',
+        ({ file }) => ({ file }),
+        (params) => ({ 'If-Match': String(params.ifMatch) })
+      ).invoke({ file: 'stable-ref', ifMatch: 1700000000000 });
+
+      const init = fetchSpy.mock.calls[0][1];
+      expect(init?.headers).toEqual({
+        'Content-Type': 'application/json',
+        'If-Match': '1700000000000',
+      });
+      expect(init?.body).toBe('{"file":"stable-ref"}');
+    });
   });
 
   describe('httpPatch', () => {

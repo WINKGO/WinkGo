@@ -1,3 +1,4 @@
+// Modified from AionCore by WINK GO contributors in 2026.
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -96,6 +97,7 @@ pub struct AcpConfigOptionDto {
 #[serde(rename_all = "snake_case")]
 pub enum ConfigOptionConfirmation {
     Observed,
+    PendingNextTurn,
     CommandAck,
 }
 
@@ -273,6 +275,18 @@ mod tests {
 
         let value = serde_json::to_value(resp).unwrap();
         assert_eq!(value["confirmation"], "command_ack");
+        assert!(value["config_options"].is_null());
+    }
+
+    #[test]
+    fn set_config_option_response_serializes_pending_next_turn() {
+        let resp = SetConfigOptionResponse {
+            confirmation: ConfigOptionConfirmation::PendingNextTurn,
+            config_options: None,
+        };
+
+        let value = serde_json::to_value(resp).unwrap();
+        assert_eq!(value["confirmation"], "pending_next_turn");
         assert!(value["config_options"].is_null());
     }
 

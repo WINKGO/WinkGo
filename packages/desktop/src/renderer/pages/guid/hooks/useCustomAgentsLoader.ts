@@ -9,6 +9,7 @@
 import { ipcBridge } from '@/common';
 import type { Assistant } from '@/common/types/agent/assistantTypes';
 import { brandAssistantsForDisplay } from '@/renderer/utils/model/winkGoBranding';
+import { isRetiredWinkGoAgentIdentity } from '@/renderer/utils/model/agentTypeSupportPolicy';
 import { useEffect } from 'react';
 import useSWR, { mutate as swrMutate } from 'swr';
 
@@ -37,7 +38,9 @@ export const useCustomAgentsLoader = (): UseCustomAgentsLoaderResult => {
       return [] as Assistant[];
     }
   });
-  const assistants = brandAssistantsForDisplay(assistantList ?? []);
+  const assistants = brandAssistantsForDisplay(assistantList ?? []).filter(
+    (assistant) => !isRetiredWinkGoAgentIdentity(assistant.agent?.acp_backend, assistant.agent?.type, assistant.name)
+  );
 
   useEffect(() => {
     void swrMutate('assistants.list');

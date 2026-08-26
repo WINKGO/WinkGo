@@ -20,6 +20,11 @@ use winkgo_runtime::{ensure_runtime_command, ensure_runtime_command_with_reporte
 
 use crate::runtime_status::conversation_runtime_reporter;
 
+const WINKGO_BROWSER_MCP_SERVER_NAME: &str = "winkgo-browser";
+const WINKGO_CDP_ACTIVE_PORT_ENV: &str = "WINKGO_CDP_ACTIVE_PORT";
+const WINKGO_CDP_BRIDGE_TOKEN_ENV: &str = "WINKGO_CDP_BRIDGE_TOKEN";
+const WINKGO_CONVERSATION_ID_ENV: &str = "WINKGO_CONVERSATION_ID";
+
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum BackendRoute {
     DirectCli,
@@ -164,9 +169,9 @@ pub(super) async fn build(
         .map(parse_acp_mcp_capabilities)
         .unwrap_or_default();
 
-    let user_mcp_servers = match deps.mcp_server_repo.as_ref() {
+    let mut session_mcp_servers = match deps.mcp_server_repo.as_ref() {
         Some(repo) => {
-            load_user_mcp_servers(
+            load_acp_session_mcp_servers(
                 repo.as_ref(),
                 config.mcp_server_ids.as_deref(),
                 &ctx.conversation_id,
@@ -176,7 +181,6 @@ pub(super) async fn build(
         }
         None => Vec::new(),
     };
-    let mut session_mcp_servers = user_mcp_servers;
     for server in &config.session_mcp_servers {
         if !session_server_supported_by_capabilities(server, &mcp_capabilities) {
             warn!(
@@ -188,7 +192,7 @@ pub(super) async fn build(
             continue;
         }
         match session_server_to_sdk_mcp_server(server).await {
-            Ok(server) => session_mcp_servers.push(server),
+            Ok(server) => append_unique_mcp_server(&mut session_mcp_servers, server),
             Err(err) => {
                 warn!(
                     ctx.conversation_id,
@@ -200,6 +204,14 @@ pub(super) async fn build(
             }
         }
     }
+    inject_winkgo_browser_session_env(&mut session_mcp_servers, &ctx.conversation_id, |name| {
+        std::env::var(name).ok()
+    });
+    info!(
+        conversation_id = %ctx.conversation_id,
+        servers = ?session_mcp_servers.iter().map(mcp_server_name).collect::<Vec<_>>(),
+        "session_mcp: resolved ACP session tool surface"
+    );
 
     let params = Arc::new(
         assemble_acp_params(
@@ -381,6 +393,111 @@ async fn load_user_mcp_servers(
         );
     }
     servers
+}
+
+/// Build the complete MCP surface for an ACP session. User selections remain
+/// session-scoped, while WINK GO's native browser is a core capability and is
+/// therefore available regardless of which UI entry created/restored the
+/// conversation. Other builtins are deliberately not injected here.
+async fn load_acp_session_mcp_servers(
+    repo: &dyn IMcpServerRepository,
+    selected_ids: Option<&[String]>,
+    conversation_id: &str,
+    capabilities: &AcpMcpCapabilities,
+) -> Vec<McpServer> {
+    let mut servers = load_user_mcp_servers(repo, selected_ids, conversation_id, capabilities).await;
+    match repo.find_by_name(WINKGO_BROWSER_MCP_SERVER_NAME).await {
+        Ok(Some(row)) if row.builtin => {
+            if !row_supported_by_capabilities(&row, capabilities) {
+                warn!(
+                    conversation_id,
+                    transport_type = %row.transport_type,
+                    "native_browser_mcp: ACP agent does not support the configured transport"
+                );
+            } else {
+                match row_to_sdk_mcp_server(&row).await {
+                    Ok(server) => append_unique_mcp_server(&mut servers, server),
+                    Err(error) => warn!(
+                        conversation_id,
+                        error = %error,
+                        "native_browser_mcp: failed to convert builtin server"
+                    ),
+                }
+            }
+        }
+        Ok(Some(_)) => warn!(
+            conversation_id,
+            "native_browser_mcp: refusing a non-builtin row with the reserved name"
+        ),
+        Ok(None) => warn!(conversation_id, "native_browser_mcp: builtin server row is missing"),
+        Err(error) => warn!(
+            conversation_id,
+            error = %error,
+            "native_browser_mcp: failed to load builtin server row"
+        ),
+    }
+    servers
+}
+
+fn mcp_server_name(server: &McpServer) -> &str {
+    match server {
+        McpServer::Stdio(server) => &server.name,
+        McpServer::Http(server) => &server.name,
+        McpServer::Sse(server) => &server.name,
+        _ => "",
+    }
+}
+
+fn append_unique_mcp_server(servers: &mut Vec<McpServer>, server: McpServer) {
+    let name = mcp_server_name(&server);
+    if name.is_empty() || servers.iter().any(|current| mcp_server_name(current) == name) {
+        return;
+    }
+    servers.push(server);
+}
+
+fn inject_winkgo_browser_session_env(
+    servers: &mut [McpServer],
+    conversation_id: &str,
+    mut env_value: impl FnMut(&str) -> Option<String>,
+) -> bool {
+    let conversation_id = conversation_id.trim();
+    let bridge = env_value(WINKGO_CDP_ACTIVE_PORT_ENV)
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+        .zip(
+            env_value(WINKGO_CDP_BRIDGE_TOKEN_ENV)
+                .map(|value| value.trim().to_owned())
+                .filter(|value| !value.is_empty()),
+        );
+
+    let mut injected = false;
+    for server in servers {
+        if mcp_server_name(server) != WINKGO_BROWSER_MCP_SERVER_NAME {
+            continue;
+        }
+        let McpServer::Stdio(server) = server else {
+            continue;
+        };
+        if !conversation_id.is_empty() {
+            upsert_sdk_env(&mut server.env, WINKGO_CONVERSATION_ID_ENV, conversation_id);
+            injected = true;
+        }
+        if let Some((port, token)) = bridge.as_ref() {
+            upsert_sdk_env(&mut server.env, WINKGO_CDP_ACTIVE_PORT_ENV, port);
+            upsert_sdk_env(&mut server.env, WINKGO_CDP_BRIDGE_TOKEN_ENV, token);
+            injected = true;
+        }
+    }
+    injected
+}
+
+fn upsert_sdk_env(env: &mut Vec<EnvVariable>, name: &str, value: &str) {
+    if let Some(entry) = env.iter_mut().find(|entry| entry.name == name) {
+        entry.value = value.to_owned();
+    } else {
+        env.push(EnvVariable::new(name, value));
+    }
 }
 
 /// Convert an `McpServerRow` into the SDK `McpServer` shape used by
@@ -888,7 +1005,10 @@ mod tests {
             unimplemented!()
         }
         async fn find_by_name(&self, _name: &str) -> Result<Option<McpServerRow>, winkgo_db::DbError> {
-            unimplemented!()
+            if self.fail {
+                return Err(winkgo_db::DbError::Init("simulated".into()));
+            }
+            Ok(self.rows.iter().find(|row| row.name == _name).cloned())
         }
         async fn list_by_ids_any(&self, ids: &[String]) -> Result<Vec<McpServerRow>, winkgo_db::DbError> {
             if self.fail {
@@ -1048,5 +1168,82 @@ mod tests {
 
         let servers = load_user_mcp_servers(repo.as_ref(), None, "conv-1", &caps).await;
         assert!(servers.is_empty());
+    }
+
+    #[tokio::test]
+    async fn acp_session_mcp_servers_always_include_the_native_winkgo_browser() {
+        let stdio_config = stdio_config_for_existing_command();
+        let caps = AcpMcpCapabilities {
+            stdio: true,
+            http: true,
+            sse: true,
+        };
+        let repo: Arc<dyn IMcpServerRepository> = Arc::new(MockRepo {
+            rows: vec![
+                make_row("user-selected", "stdio", &stdio_config, true, false),
+                make_row("winkgo-browser", "stdio", &stdio_config, true, true),
+                make_row("other-builtin", "stdio", &stdio_config, true, true),
+            ],
+            fail: false,
+        });
+        let selected = vec!["mcp_user-selected".to_owned()];
+
+        let servers = load_acp_session_mcp_servers(repo.as_ref(), Some(&selected), "conv-1", &caps).await;
+        let names = servers.iter().map(mcp_server_name).collect::<Vec<_>>();
+
+        assert_eq!(names, vec!["user-selected", "winkgo-browser"]);
+    }
+
+    #[test]
+    fn native_browser_session_env_is_explicit_and_scoped_to_the_browser_server() {
+        let mut servers = vec![
+            McpServer::Stdio(McpServerStdio::new("winkgo-browser", "node")),
+            McpServer::Stdio(McpServerStdio::new("other", "node")),
+        ];
+
+        inject_winkgo_browser_session_env(&mut servers, "conv-42", |name| match name {
+            WINKGO_CDP_ACTIVE_PORT_ENV => Some(" 61234 ".to_owned()),
+            WINKGO_CDP_BRIDGE_TOKEN_ENV => Some("temporary-secret".to_owned()),
+            _ => None,
+        });
+
+        let McpServer::Stdio(browser) = &servers[0] else {
+            panic!("expected stdio browser server")
+        };
+        assert!(
+            browser
+                .env
+                .iter()
+                .any(|entry| entry.name == WINKGO_CONVERSATION_ID_ENV && entry.value == "conv-42")
+        );
+        assert!(
+            browser
+                .env
+                .iter()
+                .any(|entry| entry.name == WINKGO_CDP_ACTIVE_PORT_ENV && entry.value == "61234")
+        );
+        assert!(
+            browser
+                .env
+                .iter()
+                .any(|entry| entry.name == WINKGO_CDP_BRIDGE_TOKEN_ENV && entry.value == "temporary-secret")
+        );
+
+        let McpServer::Stdio(other) = &servers[1] else {
+            panic!("expected stdio other server")
+        };
+        assert!(other.env.is_empty());
+    }
+
+    #[test]
+    fn duplicate_browser_snapshots_do_not_spawn_duplicate_mcp_processes() {
+        let mut servers = vec![McpServer::Stdio(McpServerStdio::new("winkgo-browser", "node"))];
+
+        append_unique_mcp_server(
+            &mut servers,
+            McpServer::Stdio(McpServerStdio::new("winkgo-browser", "node")),
+        );
+
+        assert_eq!(servers.len(), 1);
     }
 }

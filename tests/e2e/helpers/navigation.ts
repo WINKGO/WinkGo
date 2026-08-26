@@ -13,13 +13,16 @@ import { channelItemById, webuiTabByKey } from './selectors';
 export const ROUTES = {
   guid: '#/guid',
   settings: {
-    gemini: '#/settings/gemini',
+    /** Legacy E2E alias: the removed Gemini page now lands on Model settings. */
+    gemini: '#/settings/model',
     model: '#/settings/model',
     agent: '#/settings/agent',
     assistants: '#/settings/assistants',
     skills: '#/settings/skills',
     tools: '#/settings/tools',
-    display: '#/settings/display',
+    /** Legacy E2E alias retained for older display/theme specs. */
+    display: '#/settings/appearance',
+    appearance: '#/settings/appearance',
     webui: '#/settings/webui',
     system: '#/settings/system',
     about: '#/settings/about',

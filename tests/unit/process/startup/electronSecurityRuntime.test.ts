@@ -7,14 +7,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
 import { HTML_PREVIEW_WEBVIEW_PARTITION } from '@/common/platform/electronSecurity';
 
 const openExternal = vi.hoisted(() => vi.fn(async () => undefined));
+const loginPermission = vi.hoisted(() => ({ enabled: false }));
 
 vi.mock('electron', () => ({
   shell: {
     openExternal,
   },
+}));
+vi.mock('@process/services/winkGoBrowserLoginPermissionService', () => ({
+  hydrateWinkGoBrowserLoginPermission: vi.fn(async () => ({ enabled: loginPermission.enabled })),
+  isWinkGoBrowserLoginAutomationEnabled: () => loginPermission.enabled,
 }));
 
 type Listener = (...args: unknown[]) => unknown;
@@ -53,6 +59,7 @@ function createFakeWebContents(
     mainFrame,
     session: targetSession,
     close: vi.fn(),
+    loadURL: vi.fn(async () => undefined),
     getType: () => type,
     getURL: () => url,
     on: (event: string, listener: Listener) => {
@@ -72,6 +79,7 @@ describe('Electron security runtime', () => {
   beforeEach(() => {
     vi.resetModules();
     openExternal.mockClear();
+    loginPermission.enabled = false;
   });
 
   it('allows trusted main-window audio but denies video, display capture, and unregistered guests', async () => {
@@ -199,5 +207,35 @@ describe('Electron security runtime', () => {
 
     expect(openExternal).toHaveBeenCalledTimes(1);
     expect(openExternal).toHaveBeenCalledWith('https://example.com/oauth');
+  });
+
+  it('keeps opted-in browser login popups inside the WINK GO browser', async () => {
+    const appListeners = new Map<string, Listener>();
+    const fakeApp = {
+      on: (event: string, listener: Listener) => appListeners.set(event, listener),
+    };
+    const embedder = createFakeWebContents(20, 'file:///app/index.html');
+    const guest = createFakeWebContents(21, 'https://example.com', 'webview');
+    const { installElectronSecurityPolicy } = await import('@/process/startup/electronSecurity');
+
+    installElectronSecurityPolicy(fakeApp as never);
+    appListeners.get('web-contents-created')?.({}, embedder);
+    const attachHandler = embedder.listeners.get('will-attach-webview')?.[0];
+    const attachedHandler = embedder.listeners.get('did-attach-webview')?.[0];
+    const params: Record<string, string> = {
+      partition: BROWSER_SESSION_PARTITION,
+      src: 'https://example.com',
+    };
+    attachHandler?.({ preventDefault: vi.fn() }, {}, params);
+    attachedHandler?.({}, guest);
+
+    expect(params).toHaveProperty('allowpopups', '');
+    const handler = guest.getWindowOpenHandler();
+    loginPermission.enabled = true;
+    expect(handler?.({ url: 'https://auth.example.com/qr-login' })).toEqual({ action: 'deny' });
+    await Promise.resolve();
+
+    expect(guest.loadURL).toHaveBeenCalledWith('https://auth.example.com/qr-login');
+    expect(openExternal).not.toHaveBeenCalled();
   });
 });

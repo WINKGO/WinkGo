@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
     { label: 'Claude Sonnet 4', value: 'claude-sonnet-4' },
   ],
   modelListAsArray: false,
+  modelListEmpty: false,
   modelListUnavailable: false,
   mutate: vi.fn(),
   onSubmit: vi.fn(),
@@ -109,7 +110,7 @@ vi.mock('@renderer/hooks/agent/useModeModeList', () => ({
       ? undefined
       : mocks.modelListAsArray
         ? mocks.availableModels
-        : { models: mocks.availableModels },
+        : { models: mocks.modelListEmpty ? [] : mocks.availableModels },
     error: null,
     isLoading: false,
     mutate: mocks.mutate,
@@ -358,6 +359,7 @@ describe('model capability selectors', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.modelListAsArray = false;
+    mocks.modelListEmpty = false;
     mocks.modelListUnavailable = false;
     mocks.singleModelValue = false;
     Object.defineProperty(window, 'matchMedia', {
@@ -539,6 +541,43 @@ describe('model capability selectors', () => {
         })
       );
     });
+  });
+
+  it('keeps discovered models available when complete URL mode is enabled', async () => {
+    render(
+      <AddPlatformModal
+        deepLinkData={{
+          api_key: 'test-key',
+          base_url: 'https://api.example.com/v1/chat/completions',
+          platform: 'custom',
+        }}
+        modalProps={{ visible: true }}
+        modalCtrl={{ close: mocks.close }}
+        onSubmit={mocks.onSubmit}
+      />
+    );
+
+    const modelSelect = await screen.findByTestId('model-select');
+    expect(Array.from((modelSelect as HTMLSelectElement).options, (option) => option.value)).toContain('gpt-5.6-sol');
+
+    fireEvent.click(screen.getByRole('switch'));
+
+    expect(Array.from((modelSelect as HTMLSelectElement).options, (option) => option.value)).toContain('gpt-5.6-sol');
+  });
+
+  it('explains how to recover when the provider returns an empty model list', async () => {
+    mocks.modelListEmpty = true;
+
+    render(
+      <AddPlatformModal
+        deepLinkData={{ api_key: 'test-key', base_url: 'https://api.example.com/v1', platform: 'OpenAI' }}
+        modalProps={{ visible: true }}
+        modalCtrl={{ close: mocks.close }}
+        onSubmit={mocks.onSubmit}
+      />
+    );
+
+    expect(await screen.findByText('settings.modelListEmptyHint')).toBeInTheDocument();
   });
 
   it('keeps API mode hidden on the Gemini provider form', async () => {

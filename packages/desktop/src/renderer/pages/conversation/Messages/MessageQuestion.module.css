@@ -1,0 +1,98 @@
+/* Modified from AionUI by WINK GO contributors in 2026. */
+/*
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * Modifications Copyright 2026 WINK GO (winkgo.top)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+.header {
+  margin-bottom: 2px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.question {
+  margin-bottom: 8px;
+  color: var(--color-text-1);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.questionBlock + .questionBlock {
+  margin-top: 16px;
+}
+
+.optionList {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+}
+
+.optionRow {
+  display: flex !important;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  align-items: flex-start;
+  padding: 10px 12px;
+  transition: background-color 0.16s ease;
+}
+
+.optionRow:hover {
+  background: var(--color-fill-1);
+}
+
+.optionRow + .optionRow {
+  border-top: 1px solid var(--color-border-2);
+}
+
+.optionRow :global(.arco-icon-hover) {
+  margin-top: 3px;
+}
+
+.optionRow :global(.arco-radio-text),
+.optionRow :global(.arco-checkbox-text) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.optionText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.optionLabel {
+  color: var(--color-text-1);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.optionDesc {
+  color: var(--color-text-3);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.otherInput {
+  margin: 8px 12px 12px;
+  width: calc(100% - 24px);
+}
+
+.actions {
+  display: flex;
+  margin-top: 16px;
+  align-items: center;
+  gap: 8px;
+}

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 /**
  * Skills Hub E2E Tests - Manual Import (P1 Priority)
  *
@@ -58,8 +59,13 @@ test.describe('Skills Hub - Manual Import (P1)', () => {
       // Screenshot 02: Before clicking import button
       await takeScreenshot(page, 'skills-hub/tc-s-29/02-before-click.png');
 
-      // Step 2: Click "Import from Folder" button
-      const importButton = page.locator('[data-testid="btn-manual-import"]');
+      // Step 2: Open the current "Add Skill" menu and choose "Import Skills".
+      // The importer is intentionally grouped with the butler-assisted flow.
+      const addSkillButton = page.locator('[data-testid="btn-add-skill"]');
+      await expect(addSkillButton).toBeVisible();
+      await addSkillButton.click();
+
+      const importButton = page.locator('[data-testid="btn-add-skill-manual"]');
       await expect(importButton).toBeVisible();
       await importButton.click();
 

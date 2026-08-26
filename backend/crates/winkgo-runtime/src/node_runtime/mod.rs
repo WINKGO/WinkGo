@@ -361,22 +361,61 @@ mod tests {
     }
 
     fn fake_managed_runtime(root: &std::path::Path) -> ResolvedNodeRuntime {
-        let bin = root.join("bin");
-        fs::create_dir_all(&bin).expect("create runtime bin");
-        write_executable(&bin.join("node"), "#!/bin/sh\necho v24.11.0\n");
-        write_executable(&bin.join("npm"), "#!/bin/sh\necho 24.11.0\n");
-        write_executable(&bin.join("npx"), "#!/bin/sh\necho 24.11.0\n");
+        #[cfg(windows)]
+        {
+            let npm_bin = root.join("node_modules").join("npm").join("bin");
+            fs::create_dir_all(&npm_bin).expect("create runtime npm bin");
+            let node_path = root.join("node.exe");
+            let system_node = which::which("node").expect("system node is required for Windows runtime tests");
+            if fs::hard_link(&system_node, &node_path).is_err() {
+                fs::copy(&system_node, &node_path).expect("copy system node fixture");
+            }
+            let npm_cli = npm_bin.join("npm-cli.js");
+            let npx_cli = npm_bin.join("npx-cli.js");
+            fs::write(&npm_cli, "console.log('11.6.1');\n").expect("write npm fixture");
+            fs::write(&npx_cli, "console.log('11.6.1');\n").expect("write npx fixture");
+            fs::write(root.join("LICENSE"), "Node.js test license\n").expect("write Node license fixture");
+            fs::write(
+                root.join("node_modules").join("npm").join("LICENSE"),
+                "npm test license\n",
+            )
+            .expect("write npm license fixture");
+            return ResolvedNodeRuntime {
+                source: ResolvedNodeSource::Managed,
+                root: root.to_path_buf(),
+                version: semver::Version::new(0, 0, 0),
+                node_path: node_path.clone(),
+                npm_path: node_path.clone(),
+                npm_args_prefix: vec![npm_cli.into_os_string()],
+                npx_path: node_path,
+                npx_args_prefix: vec![npx_cli.into_os_string()],
+                env: vec![],
+            };
+        }
 
-        ResolvedNodeRuntime {
-            source: ResolvedNodeSource::Managed,
-            root: root.to_path_buf(),
-            version: semver::Version::new(0, 0, 0),
-            node_path: bin.join("node"),
-            npm_path: bin.join("npm"),
-            npm_args_prefix: vec![],
-            npx_path: bin.join("npx"),
-            npx_args_prefix: vec![],
-            env: vec![],
+        #[cfg(not(windows))]
+        {
+            let bin = root.join("bin");
+            fs::create_dir_all(&bin).expect("create runtime bin");
+            write_executable(&bin.join("node"), "#!/bin/sh\necho v24.11.0\n");
+            write_executable(&bin.join("npm"), "#!/bin/sh\necho 24.11.0\n");
+            write_executable(&bin.join("npx"), "#!/bin/sh\necho 24.11.0\n");
+            fs::write(root.join("LICENSE"), "Node.js test license\n").expect("write Node license fixture");
+            let npm_license = root.join("lib").join("node_modules").join("npm").join("LICENSE");
+            fs::create_dir_all(npm_license.parent().expect("npm license parent")).expect("create npm license parent");
+            fs::write(npm_license, "npm test license\n").expect("write npm license fixture");
+
+            ResolvedNodeRuntime {
+                source: ResolvedNodeSource::Managed,
+                root: root.to_path_buf(),
+                version: semver::Version::new(0, 0, 0),
+                node_path: bin.join("node"),
+                npm_path: bin.join("npm"),
+                npm_args_prefix: vec![],
+                npx_path: bin.join("npx"),
+                npx_args_prefix: vec![],
+                env: vec![],
+            }
         }
     }
 

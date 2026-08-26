@@ -38,6 +38,15 @@
   "closeTabMessage": "Mevcut içerik kaydedilmedi. Kapatmadan önce kaydetmek ister misiniz?",
   "saveAndClose": "Kaydet ve Kapat",
   "closeWithoutSave": "Kaydetme",
+  "saveConflictTitle": "Dosya WINK GO dışında değiştirildi",
+  "saveConflictMessage": "Diskteki dosya açıldıktan sonra değiştirildi. Diğer değişikliklerin üzerine yazmamak için devam etmeden önce en güncel içeriği yeniden yükleyin.",
+  "reloadFile": "Dosyayı yeniden yükle",
+  "reloadSuccess": "Diskteki en güncel içerik yüklendi",
+  "reloadFailed": "Dosya yeniden yüklenemedi",
+  "save": {
+    "tooltip": "Değişiklikleri kaydet (Ctrl/Cmd+S)",
+    "clean": "Kaydedilmemiş değişiklik yok"
+  },
   "pptTitle": "PowerPoint Sunumu",
   "pptOpenHint": "Tam içeriği görüntülemek için sistem uygulamasında açmak üzere aşağıdaki düğmeye tıklayın",
   "pptOpenFile": "Dosyayı Aç",
@@ -133,6 +142,15 @@
     "inspectElement": "Öğeyi İncele",
     "inspectElementEnable": "Öğe denetçisini etkinleştir",
     "inspectElementDisable": "Öğe denetçisini devre dışı bırak"
+  },
+  "browser": {
+    "newTab": "Yeni sekme",
+    "addressPlaceholder": "Bir URL girin veya arama yapın",
+    "agentActiveTooltip": "Aracı bu sekmeyi kullanıyor",
+    "tabLimitReached": "Sekme sınırına ulaşıldı ({{count}}). En eski sekme yeniden kullanıldı.",
+    "agentFirstUseTitle": "Aracı uygulama içi tarayıcıyı kullanıyor",
+    "agentFirstUseContent": "Bu panelde sayfa açabilir, tıklayabilir ve içerik okuyabilir. Oturum bilgileriniz korunur.",
+    "agentFirstUseAction": "Ayarları aç"
   },
   "ppt": {
     "loading": "PPT önizlemesi başlatılıyor...",

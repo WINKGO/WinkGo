@@ -27,6 +27,9 @@
     "configureFirst": "لطفاً ابتدا یک عامل در تنظیمات پیکربندی کنید.",
     "switching": "در حال جابه‌جایی عامل..."
   },
+  "runtime": {
+    "managedByAgent": "مدیریت‌شده توسط عامل"
+  },
   "model": {
     "switchSuccess": "مدل با موفقیت جابه‌جا شد",
     "switchFailed": "جابه‌جایی مدل ناموفق بود",
@@ -47,5 +50,31 @@
     "label": "سطح تفکر",
     "switchSuccess": "سطح تفکر تغییر کرد",
     "switchFailed": "تغییر سطح تفکر ناموفق بود"
+  },
+  "speed": {
+    "label": "سرعت",
+    "switchSuccess": "سرعت پاسخ به‌روزرسانی شد",
+    "switchFailed": "به‌روزرسانی سرعت پاسخ ناموفق بود"
+  },
+  "voiceTask": {
+    "emptyCommand": "محتوای کار خالی است و به Agent ارسال نشد.",
+    "noAgent": "هیچ WINK GO Agent در دسترس نیست یا مهارت Agent رومیزی موردنظر بازنشسته شده است.",
+    "noModel": "WINK GO CLI مدل قابل استفاده‌ای ندارد. ابتدا در صفحه مدل‌ها یک مدل را تنظیم و فعال کنید.",
+    "conversationName": "XiaoZhi: {{command}}",
+    "createFailed": "ایجاد گفتگوی WINK GO Agent ممکن نشد.",
+    "queued": "کار در صف {{assistant}} قرار گرفت و پس از کار فعلی اجرا می‌شود.",
+    "accepted": "کار به {{assistant}} ارسال شد. روند اجرا را در WINK GO ببینید.",
+    "none": "هیچ کار فعالی برای دستیار وجود ندارد.",
+    "waitingConfirmation": "{{assistant}} منتظر تأیید شماست.",
+    "queuedStatus": "{{assistant}} کار صف‌شده را دریافت کرد و پس از کار فعلی آن را اجرا می‌کند.",
+    "running": "{{assistant}} در حال اجرای کار است.",
+    "finishedWithResult": "{{assistant}} کار را تکمیل کرد: {{result}}",
+    "finishedNoResult": "{{assistant}} کار را تکمیل کرد، اما پاسخ نهایی یافت نشد.",
+    "failed": "اجرای {{assistant}} ناموفق بود: {{error}}",
+    "acceptedStatus": "{{assistant}} کار را پذیرفت.",
+    "noCancelable": "هیچ کار فعالی برای لغو وجود ندارد.",
+    "cancelling": "{{assistant}} هنوز در حال توقف کار است. کمی بعد دوباره تلاش کنید.",
+    "cancelled": "کار فعلی {{assistant}} لغو شد.",
+    "history": "{{count}} وظیفه اخیر Agent وجود دارد: {{tasks}}."
   }
 }

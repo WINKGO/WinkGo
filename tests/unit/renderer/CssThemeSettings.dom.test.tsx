@@ -5,46 +5,41 @@
  */
 
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const selectTheme = vi.fn().mockResolvedValue(undefined);
+const themeState = vi.hoisted(() => ({ activeId: 'system' }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock('@/common/config/configService', () => ({
-  configService: {
-    whenReady: vi.fn().mockResolvedValue(undefined),
-    get: vi.fn(() => []),
-    set: vi.fn().mockResolvedValue(undefined),
-  },
-}));
-
 vi.mock('@renderer/hooks/context/ThemeContext', () => ({
-  useThemeContext: () => ({ activeId: 'system', selectTheme, theme: 'light' }),
-}));
-
-vi.mock('@renderer/pages/settings/AppearanceSettings/CssThemeModal', () => ({
-  default: ({ visible }: { visible: boolean }) => (visible ? <div data-testid='css-theme-modal' /> : null),
+  useThemeContext: () => ({ activeId: themeState.activeId, selectTheme, theme: 'light' }),
 }));
 
 import CssThemeSettings from '@renderer/pages/settings/AppearanceSettings/CssThemeSettings';
 
 describe('CssThemeSettings', () => {
-  it('keeps Follow System as the only preset and exposes Add Theme', async () => {
+  beforeEach(() => {
+    themeState.activeId = 'system';
+    selectTheme.mockClear();
+  });
+
+  it('shows Follow System as the only theme without add or edit actions', () => {
     render(<CssThemeSettings />);
 
     expect(screen.getByTestId('system-theme-only')).toHaveTextContent('settings.cssTheme.followSystem');
-    expect(screen.getByRole('button', { name: /settings.cssTheme.addManually/ })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getAllByRole('button')).toHaveLength(2));
+    expect(screen.getByRole('status', { name: 'settings.cssTheme.followSystem' })).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(selectTheme).not.toHaveBeenCalled();
   });
 
-  it('opens the custom theme editor from the header action', () => {
+  it('normalizes a legacy active theme back to Follow System', async () => {
+    themeState.activeId = 'legacy-theme';
     render(<CssThemeSettings />);
 
-    fireEvent.click(screen.getByRole('button', { name: /settings.cssTheme.addManually/ }));
-    expect(screen.getByTestId('css-theme-modal')).toBeInTheDocument();
+    await waitFor(() => expect(selectTheme).toHaveBeenCalledWith('system'));
   });
 });

@@ -5,9 +5,9 @@ use tempfile::TempDir;
 use winkgo_common::constants::WINKGO_FILES_MARKER;
 use winkgo_db::{IProjectStore, SqliteProjectStore, init_database_memory};
 
-use crate::ProjectService;
 use crate::canonical::to_file_uri;
 use crate::types::ProjectError;
+use crate::{FileOp, ProjectService};
 use winkgo_api_types::ChatFileRef;
 
 /// Build a service with a tempdir standard project. Returns (service, pe_id,
@@ -47,6 +47,30 @@ async fn resolves_project_file_and_inlines_marker() {
     assert!(std::path::Path::new(abs).is_file());
     assert!(abs.ends_with("note.txt"));
     assert_eq!(out.content, format!("please review\n\n{WINKGO_FILES_MARKER}\n{abs}"));
+}
+
+#[tokio::test]
+async fn resolves_project_file_ref_for_read_and_write() {
+    let (service, pe_id, dir, upload_root) = setup().await;
+    let file = dir.path().join("editable.txt");
+    std::fs::write(&file, b"before").unwrap();
+    let reference = ChatFileRef::Project {
+        pe_id,
+        relative_path: "editable.txt".into(),
+    };
+
+    let readable = service
+        .resolve_chat_file_ref(&reference, upload_root.path(), FileOp::Read)
+        .await
+        .unwrap();
+    let writable = service
+        .resolve_chat_file_ref(&reference, upload_root.path(), FileOp::Write)
+        .await
+        .unwrap();
+
+    assert_eq!(readable, writable);
+    assert!(std::path::Path::new(&readable).is_file());
+    assert!(readable.ends_with("editable.txt"));
 }
 
 #[tokio::test]

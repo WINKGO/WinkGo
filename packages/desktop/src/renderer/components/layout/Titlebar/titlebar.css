@@ -80,6 +80,7 @@
 }
 
 .titlebar-dynamic-island__capsule.arco-btn,
+.titlebar-dynamic-island__automation.arco-btn,
 .titlebar-dynamic-island__alarm.arco-btn {
   flex-shrink: 0;
   min-width: 0;
@@ -112,6 +113,7 @@
 }
 
 .titlebar-dynamic-island__capsule.arco-btn:hover,
+.titlebar-dynamic-island__automation.arco-btn:hover,
 .titlebar-dynamic-island__alarm.arco-btn:hover {
   border-color: rgba(var(--primary-6), 0.35);
   background: var(--color-fill-1);
@@ -285,6 +287,7 @@
   animation-delay: 300ms;
 }
 
+.titlebar-dynamic-island__automation.arco-btn,
 .titlebar-dynamic-island__alarm.arco-btn {
   position: relative;
   display: inline-flex;
@@ -297,6 +300,21 @@
   color: #f04444;
 }
 
+.titlebar-dynamic-island__automation.arco-btn {
+  border-color: rgba(92, 112, 255, 0.2);
+  background: linear-gradient(145deg, #6678ff 0%, #7555e8 100%);
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(83, 92, 214, 0.24);
+}
+
+.titlebar-dynamic-island__automation.arco-btn:hover,
+.titlebar-dynamic-island__automation.arco-btn[aria-expanded='true'] {
+  border-color: rgba(92, 112, 255, 0.28);
+  background: linear-gradient(145deg, #7183ff 0%, #805feb 100%);
+  box-shadow: 0 7px 18px rgba(83, 92, 214, 0.3);
+}
+
+.titlebar-dynamic-island__automation.arco-btn > span,
 .titlebar-dynamic-island__alarm.arco-btn > span {
   display: inline-flex;
   align-items: center;

@@ -14,16 +14,30 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_PLATFORM_VALUE, getProviderLogo, MODEL_PLATFORMS } from '@renderer/utils/model/modelPlatforms';
 
 describe('MODEL_PLATFORMS ordering', () => {
-  it('keeps Custom first and pins both Moonshot entries right after it', () => {
+  it('keeps the WINK GO relay first, Custom available, and pins both Moonshot entries after it', () => {
     const values = MODEL_PLATFORMS.map((p) => p.value);
-    expect(values[0]).toBe('custom');
-    expect(values[1]).toBe('Moonshot');
-    expect(values[2]).toBe('Moonshot-Global');
+    expect(values[0]).toBe('WINK-GO');
+    expect(values[1]).toBe('custom');
+    expect(values[2]).toBe('Moonshot');
+    expect(values[3]).toBe('Moonshot-Global');
   });
 
   it('defaults the add-model modal platform to the first list entry', () => {
     expect(DEFAULT_PLATFORM_VALUE).toBe(MODEL_PLATFORMS[0].value);
-    expect(DEFAULT_PLATFORM_VALUE).toBe('custom');
+    expect(DEFAULT_PLATFORM_VALUE).toBe('WINK-GO');
+  });
+
+  it('presets the public WINK GO relay without bundling an API key', () => {
+    const preset = MODEL_PLATFORMS.find((platform) => platform.value === 'WINK-GO');
+
+    expect(preset).toMatchObject({
+      name: 'WINK GO',
+      platform: 'custom',
+      base_url: 'https://winkgo.xyz/v1',
+      website_url: 'https://winkgo.xyz/',
+      i18nKey: 'settings.platformWinkGo',
+    });
+    expect(preset).not.toHaveProperty('api_key');
   });
 
   it('defines each Moonshot entry exactly once', () => {

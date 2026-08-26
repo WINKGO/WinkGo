@@ -167,8 +167,8 @@ impl TeamSession {
         service: Weak<TeamSessionService>,
         prompt_dump: TeamPromptDumpConfig,
     ) -> Result<Self, TeamError> {
-        let mailbox = Arc::new(Mailbox::new(repo.clone()));
-        let task_board = Arc::new(TaskBoard::new(repo));
+        let mailbox = Arc::new(Mailbox::new_with_broadcaster(repo.clone(), broadcaster.clone()));
+        let task_board = Arc::new(TaskBoard::new_with_broadcaster(repo, broadcaster.clone()));
         let member_runtimes = Arc::new(MemberRuntimeRegistry::new(generate_id()));
         let team_run_manager = Arc::new(TeamRunManager::new(
             team.id.clone(),

@@ -28,6 +28,11 @@ export interface CloseTabConfirmState {
   tabId: string | null;
 }
 
+export interface SaveConflictState {
+  show: boolean;
+  tabId: string | null;
+}
+
 /**
  * PreviewConfirmModals 组件属性
  * PreviewConfirmModals component props
@@ -56,6 +61,10 @@ interface PreviewConfirmModalsProps {
    * Cancel close tab
    */
   onCancelCloseTab: () => void;
+
+  saveConflict: SaveConflictState;
+  onReloadConflict: () => void;
+  onCancelConflict: () => void;
 }
 
 /**
@@ -70,6 +79,9 @@ const PreviewConfirmModals: React.FC<PreviewConfirmModalsProps> = ({
   onSaveAndCloseTab,
   onCloseWithoutSave,
   onCancelCloseTab,
+  saveConflict,
+  onReloadConflict,
+  onCancelConflict,
 }) => {
   const { t } = useTranslation();
 
@@ -110,6 +122,20 @@ const PreviewConfirmModals: React.FC<PreviewConfirmModalsProps> = ({
         }
       >
         <div className='text-14px text-t-secondary'>{t('preview.closeTabMessage')}</div>
+      </Modal>
+
+      <Modal
+        visible={saveConflict.show}
+        title={t('preview.saveConflictTitle')}
+        onCancel={onCancelConflict}
+        onOk={onReloadConflict}
+        okText={t('preview.reloadFile')}
+        cancelText={t('common.cancel')}
+        style={{ borderRadius: '12px' }}
+        alignCenter
+        getPopupContainer={() => document.body}
+      >
+        <div className='text-14px text-t-secondary'>{t('preview.saveConflictMessage')}</div>
       </Modal>
     </>
   );

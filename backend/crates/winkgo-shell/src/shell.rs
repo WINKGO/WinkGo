@@ -179,12 +179,18 @@ fn build_windows_terminal_command(path: &str) -> String {
 /// (no highlight, but still the file manager rather than the file's handler).
 fn linux_show_item_command(path: &Path, gdbus_available: bool) -> (String, Vec<String>) {
     if gdbus_available {
-        // `from_file_path` percent-encodes spaces and other reserved characters;
-        // fall back to a raw `file://` URI only if it rejects the path (it
-        // requires an absolute path — always true here since `path` is canonical).
-        let uri = reqwest::Url::from_file_path(path)
-            .map(|u| u.to_string())
-            .unwrap_or_else(|_| format!("file://{}", path.to_string_lossy()));
+        let encoded_path = path
+            .to_string_lossy()
+            .as_bytes()
+            .iter()
+            .map(|byte| match byte {
+                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' => {
+                    char::from(*byte).to_string()
+                }
+                _ => format!("%{byte:02X}"),
+            })
+            .collect::<String>();
+        let uri = format!("file://{encoded_path}");
         (
             "gdbus".to_owned(),
             vec![

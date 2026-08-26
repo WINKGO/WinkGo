@@ -19,18 +19,22 @@ export type RpcErrorShape = {
   code: number;
   message: string;
   data?: unknown;
+  /** True only for locally generated transport errors. */
+  transport?: boolean;
 };
 
 /** A JSON-RPC error surfaced to a request caller. */
 export class RpcError extends Error {
   readonly code: number;
   readonly data?: unknown;
+  readonly transport: boolean;
 
   constructor(shape: RpcErrorShape) {
     super(shape.message);
     this.name = 'RpcError';
     this.code = shape.code;
     this.data = shape.data;
+    this.transport = shape.transport === true;
   }
 }
 
@@ -96,10 +100,15 @@ function outboundMeta(method: string, params: unknown): unknown {
       return { file: refStr(p.file) }; // NB: never log p.content
     case 'fs/mkdir':
       return { dir: refStr(p.dir) };
+    case 'fs/createFile':
+      return { file: refStr(p.file) };
     case 'fs/remove':
       return { target: refStr(p.target) };
     case 'fs/rename':
       return { from: refStr(p.from), to: refStr(p.to) };
+    case 'fs/copy':
+    case 'fs/move':
+      return { from: refStr(p.from), to_dir: refStr(p.to_dir) };
     case 'fs/search':
       return {
         roots: Array.isArray(p.roots) ? p.roots.length : 0,
@@ -176,7 +185,7 @@ export class MonitorClient {
         ok ? '' : 'DROPPED(offline)'
       );
       if (!ok) {
-        reject(new RpcError({ code: RPC_DISCONNECTED, message: 'monitor transport not connected' }));
+        reject(new RpcError({ code: RPC_DISCONNECTED, message: 'monitor transport not connected', transport: true }));
         return;
       }
       this.pending.set(id, { resolve, reject });
@@ -201,13 +210,15 @@ export class MonitorClient {
     const entry = this.pending.get(id);
     if (!entry) return;
     this.pending.delete(id);
-    entry.reject(new RpcError({ code: RPC_ABANDONED, message: 'streaming request superseded' }));
+    entry.reject(new RpcError({ code: RPC_ABANDONED, message: 'streaming request superseded', transport: true }));
   }
 
   /** Tear down subscriptions and reject any in-flight requests. */
   dispose(): void {
     for (const off of this.disposers.splice(0)) off();
-    this.rejectAllPending(new RpcError({ code: RPC_DISCONNECTED, message: 'monitor client disposed' }));
+    this.rejectAllPending(
+      new RpcError({ code: RPC_DISCONNECTED, message: 'monitor client disposed', transport: true })
+    );
   }
 
   private handleFrame(raw: unknown): void {
@@ -244,14 +255,22 @@ export class MonitorClient {
       const entry = this.pending.get(frame.id);
       if (entry) {
         this.pending.delete(frame.id);
-        entry.reject(new RpcError({ code: RPC_MALFORMED_RESPONSE, message: 'malformed response: no result or error' }));
+        entry.reject(
+          new RpcError({
+            code: RPC_MALFORMED_RESPONSE,
+            message: 'malformed response: no result or error',
+            transport: true,
+          })
+        );
       }
     }
   }
 
   private handleReconnect(): void {
     // The old connection's in-flight requests will never get a response.
-    this.rejectAllPending(new RpcError({ code: RPC_RECONNECTED, message: 'monitor connection reset' }));
+    this.rejectAllPending(
+      new RpcError({ code: RPC_RECONNECTED, message: 'monitor connection reset', transport: true })
+    );
     this.onReconnectCb?.();
   }
 

@@ -94,6 +94,6 @@ describe('islandActivity', () => {
     expect(friendlyIslandToolName('web_automation.screenshot')).toBe('网页自动化截取画面');
     expect(friendlyIslandToolName('smart_home.control_device')).toBe('智能家居控制设备');
     expect(friendlyIslandToolName('winkgo.format.convert_document')).toBe('格式台转换格式');
-    expect(friendlyIslandToolName('visual_studio_code.open_file')).toBe('VS Code打开');
+    expect(friendlyIslandToolName('visual_studio_code.open_file')).toBe('打开');
   });
 });

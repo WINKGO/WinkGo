@@ -71,7 +71,51 @@ function createToolCallMessage(toolCallId: string): IMessageAcpToolCall {
   };
 }
 
+function createTipsMessage(msgId: string, content: string, supersedesKey?: string): IMessageTips {
+  return {
+    id: `tips-${msgId}-${content}`,
+    type: 'tips',
+    msg_id: msgId,
+    conversation_id: CONVERSATION_ID,
+    position: 'center',
+    content: {
+      content,
+      type: 'warning',
+      ...(supersedesKey ? { supersedes_key: supersedesKey } : {}),
+    },
+  };
+}
+
 describe('composeMessage', () => {
+  it('replaces an earlier retry tip with the same supersedes key', () => {
+    let list: TMessage[] = [];
+
+    list = composeMessage(createTipsMessage('attempt-1', 'Retrying (1/3)', 'retry:turn-1'), list);
+    list = composeMessage(createThinkingMessage('msg-1', 'Still working'), list);
+    list = composeMessage(createTipsMessage('attempt-2', 'Retrying (2/3)', 'retry:turn-1'), list);
+
+    expect(list).toHaveLength(2);
+    expect((list[0] as IMessageTips).content.content).toBe('Retrying (2/3)');
+  });
+
+  it('keeps retry tips from different turns separate', () => {
+    let list: TMessage[] = [];
+
+    list = composeMessage(createTipsMessage('msg-1', 'Retrying first turn', 'retry:msg-1'), list);
+    list = composeMessage(createTipsMessage('msg-2', 'Retrying second turn', 'retry:msg-2'), list);
+
+    expect(list).toHaveLength(2);
+  });
+
+  it('continues appending tips without a supersedes key', () => {
+    let list: TMessage[] = [];
+
+    list = composeMessage(createTipsMessage('msg-1', 'First warning'), list);
+    list = composeMessage(createTipsMessage('msg-2', 'Second warning'), list);
+
+    expect(list).toHaveLength(2);
+  });
+
   it('preserves thinking boundaries once a tool message has been inserted', () => {
     let list: TMessage[] = [];
 

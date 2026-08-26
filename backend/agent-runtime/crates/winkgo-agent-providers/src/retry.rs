@@ -30,13 +30,10 @@ where
 
 pub const MAX_STREAM_RETRIES: u32 = 2;
 pub const MAX_INITIAL_CONNECT_RETRIES: u32 = 2;
-const INITIAL_HTTP_5XX_RETRY_BACKOFFS: [Duration; 5] = [
-    Duration::from_secs(1),
-    Duration::from_secs(5),
-    Duration::from_secs(10),
-    Duration::from_secs(30),
-    Duration::from_secs(60),
-];
+// Interactive WINK GO / XiaoZhi requests must fail fast enough to let users
+// switch models or retry.  The previous 1+5+10+30+60 second ladder could hold
+// one voice task for nearly two minutes when an upstream edge stayed at 503.
+const INITIAL_HTTP_5XX_RETRY_BACKOFFS: [Duration; 2] = [Duration::from_secs(1), Duration::from_secs(3)];
 const MAX_BACKOFF: Duration = Duration::from_secs(15);
 const INITIAL_CONNECT_BACKOFF: Duration = Duration::from_millis(300);
 const MAX_INITIAL_CONNECT_BACKOFF: Duration = Duration::from_secs(2);

@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { act, render, screen, cleanup } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
@@ -149,5 +149,42 @@ describe('ExplorerPanel reveal highlight + scroll-into-view', () => {
       await flush();
     });
     expect(scrollSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('ExplorerPanel internal drag transfer', () => {
+  it('moves a same-project file into the dropped directory', async () => {
+    configureExplorerStore(makePort({ [peKey('pe1', '')]: [file('a.txt'), dir('dest')] }));
+    const onTransfer = vi.fn();
+    render(
+      <ExplorerPanel
+        projectId='p1'
+        roots={[{ pe_id: 'pe1', title: 'app', role: 'workspace' }]}
+        onTransfer={onTransfer}
+      />
+    );
+    const source = (await screen.findByText('a.txt')).closest('[draggable="true"]');
+    const target = screen.getByText('dest').parentElement;
+    expect(source).toBeTruthy();
+    expect(target).toBeTruthy();
+
+    const values = new Map<string, string>();
+    const dataTransfer = {
+      files: [],
+      effectAllowed: 'all',
+      dropEffect: 'none',
+      setData: (type: string, value: string) => values.set(type, value),
+      getData: (type: string) => values.get(type) ?? '',
+    };
+    fireEvent.dragStart(source!, { dataTransfer });
+    fireEvent.dragOver(target!, { dataTransfer, altKey: false, ctrlKey: false });
+    fireEvent.drop(target!, { dataTransfer, altKey: false, ctrlKey: false });
+
+    expect(onTransfer).toHaveBeenCalledWith(
+      { pe_id: 'pe1', relative_path: 'a.txt', name: 'a.txt', isDir: false },
+      'pe1',
+      'dest',
+      'move'
+    );
   });
 });

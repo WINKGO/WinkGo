@@ -27,6 +27,9 @@
     "configureFirst": "请先在设置中配置一个 Agent。",
     "switching": "正在切换 Agent..."
   },
+  "runtime": {
+    "managedByAgent": "由 Agent 管理"
+  },
   "model": {
     "switchSuccess": "模型切换成功",
     "switchFailed": "模型切换失败",
@@ -44,8 +47,34 @@
     "failed": "设置失败，界面已保留原状态"
   },
   "thoughtLevel": {
-    "label": "思考强度",
-    "switchSuccess": "思考强度切换成功",
-    "switchFailed": "思考强度切换失败"
+    "label": "推理强度",
+    "switchSuccess": "推理强度切换成功",
+    "switchFailed": "推理强度切换失败"
+  },
+  "speed": {
+    "label": "速度",
+    "switchSuccess": "响应速度切换成功",
+    "switchFailed": "响应速度切换失败"
+  },
+  "voiceTask": {
+    "emptyCommand": "任务内容为空，未提交给 Agent。",
+    "noAgent": "没有可用的 WINK GO Agent，或点名的桌面 Agent 技能已经退役。",
+    "noModel": "WINK GO CLI 没有可用模型，请先在“模型”页面配置并启用一个模型。",
+    "conversationName": "小智：{{command}}",
+    "createFailed": "WINK GO Agent 会话创建失败。",
+    "queued": "任务已排队交给 {{assistant}}，当前任务完成后会自动执行。",
+    "accepted": "任务已交给 {{assistant}}，可以在 WINK GO 中查看执行过程。",
+    "none": "当前没有管家任务。",
+    "waitingConfirmation": "{{assistant}} 正在等待你确认。",
+    "queuedStatus": "{{assistant}} 已接收排队任务，当前任务完成后会自动执行。",
+    "running": "{{assistant}} 正在执行任务。",
+    "finishedWithResult": "{{assistant}} 已完成任务：{{result}}",
+    "finishedNoResult": "{{assistant}} 已完成任务，但没有读取到最终回复。",
+    "failed": "{{assistant}} 执行失败：{{error}}",
+    "acceptedStatus": "{{assistant}} 已接收任务。",
+    "noCancelable": "当前没有可取消的管家任务。",
+    "cancelling": "{{assistant}} 仍在结束任务，请稍后再试一次。",
+    "cancelled": "已取消 {{assistant}} 的当前任务。",
+    "history": "最近有 {{count}} 个 Agent 任务：{{tasks}}。"
   }
 }

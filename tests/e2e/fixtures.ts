@@ -197,6 +197,13 @@ function shouldUsePackagedMode(): boolean {
 async function launchApp(): Promise<ElectronApplication> {
   const projectRoot = path.resolve(__dirname, '../..');
   const usePackaged = shouldUsePackagedMode();
+  const bundledBackendPath = path.join(
+    projectRoot,
+    'resources',
+    'bundled-winkgo-core',
+    `${process.platform}-${process.arch}`,
+    process.platform === 'win32' ? 'winkgo_core.exe' : 'winkgo_core'
+  );
 
   const commonEnv = {
     ...process.env,
@@ -206,7 +213,12 @@ async function launchApp(): Promise<ElectronApplication> {
     WINKGO_DISABLE_DEVTOOLS: '1',
     WINKGO_E2E_TEST: '1',
     WINKGO_E2E_USER_DATA_DIR: process.env.WINKGO_E2E_USER_DATA_DIR || e2eUserDataDir,
-    WINKGO_CDP_PORT: '0',
+    ...(fs.existsSync(bundledBackendPath)
+      ? { WINKGO_BACKEND_BIN: process.env.WINKGO_BACKEND_BIN || bundledBackendPath }
+      : {}),
+    // Browser-recorder E2E coverage opts into the single-target bridge. Keep it
+    // disabled for the rest of the suite unless the caller explicitly enables it.
+    WINKGO_CDP_PORT: process.env.WINKGO_CDP_PORT || '0',
   };
 
   if (usePackaged) {

@@ -2,6 +2,14 @@
 
 # Changelog
 
+## 2.2.22 (2026-08-27)
+
+- Restored portable desktop and browser automation Skill imports by routing them through WINK GO's in-app bridge tools instead of legacy external-browser selectors.
+- Hardened Runtime Skill audits by validating a sealed temporary Runtime copy and cleaning up only the audit processes launched from that copy.
+- Selected the bundled WINK GO Core platform from the requested Electron Builder target so cross-platform Windows and macOS packaging resolves the correct Core artifact.
+- Added the customer-facing desktop automation Skill bundle and regression coverage for portable actions, bridge selectors, and target-platform packaging.
+- Ignored local stale Runtime backup directories so generated binaries and machine-specific configuration cannot enter source commits.
+
 ## 2.2.11 (2026-08-02)
 
 - Fixed final release assembly to recognize the Debian-standard `amd64` package name produced for Linux x64 builds.

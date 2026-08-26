@@ -69,6 +69,8 @@ pub struct RequiresActionSet {
     /// is an adapter-behavior question; the reducer structure (just a counter)
     /// accommodates both outcomes unchanged.
     pub waiting_on_auth: u32,
+    /// Pending structured questions (`Ask` +1 / `AskResolved` -1).
+    pub waiting_on_question: u32,
 }
 
 /// ⭐ 007 §6b b1/§9.12/§9.13: a subagent's live state in `Running.subagents`.
@@ -275,7 +277,9 @@ pub fn is_requires_action(state: &SessionState) -> bool {
     matches!(
         state,
         SessionState::Running { requires_action, .. }
-            if requires_action.waiting_on_approval > 0 || requires_action.waiting_on_auth > 0
+            if requires_action.waiting_on_approval > 0
+                || requires_action.waiting_on_auth > 0
+                || requires_action.waiting_on_question > 0
     )
 }
 
@@ -389,6 +393,7 @@ mod tests {
             requires_action: RequiresActionSet {
                 waiting_on_approval: count,
                 waiting_on_auth: 0,
+                waiting_on_question: 0,
             },
             subagents: Vec::new(),
         }
@@ -402,6 +407,7 @@ mod tests {
             requires_action: RequiresActionSet {
                 waiting_on_approval: count,
                 waiting_on_auth: 0,
+                waiting_on_question: 0,
             },
             subagents: vec![SubagentState {
                 r#ref: "sub-1".into(),

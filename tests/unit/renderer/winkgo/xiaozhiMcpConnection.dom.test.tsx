@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -16,6 +16,12 @@ const mocks = vi.hoisted(() => ({
   refreshBindingCode: vi.fn(),
   authorizeFirewall: vi.fn(),
   detectLanIp: vi.fn(),
+  getNeteaseAccount: vi.fn(),
+  bindNeteaseAccount: vi.fn(),
+  unbindNeteaseAccount: vi.fn(),
+  getQqMusicAccount: vi.fn(),
+  bindQqMusicAccount: vi.fn(),
+  unbindQqMusicAccount: vi.fn(),
   statusHandler: undefined as ((snapshot: typeof snapshot) => void) | undefined,
   navigate: vi.fn(),
 }));
@@ -34,6 +40,12 @@ vi.mock('@/common', () => ({
       refreshBindingCode: { invoke: mocks.refreshBindingCode },
       authorizeFirewall: { invoke: mocks.authorizeFirewall },
       detectLanIp: { invoke: mocks.detectLanIp },
+      getNeteaseAccount: { invoke: mocks.getNeteaseAccount },
+      bindNeteaseAccount: { invoke: mocks.bindNeteaseAccount },
+      unbindNeteaseAccount: { invoke: mocks.unbindNeteaseAccount },
+      getQqMusicAccount: { invoke: mocks.getQqMusicAccount },
+      bindQqMusicAccount: { invoke: mocks.bindQqMusicAccount },
+      unbindQqMusicAccount: { invoke: mocks.unbindQqMusicAccount },
       statusChanged: {
         on: (handler: (next: typeof snapshot) => void) => {
           mocks.statusHandler = handler;
@@ -61,6 +73,52 @@ vi.mock('react-i18next', () => ({
         'settings.mcpWorkspace.bindingHelp': '如果设备码显示失效，请重新获取设备码，同时确认电脑防火墙和WebUI已开启。',
         'settings.mcpWorkspace.bindingHelpLabel': '查看设备绑定帮助',
         'settings.mcpWorkspace.webuiConfiguration': 'WebUI 配置',
+        'settings.mcpWorkspace.neteaseAccount.title': '网易云音乐账号',
+        'settings.mcpWorkspace.neteaseAccount.description': '绑定自己的网易云账号',
+        'settings.mcpWorkspace.neteaseAccount.statusUnbound': '未绑定',
+        'settings.mcpWorkspace.neteaseAccount.statusActive': '已绑定',
+        'settings.mcpWorkspace.neteaseAccount.statusNeedsRebind': '登录已失效',
+        'settings.mcpWorkspace.neteaseAccount.accountLabel': '网易云账号',
+        'settings.mcpWorkspace.neteaseAccount.uidLabel': 'UID',
+        'settings.mcpWorkspace.neteaseAccount.membershipLabel': '会员状态',
+        'settings.mcpWorkspace.neteaseAccount.inputLabel': 'MUSIC_U',
+        'settings.mcpWorkspace.neteaseAccount.placeholder': '只粘贴 MUSIC_U 的值',
+        'settings.mcpWorkspace.neteaseAccount.disclosure': '凭据会加密保存，且不得填写密码或整段 Cookie。',
+        'settings.mcpWorkspace.neteaseAccount.bind': '验证并绑定',
+        'settings.mcpWorkspace.neteaseAccount.rebind': '重新绑定',
+        'settings.mcpWorkspace.neteaseAccount.unbind': '解除绑定',
+        'settings.mcpWorkspace.neteaseAccount.refresh': '刷新状态',
+        'settings.mcpWorkspace.neteaseAccount.unbindConfirm': '确认解除绑定？',
+        'settings.mcpWorkspace.neteaseAccount.bindSuccess': '网易云账号验证并绑定成功。',
+        'settings.mcpWorkspace.neteaseAccount.unbindSuccess': '网易云账号已解除绑定。',
+        'settings.mcpWorkspace.neteaseAccount.inputInvalid': '请输入有效的 MUSIC_U。',
+        'settings.mcpWorkspace.neteaseAccount.loginRequired': '请先登录 WINK GO 账号。',
+        'settings.mcpWorkspace.neteaseAccount.desktopBindingRequired': '请先绑定同一个小程序账号。',
+        'settings.mcpWorkspace.neteaseAccount.serviceUnavailable': '网易云账号服务暂不可用。',
+        'settings.mcpWorkspace.neteaseAccount.unknownMembership': '未知',
+        'settings.mcpWorkspace.qqMusicAccount.title': 'QQ 音乐账号',
+        'settings.mcpWorkspace.qqMusicAccount.description': '绑定自己的 QQ 音乐账号',
+        'settings.mcpWorkspace.qqMusicAccount.statusUnbound': '未绑定',
+        'settings.mcpWorkspace.qqMusicAccount.statusActive': '已绑定',
+        'settings.mcpWorkspace.qqMusicAccount.statusNeedsRebind': '登录已失效',
+        'settings.mcpWorkspace.qqMusicAccount.accountLabel': 'QQ 音乐账号',
+        'settings.mcpWorkspace.qqMusicAccount.uidLabel': 'QQ 音乐 UID',
+        'settings.mcpWorkspace.qqMusicAccount.membershipLabel': '会员状态',
+        'settings.mcpWorkspace.qqMusicAccount.inputLabel': 'QQ 音乐登录 Cookie',
+        'settings.mcpWorkspace.qqMusicAccount.placeholder': '粘贴包含 uin 和 qm_keyst 的 QQ 音乐 Cookie',
+        'settings.mcpWorkspace.qqMusicAccount.disclosure': '仅提取必要字段并加密保存。',
+        'settings.mcpWorkspace.qqMusicAccount.bind': '验证并绑定 QQ 音乐',
+        'settings.mcpWorkspace.qqMusicAccount.rebind': '重新绑定 QQ 音乐',
+        'settings.mcpWorkspace.qqMusicAccount.unbind': '解除 QQ 音乐绑定',
+        'settings.mcpWorkspace.qqMusicAccount.refresh': '刷新 QQ 音乐状态',
+        'settings.mcpWorkspace.qqMusicAccount.unbindConfirm': '确认解除 QQ 音乐绑定？',
+        'settings.mcpWorkspace.qqMusicAccount.bindSuccess': 'QQ 音乐账号验证并绑定成功。',
+        'settings.mcpWorkspace.qqMusicAccount.unbindSuccess': 'QQ 音乐账号已解除绑定。',
+        'settings.mcpWorkspace.qqMusicAccount.inputInvalid': '请输入有效的 QQ 音乐 Cookie。',
+        'settings.mcpWorkspace.qqMusicAccount.loginRequired': '请先登录 WINK GO 账号。',
+        'settings.mcpWorkspace.qqMusicAccount.desktopBindingRequired': '请先绑定同一个小程序账号。',
+        'settings.mcpWorkspace.qqMusicAccount.serviceUnavailable': 'QQ 音乐账号服务暂不可用。',
+        'settings.mcpWorkspace.qqMusicAccount.unknownMembership': '未知',
       };
       return (translations[key] ?? key).replace('{{domain}}', options?.domain ?? '');
     },
@@ -76,6 +134,8 @@ vi.mock('@arco-design/web-react', async (importOriginal) => {
       success: vi.fn(),
       warning: vi.fn(),
     },
+    Popconfirm: ({ children, onOk }: { children: React.ReactElement; onOk?: () => void }) =>
+      React.cloneElement(children, { onClick: () => void onOk?.() }),
   };
 });
 
@@ -165,6 +225,80 @@ describe('XiaozhiMcpConnection', () => {
     });
     mocks.refreshBindingCode.mockResolvedValue({ success: true, data: snapshot });
     mocks.authorizeFirewall.mockResolvedValue({ success: true, data: snapshot });
+    mocks.getNeteaseAccount.mockResolvedValue({
+      success: true,
+      data: {
+        configured: false,
+        state: 'unbound',
+        uid: '',
+        displayName: '',
+        membershipLevel: '',
+        verifiedAt: null,
+        updatedAt: null,
+        lastErrorCode: '',
+      },
+    });
+    mocks.bindNeteaseAccount.mockResolvedValue({
+      success: true,
+      data: {
+        configured: true,
+        state: 'active',
+        uid: '123456',
+        displayName: '测试账号',
+        membershipLevel: '网易云会员',
+        verifiedAt: 1,
+        updatedAt: 1,
+        lastErrorCode: '',
+      },
+    });
+    mocks.getQqMusicAccount.mockResolvedValue({
+      success: true,
+      data: {
+        configured: false,
+        state: 'unbound',
+        uid: '',
+        displayName: '',
+        membershipLevel: '',
+        verifiedAt: null,
+        updatedAt: null,
+        lastErrorCode: '',
+      },
+    });
+    mocks.bindQqMusicAccount.mockResolvedValue({
+      success: true,
+      data: {
+        configured: true,
+        state: 'active',
+        uid: '87654321',
+        displayName: 'QQ 测试账号',
+        membershipLevel: '豪华绿钻',
+        verifiedAt: 1,
+        updatedAt: 1,
+        lastErrorCode: '',
+      },
+    });
+  });
+
+  const triggerRejectedBinding = async (): Promise<HTMLInputElement> => {
+    mocks.bindNeteaseAccount.mockRejectedValueOnce(new Error('ipc unavailable'));
+    render(<XiaozhiMcpConnection />);
+    const input = await screen.findByPlaceholderText('只粘贴 MUSIC_U 的值');
+    fireEvent.change(input, { target: { value: 'm'.repeat(64) } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '验证并绑定' }));
+      await Promise.resolve();
+    });
+    return input as HTMLInputElement;
+  };
+
+  it('shows a neutral detection state before the first Runtime snapshot arrives', () => {
+    mocks.getSnapshot.mockImplementation(() => new Promise(() => undefined));
+
+    render(<XiaozhiMcpConnection />);
+
+    expect(screen.getByTestId('xiaozhi-flow-runtime')).toHaveAttribute('data-status', 'checking');
+    expect(screen.getByText('正在检测')).toBeInTheDocument();
+    expect(screen.queryByText('尚未安装')).toBeNull();
   });
 
   it('loads the original dual-channel configuration without testing remote services on mount', async () => {
@@ -278,5 +412,119 @@ describe('XiaozhiMcpConnection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'WebUI 配置' }));
 
     expect(mocks.navigate).toHaveBeenCalledWith('/settings/webui');
+  });
+
+  it('shows only sanitized NetEase account metadata after status refresh', async () => {
+    mocks.getNeteaseAccount.mockResolvedValue({
+      success: true,
+      data: {
+        configured: true,
+        state: 'active',
+        uid: '123456',
+        displayName: '测试账号',
+        membershipLevel: '网易云会员',
+        verifiedAt: 1,
+        updatedAt: 1,
+        lastErrorCode: '',
+      },
+    });
+
+    render(<XiaozhiMcpConnection />);
+
+    expect(await screen.findByText('测试账号')).toBeInTheDocument();
+    expect(screen.getByText('123456')).toBeInTheDocument();
+    expect(screen.getByText('网易云会员')).toBeInTheDocument();
+    expect(screen.queryByText(/MUSIC_U=/)).toBeNull();
+  });
+
+  it('submits MUSIC_U once and clears the secret input after binding', async () => {
+    render(<XiaozhiMcpConnection />);
+    const input = await screen.findByPlaceholderText('只粘贴 MUSIC_U 的值');
+    const musicU = 'm'.repeat(64);
+    fireEvent.change(input, { target: { value: musicU } });
+    fireEvent.click(screen.getByRole('button', { name: '验证并绑定' }));
+
+    await waitFor(() => expect(mocks.bindNeteaseAccount).toHaveBeenCalledWith({ musicU }));
+    expect(input).toHaveValue('');
+    expect(await screen.findByText('测试账号')).toBeInTheDocument();
+  });
+
+  it('clears the secret when binding IPC rejects', async () => {
+    const input = await triggerRejectedBinding();
+
+    expect(input).toHaveValue('');
+  });
+
+  it('releases the loading state when binding IPC rejects', async () => {
+    await triggerRejectedBinding();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '刷新状态' })).toBeEnabled());
+  });
+
+  it('shows a safe service error when binding IPC rejects', async () => {
+    await triggerRejectedBinding();
+
+    expect(await screen.findByText('网易云账号服务暂不可用。')).toBeInTheDocument();
+  });
+
+  it('releases the loading state when account status IPC rejects', async () => {
+    mocks.getNeteaseAccount.mockRejectedValueOnce(new Error('ipc unavailable'));
+    render(<XiaozhiMcpConnection />);
+
+    expect(await screen.findByText('网易云账号服务暂不可用。')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: '刷新状态' })).toBeEnabled());
+  });
+
+  it('releases the loading state when account unbinding IPC rejects', async () => {
+    mocks.getNeteaseAccount.mockResolvedValueOnce({
+      success: true,
+      data: {
+        configured: true,
+        state: 'active',
+        uid: '123456',
+        displayName: '测试账号',
+        membershipLevel: '网易云会员',
+        verifiedAt: 1,
+        updatedAt: 1,
+        lastErrorCode: '',
+      },
+    });
+    mocks.unbindNeteaseAccount.mockRejectedValueOnce(new Error('ipc unavailable'));
+    render(<XiaozhiMcpConnection />);
+
+    expect(await screen.findByText('测试账号')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '解除绑定' }));
+
+    await waitFor(() => expect(mocks.unbindNeteaseAccount).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('网易云账号服务暂不可用。')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: '刷新状态' })).toBeEnabled());
+  });
+
+  it('shows a safe binding requirement without exposing a raw server response', async () => {
+    mocks.getNeteaseAccount.mockResolvedValue({
+      success: false,
+      error: 'desktop_miniapp_binding_required',
+    });
+
+    render(<XiaozhiMcpConnection />);
+
+    expect(await screen.findByText('请先绑定同一个小程序账号。')).toBeInTheDocument();
+    expect(screen.queryByText('desktop_miniapp_binding_required')).toBeNull();
+  });
+
+  it('submits the QQ Music Cookie once, clears it, and renders only sanitized metadata', async () => {
+    render(<XiaozhiMcpConnection />);
+    const input = await screen.findByPlaceholderText('粘贴包含 uin 和 qm_keyst 的 QQ 音乐 Cookie');
+    const cookie = `uin=o87654321; qm_keyst=${'k'.repeat(32)}; p_skey=desktop-only`;
+    fireEvent.change(input, { target: { value: cookie } });
+    fireEvent.click(screen.getByRole('button', { name: '验证并绑定 QQ 音乐' }));
+
+    await waitFor(() => expect(mocks.bindQqMusicAccount).toHaveBeenCalledWith({ cookie }));
+    expect(input).toHaveValue('');
+    expect(await screen.findByText('QQ 测试账号')).toBeInTheDocument();
+    expect(screen.getByText('87654321')).toBeInTheDocument();
+    expect(screen.getByText('豪华绿钻')).toBeInTheDocument();
+    expect(screen.queryByText(/qm_keyst=/)).toBeNull();
+    expect(screen.queryByText(/p_skey=/)).toBeNull();
   });
 });

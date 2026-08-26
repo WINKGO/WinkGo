@@ -269,6 +269,35 @@ impl ITeamRepository for SqliteTeamRepository {
         Ok(rows)
     }
 
+    async fn list_mailbox(&self, team_id: &str, limit: Option<i64>) -> Result<Vec<MailboxMessageRow>, DbError> {
+        let rows = if let Some(limit) = limit {
+            sqlx::query_as::<_, MailboxMessageRow>(
+                "SELECT id, team_id, to_agent_id, from_agent_id, \
+                        type, content, summary, files, read, created_at \
+                 FROM mailbox \
+                 WHERE team_id = ? \
+                 ORDER BY created_at ASC, id ASC \
+                 LIMIT ?",
+            )
+            .bind(team_id)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await?
+        } else {
+            sqlx::query_as::<_, MailboxMessageRow>(
+                "SELECT id, team_id, to_agent_id, from_agent_id, \
+                        type, content, summary, files, read, created_at \
+                 FROM mailbox \
+                 WHERE team_id = ? \
+                 ORDER BY created_at ASC, id ASC",
+            )
+            .bind(team_id)
+            .fetch_all(&self.pool)
+            .await?
+        };
+        Ok(rows)
+    }
+
     async fn delete_mailbox_by_team(&self, team_id: &str) -> Result<(), DbError> {
         sqlx::query("DELETE FROM mailbox WHERE team_id = ?")
             .bind(team_id)

@@ -8,6 +8,7 @@ import WinkGoModal from '@/renderer/components/base/WinkGoModal';
 import { LinkCloud } from '@icon-park/react';
 import { ipcBridge } from '@/common';
 import useModeModeList from '@renderer/hooks/agent/useModeModeList';
+import { getModelDiscoveryBaseUrl } from '@/common/utils/modelDiscovery';
 import { getProviderLogo } from '@/renderer/utils/model/modelPlatforms';
 
 /**
@@ -55,11 +56,10 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
 
     // For Bedrock, don't pass bedrock_config to avoid auto-refresh on input changes
     // We'll build it dynamically in onFocus
-    // When is_full_url, pass empty base_url to prevent auto-fetch with the full endpoint URL
     const modelListState = useModeModeList(
       data?.platform || 'gemini',
-      isFullUrl ? '' : effectiveBaseUrl,
-      isFullUrl ? '' : effectiveApiKey,
+      effectiveBaseUrl,
+      effectiveApiKey,
       true,
       undefined
     );
@@ -72,9 +72,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
     // a refresh result. When the refresh succeeds and a selected model is
     // missing from the new list we surface a passive hint only.
     const handleBaseUrlBlur = async () => {
-      // is_full_url providers don't fetch a model list (the endpoint is a full
-      // chat URL, not a base), so there is nothing to refresh — mirror onFocus.
-      if (isFullUrl || isBedrock) return;
+      if (isBedrock) return;
 
       const nextBaseUrl = form.getFieldValue('base_url') as string | undefined;
       const apiKey = (form.getFieldValue('api_key') as string | undefined) ?? '';
@@ -90,7 +88,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
 
       try {
         const res = await ipcBridge.mode.fetchModelList.invoke({
-          base_url: nextBaseUrl,
+          base_url: getModelDiscoveryBaseUrl(nextBaseUrl, data?.platform || 'gemini'),
           api_key: apiKey,
           try_fix: true,
           platform: data?.platform || 'gemini',
@@ -312,22 +310,21 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
               field={'model'}
               required
               rules={[{ required: true }]}
-              validateStatus={!isFullUrl && modelListState.error ? 'error' : undefined}
+              validateStatus={modelListState.error ? 'error' : undefined}
               help={
-                !isFullUrl && modelListState.error instanceof Error
+                modelListState.error instanceof Error
                   ? modelListState.error.message
-                  : !isFullUrl && modelListState.error
+                  : modelListState.error
                     ? String(modelListState.error)
                     : undefined
               }
             >
               <Select
-                loading={!isFullUrl && modelListState.isLoading}
+                loading={modelListState.isLoading}
                 showSearch
                 allowCreate
                 mode={data?.models && data.models.length > 1 ? 'multiple' : undefined}
                 onFocus={async () => {
-                  if (isFullUrl) return;
                   // For Bedrock, build bedrock_config from current form values and fetch models
                   if (isBedrock) {
                     const values = form.getFields();
@@ -382,7 +379,7 @@ const EditModeModal = ModalHOC<{ data?: IProvider; onChange(data: IProvider): vo
                   }
                   void modelListState.mutate();
                 }}
-                options={isFullUrl ? [] : modelListState.data?.models || []}
+                options={modelListState.data?.models || []}
                 placeholder={t('settings.modelNamePlaceholder', '输入模型名称并按 Enter')}
               />
             </Form.Item>

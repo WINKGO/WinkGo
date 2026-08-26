@@ -7,11 +7,13 @@
  */
 
 import type { BrowserWindow } from 'electron';
-import { app } from 'electron';
+import { app, session } from 'electron';
 import { ipcBridge } from '@/common';
+import { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
 import { ProcessConfig } from '@process/utils/initStorage';
 import { getZoomFactor, setZoomFactor } from '@process/utils/zoom';
 import { getCdpStatus, updateCdpConfig } from '@process/utils/configureChromium';
+import { getCdpBridgeHandle } from '@process/utils/cdpBridgeRegistry';
 import { getGpuStatus, setGpuUserOverride } from '@process/utils/gpuRecovery';
 import { initApplicationBridgeCore } from './applicationBridgeCore';
 import type { IStartOnBootStatus } from '@/common/adapter/ipcBridge';
@@ -190,6 +192,30 @@ export function initApplicationBridge(): void {
       return { success: true, data: updatedConfig };
     } catch (e) {
       return { success: false, msg: e.message || e.toString() };
+    }
+  });
+
+  ipcBridge.application.clearBrowserData.provider(async () => {
+    try {
+      const browserSession = session.fromPartition(BROWSER_SESSION_PARTITION);
+      await browserSession.clearStorageData();
+      await browserSession.clearCache();
+      await browserSession.clearAuthCache();
+      return { success: true };
+    } catch (e) {
+      return { success: false, msg: e instanceof Error ? e.message : String(e) };
+    }
+  });
+
+  ipcBridge.application.reportBrowserWebContentsId.provider(async ({ webContentsId }) => {
+    try {
+      const handle = getCdpBridgeHandle();
+      if (!handle) return { success: false, msg: 'WINK GO 浏览器控制尚未启用。' };
+      const result = handle.attach(webContentsId);
+      if (result.ok === false) return { success: false, msg: result.reason };
+      return { success: true };
+    } catch (e) {
+      return { success: false, msg: e instanceof Error ? e.message : String(e) };
     }
   });
 

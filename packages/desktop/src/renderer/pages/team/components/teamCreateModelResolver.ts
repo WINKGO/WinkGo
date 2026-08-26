@@ -68,6 +68,10 @@ function resolveAssistantModel(detail: AssistantDetail): string | undefined {
 }
 
 function resolveBackendDefaultModel(assistant_backend?: string): Promise<string> {
+  if (assistant_backend === 'antigravity') {
+    return resolveAntigravityDefaultModel();
+  }
+
   if (assistant_backend === 'gemini') {
     return resolveGeminiDefaultModel();
   }
@@ -77,6 +81,12 @@ function resolveBackendDefaultModel(assistant_backend?: string): Promise<string>
   }
 
   return resolveAcpDefaultModel(assistant_backend ?? 'acp');
+}
+
+async function resolveAntigravityDefaultModel(): Promise<string> {
+  // Antigravity owns model selection. The ACP placeholder is interpreted as
+  // a real model id and prevents the conversation from starting.
+  return '';
 }
 
 async function resolveAcpDefaultModel(_assistant_backend: string): Promise<string> {

@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
@@ -182,6 +183,20 @@ describe('useTeamRunView', () => {
     const { result } = renderHook(() => useTeamRunView('team-1'));
 
     await waitFor(() => expect(result.current.state.slotWorkBySlot.worker).toEqual(background));
+    expect(result.current.state.activeRun).toBeUndefined();
+  });
+
+  it('treats omitted slot work in a new team snapshot as empty', async () => {
+    const { result } = renderHook(() => useTeamRunView('team-1'));
+    const runUpdated = teamEventMocks.handlers.runUpdated as TeamRunHandler;
+    act(() => runUpdated(runEvent({ slot_work: [slotWork('lead')] })));
+    teamEventMocks.invoke.getRunState.mockResolvedValue({ active_run: null });
+
+    await act(async () => {
+      expect(await result.current.reconcile('new-team')).toBe(true);
+    });
+
+    expect(result.current.state.slotWorkBySlot).toEqual({});
     expect(result.current.state.activeRun).toBeUndefined();
   });
 

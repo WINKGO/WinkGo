@@ -343,12 +343,25 @@ const ensureAssistantDirs = async (): Promise<void> => {
 };
 
 const getBuiltinMcpBaseDir = (): string => {
+  const platformPaths = getPlatformServices().paths;
+  const appPath = platformPaths.getAppPath();
+
+  // In Electron development mode require.main points at the repository entry
+  // (usually `<repo>/index.js`) instead of the compiled main bundle. Built-in
+  // MCP scripts are emitted to `<repo>/out/main`, so resolving relative to
+  // require.main silently registered a non-existent `<repo>/builtin-mcp-*.js`
+  // path and every chat-side MCP handshake failed with MODULE_NOT_FOUND.
+  if (!platformPaths.isPackaged() && appPath) {
+    const developmentBundleDir = path.join(appPath, 'out', 'main');
+    if (existsSync(developmentBundleDir)) return developmentBundleDir;
+  }
+
   const mainModuleDir =
     typeof require !== 'undefined' && require.main?.filename ? path.dirname(require.main.filename) : __dirname;
   const baseDir = path.basename(mainModuleDir) === 'chunks' ? path.dirname(mainModuleDir) : mainModuleDir;
   // In packaged mode the main bundle lives inside app.asar, but external node
   // processes cannot read files from ASAR archives. Redirect to the unpacked copy.
-  if (getPlatformServices().paths.isPackaged()) {
+  if (platformPaths.isPackaged()) {
     return baseDir.replace('app.asar', 'app.asar.unpacked');
   }
   return baseDir;

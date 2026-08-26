@@ -45,4 +45,14 @@ describe('WINK GO Windows media control bridge', () => {
     expect(bridgeSource).toContain('[bool]$script:latestMedia.isPlaying');
     expect(bridgeSource).toContain('420');
   });
+
+  it('backs off and deduplicates warnings when Windows notification polling hangs', () => {
+    expect(bridgeSource).toContain('$script:notificationFailureCount');
+    expect(bridgeSource).toContain('$script:notificationRetryAfter');
+    expect(bridgeSource).toContain('$script:lastNotificationWarningAt');
+    expect(bridgeSource).toContain(') $listType 2500');
+    expect(bridgeSource).toContain('$script:notificationFailureCount -ge 4');
+    expect(bridgeSource).toContain('$backoffSeconds = 300');
+    expect(bridgeSource).toContain('TotalSeconds -ge 300');
+  });
 });

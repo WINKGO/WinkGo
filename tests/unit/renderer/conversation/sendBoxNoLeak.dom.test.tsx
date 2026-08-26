@@ -105,7 +105,12 @@ vi.mock('@/renderer/pages/conversation/runtime/useConversationRuntimeView', () =
 vi.mock('@/renderer/pages/conversation/utils/ensureConversationRuntime', () => ({
   ensureConversationRuntime: vi.fn(),
 }));
-vi.mock('@/renderer/services/FileService', () => ({ allSupportedExts: [] }));
+vi.mock('@/renderer/services/FileService', () => ({
+  allSupportedExts: [],
+  audioExts: ['.mp3'],
+  imageExts: ['.png', '.svg'],
+  getFileExtension: (path: string) => path.slice(path.lastIndexOf('.')).toLowerCase(),
+}));
 // NOTE: emitter + useAddEventListener are NOT mocked — the real bus drives the guards.
 
 import { emitter } from '@/renderer/utils/emitter';

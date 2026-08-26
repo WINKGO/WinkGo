@@ -6,6 +6,7 @@
 //! limit, non-existent file handling, and contentUpdate event broadcast.
 
 use std::fs;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use winkgo_api_types::WebSocketMessage;
@@ -412,7 +413,8 @@ async fn write_file_nested_relative_path() {
 
     let events = recorder.take_events();
     assert_eq!(events.len(), 1);
-    assert_eq!(events[0].data["relative_path"], "src/utils/helper.ts");
+    let relative_path = events[0].data["relative_path"].as_str().unwrap();
+    assert_eq!(Path::new(relative_path), Path::new("src/utils/helper.ts"));
 }
 
 // -----------------------------------------------------------------------

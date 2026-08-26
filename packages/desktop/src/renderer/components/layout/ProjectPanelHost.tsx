@@ -28,6 +28,7 @@
 import React, { useRef } from 'react';
 
 import { ExpandRight } from '@icon-park/react';
+import { Button } from '@arco-design/web-react';
 
 import { ExplorerContainer } from '@/renderer/pages/conversation/explorer/ExplorerContainer';
 import { useCurrentProject } from '@/renderer/pages/conversation/explorer/currentProjectStore';
@@ -76,14 +77,13 @@ export const ProjectPanelHost: React.FC<ProjectPanelHostProps> = ({
     >
       {!collapsed && dragHandle}
       {!collapsed && showChevron && (
-        <button
-          type='button'
-          className='workspace-header__toggle absolute top-8px right-8px z-30'
+        <Button
+          type='text'
+          className='project-panel-edge-toggle'
           aria-label='Collapse explorer'
           onClick={onToggle}
-        >
-          <ExpandRight size={16} />
-        </button>
+          icon={<ExpandRight size={15} />}
+        />
       )}
       {/* Hosted project component (this round: Explorer). Seam = projectId only. */}
       <ExplorerContainer projectId={projectId} />

@@ -7,19 +7,29 @@
  */
 
 import type { IConversationMcpStatus, IConversationMcpStatusKind } from '@/common/config/storage';
-import { ipcBridge } from '@/common';
 import { Button, Message, Trigger } from '@arco-design/web-react';
-import { FolderOpen, Lightning, Paperclip, Plus, Right, Shield } from '@icon-park/react';
+import {
+  Browser,
+  Calendar,
+  Computer,
+  FolderOpen,
+  Lightning,
+  Paperclip,
+  Plus,
+  Puzzle,
+  Right,
+  Shield,
+} from '@icon-park/react';
 import { useConversationContextSafe } from '@/renderer/hooks/context/ConversationContext';
 import { iconColors } from '@/renderer/styles/colors';
 import { isElectronDesktop } from '@/renderer/utils/platform';
 import { FileService } from '@/renderer/services/FileService';
 import type { FileMetadata } from '@/renderer/services/FileService';
 import { emitter } from '@/renderer/utils/emitter';
+import { openDynamicIslandPanel } from '@/renderer/utils/winkgo/openDynamicIslandPanel';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import useSWR from 'swr';
 
 interface FileAttachButtonProps {
   openFileSelector: () => void;
@@ -94,11 +104,6 @@ const FileAttachButton: React.FC<FileAttachButtonProps> = ({
     loadedMcpStatuses ?? conversationContext?.loadedMcpStatuses,
     conversationContext?.loadedMcpServers
   );
-  const { data: skillIndex } = useSWR(skillNames.length > 0 ? 'skills-index' : null, () =>
-    ipcBridge.fs.listAvailableSkills.invoke()
-  );
-  const descriptionByName = new Map((skillIndex ?? []).map((s) => [s.name, s.description]));
-
   const handleSkillClick = useCallback((name: string) => {
     setOpen(false);
     emitter.emit('sendbox.fill', `/${name} `);
@@ -109,6 +114,34 @@ const FileAttachButton: React.FC<FileAttachButtonProps> = ({
     setSkillsOpen(false);
     setMcpOpen(false);
     void navigate('/settings/tools');
+  }, [navigate]);
+
+  const handleOpenSkills = useCallback(() => {
+    setOpen(false);
+    setSkillsOpen(false);
+    setMcpOpen(false);
+    void navigate('/settings/skills');
+  }, [navigate]);
+
+  const handleOpenBrowserComputerUse = useCallback(() => {
+    setOpen(false);
+    setSkillsOpen(false);
+    setMcpOpen(false);
+    void openDynamicIslandPanel('browserComputerUse');
+  }, []);
+
+  const handleOpenDesktopComputerUse = useCallback(() => {
+    setOpen(false);
+    setSkillsOpen(false);
+    setMcpOpen(false);
+    void openDynamicIslandPanel('desktopComputerUse');
+  }, []);
+
+  const handleOpenScheduledTasks = useCallback(() => {
+    setOpen(false);
+    setSkillsOpen(false);
+    setMcpOpen(false);
+    void navigate('/scheduled');
   }, [navigate]);
 
   const handleLocalFileChange = useCallback(
@@ -134,25 +167,14 @@ const FileAttachButton: React.FC<FileAttachButtonProps> = ({
   const hasMcpServers = mcpStatuses.length > 0;
   const plusIcon = <Plus theme='outline' size='14' strokeWidth={2} fill={iconColors.primary} />;
 
-  if (isDesktop && !hasSkills && !hasMcpServers) {
-    return (
-      <Button
-        type='secondary'
-        shape='circle'
-        icon={plusIcon}
-        onClick={openFileSelector}
-        data-testid='winkgo_agent-attach-folder-btn'
-      />
-    );
-  }
-
   const cardStyle: React.CSSProperties = {
     backgroundColor: 'var(--color-bg-2, #fff)',
     borderRadius: 12,
-    boxShadow: '0 4px 24px rgba(0,0,0,0.13)',
+    boxShadow: '0 14px 38px rgba(23, 32, 51, 0.14)',
     border: '1px solid var(--color-border-1, #e5e6eb)',
     padding: '6px 0',
-    minWidth: 220,
+    minWidth: 252,
+    backdropFilter: 'blur(18px)',
     zIndex: 1050,
   };
 
@@ -295,6 +317,40 @@ const FileAttachButton: React.FC<FileAttachButtonProps> = ({
           }}
         />
       </div>
+      <div style={{ margin: '4px 12px', height: 1, backgroundColor: 'var(--color-border-1, #e5e6eb)' }} />
+      <div className='px-6px'>
+        {isDesktop ? (
+          <>
+            <MenuItem
+              icon={<Computer theme='outline' size={15} strokeWidth={2.5} />}
+              label={t('common.desktopComputerUse.title', { defaultValue: '桌面 Computer Use' })}
+              description={t('common.desktopComputerUse.hint', { defaultValue: '使用视觉模型操作 Windows 软件' })}
+              onClick={handleOpenDesktopComputerUse}
+            />
+            <MenuItem
+              icon={<Browser theme='outline' size={15} strokeWidth={2.5} />}
+              label={t('common.browserComputerUse.title', { defaultValue: 'WINK GO 浏览器 Computer Use' })}
+              description={t('common.browserComputerUse.hint', { defaultValue: '使用模型操作软件内置浏览器' })}
+              onClick={handleOpenBrowserComputerUse}
+            />
+            <MenuItem
+              icon={<Calendar theme='outline' size={15} strokeWidth={2.5} />}
+              label={t('cron.scheduledTasks')}
+              onClick={handleOpenScheduledTasks}
+            />
+          </>
+        ) : null}
+        <MenuItem
+          icon={<Puzzle theme='outline' size={15} strokeWidth={2.5} />}
+          label={t('common.fileAttach.manageSkills', { defaultValue: 'Add or manage skills' })}
+          onClick={handleOpenSkills}
+        />
+        <MenuItem
+          icon={<Shield theme='outline' size={15} strokeWidth={2.5} />}
+          label={t('conversation.mcp.openSettings', { defaultValue: 'Open Tools settings' })}
+          onClick={handleOpenMcpSettings}
+        />
+      </div>
     </div>
   );
 
@@ -316,6 +372,8 @@ const FileAttachButton: React.FC<FileAttachButtonProps> = ({
           loading={uploading}
           disabled={uploading}
           data-testid='winkgo_agent-attach-folder-btn'
+          className='sendbox-add-capability-btn'
+          aria-label={t('common.addFunction', { defaultValue: 'Add functions' })}
         />
       </Trigger>
       <input

@@ -23,12 +23,13 @@
 //! `emit`) are now production-reachable via `open_session`'s live spawn (R4) and
 //! independently contract-tested via the `build_with_io` seam.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
-use tokio::sync::{Mutex, broadcast};
+use tokio::sync::{Mutex, broadcast, oneshot};
 use winkgo_process::Spawner;
 
 use super::suspend::{ProcHandle, SuspendController, spawn_idle_timer};
@@ -41,6 +42,10 @@ use crate::adapter::AgentIo;
 use crate::capability::{BlockSet, Capabilities, CapabilityTier, CommandSet, PromptAcceptedSource, SignalSet};
 use crate::event::{CancelReason, ProvisioningPhase, SessionEvent, StopReason, SubagentStatus, TurnOutcome};
 use futures_util::stream::{BoxStream, StreamExt};
+
+const STEER_ACK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+type SteerAckSender = oneshot::Sender<Result<(), String>>;
+type PendingSteerAcks = Arc<Mutex<HashMap<u64, SteerAckSender>>>;
 
 /// Connection-level factory for codex. Holds the injected `Spawner`. Unlike
 /// claude (1:1), codex's app-server CAN multiplex threads on one process — but
@@ -58,6 +63,132 @@ impl CodexConnection {
     }
 }
 
+/// Build the isolated app-server argv for a WINK GO-owned Codex session.
+///
+/// Codex normally merges `~/.codex/config.toml` plus installed Codex plugins into
+/// every app-server thread.  That is the correct behavior for the Codex app, but
+/// it is the wrong ownership boundary here: WINK GO already snapshots the MCP
+/// servers selected for this conversation and injects that exact list through
+/// `thread/start.config.mcp_servers`.  Inheriting the global table made unrelated
+/// Playwright/Journey/Cowart servers start (and sometimes wait 30 seconds to
+/// fail) before a desktop or browser task could use WINK GO's ready native MCP.
+///
+/// Put caller-provided arguments first and the isolation overrides last so the
+/// session surface remains deterministic.  The explicit servers are still
+/// injected later by [`thread_start_params`] / [`thread_resume_params`].
+fn global_codex_config_path() -> Option<PathBuf> {
+    if let Some(home) = std::env::var_os("CODEX_HOME").filter(|value| !value.is_empty()) {
+        return Some(PathBuf::from(home).join("config.toml"));
+    }
+    std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .filter(|value| !value.is_empty())
+        .map(|home| PathBuf::from(home).join(".codex").join("config.toml"))
+}
+
+fn quoted_toml_key_prefix(input: &str) -> Option<&str> {
+    if !input.starts_with('"') {
+        return None;
+    }
+    let mut escaped = false;
+    for (index, ch) in input.char_indices().skip(1) {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match ch {
+            '\\' => escaped = true,
+            '"' => return Some(&input[..=index]),
+            _ => {}
+        }
+    }
+    None
+}
+
+fn global_mcp_server_names_from_toml(config: &str) -> Vec<&str> {
+    let mut names = BTreeSet::new();
+    for line in config.lines() {
+        let Some(rest) = line.trim().strip_prefix("[mcp_servers.") else {
+            continue;
+        };
+        let name = if rest.starts_with('"') {
+            let Some(quoted) = quoted_toml_key_prefix(rest) else {
+                continue;
+            };
+            let Ok(name) = serde_json::from_str::<&str>(quoted) else {
+                continue;
+            };
+            name
+        } else {
+            rest.split(['.', ']'])
+                .next()
+                .map(str::trim)
+                .filter(|name| !name.is_empty())
+                .unwrap_or_default()
+        };
+        if !name.is_empty() {
+            names.insert(name);
+        }
+    }
+    names.into_iter().collect()
+}
+
+fn global_mcp_server_names() -> Vec<String> {
+    let Some(path) = global_codex_config_path() else {
+        return Vec::new();
+    };
+    let Ok(config) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    global_mcp_server_names_from_toml(&config)
+        .into_iter()
+        .map(str::to_owned)
+        .collect()
+}
+
+fn is_toml_bare_key(input: &str) -> bool {
+    !input.is_empty()
+        && input
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
+}
+
+fn codex_app_server_args_with_global_mcp_names(
+    extra_args: &[String],
+    global_mcp_names: &[impl AsRef<str>],
+) -> Vec<String> {
+    let mut args = vec!["app-server".to_string()];
+    args.extend(extra_args.iter().cloned());
+    args.extend([
+        "--disable".to_string(),
+        "plugins".to_string(),
+        "--disable".to_string(),
+        "apps".to_string(),
+    ]);
+    for name in global_mcp_names {
+        let name = name.as_ref();
+        if !is_toml_bare_key(name) {
+            tracing::warn!(
+                mcp_server = name,
+                "cannot safely disable global MCP server through Codex CLI dotted-key override"
+            );
+            continue;
+        }
+        // Codex's direct `-c` parser treats quotes in a dotted segment as
+        // literal server-name bytes.  TOML bare keys already support '-' and
+        // '_', so emit the segment without source-level quoting.  Otherwise a
+        // name such as `journey-forge-skills` becomes a new incomplete server
+        // named `\"journey-forge-skills\"` and app-server exits with
+        // `invalid transport` before the selected WINK GO MCPs can start.
+        args.extend(["-c".to_string(), format!("mcp_servers.{name}.enabled=false")]);
+    }
+    args
+}
+
+fn codex_app_server_args(extra_args: &[String]) -> Vec<String> {
+    codex_app_server_args_with_global_mcp_names(extra_args, &global_mcp_server_names())
+}
+
 #[async_trait::async_trait]
 impl BackendConnection for CodexConnection {
     async fn open_session(
@@ -73,8 +204,7 @@ impl BackendConnection for CodexConnection {
             SessionSpec::Fresh { session_id } => session_id.clone(),
             SessionSpec::Resume { session_id, .. } => session_id.clone(),
         };
-        let mut args = vec!["app-server".to_string()];
-        args.extend(config.extra_args.iter().cloned());
+        let args = codex_app_server_args(&config.extra_args);
         let cmd = winkgo_common::CommandSpec {
             // User-installed CLI resolved from an explicit override or PATH.
             // See SessionConfig.cli_program.
@@ -559,6 +689,7 @@ pub fn codex_capabilities() -> Capabilities {
         // can_queue off steer here would be the MX-QUEUE-3 dead button.) Flips true
         // only when B5 wires Steer routing.
         accepts_proactive_input: false,
+        supports_midturn_delivery: true,
         // #101: codex's app-server has no slash-command discovery wire (112 methods
         // audited, none lists commands — samples/codex-cli/0.137.0/schema-full/
         // ClientRequest.json). The legacy codex-acp bridge instead advertised a
@@ -694,6 +825,11 @@ pub struct CodexSessionBackend {
     /// or surfaces a Notice (NoTurn) — NEVER a silent drop (a dropped rejection
     /// left the turn hanging Running forever, ELECTRON-3Q0).
     pending_sends: Arc<Mutex<HashMap<u64, PendingSend>>>,
+    /// `turn/steer` must not be treated as delivered merely because bytes were
+    /// flushed to stdin. The reader resolves this map from the matching JSON-RPC
+    /// response; dispatch waits on the oneshot and only then acknowledges the
+    /// conversation message.
+    pending_steers: PendingSteerAcks,
     /// B-CODEX-MODEL-LIST (§9.10 discovery): rpc ids of the `model/list` +
     /// `collaborationMode/list` calls `open_session` issues at handshake, mapped to
     /// which list they fill. The reader claims the matching responses and writes
@@ -789,6 +925,7 @@ struct CodexReaderState {
     pending_auth_id: Arc<Mutex<Option<Value>>>,
     pending_tool_approvals: Arc<std::sync::Mutex<HashMap<String, String>>>,
     pending_sends: Arc<Mutex<HashMap<u64, PendingSend>>>,
+    pending_steers: PendingSteerAcks,
     pending_discovery: Arc<Mutex<HashMap<u64, DiscoveryKind>>>,
     pending_set: Arc<Mutex<HashMap<u64, String>>>,
     pending_resume: Arc<Mutex<Option<u64>>>,
@@ -821,6 +958,7 @@ fn start_codex_reader(
             state.pending_auth_id,
             state.pending_tool_approvals,
             state.pending_sends,
+            state.pending_steers,
             state.pending_discovery,
             state.pending_set,
             state.pending_resume,
@@ -949,6 +1087,7 @@ impl CodexSessionBackend {
         let pending_tool_approvals = Arc::new(std::sync::Mutex::new(HashMap::new()));
         let current_model = Arc::new(Mutex::new(None));
         let pending_sends = Arc::new(Mutex::new(HashMap::new()));
+        let pending_steers = Arc::new(Mutex::new(HashMap::new()));
         let pending_discovery = Arc::new(Mutex::new(HashMap::new()));
         let pending_set = Arc::new(Mutex::new(HashMap::new()));
         let pending_resume = Arc::new(Mutex::new(None));
@@ -972,6 +1111,7 @@ impl CodexSessionBackend {
             pending_auth_id: pending_auth_id.clone(),
             pending_tool_approvals: pending_tool_approvals.clone(),
             pending_sends: pending_sends.clone(),
+            pending_steers: pending_steers.clone(),
             pending_discovery: pending_discovery.clone(),
             pending_set: pending_set.clone(),
             pending_resume: pending_resume.clone(),
@@ -1028,6 +1168,7 @@ impl CodexSessionBackend {
             pending_tool_approvals,
             current_model,
             pending_sends,
+            pending_steers,
             pending_discovery,
             pending_set,
             pending_resume,
@@ -1111,6 +1252,19 @@ impl CodexSessionBackend {
         // A handshake is a fresh chance: any prior resume rejection belonged to
         // the previous process/attempt.
         *self.resume_poison.lock().await = None;
+        let mcp_server_names = self
+            .wake
+            .config
+            .init
+            .mcp_servers
+            .iter()
+            .map(|server| server.name.as_str())
+            .collect::<Vec<_>>();
+        tracing::info!(
+            resume = resume_thread_id.is_some(),
+            mcp_servers = ?mcp_server_names,
+            "codex app-server handshake surface resolved"
+        );
         self.write_frame(initialize_params().into_frame(self.next_rpc_id(), "initialize"))
             .await?;
         match resume_thread_id {
@@ -1178,8 +1332,7 @@ impl CodexSessionBackend {
             .spawner
             .as_ref()
             .ok_or_else(|| BackendError::Transport("codex wake: no spawner (suspension not enabled)".into()))?;
-        let mut args = vec!["app-server".to_string()];
-        args.extend(self.wake.config.extra_args.iter().cloned());
+        let args = codex_app_server_args(&self.wake.config.extra_args);
         let cmd = winkgo_common::CommandSpec {
             // Same user-installed CLI resolution + spawn env as the initial spawn
             // (R16 continuity).
@@ -1233,6 +1386,7 @@ async fn reader_task(
     pending_auth_id: Arc<Mutex<Option<Value>>>,
     pending_tool_approvals: Arc<std::sync::Mutex<HashMap<String, String>>>,
     pending_sends: Arc<Mutex<HashMap<u64, PendingSend>>>,
+    pending_steers: PendingSteerAcks,
     pending_discovery: Arc<Mutex<HashMap<u64, DiscoveryKind>>>,
     pending_set: Arc<Mutex<HashMap<u64, String>>>,
     pending_resume: Arc<Mutex<Option<u64>>>,
@@ -1455,6 +1609,17 @@ async fn reader_task(
                                     .unwrap_or("request rejected (no error message)")
                                     .to_string()
                             });
+                            if let Some(waiter) = pending_steers.lock().await.remove(&rid) {
+                                let acknowledgement = if frame.get("result").is_some() {
+                                    Ok(())
+                                } else {
+                                    Err(error_message
+                                        .clone()
+                                        .unwrap_or_else(|| "request rejected without a result".to_owned()))
+                                };
+                                let _ = waiter.send(acknowledgement);
+                                continue;
+                            }
                             // (ELECTRON-3Q0 fix A) Claim the thread/resume response.
                             // An ERROR ("no rollout found for thread id …", verified:
                             // samples/codex-cli/0.144.1/dead_resume.jsonl) means the
@@ -1659,6 +1824,15 @@ async fn reader_task(
     // F-4: the reader loop ended (process exited / stdout EOF) → the turn (if any)
     // is terminal. Clear the turn-active flag so the idle timer is unblocked.
     turn_in_flight.store(false, std::sync::atomic::Ordering::SeqCst);
+    let pending_steer_waiters = {
+        let mut pending = pending_steers.lock().await;
+        pending.drain().map(|(_, waiter)| waiter).collect::<Vec<_>>()
+    };
+    for waiter in pending_steer_waiters {
+        let _ = waiter.send(Err(
+            "delivery-uncertain: codex stream ended before turn/steer acknowledgement".into(),
+        ));
+    }
 
     // M3 defensive flush: the stream ended with a deferred `status→idle` but NO
     // authoritative `turn/completed` ever arrived (not observed in real codex, but
@@ -2367,6 +2541,12 @@ fn map_notification(method: &str, params: &Value) -> Vec<SessionEvent> {
                 .and_then(Value::as_str)
                 .map(str::to_string)
                 .unwrap_or_default();
+            tracing::info!(
+                server = params.get("name").and_then(|value| value.as_str()).unwrap_or(""),
+                status = params.get("status").and_then(|value| value.as_str()).unwrap_or(""),
+                error = reason.as_str(),
+                "codex MCP startup status"
+            );
             let phase = match params.get("status").and_then(Value::as_str).unwrap_or("") {
                 "starting" => ProvisioningPhase::ToolsWaiting,
                 "ready" => ProvisioningPhase::ToolsReady,
@@ -3274,17 +3454,46 @@ impl SessionBackend for CodexSessionBackend {
                 // gated-steering wire: codex rejects (activeTurnNotSteerable) if the
                 // turn already ended. NoTurn admission (no new turn_gen — folds into
                 // the live turn, b-side FSM never sees Steer).
+                // Verified: backend/protocols/samples/codex-cli/0.145.0/
+                // turn-steer-live-redacted.ndjson.
                 let tid = self.bound_thread().await?;
                 let Some(turn_id) = self.active_turn_id.lock().await.clone() else {
                     // No active turn to steer into.
                     return Err(BackendError::Transport("no active turn to steer".into()));
                 };
                 let id = self.next_rpc_id();
+                let (ack_tx, ack_rx) = oneshot::channel();
+                self.pending_steers.lock().await.insert(id, ack_tx);
                 let frame = json!({
                     "jsonrpc": "2.0", "id": id, "method": "turn/steer",
                     "params": { "threadId": tid, "expectedTurnId": turn_id, "input": build_input(&content) }
                 });
-                self.write_frame(frame).await?;
+                if let Err(error) = self.write_frame(frame).await {
+                    self.pending_steers.lock().await.remove(&id);
+                    return Err(BackendError::DeliveryUncertain(format!(
+                        "codex turn/steer write failed: {error}"
+                    )));
+                }
+                match tokio::time::timeout(STEER_ACK_TIMEOUT, ack_rx).await {
+                    Ok(Ok(Ok(()))) => {}
+                    Ok(Ok(Err(message))) if message.starts_with("delivery-uncertain:") => {
+                        return Err(BackendError::DeliveryUncertain(message));
+                    }
+                    Ok(Ok(Err(message))) => {
+                        return Err(BackendError::Transport(format!("codex turn/steer rejected: {message}")));
+                    }
+                    Ok(Err(_)) => {
+                        return Err(BackendError::DeliveryUncertain(
+                            "codex turn/steer acknowledgement channel closed".into(),
+                        ));
+                    }
+                    Err(_) => {
+                        self.pending_steers.lock().await.remove(&id);
+                        return Err(BackendError::DeliveryUncertain(
+                            "codex turn/steer acknowledgement timed out".into(),
+                        ));
+                    }
+                }
                 Ok(CommandReceipt {
                     accepted: true,
                     admission: Admission::NoTurn,
@@ -3533,6 +3742,7 @@ impl SessionBackend for CodexSessionBackend {
                     turn_gen: self.turn_gen.load(Ordering::SeqCst),
                 })
             }
+            Command::AnswerAsk { .. } => Err(BackendError::CommandNotSupported { command: "answer_ask" }),
             Command::Acknowledge { .. } => {
                 // User-ack of a completed turn (done-unseen → seen). NO wire frame —
                 // codex has no "acknowledge" concept; this folds at the
@@ -5770,15 +5980,37 @@ mod tests {
     async fn dispatch_steer_writes_turn_steer_with_expected_turn_id() {
         // R6 Steer → `turn/steer{threadId, expectedTurnId, input}` (soft injection;
         // NoTurn admission — no new turn_gen). The expectedTurnId is the active turn.
-        let fake = fake_with_binding("th-3", Some("turn-X"));
+        let prefix = format!(
+            "{}\n{}\n",
+            r#"{"jsonrpc":"2.0","method":"thread/started","params":{"thread":{"id":"th-3"}}}"#,
+            r#"{"jsonrpc":"2.0","method":"turn/started","params":{"threadId":"th-3","turn":{"id":"turn-X"}}}"#
+        )
+        .into_bytes();
+        let tail = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n".to_vec();
+        let fake = FakeAgentIo::new(prefix, None).with_gated_tail(tail);
         let captured = fake.captured_stdin();
-        let backend = CodexSessionBackend::build_with_io("codex-1", Box::new(fake)).await;
-        let receipt = backend
-            .dispatch(Command::Steer {
-                content: vec![ContentBlock::Text("STEERED".into())],
-            })
-            .await
-            .expect("accepted");
+        let release = fake.stdout_releaser();
+        let backend = Arc::new(CodexSessionBackend::build_with_io("codex-1", Box::new(fake)).await);
+        let dispatch_backend = backend.clone();
+        let dispatch = tokio::spawn(async move {
+            dispatch_backend
+                .dispatch(Command::Steer {
+                    content: vec![ContentBlock::Text("STEERED".into())],
+                })
+                .await
+        });
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            loop {
+                if String::from_utf8_lossy(&captured.lock().await).contains(r#""method":"turn/steer""#) {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("steer request should be written before acknowledgement");
+        release();
+        let receipt = dispatch.await.unwrap().expect("accepted after codex acknowledgement");
         assert_eq!(receipt.admission, Admission::NoTurn, "steer folds into the live turn");
         let written = captured_str(&captured).await;
         assert!(
@@ -5790,6 +6022,85 @@ mod tests {
             "gated by the active turn token, got: {written}"
         );
         assert!(written.contains("STEERED"), "carries the steer text, got: {written}");
+    }
+
+    #[tokio::test]
+    async fn dispatch_steer_surfaces_codex_rejection() {
+        let prefix = format!(
+            "{}\n{}\n",
+            r#"{"jsonrpc":"2.0","method":"thread/started","params":{"thread":{"id":"th-3"}}}"#,
+            r#"{"jsonrpc":"2.0","method":"turn/started","params":{"threadId":"th-3","turn":{"id":"turn-X"}}}"#
+        )
+        .into_bytes();
+        let tail =
+            b"{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32000,\"message\":\"activeTurnNotSteerable\"}}\n"
+                .to_vec();
+        let fake = FakeAgentIo::new(prefix, None).with_gated_tail(tail);
+        let captured = fake.captured_stdin();
+        let release = fake.stdout_releaser();
+        let backend = Arc::new(CodexSessionBackend::build_with_io("codex-1", Box::new(fake)).await);
+        let dispatch_backend = backend.clone();
+        let dispatch = tokio::spawn(async move {
+            dispatch_backend
+                .dispatch(Command::Steer {
+                    content: vec![ContentBlock::Text("too late".into())],
+                })
+                .await
+        });
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            loop {
+                if String::from_utf8_lossy(&captured.lock().await).contains(r#""method":"turn/steer""#) {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("steer request should be written before rejection");
+        release();
+        let error = dispatch
+            .await
+            .unwrap()
+            .expect_err("codex rejection must reach the caller");
+        assert!(matches!(error, BackendError::Transport(message) if message.contains("activeTurnNotSteerable")));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn dispatch_steer_times_out_without_a_codex_acknowledgement() {
+        let prefix = format!(
+            "{}\n{}\n",
+            r#"{"jsonrpc":"2.0","method":"thread/started","params":{"thread":{"id":"th-3"}}}"#,
+            r#"{"jsonrpc":"2.0","method":"turn/started","params":{"threadId":"th-3","turn":{"id":"turn-X"}}}"#
+        )
+        .into_bytes();
+        let fake = FakeAgentIo::new(prefix, None).with_gated_tail(b"\n".to_vec());
+        let backend = Arc::new(CodexSessionBackend::build_with_io("codex-1", Box::new(fake)).await);
+        for _ in 0..20 {
+            if backend.active_turn_id.lock().await.as_deref() == Some("turn-X") {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(backend.active_turn_id.lock().await.as_deref(), Some("turn-X"));
+
+        let dispatch_backend = backend.clone();
+        let dispatch = tokio::spawn(async move {
+            dispatch_backend
+                .dispatch(Command::Steer {
+                    content: vec![ContentBlock::Text("wait forever".into())],
+                })
+                .await
+        });
+        tokio::task::yield_now().await;
+        tokio::time::advance(STEER_ACK_TIMEOUT + std::time::Duration::from_millis(1)).await;
+        let error = dispatch
+            .await
+            .unwrap()
+            .expect_err("missing steer acknowledgement must time out");
+        assert!(
+            matches!(error, BackendError::DeliveryUncertain(message) if message.contains("acknowledgement timed out"))
+        );
+        assert!(backend.pending_steers.lock().await.is_empty());
     }
 
     #[tokio::test]
@@ -6532,6 +6843,14 @@ mod tests {
             spec.args.first().map(String::as_str),
             Some("app-server"),
             "first arg is app-server"
+        );
+        assert!(
+            spec.args.windows(2).any(|args| args == ["--disable", "plugins"]),
+            "WINK GO sessions must not inherit Codex plugins and their hidden MCP servers"
+        );
+        assert!(
+            spec.args.windows(2).any(|args| args == ["--disable", "apps"]),
+            "WINK GO sessions must not inherit Codex Apps MCP servers"
         );
         assert!(
             spec.args.iter().any(|a| a == "--flag"),
@@ -7939,4 +8258,49 @@ mod tests {
             "the late-arriving threadId binds (no premature timeout)"
         );
     }
+}
+#[test]
+fn winkgo_codex_sessions_disable_every_global_mcp_server_by_name() {
+    let config = r#"
+[mcp_servers.node_repl]
+command = "node"
+
+[mcp_servers.node_repl.env]
+NODE_NO_WARNINGS = "1"
+
+[mcp_servers."journey-forge-skills"]
+url = "https://example.test/mcp"
+
+[mcp_servers.playwright]
+command = "npx"
+"#;
+
+    let names = global_mcp_server_names_from_toml(config);
+    assert_eq!(names, ["journey-forge-skills", "node_repl", "playwright"]);
+
+    let args = codex_app_server_args_with_global_mcp_names(&[], &names);
+    for name in names {
+        let override_value = format!("mcp_servers.{name}.enabled=false");
+        assert!(
+            args.windows(2).any(|pair| pair == ["-c", override_value.as_str()]),
+            "missing per-server disable override for {name}: {args:?}"
+        );
+    }
+
+    assert!(
+        args.iter().all(|arg| !arg.contains("mcp_servers.\"")),
+        "direct CLI overrides must not preserve TOML source quotes as literal server-name bytes: {args:?}"
+    );
+}
+
+#[test]
+fn winkgo_codex_sessions_skip_names_that_cannot_be_cli_bare_keys() {
+    let args = codex_app_server_args_with_global_mcp_names(&[], &["safe-name", "unsafe.name", "unsafe name"]);
+
+    assert!(
+        args.windows(2)
+            .any(|pair| { pair == ["-c", "mcp_servers.safe-name.enabled=false"] })
+    );
+    assert!(args.iter().all(|arg| !arg.contains("unsafe.name")));
+    assert!(args.iter().all(|arg| !arg.contains("unsafe name")));
 }

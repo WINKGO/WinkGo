@@ -865,6 +865,105 @@ async fn t6_4_clone_requires_auth() {
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
 
+#[tokio::test]
+async fn t6_5_fork_copies_history_through_anchor_without_runtime_identity() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let req = json_with_token(
+        "POST",
+        "/api/conversations",
+        create_body_with_extra(
+            "Fork Source",
+            json!({
+                "branch_marker": "preserved",
+                "sessionId": "parent-session",
+                "thread_id": "parent-thread"
+            }),
+        ),
+        &token,
+        &csrf,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let parent_json = body_json(resp).await;
+    let parent_id = parent_json["data"]["id"].as_str().unwrap().to_owned();
+
+    let repo = SqliteConversationRepository::new(services.database.pool().clone());
+    for (id, content, created_at) in [
+        ("fork-msg-1", "first", 1_000),
+        ("fork-msg-2", "anchor", 2_000),
+        ("fork-msg-3", "after anchor", 3_000),
+    ] {
+        IConversationRepository::insert_message(
+            &repo,
+            &winkgo_db::models::MessageRow {
+                id: id.into(),
+                conversation_id: parent_id.clone(),
+                msg_id: Some(id.into()),
+                r#type: "text".into(),
+                content: json!({ "content": content }).to_string(),
+                position: Some("right".into()),
+                status: Some("finish".into()),
+                hidden: false,
+                created_at,
+            },
+        )
+        .await
+        .unwrap();
+    }
+
+    let req = json_with_token(
+        "POST",
+        &format!("/api/conversations/{parent_id}/fork"),
+        json!({ "message_id": "fork-msg-2" }),
+        &token,
+        &csrf,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let fork_json = body_json(resp).await;
+    let fork_id = fork_json["data"]["id"].as_str().unwrap().to_owned();
+
+    assert_ne!(fork_id, parent_id);
+    assert_eq!(fork_json["data"]["name"], "Fork Source · Branch");
+    assert_eq!(
+        fork_json["data"]["extra"]["fork"]["parent_conversation_id"],
+        parent_id
+    );
+    assert_eq!(fork_json["data"]["extra"]["fork"]["parent_message_id"], "fork-msg-2");
+    assert!(fork_json["data"]["extra"]["sessionId"].is_null());
+    assert!(fork_json["data"]["extra"]["thread_id"].is_null());
+    assert_eq!(fork_json["data"]["extra"]["branch_marker"], "preserved");
+
+    let resp = app
+        .clone()
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{fork_id}/messages"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let messages = body_json(resp).await;
+    let fork_items = messages["data"]["items"].as_array().unwrap();
+    assert_eq!(fork_items.len(), 2);
+    assert_eq!(fork_items[0]["content"]["content"], "first");
+    assert_eq!(fork_items[1]["content"]["content"], "anchor");
+    assert_ne!(fork_items[0]["msg_id"], "fork-msg-1");
+    assert_ne!(fork_items[1]["msg_id"], "fork-msg-2");
+
+    let resp = app
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{parent_id}/messages"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    let messages = body_json(resp).await;
+    assert_eq!(messages["data"]["items"].as_array().unwrap().len(), 3);
+}
+
 // ── T7: Reset ─────────────────────────────────────────────────────────
 
 #[tokio::test]

@@ -71,6 +71,7 @@ vi.mock('@arco-design/web-react', () => {
     Message: {
       success: vi.fn(),
       error: vi.fn(),
+      info: vi.fn(),
     },
     Tooltip: ({ children, content }: { children?: React.ReactNode; content?: React.ReactNode }) => (
       <span data-tooltip-content={typeof content === 'string' ? content : undefined}>{children}</span>
@@ -142,6 +143,67 @@ describe('AgentModeSelector', () => {
 
     await waitFor(() => expect(screen.getByTestId('mode-selector')).toHaveAttribute('data-current-mode', 'default'));
     expect(screen.getByText('权限 · 默认')).toBeInTheDocument();
+  });
+
+  it('shows a pending target without moving the pill off the mode still in force', async () => {
+    useAcpConfigOptionsMock.mockImplementation(() => ({
+      setStatus: { state: 'idle' },
+      isLoading: false,
+      mode: runtimeMode(),
+      model: null,
+      thoughtLevel: null,
+      reload: vi.fn(),
+      setConfigOption: vi.fn(),
+      pendingValues: { mode: 'bypassPermissions' },
+    }));
+
+    render(
+      <AgentModeSelector
+        backend='claude'
+        conversation_id='conv-1'
+        compact
+        modeLabelFormatter={(mode) => (mode.value === 'default' ? '默认' : '全自动')}
+        compactLabelPrefix='权限'
+      />
+    );
+
+    await waitFor(() => expect(screen.getByText('默认 → 全自动')).toBeInTheDocument());
+    expect(screen.getByTestId('mode-selector')).toHaveAttribute('data-current-mode', 'default');
+  });
+
+  it('treats a deferred switch as pending rather than an error', async () => {
+    const { Message } = (await import('@arco-design/web-react')) as unknown as {
+      Message: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn>; info: ReturnType<typeof vi.fn> };
+    };
+    const setConfigOption = vi.fn().mockResolvedValue([{ id: 'mode', current_value: 'default' }]);
+    useAcpConfigOptionsMock.mockImplementation(() => ({
+      setStatus: { state: 'idle' },
+      isLoading: false,
+      mode: runtimeMode(),
+      model: null,
+      thoughtLevel: null,
+      reload: vi.fn(),
+      setConfigOption,
+      pendingValues: {},
+    }));
+
+    render(
+      <AgentModeSelector
+        backend='claude'
+        conversation_id='conv-1'
+        compact
+        modeLabelFormatter={(mode) => (mode.value === 'default' ? '默认' : '全自动')}
+        compactLabelPrefix='权限'
+      />
+    );
+
+    fireEvent.click(screen.getByText('全自动'));
+
+    await waitFor(() => expect(setConfigOption).toHaveBeenCalledWith('mode', 'bypassPermissions'));
+    await waitFor(() => expect(Message.info).toHaveBeenCalled());
+    expect(Message.error).not.toHaveBeenCalled();
+    expect(Message.success).not.toHaveBeenCalled();
+    expect(screen.getByTestId('mode-selector')).toHaveAttribute('data-current-mode', 'default');
   });
 
   it('keeps compact mode selector hidden while runtime mode is initializing', () => {

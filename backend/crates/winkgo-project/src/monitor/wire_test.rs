@@ -76,6 +76,16 @@ fn remove_params_recursive_defaults_false() {
     assert!(!p.recursive);
 }
 
+#[test]
+fn create_file_params_parse_project_reference() {
+    let params: CreateFileParams = serde_json::from_value(json!({
+        "file": {"pe_id": "pe1", "relative_path": "notes/new.txt"}
+    }))
+    .unwrap();
+    assert_eq!(params.file.pe_id, "pe1");
+    assert_eq!(params.file.relative_path, "notes/new.txt");
+}
+
 // ── entry / kind ──────────────────────────────────────────────────────────
 
 #[test]

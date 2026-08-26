@@ -10,7 +10,11 @@ import { winkGoCloudAuthService } from '@process/services/WinkGoCloudAuthService
 import { requireWinkGoCapability } from '@process/services/winkGoEditionGuard';
 import {
   authorizeWinkGoXiaozhiFirewall,
+  bindWinkGoNeteaseAccount,
+  bindWinkGoQqMusicAccount,
   detectWinkGoLanIp,
+  getWinkGoNeteaseAccount,
+  getWinkGoQqMusicAccount,
   getWinkGoXiaozhiSnapshot,
   refreshWinkGoBindingCode,
   resolveWinkGoXiaozhiRuntimeLogPath,
@@ -20,10 +24,26 @@ import {
   stopWinkGoRemoteGateway,
   subscribeWinkGoXiaozhiStatus,
   testWinkGoXiaozhiConnections,
+  unbindWinkGoNeteaseAccount,
+  unbindWinkGoQqMusicAccount,
 } from '@process/services/WinkGoXiaozhiService';
 import { WinkGoXiaozhiActivityMonitor } from '@process/services/WinkGoXiaozhiActivityService';
 
 let initialized = false;
+
+export const startWinkGoXiaozhiAtLaunch = async ({
+  hasUsableSession,
+  hasXiaozhiCapability,
+  startRuntime,
+}: {
+  hasUsableSession: boolean;
+  hasXiaozhiCapability: boolean;
+  startRuntime: () => Promise<unknown>;
+}): Promise<boolean> => {
+  if (!hasUsableSession || !hasXiaozhiCapability) return false;
+  await startRuntime();
+  return true;
+};
 
 const capture = async <T>(task: () => Promise<T>): Promise<ipcBridge.WinkGoInspirationResult<T>> => {
   try {
@@ -53,6 +73,16 @@ export function initWinkGoXiaozhiBridge(): void {
   ipcBridge.winkGoXiaozhi.refreshBindingCode.provider(() => capturePro(refreshWinkGoBindingCode));
   ipcBridge.winkGoXiaozhi.authorizeFirewall.provider(() => capturePro(authorizeWinkGoXiaozhiFirewall));
   ipcBridge.winkGoXiaozhi.detectLanIp.provider(() => capturePro(async () => detectWinkGoLanIp()));
+  ipcBridge.winkGoXiaozhi.getNeteaseAccount.provider(() => capturePro(getWinkGoNeteaseAccount));
+  ipcBridge.winkGoXiaozhi.bindNeteaseAccount.provider((request) =>
+    capturePro(() => bindWinkGoNeteaseAccount(request.musicU))
+  );
+  ipcBridge.winkGoXiaozhi.unbindNeteaseAccount.provider(() => capturePro(unbindWinkGoNeteaseAccount));
+  ipcBridge.winkGoXiaozhi.getQqMusicAccount.provider(() => capturePro(getWinkGoQqMusicAccount));
+  ipcBridge.winkGoXiaozhi.bindQqMusicAccount.provider((request) =>
+    capturePro(() => bindWinkGoQqMusicAccount(request.cookie))
+  );
+  ipcBridge.winkGoXiaozhi.unbindQqMusicAccount.provider(() => capturePro(unbindWinkGoQqMusicAccount));
   const unsubscribe = subscribeWinkGoXiaozhiStatus((snapshot) => {
     ipcBridge.winkGoXiaozhi.statusChanged.emit(snapshot);
   });
@@ -60,18 +90,19 @@ export function initWinkGoXiaozhiBridge(): void {
     ipcBridge.winkGoXiaozhi.activityChanged.emit(activity);
   });
   const stopActivityMonitor = activityMonitor.start();
-  if (winkGoCloudAuthService.hasUsableSession() && winkGoCloudAuthService.hasCapability('mcp.miniapp')) {
-    void getWinkGoXiaozhiSnapshot().catch((error) => {
-      // Re-post the saved gateway configuration on every desktop start. This
-      // deliberately makes the official ESP32 channel reconnect and refresh
-      // its advertised Runtime capabilities instead of keeping a stale tool
-      // cache after skills or music providers are changed.
-      console.warn(
-        '[WINK GO Xiaozhi] 启动时刷新 ESP32/小程序能力失败：',
-        error instanceof Error ? error.message : String(error)
-      );
-    });
-  }
+  void startWinkGoXiaozhiAtLaunch({
+    hasUsableSession: winkGoCloudAuthService.hasUsableSession(),
+    hasXiaozhiCapability: winkGoCloudAuthService.hasCapability('mcp.miniapp'),
+    startRuntime: startWinkGoXiaozhiRuntime,
+  }).catch((error) => {
+    // Starting here also runs the packaged-Runtime upgrade check before the
+    // ESP32 channel reconnects, so a customer never keeps routing through a
+    // stale executable merely because they did not open the MCP settings page.
+    console.warn(
+      '[WINK GO Xiaozhi] 启动时更新并连接 Runtime 失败：',
+      error instanceof Error ? error.message : String(error)
+    );
+  });
   if (winkGoCloudAuthService.hasUsableSession() && winkGoCloudAuthService.hasCapability('remote.desktop')) {
     void startWinkGoRemoteGateway().catch(() => {
       // The settings page exposes a readable relay status; desktop startup must continue.

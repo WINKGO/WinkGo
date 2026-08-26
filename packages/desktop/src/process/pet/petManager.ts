@@ -21,7 +21,7 @@ import {
   destroyPetConfirmManager,
   unhookPetConfirm,
 } from './petConfirmManager';
-import type { PetSize, PetState } from './petTypes';
+import { DEFAULT_PET_SIZE, type PetSize, type PetState } from './petTypes';
 
 /**
  * Check whether the current environment can support desktop pet windows.
@@ -48,7 +48,7 @@ let petHitWindow: BrowserWindow | null = null;
 let stateMachine: PetStateMachine | null = null;
 let idleTicker: PetIdleTicker | null = null;
 let eventBridge: PetEventBridge | null = null;
-let currentSize: PetSize = 280;
+let currentSize: PetSize = DEFAULT_PET_SIZE;
 let dragTimer: ReturnType<typeof setInterval> | null = null;
 let dragWatchdog: ReturnType<typeof setTimeout> | null = null;
 let dragOffsetX = 0;
@@ -96,17 +96,20 @@ const RESTORABLE_STATES: ReadonlySet<PetState> = new Set<PetState>(['thinking', 
 /**
  * Create pet windows (rendering window + hit detection window).
  */
-export function createPetWindow(): void {
+export function createPetWindow(size: PetSize = currentSize): void {
   if (!isPetSupported()) {
     console.warn('[Pet] Desktop pet is not supported in headless mode');
     return;
   }
 
   if (petWindow && !petWindow.isDestroyed()) {
+    resizePet(size);
     petWindow.show();
     petWindow.focus();
     return;
   }
+
+  currentSize = size;
 
   const { x, y } = computeInitialPosition(currentSize);
 
@@ -674,6 +677,9 @@ function stopHitIgnoreWatchdog(): void {
 }
 
 function resizePet(size: PetSize): void {
+  // Remember the preference even while the pet is disabled. The next
+  // createPetWindow() call must use the user's saved size.
+  currentSize = size;
   if (!petWindow || petWindow.isDestroyed() || !petHitWindow || petHitWindow.isDestroyed()) return;
 
   // If the user resizes mid-drag, the in-flight drag timer would keep moving the
@@ -684,7 +690,6 @@ function resizePet(size: PetSize): void {
     endDrag();
   }
 
-  currentSize = size;
   const [x, y] = petWindow.getPosition();
 
   applyTransparentResize(petWindow, { x, y, width: size, height: size });

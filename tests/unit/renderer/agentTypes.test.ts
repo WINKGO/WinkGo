@@ -2,7 +2,7 @@
 import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
-import { formatManagedAgentDiagnosticMessage } from '@/renderer/utils/model/agentTypes';
+import { formatManagedAgentDiagnosticMessage, managedAgentSearchText } from '@/renderer/utils/model/agentTypes';
 
 const t = ((key: string, options?: Record<string, unknown>) => {
   switch (key) {
@@ -73,5 +73,24 @@ describe('formatManagedAgentDiagnosticMessage', () => {
     );
 
     expect(message).toBe('Qoder IDE is separate from qodercli.');
+  });
+});
+
+describe('managedAgentSearchText', () => {
+  it('includes backend, command, binary name and localized metadata', () => {
+    const text = managedAgentSearchText(
+      managedAgent({
+        name: 'Antigravity',
+        name_i18n: { 'zh-CN': '反重力' },
+        backend: 'antigravity',
+        command: 'agy',
+        agent_source_info: { binary_name: 'agy.exe' },
+      }),
+      'zh-CN'
+    );
+
+    expect(text).toContain('antigravity');
+    expect(text).toContain('反重力');
+    expect(text).toContain('agy.exe');
   });
 });

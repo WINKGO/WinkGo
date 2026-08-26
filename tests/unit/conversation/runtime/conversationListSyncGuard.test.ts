@@ -6,8 +6,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, expect, it } from 'vitest';
-import { getSidebarStreamGuardDecision } from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+  getSidebarStreamGuardDecision,
+  getSnapshotConversationProjectId,
+  setConversationProjectMapForTest,
+} from '@/renderer/pages/conversation/GroupedHistory/hooks/useConversationListSync';
+
+afterEach(() => setConversationProjectMapForTest([]));
 
 describe('getSidebarStreamGuardDecision', () => {
   it('marks normal generating stream messages', () => {
@@ -40,5 +46,58 @@ describe('getSidebarStreamGuardDecision', () => {
       clearCompleted: false,
       lateIgnored: false,
     });
+  });
+
+  it("does not treat a newer turn's frame as late", () => {
+    expect(
+      getSidebarStreamGuardDecision({
+        type: 'content',
+        completed: true,
+        completedTurnId: 'turn-orphan',
+        streamTurnId: 'turn-new',
+      })
+    ).toEqual({
+      markGenerating: true,
+      clearCompleted: true,
+      lateIgnored: false,
+    });
+  });
+
+  it('still ignores a frame from the turn that completed', () => {
+    expect(
+      getSidebarStreamGuardDecision({
+        type: 'content',
+        completed: true,
+        completedTurnId: 'turn-1',
+        streamTurnId: 'turn-1',
+      })
+    ).toEqual({
+      markGenerating: false,
+      clearCompleted: false,
+      lateIgnored: true,
+    });
+  });
+
+  it('falls back to late-ignore when turn ids are unknown', () => {
+    expect(
+      getSidebarStreamGuardDecision({ type: 'content', completed: true, completedTurnId: null, streamTurnId: null })
+    ).toEqual({
+      markGenerating: false,
+      clearCompleted: false,
+      lateIgnored: true,
+    });
+  });
+});
+
+describe('conversation project snapshot', () => {
+  it('distinguishes a project, a known project-less conversation, and an unknown row synchronously', () => {
+    setConversationProjectMapForTest([
+      ['conversation-a', 'project-a'],
+      ['conversation-without-project', null],
+    ]);
+
+    expect(getSnapshotConversationProjectId('conversation-a')).toBe('project-a');
+    expect(getSnapshotConversationProjectId('conversation-without-project')).toBeNull();
+    expect(getSnapshotConversationProjectId('not-loaded')).toBeUndefined();
   });
 });

@@ -453,18 +453,37 @@ mod tests {
     // -----------------------------------------------------------------------
 
     #[test]
-    fn embedded_assistants_use_default_avatar_without_unregistered_bitmaps() {
+    fn embedded_assistant_file_avatars_are_registered_and_readable() {
         let reg = BuiltinAssistantRegistry::load_embedded();
-        assert!(!reg.has("moltbook"));
+        assert!(reg.has("moltbook"));
 
+        let mut file_avatar_count = 0;
         for assistant in reg.all() {
-            assert!(
-                assistant.avatar.is_none(),
-                "official assistant {} must use the UI default avatar",
-                assistant.id
-            );
-            assert!(reg.avatar_asset(&assistant.id).is_none());
+            let has_file_avatar = assistant
+                .avatar
+                .as_deref()
+                .map(looks_like_relative_path)
+                .unwrap_or(false);
+            if has_file_avatar {
+                file_avatar_count += 1;
+                let asset = reg
+                    .avatar_asset(&assistant.id)
+                    .unwrap_or_else(|| panic!("official assistant {} references a missing avatar", assistant.id));
+                assert!(
+                    !asset.bytes.is_empty(),
+                    "official assistant {} has an empty avatar",
+                    assistant.id
+                );
+                assert!(
+                    asset.extension.is_some(),
+                    "official assistant {} avatar has no extension",
+                    assistant.id
+                );
+            } else {
+                assert!(reg.avatar_asset(&assistant.id).is_none());
+            }
         }
+        assert!(file_avatar_count > 0);
 
         let design_studio = reg.get("ui-ux-pro-max").expect("UI/UX assistant");
         assert_eq!(design_studio.name, "UI/UX Design Studio");

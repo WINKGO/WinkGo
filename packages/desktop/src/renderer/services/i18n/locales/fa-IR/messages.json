@@ -2,6 +2,7 @@
   "fileChanges": "تغییرات فایل",
   "fileChangesCount": "{{count}} تغییر فایل",
   "conversationInProgress": "در حال حاضر گفتگویی در جریان است...",
+  "delivery": { "queued": "در انتظار پایان کار فعلی" },
   "confirm": "تأیید",
   "canceledExecution": "اجرا لغو شد",
   "openLinkFailed": "باز کردن لینک ناموفق بود",
@@ -62,6 +63,13 @@
   "processing": "در حال پردازش...",
   "responseSentSuccessfully": "پاسخ با موفقیت ارسال شد",
   "permissionResponseFailed": "ارسال پاسخ ممکن نشد. دوباره تلاش کنید.",
+  "askSubmit": "ارسال",
+  "askDecline": "رد کردن",
+  "askAnswered": "پاسخ داده شد",
+  "askDeclined": "رد شد",
+  "askOther": "سایر",
+  "askOtherPlaceholder": "پاسخ خود را وارد کنید",
+  "requestDetails": "جزئیات درخواست:",
   "confirmation": {
     "applyChange": "این تغییر اعمال شود؟",
     "allowExecution": "اجرا مجاز باشد؟",
@@ -72,5 +80,14 @@
     "yesAlwaysAllowTool": "بله، همیشه اجازه ابزار «{{toolName}}» از سرور «{{serverName}}» بده",
     "yesAlwaysAllowServer": "بله، همیشه اجازه تمام ابزارها از سرور «{{serverName}}» بده",
     "no": "خیر (esc)"
+  },
+  "fork": {
+    "action": "انشعاب از اینجا",
+    "errorTurnInFlight": "پیش از انشعاب صبر کنید تا پاسخ فعلی کامل شود",
+    "errorParentUnbound": "این گفتگو هنوز نشست پشتیبانی برای انشعاب ندارد",
+    "errorPointUnsupported": "این عامل فقط از آخرین پیام می‌تواند انشعاب بگیرد",
+    "errorUnsupported": "این عامل از انشعاب پشتیبانی نمی‌کند",
+    "errorGeneric": "انشعاب ناموفق بود: {{message}}",
+    "errorTeamUnsupported": "Team member conversations must be managed from Team mode"
   }
 }

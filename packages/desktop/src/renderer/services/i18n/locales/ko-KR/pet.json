@@ -1,6 +1,8 @@
 {
   "desktopPet": "데스크톱 펫",
   "enable": "데스크톱 펫 활성화",
+  "butlerSetup": "도우미에게 설정 요청",
+  "butlerSetupPrompt": "데스크톱 펫을 만들어 주세요. 이미지를 첨부할 테니 그 이미지로 펫을 만들어 주세요.",
   "size": "펫 크기",
   "sizeSmall": "소 ({{px}}px)",
   "sizeMedium": "중 ({{px}}px)",

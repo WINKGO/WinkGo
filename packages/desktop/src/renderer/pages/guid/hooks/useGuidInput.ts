@@ -63,7 +63,7 @@ export const useGuidInput = ({ locationState }: UseGuidInputOptions): GuidInputR
   const handleFilesPasted = useCallback((pastedFiles: FileMetadata[]) => {
     // Paste/drag bytes are uploaded to the managed dir by the paste/drag hooks →
     // `upload` refs.
-    const refs = pastedFiles.map((file) => uploadFileRef(file.path));
+    const refs = pastedFiles.map((file) => file.chatRef ?? uploadFileRef(file.path));
     setFiles((prevFiles) => [...prevFiles, ...refs]);
   }, []);
 

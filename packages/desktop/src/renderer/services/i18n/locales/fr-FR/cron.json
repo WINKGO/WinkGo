@@ -108,7 +108,23 @@
       "winkgo_agentModelRequired": "Veuillez sélectionner un modèle pour WINK GO",
       "winkgo_agentNoProvider": "Aucun modèle disponible",
       "assistantLockedExistingConversation": "Les tâches de conversation en cours doivent conserver leur assistant d'origine. Créez une nouvelle tâche pour utiliser un autre assistant.",
-      "teamTaskExecutionModeLockedReason": "Les tâches planifiées par l'équipe doivent continuer à s'exécuter dans la conversation de l'équipe propriétaire, le mode d'exécution ne peut donc pas être modifié."
+      "teamTaskExecutionModeLockedReason": "Les tâches planifiées par l'équipe doivent continuer à s'exécuter dans la conversation de l'équipe propriétaire, le mode d'exécution ne peut donc pas être modifié.",
+      "queue": "Protection de la file d'attente",
+      "queueHint": "Lorsque cette option est activée, tout nouveau déclenchement est ignoré tant que la conversation planifiée précédente est en cours, sans interrompre l'assistant."
+    },
+    "custom": {
+      "modeLabel": "Mode de répétition",
+      "interval": "À intervalle régulier",
+      "monthly": "Tous les mois",
+      "advanced": "Expression Cron avancée",
+      "every": "Toutes les",
+      "unit": "Unité",
+      "minutes": "Minutes",
+      "hours": "Heures",
+      "time": "Heure",
+      "weekdays": "Jours de la semaine",
+      "monthDay": "Jour du mois",
+      "preview": "Cron généré"
     },
     "freq": {
       "manual": "Manuel",

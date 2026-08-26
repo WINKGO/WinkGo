@@ -77,6 +77,10 @@ const DEFAULT_WEB_EDITION = resolveWinkGoEditionSnapshot({
   authenticated: false,
 });
 
+function isElectronE2ETestRuntime(): boolean {
+  return typeof window !== 'undefined' && window.__winkgoE2ETest === true;
+}
+
 // Clear expired auth cache including cookies and localStorage
 // 清除过期的认证缓存，包括 Cookie 和 localStorage
 function clearAuthCache(): void {
@@ -138,6 +142,22 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const abortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
+    // Electron navigation tests use a disposable user-data directory and must
+    // never depend on a real WINK GO cloud account. The flag is injected by
+    // the isolated Playwright main process and is false in production builds.
+    if (isElectronE2ETestRuntime()) {
+      setUser({ id: 'winkgo-e2e-user', username: 'WINK GO E2E' });
+      setEdition(
+        resolveWinkGoEditionSnapshot({
+          buildEdition: 'free',
+          authenticated: true,
+        })
+      );
+      setStatus('authenticated');
+      setReady(true);
+      return;
+    }
+
     if (isDesktopRuntime) {
       setStatus('checking');
       try {

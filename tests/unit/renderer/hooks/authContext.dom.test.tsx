@@ -71,6 +71,7 @@ const AuthProbe: React.FC = () => {
 
 describe('desktop authentication context', () => {
   beforeEach(() => {
+    window.__winkgoE2ETest = false;
     bridgeMocks.getSession.mockReset();
     bridgeMocks.login.mockReset();
     bridgeMocks.register.mockReset();
@@ -80,6 +81,20 @@ describe('desktop authentication context', () => {
       user: null,
       oauth: { google: false, wechat: false },
     });
+  });
+
+  it('uses an isolated authenticated session for Electron E2E navigation tests', async () => {
+    window.__winkgoE2ETest = true;
+
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>
+    );
+
+    expect(await screen.findByText('authenticated')).toBeInTheDocument();
+    expect(screen.getByText('WINK GO E2E')).toBeInTheDocument();
+    expect(bridgeMocks.getSession).not.toHaveBeenCalled();
   });
 
   it('starts unauthenticated when no in-memory desktop session exists', async () => {

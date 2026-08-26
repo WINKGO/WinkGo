@@ -21,6 +21,8 @@ const {
   setSendBoxHandlerMock,
   useAcpConfigOptionsMock,
   useTeamPermissionMock,
+  useAcpModelInfoMock,
+  acpModelSelectorMock,
   isMobileMock,
   mobileActionSheetEntries,
 } = vi.hoisted(() => ({
@@ -31,6 +33,8 @@ const {
   setSendBoxHandlerMock: vi.fn(),
   useAcpConfigOptionsMock: vi.fn(),
   useTeamPermissionMock: vi.fn(),
+  useAcpModelInfoMock: vi.fn(),
+  acpModelSelectorMock: vi.fn(() => <button data-testid='composer-model-selector'>model</button>),
   isMobileMock: { current: false },
   mobileActionSheetEntries: {
     current: [] as Array<{
@@ -88,6 +92,9 @@ vi.mock('@/renderer/components/chat/SendBox', () => ({
 }));
 
 vi.mock('@/renderer/components/agent/AgentModeSelector', () => ({ default: () => null }));
+vi.mock('@/renderer/components/agent/AcpModelSelector', () => ({
+  default: (props: unknown) => acpModelSelectorMock(props),
+}));
 vi.mock('@/renderer/components/chat/CommandQueuePanel', () => ({ default: () => null }));
 vi.mock('@/renderer/components/chat/MobileActionSheet', () => ({
   default: ({
@@ -112,11 +119,7 @@ vi.mock('@/renderer/components/media/HorizontalFileList', () => ({
   default: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock('@/renderer/hooks/agent/useAcpModelInfo', () => ({
-  useAcpModelInfo: () => ({
-    model_info: null,
-    canSwitch: false,
-    selectModel: vi.fn(),
-  }),
+  useAcpModelInfo: (options: unknown) => useAcpModelInfoMock(options),
 }));
 vi.mock('@/renderer/hooks/agent/useAcpConfigOptions', () => ({
   classifyConfigSetError: () => 'unknown',
@@ -190,6 +193,9 @@ vi.mock('@/renderer/pages/team/hooks/TeamPermissionContext', () => ({
 }));
 vi.mock('@/renderer/services/FileService', () => ({
   allSupportedExts: [],
+  audioExts: ['.mp3'],
+  imageExts: ['.png', '.svg'],
+  getFileExtension: (path: string) => path.slice(path.lastIndexOf('.')).toLowerCase(),
 }));
 vi.mock('@/renderer/utils/emitter', () => ({
   emitter: {
@@ -233,6 +239,43 @@ const makeMessageState = (): UseAcpMessageReturn => ({
 });
 
 describe('AcpSendBox', () => {
+  beforeEach(() => {
+    useAcpModelInfoMock.mockReturnValue({
+      model_info: null,
+      canSwitch: false,
+      selectModel: vi.fn(),
+    });
+    acpModelSelectorMock.mockClear();
+  });
+
+  it('places the model selector inside the composer action row', () => {
+    render(
+      <AcpSendBox
+        conversation_id='conv-1'
+        backend='codex'
+        workspacePath='/tmp/workspace'
+        messageState={makeMessageState()}
+      />
+    );
+
+    expect(screen.getByTestId('composer-model-selector')).toBeInTheDocument();
+  });
+
+  it('passes the conversation creation model to both desktop and mobile model sources', () => {
+    render(
+      <AcpSendBox
+        conversation_id='conv-1'
+        backend='codex'
+        initialModelId='gpt-5.6-terra'
+        workspacePath='/tmp/workspace'
+        messageState={makeMessageState()}
+      />
+    );
+
+    expect(acpModelSelectorMock).toHaveBeenCalledWith(expect.objectContaining({ initialModelId: 'gpt-5.6-terra' }));
+    expect(useAcpModelInfoMock).toHaveBeenCalledWith(expect.objectContaining({ initialModelId: 'gpt-5.6-terra' }));
+  });
+
   it('renders an honest context usage ring only when usage exists', () => {
     const { container, rerender } = render(
       <AcpSendBox

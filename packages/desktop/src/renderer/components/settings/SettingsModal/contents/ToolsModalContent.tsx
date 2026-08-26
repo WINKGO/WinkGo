@@ -141,8 +141,6 @@ const ModalMcpManagementSection: React.FC<{
     [handleBatchImportMcpServers, handleTestMcpConnections]
   );
 
-  const [importMode, setImportMode] = useState<'json' | 'oneclick'>('json');
-
   useEffect(() => {
     const httpServers = mcpServers.filter(
       (s) => s.transport.type === 'http' || s.transport.type === 'sse' || s.transport.type === 'streamable_http'
@@ -171,15 +169,6 @@ const ModalMcpManagementSection: React.FC<{
             key: 'json',
             label: t('settings.mcpImportFromJSON'),
             onClick: () => {
-              setImportMode('json');
-              showAddMcpModal();
-            },
-          },
-          {
-            key: 'oneclick',
-            label: t('settings.mcpOneKeyImport'),
-            onClick: () => {
-              setImportMode('oneclick');
               showAddMcpModal();
             },
           },
@@ -242,7 +231,6 @@ const ModalMcpManagementSection: React.FC<{
       <AddMcpServerModal
         visible={showMcpModal}
         server={editingMcpServer}
-        existingServerNames={mcpServers.map((server) => server.name)}
         onCancel={hideMcpModal}
         onSubmit={
           editingMcpServer
@@ -250,7 +238,6 @@ const ModalMcpManagementSection: React.FC<{
             : wrappedHandleAddMcpServer
         }
         onBatchImport={wrappedHandleBatchImportMcpServers}
-        importMode={importMode}
       />
 
       <Modal

@@ -1,3 +1,11 @@
+// Modified from AionUI by WINK GO contributors in 2026.
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * Modifications Copyright 2026 WINK GO (winkgo.top)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { ApiKeyManager } from './ApiKeyManager';
 import type { AuthType } from '@/common/types/provider/authType';
 
@@ -62,7 +70,10 @@ export abstract class RotatingApiClient<T> {
     this.originalApiKeys = api_keys;
     this.createClientFn = createClientFn;
     this.options = {
-      maxRetries: options.maxRetries ?? DEFAULT_MAX_RETRIES,
+      // Historical callers use maxRetries=0 to mean "do not retry". The
+      // execution loop counts total attempts, so always preserve the initial
+      // request instead of silently skipping the operation altogether.
+      maxRetries: Math.max(1, Math.trunc(options.maxRetries ?? DEFAULT_MAX_RETRIES)),
       retryDelay: options.retryDelay ?? DEFAULT_RETRY_DELAY,
     };
 

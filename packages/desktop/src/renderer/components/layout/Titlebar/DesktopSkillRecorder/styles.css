@@ -1,0 +1,181 @@
+.winkgo-desktop-recorder {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  padding: 0 10px 10px;
+}
+
+.winkgo-desktop-recorder__status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, #687bff 15%, var(--color-border-1));
+  border-radius: 14px;
+  background: linear-gradient(115deg, rgba(103, 124, 255, 0.08), rgba(119, 82, 232, 0.045));
+}
+
+.winkgo-desktop-recorder__status > i {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: #6477f6;
+  box-shadow: 0 0 0 4px rgba(100, 119, 246, 0.12);
+}
+
+.winkgo-desktop-recorder__status[data-phase='recording'] > i {
+  background: #ff4d67;
+  box-shadow: 0 0 0 4px rgba(255, 77, 103, 0.12);
+  animation: winkgo-desktop-recorder-pulse 1.2s ease-in-out infinite;
+}
+
+.winkgo-desktop-recorder__status[data-phase='ai_takeover'] > i {
+  background: #8b5cf6;
+}
+
+.winkgo-desktop-recorder__status span,
+.winkgo-desktop-recorder__skills article .winkgo-desktop-recorder__skill-name span {
+  display: grid;
+  min-width: 0;
+  text-align: left;
+}
+
+.winkgo-desktop-recorder__status strong {
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.winkgo-desktop-recorder__status small,
+.winkgo-desktop-recorder__skills small {
+  overflow: hidden;
+  color: var(--color-text-3);
+  font-size: 10px;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.winkgo-desktop-recorder__start,
+.winkgo-desktop-recorder__actions,
+.winkgo-desktop-recorder__capture-row {
+  display: flex;
+  gap: 7px;
+}
+
+.winkgo-desktop-recorder__start {
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0 1px;
+}
+
+.winkgo-desktop-recorder__capture-row .arco-input-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.winkgo-desktop-recorder__capture-row .arco-input-wrapper {
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-fill-1) 76%, transparent);
+}
+
+.winkgo-desktop-recorder__start > small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-3);
+  font-size: 10px;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.winkgo-desktop-recorder__start > .arco-btn-primary,
+.winkgo-desktop-recorder__actions > .arco-btn-primary {
+  border-color: transparent;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6478f7, #7957e8);
+  box-shadow: none;
+}
+
+.winkgo-desktop-recorder__start > .arco-btn-primary {
+  min-width: 104px;
+  flex: none;
+}
+
+.winkgo-desktop-recorder__capture {
+  display: grid;
+  gap: 7px;
+}
+
+.winkgo-desktop-recorder__actions {
+  justify-content: flex-end;
+}
+
+.winkgo-desktop-recorder__skills {
+  display: grid;
+  gap: 5px;
+  max-height: 148px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.winkgo-desktop-recorder__skills article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  min-height: 38px;
+  padding: 3px 5px;
+  border: 1px solid var(--color-border-1);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg-1) 80%, rgba(104, 123, 255, 0.06));
+}
+
+.winkgo-desktop-recorder__skill-name.arco-btn {
+  min-width: 0;
+  height: auto;
+  justify-content: flex-start;
+  padding: 2px 4px;
+  color: inherit;
+}
+
+.winkgo-desktop-recorder__skill-name.arco-btn > span {
+  width: 100%;
+}
+
+.winkgo-desktop-recorder__parameters {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 5px;
+  padding: 4px 3px 2px;
+}
+
+.winkgo-desktop-recorder__empty {
+  min-height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed color-mix(in srgb, #687bff 20%, var(--color-border-1));
+  border-radius: 12px;
+  background: rgba(103, 124, 255, 0.025);
+}
+
+.winkgo-desktop-recorder__empty,
+.winkgo-desktop-recorder__feedback {
+  margin: 0;
+  color: var(--color-text-3);
+  font-size: 10px;
+}
+
+.winkgo-desktop-recorder__feedback {
+  overflow: hidden;
+  padding-inline: 2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes winkgo-desktop-recorder-pulse {
+  50% {
+    opacity: 0.38;
+    transform: scale(0.8);
+  }
+}

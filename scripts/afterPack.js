@@ -12,6 +12,7 @@ const {
 const {
   verifyBundledWinkGoCoreResources,
 } = require('../packages/shared-scripts/src/verify-bundled-winkgo-core-resources');
+const { validateNativeDropBinary } = require('../packages/shared-scripts/src/prepare-winkgo-native-drop.cjs');
 
 /**
  * afterPack hook for electron-builder
@@ -37,7 +38,28 @@ function verifyBundledResources(resourcesDir, electronPlatformName, targetArch) 
     throw new Error(`Packaged app is missing required bundled resource(s): ${result.missing.join(', ')}`);
   }
 
+  if (electronPlatformName === 'win32') {
+    const nativeDropPath = path.join(resourcesDir, 'native', 'winkgo_native_drop.node');
+    validateNativeDropBinary(nativeDropPath);
+    console.log(`   ✓ WINK GO native drop verified for ${targetArch}`);
+  }
+
   console.log(`   ✓ Bundled resources verified for ${result.runtimeKey} (${result.checked.length} checks)`);
+}
+
+function verifyBuiltinMcpScripts(resourcesDir) {
+  const unpackedMainDir = path.join(resourcesDir, 'app.asar.unpacked', 'out', 'main');
+  const requiredScripts = ['builtin-mcp-image-gen.js', 'builtin-mcp-browser.js', 'builtin-mcp-browser-skills.js'];
+  const missing = requiredScripts.filter((fileName) => {
+    const scriptPath = path.join(unpackedMainDir, fileName);
+    return !fs.existsSync(scriptPath) || fs.statSync(scriptPath).size === 0;
+  });
+
+  if (missing.length > 0) {
+    throw new Error(`Packaged app is missing required builtin MCP script(s): ${missing.join(', ')}`);
+  }
+
+  console.log(`   ✓ Builtin MCP scripts verified (${requiredScripts.length} checks)`);
 }
 
 function verifyLegalDocuments(resourcesDir) {
@@ -223,6 +245,7 @@ module.exports = async function afterPack(context) {
     }
 
     verifyBundledResources(resourcesDir, electronPlatformName, targetArch);
+    verifyBuiltinMcpScripts(resourcesDir);
     verifyLegalDocuments(resourcesDir);
     verifyNoRuntimeSharpLibvips(resourcesDir);
     // Keep every capability for the target machine, but do not make an x64

@@ -16,7 +16,7 @@ Apache-2.0 upstream projects:
 | aionrs   | `v0.2.7`  | `445a18e1625cc68ded3a647ee99332195fbe8508` | <https://github.com/iOfficeAI/aionrs>   | Copyright 2026 iOfficeAI           |
 
 WINK GO also selectively adapts later compatibility, stability, and agent
-registry changes from AionUI and AionCore reviewed through 2026-08-03. The
+registry changes from AionUI and AionCore reviewed through 2026-08-21. The
 exact selected commit list and adapted scope are recorded in
 [`docs/vendor/aionui-selected-post-v2.1.41-patches.md`](docs/vendor/aionui-selected-post-v2.1.41-patches.md).
 This does not replace the complete pinned inventories used for baseline

@@ -520,6 +520,24 @@ fn unknown_upstream_classification() -> ClassifiedError {
 }
 
 fn classify_agent_lifecycle(lower: &str) -> Option<ClassifiedError> {
+    // Local browser/desktop automation returns this when the recorded locator
+    // no longer resolves on the current page or window. It is not a provider,
+    // network, or account failure; keep it actionable and retryable so the UI
+    // can offer a fresh locate / one-shot AI repair instead of blaming upstream.
+    if lower.contains("mcp tool execution")
+        && (lower.contains("target-not-found") || lower.contains("target not found"))
+    {
+        return Some(ClassifiedError {
+            message: "The automation target could not be found",
+            code: AgentErrorCode::UserAgentResourceNotFound,
+            ownership: AgentErrorOwnership::UserAgent,
+            retryable: true,
+            feedback_recommended: false,
+            resolution_kind: None,
+            resolution_target: None,
+        });
+    }
+
     // codex dead resume anchor (ELECTRON-3Q0): `thread/resume` against a threadId
     // with no on-disk rollout / `turn/start` against a threadId unknown to the
     // process (verified: samples/codex-cli/0.144.1/dead_resume.jsonl). MUST
@@ -1284,6 +1302,17 @@ mod tests {
         assert_eq!(err.ownership(), Some(AgentErrorOwnership::UnknownUpstream));
         assert_eq!(err.stream_error().feedback_recommended, Some(false));
         assert!(err.stream_error().resolution.is_none());
+    }
+
+    #[test]
+    fn classifies_local_mcp_target_not_found_as_agent_resource_error() {
+        let detail = "Error in MCP tool execution: target-not-found";
+        let err = AgentSendError::from_agent_error(AgentError::bad_gateway(detail));
+
+        assert_eq!(err.code(), Some(AgentErrorCode::UserAgentResourceNotFound));
+        assert_eq!(err.ownership(), Some(AgentErrorOwnership::UserAgent));
+        assert_eq!(err.stream_error().retryable, Some(true));
+        assert_eq!(err.stream_error().feedback_recommended, Some(false));
     }
 
     #[test]

@@ -11,6 +11,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
 import GuidActionRow from '@/renderer/pages/guid/components/GuidActionRow';
 import type { IMcpServer } from '@/common/config/storage';
+import type { MobileActionSheetEntry } from '@/renderer/components/chat/MobileActionSheet/types';
+
+const { layoutState, platformState, capturedMobileSheetProps } = vi.hoisted(() => ({
+  layoutState: { isMobile: false },
+  platformState: { isElectronDesktop: true },
+  capturedMobileSheetProps: [] as Array<{ open: boolean; entries: MobileActionSheetEntry[] }>,
+}));
 
 vi.mock('@/common', () => ({
   ipcBridge: {
@@ -27,7 +34,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/renderer/hooks/context/LayoutContext', () => ({
-  useLayoutContext: () => ({ isMobile: false }),
+  useLayoutContext: () => ({ isMobile: layoutState.isMobile }),
 }));
 
 vi.mock('@/renderer/components/agent/AgentModeSelector', () => ({
@@ -35,7 +42,10 @@ vi.mock('@/renderer/components/agent/AgentModeSelector', () => ({
 }));
 
 vi.mock('@/renderer/components/chat/MobileActionSheet', () => ({
-  default: () => null,
+  default: (props: { open: boolean; entries: MobileActionSheetEntry[] }) => {
+    capturedMobileSheetProps.push(props);
+    return null;
+  },
 }));
 
 vi.mock('@/renderer/services/FileService', () => ({
@@ -44,7 +54,19 @@ vi.mock('@/renderer/services/FileService', () => ({
 }));
 
 vi.mock('@/renderer/utils/platform', () => ({
-  isElectronDesktop: () => true,
+  isElectronDesktop: () => platformState.isElectronDesktop,
+}));
+
+const { navigateMock, emitMock } = vi.hoisted(() => ({
+  navigateMock: vi.fn(),
+  emitMock: vi.fn(),
+}));
+vi.mock('react-router', () => ({
+  useNavigate: () => navigateMock,
+}));
+
+vi.mock('@/renderer/utils/emitter', () => ({
+  emitter: { emit: emitMock },
 }));
 
 vi.mock('@icon-park/react', () => {
@@ -52,9 +74,13 @@ vi.mock('@icon-park/react', () => {
   return {
     ArrowUp: Icon,
     Brain: Icon,
+    Browser: Icon,
+    Calendar: Icon,
+    Computer: Icon,
     FolderUpload: Icon,
     Lightning: Icon,
     Plus: Icon,
+    Puzzle: Icon,
     Search: Icon,
     Shield: Icon,
     UploadOne: Icon,
@@ -63,8 +89,23 @@ vi.mock('@icon-park/react', () => {
 
 vi.mock('@arco-design/web-react', () => {
   const Menu = Object.assign(
-    ({ children, className }: { children?: React.ReactNode; className?: string }) => (
-      <div data-testid='dropdown-menu' className={className}>
+    ({
+      children,
+      className,
+      onClickMenuItem,
+    }: {
+      children?: React.ReactNode;
+      className?: string;
+      onClickMenuItem?: (key: string) => void;
+    }) => (
+      <div
+        data-testid='dropdown-menu'
+        className={className}
+        onClick={(event) => {
+          const key = (event.target as HTMLElement).closest<HTMLElement>('[data-menu-key]')?.dataset.menuKey;
+          if (key) onClickMenuItem?.(key);
+        }}
+      >
         {children}
       </div>
     ),
@@ -77,6 +118,7 @@ vi.mock('@arco-design/web-react', () => {
         children?: React.ReactNode;
         className?: string;
         onClick?: (e: React.MouseEvent) => void;
+        key?: React.Key;
       }) => (
         <div role='menuitem' className={className} onClick={onClick}>
           {children}
@@ -171,6 +213,19 @@ const renderActionRow = (overrides: Partial<React.ComponentProps<typeof GuidActi
 describe('GuidActionRow skill/MCP submenu search', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    layoutState.isMobile = false;
+    platformState.isElectronDesktop = true;
+    capturedMobileSheetProps.length = 0;
+  });
+
+  it('shows the full WINK GO capability menu in the welcome composer', () => {
+    renderActionRow();
+
+    expect(screen.getByText('桌面 Computer Use')).toBeInTheDocument();
+    expect(screen.getByText('WINK GO 浏览器 Computer Use')).toBeInTheDocument();
+    expect(screen.getByText('cron.scheduledTasks')).toBeInTheDocument();
+    expect(screen.getByText('Add or manage skills')).toBeInTheDocument();
+    expect(screen.getByText('Open Tools settings')).toBeInTheDocument();
   });
 
   it('shows both search boxes when skills and MCP servers exceed the threshold', () => {
@@ -235,5 +290,32 @@ describe('GuidActionRow skill/MCP submenu search', () => {
     fireEvent.click(screen.getByText('skill-3').closest('[role="menuitem"]')!);
 
     expect(onToggleSkill).toHaveBeenCalledWith('skill-3', false);
+  });
+
+  it('shows both Computer Use capabilities as direct selectable actions on mobile WebUI', () => {
+    layoutState.isMobile = true;
+    platformState.isElectronDesktop = false;
+    const onToggleMcpServer = vi.fn();
+    renderActionRow({
+      mcpServers: [
+        { id: 'desktop-cu', name: 'winkgo-desktop-computer-use', builtin: true } as IMcpServer,
+        { id: 'browser-cu', name: 'winkgo-browser', builtin: true } as IMcpServer,
+      ],
+      selectedMcpServerIds: ['desktop-cu'],
+      onToggleMcpServer,
+    });
+
+    fireEvent.click(screen.getByTestId('file-upload-btn'));
+    const entries = capturedMobileSheetProps.at(-1)?.entries ?? [];
+    const desktopEntry = entries.find((entry) => entry.key === 'desktop-computer-use');
+    const browserEntry = entries.find((entry) => entry.key === 'browser-computer-use');
+
+    expect(desktopEntry).toBeDefined();
+    expect(desktopEntry?.meta).toBe('✓');
+    expect(browserEntry).toBeDefined();
+    expect(browserEntry?.meta).toBeUndefined();
+
+    browserEntry?.onClick?.();
+    expect(onToggleMcpServer).toHaveBeenCalledWith('browser-cu');
   });
 });

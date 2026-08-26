@@ -27,6 +27,9 @@
     "configureFirst": "Сначала настройте агента в Настройках.",
     "switching": "Переключение агента..."
   },
+  "runtime": {
+    "managedByAgent": "Управляется агентом"
+  },
   "model": {
     "switchSuccess": "Модель успешно сменена",
     "switchFailed": "Не удалось сменить модель",
@@ -47,5 +50,31 @@
     "label": "Уровень рассуждений",
     "switchSuccess": "Уровень рассуждений переключен",
     "switchFailed": "Не удалось переключить уровень рассуждений"
+  },
+  "speed": {
+    "label": "Скорость",
+    "switchSuccess": "Скорость ответа обновлена",
+    "switchFailed": "Не удалось обновить скорость ответа"
+  },
+  "voiceTask": {
+    "emptyCommand": "Задача пуста и не была отправлена Agent.",
+    "noAgent": "Нет доступного WINK GO Agent или указанный навык настольного Agent выведен из эксплуатации.",
+    "noModel": "Для WINK GO CLI нет доступной модели. Сначала настройте и включите модель на странице «Модели».",
+    "conversationName": "XiaoZhi: {{command}}",
+    "createFailed": "Не удалось создать диалог WINK GO Agent.",
+    "queued": "Задача добавлена в очередь {{assistant}} и запустится после завершения текущей.",
+    "accepted": "Задача передана {{assistant}}. Ход выполнения можно смотреть в WINK GO.",
+    "none": "Текущей задачи ассистента нет.",
+    "waitingConfirmation": "{{assistant}} ожидает вашего подтверждения.",
+    "queuedStatus": "{{assistant}} принял задачу в очереди и запустит её после текущей.",
+    "running": "{{assistant}} выполняет задачу.",
+    "finishedWithResult": "{{assistant}} завершил задачу: {{result}}",
+    "finishedNoResult": "{{assistant}} завершил задачу, но итоговый ответ не найден.",
+    "failed": "Ошибка {{assistant}}: {{error}}",
+    "acceptedStatus": "{{assistant}} принял задачу.",
+    "noCancelable": "Нет текущей задачи ассистента, которую можно отменить.",
+    "cancelling": "{{assistant}} ещё останавливает задачу. Повторите позже.",
+    "cancelled": "Текущая задача {{assistant}} отменена.",
+    "history": "Недавних задач Agent: {{count}} — {{tasks}}."
   }
 }

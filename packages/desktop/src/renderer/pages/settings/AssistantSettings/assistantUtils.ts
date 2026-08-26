@@ -3,6 +3,7 @@ import { resolveExtensionAssetUrl } from '@/renderer/utils/platform';
 import { isBackendRelativeAssetPath, isLikelyLocalFilePath } from '@/renderer/utils/model/assistantAvatar';
 import type { AssistantListItem, AvailableBackend } from './types';
 import type { ManagedAgent } from '@/renderer/utils/model/agentTypes';
+import { isRetiredWinkGoAgentIdentity } from '@/renderer/utils/model/agentTypeSupportPolicy';
 
 export type AssistantListFilter = 'all' | 'enabled' | 'disabled' | 'builtin' | 'user';
 
@@ -137,7 +138,9 @@ export const filterByEnabled = (
 };
 
 const byAssistantSortOrder = (a: AssistantListItem, b: AssistantListItem) => a.sort_order - b.sort_order;
-const ASSISTANT_EDITOR_AGENT_TYPES = new Set(['acp', 'winkgo_agent']);
+// Antigravity is a direct CLI agent that the editor can drive; omitting it
+// makes the Select fall back to an opaque raw id instead of its display name.
+const ASSISTANT_EDITOR_AGENT_TYPES = new Set(['acp', 'antigravity', 'winkgo_agent']);
 
 const isAssistantEditorAgent = (agent: ManagedAgent): boolean => ASSISTANT_EDITOR_AGENT_TYPES.has(agent.agent_type);
 
@@ -155,6 +158,14 @@ export const groupMyAssistants = (assistants: AssistantListItem[]) => {
   };
 };
 
+export const filterAssistantEditorBackends = (backends: AvailableBackend[], query: string): AvailableBackend[] => {
+  const keyword = query.trim().toLowerCase();
+  if (!keyword) return backends;
+  return backends.filter((option) =>
+    [option.name, option.id, option.runtimeKey].some((field) => field?.toLowerCase().includes(keyword))
+  );
+};
+
 export const buildAssistantEditorBackends = (
   agents: ManagedAgent[],
   localeKey: string,
@@ -163,7 +174,7 @@ export const buildAssistantEditorBackends = (
   const backendMap = new Map<string, AvailableBackend>();
 
   for (const agent of agents) {
-    if (!isAssistantEditorAgent(agent)) {
+    if (!isAssistantEditorAgent(agent) || isRetiredWinkGoAgentIdentity(agent.backend, agent.name)) {
       continue;
     }
 

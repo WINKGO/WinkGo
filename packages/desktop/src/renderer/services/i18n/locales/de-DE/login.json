@@ -39,6 +39,7 @@
     "agreementRequired": "Bitte zuerst die Nutzungsbedingungen und Datenschutzerklärung lesen und akzeptieren",
     "empty": "Bitte Benutzername und Passwort eingeben",
     "phoneRequired": "Für die Registrierung ist eine Mobilnummer erforderlich",
+    "usernameNumeric": "Der Benutzername darf nicht nur aus Ziffern bestehen",
     "phoneInvalid": "Gültige chinesische Nummer oder internationale Nummer mit + eingeben",
     "invalidCredentials": "Ungültiger Benutzername oder Passwort",
     "accountExists": "Dieses Konto oder diese Mobilnummer ist möglicherweise bereits registriert. Bitte anmelden oder andere Daten verwenden",

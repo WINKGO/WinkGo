@@ -11,11 +11,13 @@ name = "winkgo_core"
 path = "src/main.rs"
 
 [features]
-default = ["telegram", "lark", "dingtalk", "weixin"]
+default = ["telegram", "lark", "dingtalk", "weixin", "slack", "discord"]
 telegram = ["winkgo-channel/telegram"]
 lark = ["winkgo-channel/lark"]
 dingtalk = ["winkgo-channel/dingtalk"]
 weixin = ["winkgo-channel/weixin"]
+slack = ["winkgo-channel/slack"]
+discord = ["winkgo-channel/discord"]
 
 [dependencies]
 winkgo-common.workspace = true

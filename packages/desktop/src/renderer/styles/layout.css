@@ -196,6 +196,38 @@
   background-color: transparent !important;
 }
 
+/* Project Explorer collapse control: keep the toolbar clear and place the
+   affordance on the outer middle edge, where it remains easy to find without
+   overlapping project actions. */
+.project-panel-edge-toggle.arco-btn {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: 40;
+  width: 22px;
+  min-width: 22px;
+  height: 52px;
+  padding: 0;
+  color: var(--color-text-3);
+  border: 1px solid var(--color-border-2);
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+  background-color: color-mix(in srgb, var(--color-bg-2) 94%, transparent);
+  box-shadow: none;
+  transform: translateY(-50%);
+  transition:
+    width 0.16s ease,
+    color 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.project-panel-edge-toggle.arco-btn:hover,
+.project-panel-edge-toggle.arco-btn:focus-visible {
+  width: 26px;
+  color: var(--color-text-1);
+  background-color: var(--color-fill-2);
+}
+
 /* Mobile sidebar positioning */
 /* Use dvh for better mobile browser support (iOS Chrome/Safari) */
 @media (max-width: 767px) {

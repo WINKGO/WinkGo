@@ -111,6 +111,13 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Successful-start tests intentionally keep their fake backend alive. Clean up
+  // the matching process-exit hooks so they do not accumulate across test cases.
+  for (const listener of process.listeners('exit')) {
+    if (listener.name === 'killOnExit') {
+      process.removeListener('exit', listener);
+    }
+  }
   // Do NOT call restoreAllMocks; it would remove vi.mock() module factories.
   vi.useRealTimers();
 });
@@ -310,6 +317,34 @@ describe('findAvailablePort', () => {
 });
 
 describe('BackendLifecycleManager.start (success path)', () => {
+  it('removes its process-exit cleanup hook when the backend exits', async () => {
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+    const initialExitListeners = process.listenerCount('exit');
+
+    try {
+      const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/winkgo_core');
+      const startPromise = mgr.start('/db/path');
+      await Promise.resolve();
+      emitListening(child, 55555);
+      await startPromise;
+
+      expect(process.listenerCount('exit')).toBe(initialExitListeners + 1);
+
+      // Mark the fake manager as stopped so this lifecycle assertion does not
+      // schedule the crash-restart path when we simulate the child exit.
+      (mgr as unknown as { _status: 'stopped' })._status = 'stopped';
+      child.emit('exit', 0, null);
+
+      expect(process.listenerCount('exit')).toBe(initialExitListeners);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it('lets winkgo_core choose the backend port and waits for the reported listening event', async () => {
     vi.mocked(createServer).mockImplementation(() => {
       throw new Error('launcher must not pre-bind backend ports');

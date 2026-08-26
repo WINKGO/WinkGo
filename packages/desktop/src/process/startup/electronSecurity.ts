@@ -8,6 +8,11 @@ import type { App, BrowserWindow, Session, WebContents, WebPreferences } from 'e
 import { shell } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { BROWSER_SESSION_PARTITION } from '@/common/config/constants';
+import {
+  hydrateWinkGoBrowserLoginPermission,
+  isWinkGoBrowserLoginAutomationEnabled,
+} from '@process/services/winkGoBrowserLoginPermissionService';
 import {
   getSafeExternalOpenUrl,
   getTrustedWindowPolicy,
@@ -46,8 +51,21 @@ function openExternalSafely(value: string): void {
   });
 }
 
-function installPopupPolicy(contents: WebContents): void {
+function installPopupPolicy(contents: WebContents, partition?: string): void {
   contents.setWindowOpenHandler(({ url }) => {
+    if (
+      partition === BROWSER_SESSION_PARTITION &&
+      isWinkGoBrowserLoginAutomationEnabled() &&
+      isAllowedWebviewNavigationUrl(url, BROWSER_SESSION_PARTITION)
+    ) {
+      // OAuth and QR-login pages frequently use window.open. Keep the flow in
+      // the visible WINK GO browser instead of spawning the system browser or
+      // an unmanaged Electron window.
+      void contents.loadURL(url).catch((error: unknown) => {
+        console.warn('[ElectronSecurity] Failed to continue login popup in the WINK GO browser:', error);
+      });
+      return { action: 'deny' };
+    }
     openExternalSafely(url);
     return { action: 'deny' };
   });
@@ -158,7 +176,13 @@ function installWebviewAttachmentPolicy(embedder: WebContents): void {
       return;
     }
 
-    delete params.allowpopups;
+    if (partition === BROWSER_SESSION_PARTITION) {
+      // The main-process window-open handler remains authoritative. Keeping the
+      // event enabled lets a user opt in without recreating every browser tab.
+      params.allowpopups = '';
+    } else {
+      delete params.allowpopups;
+    }
     delete params.preload;
     delete params.webpreferences;
     params.partition = partition;
@@ -177,7 +201,7 @@ function installWebviewAttachmentPolicy(embedder: WebContents): void {
       return;
     }
     configurePermissionHandlers(guestContents.session);
-    installPopupPolicy(guestContents);
+    installPopupPolicy(guestContents, policy.partition);
     installGuestNavigationPolicy(guestContents, policy.partition);
   });
 }
@@ -185,6 +209,9 @@ function installWebviewAttachmentPolicy(embedder: WebContents): void {
 export function installElectronSecurityPolicy(electronApp: App): void {
   if (installedApps.has(electronApp)) return;
   installedApps.add(electronApp);
+  void hydrateWinkGoBrowserLoginPermission().catch((error) => {
+    console.warn('[ElectronSecurity] Failed to hydrate browser login permission:', error);
+  });
 
   electronApp.on('web-contents-created', (_event, contents) => {
     configurePermissionHandlers(contents.session);

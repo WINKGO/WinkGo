@@ -38,6 +38,15 @@
   "closeTabMessage": "当前内容还未保存，是否保存后再关闭？",
   "saveAndClose": "保存并关闭",
   "closeWithoutSave": "不保存",
+  "saveConflictTitle": "文件已在外部修改",
+  "saveConflictMessage": "磁盘上的文件在打开后发生了变化。为避免覆盖其他修改，请重新加载最新内容后再继续编辑。",
+  "reloadFile": "重新加载",
+  "reloadSuccess": "已加载磁盘上的最新内容",
+  "reloadFailed": "重新加载文件失败",
+  "save": {
+    "tooltip": "保存修改（Ctrl/Cmd+S）",
+    "clean": "没有未保存的修改"
+  },
   "pptTitle": "PowerPoint 演示文稿",
   "pptOpenHint": "点击下方按钮在系统应用中打开以查看完整内容",
   "pptOpenFile": "打开文件",
@@ -133,6 +142,15 @@
     "inspectElement": "审核元素",
     "inspectElementEnable": "开启审核元素",
     "inspectElementDisable": "关闭审核元素"
+  },
+  "browser": {
+    "newTab": "新建标签页",
+    "addressPlaceholder": "输入网址或搜索内容",
+    "agentActiveTooltip": "Agent 正在操作此标签页",
+    "tabLimitReached": "标签页数量已达上限（{{count}} 个），已复用最早打开的标签页。",
+    "agentFirstUseTitle": "Agent 正在使用应用内浏览器",
+    "agentFirstUseContent": "它可以在这个面板里打开网页、点击和读取内容。你的登录状态会被保留。",
+    "agentFirstUseAction": "前往设置"
   },
   "ppt": {
     "loading": "正在启动 PPT 预览...",

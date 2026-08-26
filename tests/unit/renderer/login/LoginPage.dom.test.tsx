@@ -106,6 +106,29 @@ describe('WINK GO login page', () => {
     expect(authMocks.register).not.toHaveBeenCalled();
   });
 
+  it('rejects a numeric-only username and an invalid mobile number before registration', async () => {
+    render(<LoginPage />);
+    fireEvent.click(screen.getByText('login.registerTab'));
+    fireEvent.change(screen.getByPlaceholderText('login.usernamePlaceholder'), { target: { value: '123456' } });
+    fireEvent.change(screen.getByPlaceholderText('login.phonePlaceholder'), { target: { value: '13800138000' } });
+    fireEvent.change(screen.getByPlaceholderText('login.passwordPlaceholder'), { target: { value: 'secret-123' } });
+    fireEvent.change(screen.getByPlaceholderText('login.confirmPasswordPlaceholder'), {
+      target: { value: 'secret-123' },
+    });
+    acceptCurrentPolicy();
+    fireEvent.click(screen.getByRole('button', { name: 'login.registerSubmit' }));
+
+    expect(await screen.findByText('login.errors.usernameNumeric')).toBeInTheDocument();
+    expect(authMocks.register).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByPlaceholderText('login.usernamePlaceholder'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByPlaceholderText('login.phonePlaceholder'), { target: { value: '12345' } });
+    fireEvent.click(screen.getByRole('button', { name: 'login.registerSubmit' }));
+
+    expect(await screen.findByText('login.errors.phoneInvalid')).toBeInTheDocument();
+    expect(authMocks.register).not.toHaveBeenCalled();
+  });
+
   it('remembers only the username and removes legacy stored passwords', async () => {
     localStorage.setItem('rememberedPassword', 'legacy-secret');
     authMocks.register.mockResolvedValue({

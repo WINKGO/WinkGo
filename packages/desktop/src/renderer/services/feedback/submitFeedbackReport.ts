@@ -8,7 +8,7 @@ const MAX_AUTO_CONTEXT_DEPTH = 6;
 const MAX_AUTO_CONTEXT_ITEMS = 100;
 const MAX_AUTO_CONTEXT_TEXT = 4000;
 const SENSITIVE_CONTEXT_KEY =
-  /(?:password|passphrase|secret|token|authorization|cookie|api[_-]?key|phone|mobile|email|prompt|message[_-]?content|file[_-]?path|folder[_-]?path|resources[_-]?path|home[_-]?dir|environment)/i;
+  /(?:password|passphrase|secret|token|authorization|cookie|music[_-]?u|api[_-]?key|phone|mobile|email|prompt|message[_-]?content|file[_-]?path|folder[_-]?path|resources[_-]?path|home[_-]?dir|environment)/i;
 type FeedbackLogLevel = 'info' | 'warn' | 'error';
 type FeedbackLogAttachmentStatus = 'collected' | 'empty' | 'failed' | 'skipped' | 'unavailable';
 type FeedbackDbDiagnosticsAttachmentStatus = 'collected' | 'empty' | 'failed' | 'skipped' | 'unavailable';
@@ -237,6 +237,8 @@ function normalizeDescription(description: string): string {
 function redactAutomaticContextText(value: string): string {
   return value
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer <redacted>')
+    .replace(/(MUSIC_U\s*=\s*)[^;\s"',}]+/gi, '$1<redacted>')
+    .replace(/((?:qm_keyst|qqmusic_key)\s*=\s*)[^;\s"',}]+/gi, '$1<redacted>')
     .replace(/\b(?:sk|key|token|api)[-_][A-Za-z0-9_-]{10,}\b/gi, '<redacted-token>')
     .replace(/\b(?:1[3-9]\d{9}|\+[1-9]\d{7,14})\b/g, '<redacted-phone>')
     .replace(/[A-Za-z]:\\(?:[^\\/:*?"<>|\r\n\s]+\\)*[^\\/:*?"<>|\r\n\s]*/g, '<local-path>')

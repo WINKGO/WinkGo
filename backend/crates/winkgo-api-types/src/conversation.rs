@@ -89,6 +89,16 @@ pub struct CloneConversationRequest {
     pub conversation: CreateConversationRequest,
 }
 
+/// Body for `POST /api/conversations/:id/fork`.
+///
+/// WINK GO creates an independent local branch containing history through the
+/// selected message. The new runtime starts fresh and never reuses the parent
+/// process/session identifier.
+#[derive(Debug, Deserialize)]
+pub struct ForkConversationRequest {
+    pub message_id: String,
+}
+
 /// Body for `POST /api/conversations/:id/messages`.
 ///
 /// `msg_id` is server-generated — clients must not provide one.
@@ -108,6 +118,10 @@ pub struct SendMessageRequest {
 pub struct SendMessageResponse {
     pub msg_id: String,
     pub turn_id: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub delivered_midturn: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub queued_at_boundary: bool,
     pub runtime: ConversationRuntimeSummary,
 }
 
@@ -133,6 +147,22 @@ pub enum ConversationRuntimeStateKind {
     WaitingConfirmation,
 }
 
+/// How WINK GO handles a user message sent while the current turn is running.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum InterjectionMode {
+    /// Deliver into the active backend turn. Only advertised after a real
+    /// backend-specific implementation is verified.
+    Native,
+    /// Safest universal fallback: execute immediately after the active turn
+    /// reaches its next boundary.
+    #[default]
+    BoundaryQueue,
+    /// Explicit user action: stop the active turn and resume with its persisted
+    /// context plus the new message.
+    CancelResume,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ConversationRuntimeSummary {
     pub state: ConversationRuntimeStateKind,
@@ -142,6 +172,16 @@ pub struct ConversationRuntimeSummary {
     pub is_processing: bool,
     pub pending_confirmations: usize,
     pub turn_id: Option<String>,
+    #[serde(default)]
+    pub interjection_mode: InterjectionMode,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MessageStatusChangedPayload {
+    pub user_id: String,
+    pub conversation_id: String,
+    pub msg_id: String,
+    pub status: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -198,6 +238,16 @@ pub struct SearchMessagesQuery {
 
 // ── Response types ─────────────────────────────────────────────────
 
+/// Native media prompt support projected from the selected agent metadata.
+/// Missing means unknown/path-only; the frontend must not assume support.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PromptCapabilityView {
+    #[serde(default)]
+    pub image: bool,
+    #[serde(default)]
+    pub audio: bool,
+}
+
 /// Full conversation object returned in API responses.
 ///
 /// `model` is the canonical top-level field **only for `AgentType::WinkGoAgent`**.
@@ -231,6 +281,10 @@ pub struct ConversationResponse {
     pub assistant: Option<ConversationAssistantIdentityResponse>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project_id: Option<String>,
+    /// Detail-response-only media capability hint. List responses omit it to
+    /// avoid one metadata lookup per conversation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_capability: Option<PromptCapabilityView>,
     pub created_at: TimestampMs,
     pub modified_at: TimestampMs,
     pub extra: serde_json::Value,
@@ -590,6 +644,7 @@ mod tests {
             channel_chat_id: None,
             assistant: None,
             project_id: None,
+            prompt_capability: None,
             created_at: 1712345678000,
             modified_at: 1712345678000,
             extra: json!({ "workspace": "/project" }),
@@ -629,6 +684,7 @@ mod tests {
             channel_chat_id: None,
             assistant: None,
             project_id: None,
+            prompt_capability: None,
             created_at: 1,
             modified_at: 1,
             extra: json!({}),
@@ -662,6 +718,7 @@ mod tests {
             channel_chat_id: Some("group:42".into()),
             assistant: None,
             project_id: None,
+            prompt_capability: None,
             created_at: 1000,
             modified_at: 2000,
             extra: json!({}),
@@ -747,6 +804,7 @@ mod tests {
                 channel_chat_id: None,
                 assistant: None,
                 project_id: None,
+                prompt_capability: None,
                 created_at: 1712345678000,
                 modified_at: 1712345678000,
                 extra: json!({}),
@@ -785,6 +843,7 @@ mod tests {
                 channel_chat_id: None,
                 assistant: None,
                 project_id: None,
+                prompt_capability: None,
                 created_at: 9000,
                 modified_at: 9000,
                 extra: json!({}),
@@ -857,6 +916,45 @@ mod tests {
         assert_eq!(req.content, "Hi");
     }
 
+    #[test]
+    fn runtime_summary_defaults_unknown_agents_to_boundary_queue() {
+        let summary: ConversationRuntimeSummary = serde_json::from_value(json!({
+            "state": "running",
+            "can_send_message": false,
+            "has_task": true,
+            "task_status": "running",
+            "is_processing": true,
+            "pending_confirmations": 0,
+            "turn_id": "turn-1"
+        }))
+        .unwrap();
+        assert_eq!(summary.interjection_mode, InterjectionMode::BoundaryQueue);
+        assert_eq!(
+            serde_json::to_value(summary).unwrap()["interjection_mode"],
+            "boundary_queue"
+        );
+    }
+
+    #[test]
+    fn ordinary_send_response_defaults_to_not_delivered_midturn() {
+        let response: SendMessageResponse = serde_json::from_value(json!({
+            "msg_id": "msg-1",
+            "turn_id": "turn-1",
+            "runtime": {
+                "state": "running",
+                "can_send_message": false,
+                "has_task": true,
+                "task_status": "running",
+                "is_processing": true,
+                "pending_confirmations": 0,
+                "turn_id": "turn-1"
+            }
+        }))
+        .unwrap();
+        assert!(!response.delivered_midturn);
+        assert!(!response.queued_at_boundary);
+    }
+
     // ── Paginated type aliases ──────────────────────────────────────
 
     #[test]
@@ -875,6 +973,7 @@ mod tests {
                 channel_chat_id: None,
                 assistant: None,
                 project_id: None,
+                prompt_capability: None,
                 created_at: 1000,
                 modified_at: 1000,
                 extra: json!({}),
@@ -928,6 +1027,7 @@ mod tests {
                     channel_chat_id: None,
                     assistant: None,
                     project_id: None,
+                    prompt_capability: None,
                     created_at: 5000,
                     modified_at: 5000,
                     extra: json!({}),

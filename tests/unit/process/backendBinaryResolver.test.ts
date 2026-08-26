@@ -24,6 +24,7 @@ vi.mock('node:fs', () => ({
 const originalResourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
 const originalRendererUrl = process.env.ELECTRON_RENDERER_URL;
 const originalBackendBin = process.env.WINKGO_BACKEND_BIN;
+const originalE2ETest = process.env.WINKGO_E2E_TEST;
 
 function setResourcesPath(resourcesPath: string | undefined): void {
   Object.defineProperty(process, 'resourcesPath', {
@@ -35,6 +36,7 @@ function setResourcesPath(resourcesPath: string | undefined): void {
 beforeEach(() => {
   delete process.env.WINKGO_BACKEND_BIN;
   delete process.env.ELECTRON_RENDERER_URL;
+  delete process.env.WINKGO_E2E_TEST;
 });
 
 afterEach(() => {
@@ -50,12 +52,27 @@ afterEach(() => {
   } else {
     process.env.WINKGO_BACKEND_BIN = originalBackendBin;
   }
+  if (originalE2ETest === undefined) {
+    delete process.env.WINKGO_E2E_TEST;
+  } else {
+    process.env.WINKGO_E2E_TEST = originalE2ETest;
+  }
 });
 
 describe('development backend binary resolution', () => {
   it('prefers an explicit source-built Core during electron-vite development', () => {
     const configured = 'backend/target/debug/winkgo_core.exe';
     process.env.ELECTRON_RENDERER_URL = 'http://127.0.0.1:5173';
+    process.env.WINKGO_BACKEND_BIN = configured;
+    vi.mocked(existsSync).mockImplementation((path) => path === resolve(configured));
+
+    expect(resolveBinaryPath()).toBe(resolve(configured));
+    expect(execSync).not.toHaveBeenCalled();
+  });
+
+  it('prefers an explicit source-built Core in the isolated E2E runtime', () => {
+    const configured = 'backend/target/debug/winkgo_core.exe';
+    process.env.WINKGO_E2E_TEST = '1';
     process.env.WINKGO_BACKEND_BIN = configured;
     vi.mocked(existsSync).mockImplementation((path) => path === resolve(configured));
 

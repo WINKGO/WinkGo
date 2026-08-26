@@ -32,6 +32,16 @@ const thoughtLevel: AcpDerivedOption = {
   ],
 };
 
+const speed: AcpDerivedOption = {
+  id: 'response_speed',
+  category: 'speed',
+  currentValue: 'fast',
+  options: [
+    { value: 'balanced', label: 'Balanced' },
+    { value: 'fast', label: 'Fast' },
+  ],
+};
+
 const makeSelection = (overrides: Partial<WinkGoAgentModelSelection> = {}): WinkGoAgentModelSelection => ({
   current_model: {
     ...provider,
@@ -74,6 +84,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string }) => {
       if (key === 'agent.thoughtLevel.label') return 'Thinking Level';
+      if (key === 'agent.speed.label') return 'Speed';
       if (key === 'common.model') return 'Model';
       if (key === 'conversation.welcome.selectModel') return 'Select model';
       if (key === 'conversation.welcome.useCliModel') return 'Use CLI model';
@@ -163,11 +174,12 @@ describe('WinkGoAgentModelSelector runtime options', () => {
     expect(screen.getByTestId('winkgo_agent-model-selector')).toHaveTextContent('gpt-5.2 · High');
   });
 
-  it('shows the model submenu before the thought level submenu, each with its current value', () => {
+  it('shows model, thought level, and speed submenus with their current values', () => {
     render(
       <WinkGoAgentModelSelector
         selection={makeSelection()}
         thoughtLevel={thoughtLevel}
+        speed={speed}
         setStatus={{ state: 'idle' }}
         onSetThoughtLevel={vi.fn().mockResolvedValue(undefined)}
       />
@@ -178,6 +190,8 @@ describe('WinkGoAgentModelSelector runtime options', () => {
     expect(titles[0]).toHaveTextContent('gpt-5.2');
     expect(titles[1]).toHaveTextContent('Thinking Level');
     expect(titles[1]).toHaveTextContent('High');
+    expect(titles[2]).toHaveTextContent('Speed');
+    expect(titles[2]).toHaveTextContent('Fast');
   });
 
   it('keeps provider grouping inside the model submenu', () => {
@@ -253,6 +267,27 @@ describe('WinkGoAgentModelSelector runtime options', () => {
 
     await waitFor(() => {
       expect(onSetThoughtLevel).toHaveBeenCalledWith('reasoning_effort', 'low');
+    });
+  });
+
+  it('sets response speed through the optional runtime callback', async () => {
+    const onSetRuntimeOption = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <WinkGoAgentModelSelector
+        selection={makeSelection()}
+        thoughtLevel={thoughtLevel}
+        speed={speed}
+        setStatus={{ state: 'idle' }}
+        onSetThoughtLevel={onSetRuntimeOption}
+        onSetSpeed={onSetRuntimeOption}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Balanced'));
+
+    await waitFor(() => {
+      expect(onSetRuntimeOption).toHaveBeenCalledWith('response_speed', 'balanced');
     });
   });
 });

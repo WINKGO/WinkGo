@@ -27,6 +27,9 @@
     "configureFirst": "Bitte konfiguriere zuerst einen Agenten in den Einstellungen.",
     "switching": "Agent wird gewechselt..."
   },
+  "runtime": {
+    "managedByAgent": "Vom Agent verwaltet"
+  },
   "model": {
     "switchSuccess": "Modell erfolgreich gewechselt",
     "switchFailed": "Modellwechsel fehlgeschlagen",
@@ -47,5 +50,31 @@
     "label": "Denk-Stufe",
     "switchSuccess": "Denk-Stufe gewechselt",
     "switchFailed": "Wechsel der Denk-Stufe fehlgeschlagen"
+  },
+  "speed": {
+    "label": "Geschwindigkeit",
+    "switchSuccess": "Antwortgeschwindigkeit aktualisiert",
+    "switchFailed": "Antwortgeschwindigkeit konnte nicht aktualisiert werden"
+  },
+  "voiceTask": {
+    "emptyCommand": "Die Aufgabe ist leer und wurde nicht an den Agent gesendet.",
+    "noAgent": "Kein WINK GO Agent ist verfügbar oder die genannte Desktop-Agent-Fähigkeit wurde eingestellt.",
+    "noModel": "Für WINK GO CLI ist kein Modell verfügbar. Konfigurieren und aktivieren Sie zuerst ein Modell auf der Modellseite.",
+    "conversationName": "XiaoZhi: {{command}}",
+    "createFailed": "Die WINK GO Agent-Unterhaltung konnte nicht erstellt werden.",
+    "queued": "Die Aufgabe wurde für {{assistant}} eingereiht und wird nach der aktuellen Aufgabe ausgeführt.",
+    "accepted": "Die Aufgabe wurde an {{assistant}} gesendet. Den Fortschritt sehen Sie in WINK GO.",
+    "none": "Es gibt derzeit keine Assistentenaufgabe.",
+    "waitingConfirmation": "{{assistant}} wartet auf Ihre Bestätigung.",
+    "queuedStatus": "{{assistant}} hat die eingereihte Aufgabe erhalten und führt sie nach der aktuellen Aufgabe aus.",
+    "running": "{{assistant}} führt die Aufgabe aus.",
+    "finishedWithResult": "{{assistant}} hat die Aufgabe abgeschlossen: {{result}}",
+    "finishedNoResult": "{{assistant}} hat die Aufgabe abgeschlossen, aber es wurde keine abschließende Antwort gefunden.",
+    "failed": "{{assistant}} ist fehlgeschlagen: {{error}}",
+    "acceptedStatus": "{{assistant}} hat die Aufgabe angenommen.",
+    "noCancelable": "Es gibt keine aktuelle Assistentenaufgabe zum Abbrechen.",
+    "cancelling": "{{assistant}} beendet die Aufgabe noch. Versuchen Sie es gleich erneut.",
+    "cancelled": "Die aktuelle Aufgabe von {{assistant}} wurde abgebrochen.",
+    "history": "Es gibt {{count}} kürzlich ausgeführte Agent-Aufgaben: {{tasks}}."
   }
 }

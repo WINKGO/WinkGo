@@ -476,7 +476,102 @@ pub struct TeamResponse {
 pub type TeamListResponse = Vec<TeamResponse>;
 
 // ---------------------------------------------------------------------------
-// F. WebSocket event payloads
+// F. Read-only team activity projections
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TeamMailboxMessageResponse {
+    pub id: String,
+    pub team_id: String,
+    pub from_agent_id: String,
+    pub to_agent_id: String,
+    pub msg_type: String,
+    pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(default)]
+    pub files: Vec<String>,
+    pub read: bool,
+    pub created_at: TimestampMs,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TeamTaskResponse {
+    pub id: String,
+    pub team_id: String,
+    pub subject: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
+    #[serde(default)]
+    pub blocked_by: Vec<String>,
+    #[serde(default)]
+    pub blocks: Vec<String>,
+    pub created_at: TimestampMs,
+    pub updated_at: TimestampMs,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TeamActivityCursorResponse {
+    pub ts: TimestampMs,
+    pub id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum TeamActivityItemResponse {
+    Message {
+        created_at: TimestampMs,
+        id: String,
+        message: TeamMailboxMessageResponse,
+    },
+    Task {
+        created_at: TimestampMs,
+        id: String,
+        task: TeamTaskResponse,
+    },
+}
+
+impl TeamActivityItemResponse {
+    pub fn created_at(&self) -> TimestampMs {
+        match self {
+            Self::Message { created_at, .. } | Self::Task { created_at, .. } => *created_at,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Message { id, .. } | Self::Task { id, .. } => id,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TeamActivityPageResponse {
+    pub items: Vec<TeamActivityItemResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_cursor: Option<TeamActivityCursorResponse>,
+    pub has_more: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TeamMailboxChangedPayload {
+    pub team_id: String,
+    pub message: TeamMailboxMessageResponse,
+    pub change: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TeamTaskChangedPayload {
+    pub team_id: String,
+    pub task: TeamTaskResponse,
+    pub change: String,
+}
+
+// ---------------------------------------------------------------------------
+// G. WebSocket event payloads
 // ---------------------------------------------------------------------------
 
 /// Payload for `team.agentStatusChanged` WebSocket event.

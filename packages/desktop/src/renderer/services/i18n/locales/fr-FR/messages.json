@@ -2,6 +2,7 @@
   "fileChanges": "Modifications de fichiers",
   "fileChangesCount": "{{count}} modification(s) de fichiers",
   "conversationInProgress": "Une conversation est en cours...",
+  "delivery": { "queued": "En attente de la fin de la tâche actuelle" },
   "confirm": "Confirmer",
   "canceledExecution": "Exécution annulée",
   "openLinkFailed": "Échec de l'ouverture du lien",
@@ -62,6 +63,13 @@
   "processing": "Traitement...",
   "responseSentSuccessfully": "Réponse envoyée avec succès",
   "permissionResponseFailed": "Impossible d’envoyer la réponse. Veuillez réessayer.",
+  "askSubmit": "Envoyer",
+  "askDecline": "Ignorer",
+  "askAnswered": "Répondu",
+  "askDeclined": "Ignoré",
+  "askOther": "Autre",
+  "askOtherPlaceholder": "Saisissez votre réponse",
+  "requestDetails": "Détails de la demande :",
   "confirmation": {
     "applyChange": "Appliquer cette modification ?",
     "allowExecution": "Autoriser l'exécution ?",
@@ -72,5 +80,14 @@
     "yesAlwaysAllowTool": "Oui, toujours autoriser l'outil \"{{toolName}}\" du serveur \"{{serverName}}\"",
     "yesAlwaysAllowServer": "Oui, toujours autoriser tous les outils du serveur \"{{serverName}}\"",
     "no": "Non (Échap)"
+  },
+  "fork": {
+    "action": "Bifurquer à partir d'ici",
+    "errorTurnInFlight": "Attendez la fin de la réponse en cours avant de bifurquer",
+    "errorParentUnbound": "Cette conversation n'a pas encore de session backend à bifurquer",
+    "errorPointUnsupported": "Cet agent ne peut bifurquer qu'à partir du dernier message",
+    "errorUnsupported": "Cet agent ne prend pas en charge la bifurcation",
+    "errorGeneric": "Échec de la bifurcation : {{message}}",
+    "errorTeamUnsupported": "Team member conversations must be managed from Team mode"
   }
 }

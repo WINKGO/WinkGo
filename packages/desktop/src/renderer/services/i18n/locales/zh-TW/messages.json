@@ -2,6 +2,7 @@
   "fileChanges": "檔案變更",
   "fileChangesCount": "{{count}} 個檔案變更",
   "conversationInProgress": "目前正在進行對話...",
+  "delivery": { "queued": "等待目前工作完成後執行" },
   "confirm": "確認",
   "canceledExecution": "已取消執行",
   "openLinkFailed": "無法開啟連結",
@@ -62,6 +63,13 @@
   "processing": "處理中...",
   "responseSentSuccessfully": "回覆已成功送出",
   "permissionResponseFailed": "無法傳送回應，請再試一次。",
+  "askSubmit": "提交",
+  "askDecline": "暫不回答",
+  "askAnswered": "已回答",
+  "askDeclined": "已略過",
+  "askOther": "其他",
+  "askOtherPlaceholder": "輸入你的回答",
+  "requestDetails": "請求詳情：",
   "confirmation": {
     "applyChange": "應用此更改？",
     "allowExecution": "允許執行？",
@@ -72,5 +80,14 @@
     "yesAlwaysAllowTool": "是，始終允許來自伺服器 \"{{serverName}}\" 的工具 \"{{toolName}}\"",
     "yesAlwaysAllowServer": "是，始終允許來自伺服器 \"{{serverName}}\" 的所有工具",
     "no": "否 (esc)"
+  },
+  "fork": {
+    "action": "從此處分叉",
+    "errorTurnInFlight": "請等待目前回覆完成後再分叉",
+    "errorParentUnbound": "此對話尚無可分叉的後端工作階段",
+    "errorPointUnsupported": "此智慧代理僅支援從最新訊息分叉",
+    "errorUnsupported": "此智慧代理不支援對話分叉",
+    "errorGeneric": "分叉失敗：{{message}}",
+    "errorTeamUnsupported": "團隊成員對話請在團隊模式中管理，不能在訊息處建立分支"
   }
 }

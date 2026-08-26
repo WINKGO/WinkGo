@@ -117,6 +117,11 @@ pub struct MkdirParams {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct CreateFileParams {
+    pub file: ResourceRef,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct RemoveParams {
     pub target: ResourceRef,
     #[serde(default)]
@@ -127,6 +132,12 @@ pub struct RemoveParams {
 pub struct RenameParams {
     pub from: ResourceRef,
     pub to: ResourceRef,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TransferParams {
+    pub from: ResourceRef,
+    pub to_dir: ResourceRef,
 }
 
 // ── Filename search (fs/search) ───────────────────────────────────────────

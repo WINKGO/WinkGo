@@ -14,6 +14,7 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { useGuidInput } from '@/renderer/pages/guid/hooks/useGuidInput';
+import { localFileRef } from '@/common/types/chatFile';
 
 vi.mock('@/renderer/hooks/file/useDragUpload', () => ({
   useDragUpload: () => ({ isFileDragging: false, dragHandlers: {} }),
@@ -62,6 +63,26 @@ describe('useGuidInput — ELECTRON-1K6', () => {
 });
 
 describe('useGuidInput — source-tagged file kinds', () => {
+  it('preserves a local ref supplied by an Electron desktop drop', () => {
+    const { result } = renderHook(() => useGuidInput({ locationState: null }));
+    const path = String.raw`C:\Users\Administrator\Desktop\page.html`;
+
+    act(() => {
+      result.current.handleFilesPasted([
+        {
+          path,
+          name: 'page.html',
+          size: 1,
+          type: 'text/html',
+          lastModified: 1,
+          chatRef: localFileRef(path),
+        },
+      ]);
+    });
+
+    expect(result.current.files).toEqual([localFileRef(path)]);
+  });
+
   // Tripwire: the Guid "Add files" entry (backend-machine picker) must produce
   // `local` refs, while device uploads/paste produce `upload`. If handleFilesPicked
   // is ever wired to uploadFileRef, this flips to `upload` and fails.

@@ -41,8 +41,8 @@ const entry = (over: Partial<ProjectEntryDto>): ProjectEntryDto => ({
   ...over,
 });
 
-const detail = (entries: ProjectEntryDto[]): ProjectDetailDto => ({
-  project_id: 'p1',
+const detail = (entries: ProjectEntryDto[], projectId = 'p1'): ProjectDetailDto => ({
+  project_id: projectId,
   name: 'Proj',
   explorer: { workspace_pe_id: entries[0]?.pe_id ?? '', entries },
 });
@@ -139,23 +139,26 @@ describe('ExplorerContainer data integration', () => {
 
     // Component-switcher tabs present (t returns the raw key here).
     fireEvent.click(screen.getByText('conversation.explorer.tabs.changes'));
-    // Changes tab shows the placeholder…
-    expect(screen.getByText('conversation.explorer.changesPlaceholder')).toBeInTheDocument();
+    // Changes tab mounts the real Source Control panel. The test transport stays
+    // offline, so the panel remains in its loading state.
+    expect(screen.getByText('conversation.explorer.scm.loading')).toBeInTheDocument();
     // …and the explorer stays mounted (root still in the DOM, just hidden) — no rebuild.
     expect(screen.getByText('Root Alpha')).toBeInTheDocument();
 
-    // Switching back hides the placeholder and keeps the tree.
+    // Switching back unmounts Source Control and keeps the tree.
     fireEvent.click(screen.getByText('conversation.explorer.tabs.files'));
-    expect(screen.queryByText('conversation.explorer.changesPlaceholder')).not.toBeInTheDocument();
+    expect(screen.queryByText('conversation.explorer.scm.loading')).not.toBeInTheDocument();
     expect(screen.getByText('Root Alpha')).toBeInTheDocument();
   });
 
   it('refetches and re-projects when projectId changes', async () => {
-    projectGet.mockImplementation(async ({ project_id }) =>
-      project_id === 'p1'
-        ? detail([entry({ pe_id: 'peA', display_name: 'Root Alpha' })])
-        : detail([entry({ pe_id: 'peB', display_name: 'Root Beta' })])
-    );
+    projectGet.mockImplementation(async ({ project_id }) => {
+      const firstProject = project_id === 'p1';
+      return detail(
+        [entry({ pe_id: firstProject ? 'peA' : 'peB', display_name: firstProject ? 'Root Alpha' : 'Root Beta' })],
+        project_id
+      );
+    });
 
     const { rerender } = renderContainer('p1');
     expect(await screen.findByText('Root Alpha')).toBeInTheDocument();
@@ -167,5 +170,13 @@ describe('ExplorerContainer data integration', () => {
     );
     expect(await screen.findByText('Root Beta')).toBeInTheDocument();
     expect(screen.queryByText('Root Alpha')).not.toBeInTheDocument();
+  });
+
+  it('never paints roots returned for a different project', async () => {
+    projectGet.mockResolvedValue(detail([entry({ pe_id: 'peX', display_name: 'Wrong Project Root' })], 'p-other'));
+    renderContainer('p1');
+
+    await waitFor(() => expect(projectGet).toHaveBeenCalledWith({ project_id: 'p1' }));
+    expect(screen.queryByText('Wrong Project Root')).not.toBeInTheDocument();
   });
 });

@@ -13,7 +13,7 @@
   "color": "linear-gradient(135deg, #4facfe, #00f2fe)",
   "description": "独立的豆包客户端、桌面对话、任务与可见回复入口。",
   "strong_aliases": ["豆包", "豆包AI", "Doubao"],
-  "weak_aliases": ["AI助手", "桌面端", "任务", "对话"],
+  "weak_aliases": ["AI助手", "桌面端", "任务", "对话", "回复"],
   "capability_labels": ["豆包客户端", "桌面对话", "任务投递", "可见回复"],
   "related_skill_ids": [],
   "legacy_route_prefix": "豆包",

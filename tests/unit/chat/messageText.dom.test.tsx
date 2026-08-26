@@ -22,6 +22,11 @@ import {
 const previewMocks = vi.hoisted(() => ({
   openPreview: vi.fn(),
 }));
+const forkMocks = vi.hoisted(() => ({
+  fork: vi.fn().mockResolvedValue({ id: 'forked-conv' }),
+  ensureRuntime: vi.fn().mockResolvedValue(undefined),
+  navigate: vi.fn(),
+}));
 const localFileLinkMocks = vi.hoisted(() => ({
   payload: {
     path: '/missing/report.xlsx',
@@ -43,11 +48,18 @@ const mockFilePreview = vi.fn(({ path, variant }: { path: string; variant?: 'thu
 vi.mock('@/common', () => ({
   ipcBridge: {
     fs: {
-      getFileMetadata: { invoke: vi.fn() },
-      getImageBase64: { invoke: vi.fn() },
-      readFile: { invoke: vi.fn() },
+      getContentMetadata: { invoke: vi.fn() },
+      readContent: { invoke: vi.fn() },
+    },
+    conversation: {
+      fork: { invoke: forkMocks.fork },
+      ensureRuntime: { invoke: forkMocks.ensureRuntime },
     },
   },
+}));
+
+vi.mock('react-router', () => ({
+  useNavigate: () => forkMocks.navigate,
 }));
 
 vi.mock('@/renderer/pages/conversation/Preview/context/PreviewContext', () => ({
@@ -152,7 +164,6 @@ const fileMetadata = (path: string) => ({
   type: 'file',
   lastModified: 1_717_000_000,
 });
-
 describe('MessageText attachment paths', () => {
   beforeEach(() => {
     mockFilePreview.mockClear();
@@ -162,9 +173,8 @@ describe('MessageText attachment paths', () => {
       path: '/missing/report.xlsx',
       reference: undefined,
     };
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockReset();
-    vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockReset();
-    vi.mocked(ipcBridge.fs.readFile.invoke).mockReset();
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockReset();
+    vi.mocked(ipcBridge.fs.readContent.invoke).mockReset();
   });
 
   const renderMessageWithLocalLink = (content = '[report](/missing/report.xlsx)') => {
@@ -181,7 +191,7 @@ describe('MessageText attachment paths', () => {
     };
 
     render(
-      <ConversationProvider value={{ conversationId: 'conv-1', workspace: '/workspace/demo', type: 'acp' }}>
+      <ConversationProvider value={{ conversation_id: 'conv-1', workspace: '/workspace/demo', type: 'acp' }}>
         <MessageText message={message} />
       </ConversationProvider>
     );
@@ -207,11 +217,16 @@ describe('MessageText attachment paths', () => {
     };
 
     render(
-      <ConversationProvider value={{ conversationId: 'conv-1', workspace: '/workspace/demo', type: 'acp' }}>
+      <ConversationProvider value={{ conversation_id: 'conv-1', workspace: '/workspace/demo', type: 'acp' }}>
         <MessageText message={message} />
       </ConversationProvider>
     );
   };
+
+  it('labels a boundary-queued user message until the backend starts it', () => {
+    renderMessageText('follow up', { position: 'right', status: 'pending' });
+    expect(screen.getByTestId('queued-message-status')).toHaveTextContent('Waiting for the current task');
+  });
 
   it('resolves relative attachment paths against the current workspace before previewing', () => {
     const message: IMessageText = {
@@ -227,7 +242,7 @@ describe('MessageText attachment paths', () => {
     };
 
     render(
-      <ConversationProvider value={{ conversationId: 'conv-1', workspace: '/workspace/demo', type: 'acp' }}>
+      <ConversationProvider value={{ conversation_id: 'conv-1', workspace: '/workspace/demo', type: 'acp' }}>
         <MessageText message={message} />
       </ConversationProvider>
     );
@@ -249,7 +264,7 @@ describe('MessageText attachment paths', () => {
     };
 
     render(
-      <ConversationProvider value={{ conversationId: 'conv-1', workspace: '/workspace/demo', type: 'acp' }}>
+      <ConversationProvider value={{ conversation_id: 'conv-1', workspace: '/workspace/demo', type: 'acp' }}>
         <MessageText message={message} />
       </ConversationProvider>
     );
@@ -284,7 +299,7 @@ describe('MessageText attachment paths', () => {
     };
 
     render(
-      <ConversationProvider value={{ conversationId: 'conv-1', workspace: '/workspace/demo', type: 'acp' }}>
+      <ConversationProvider value={{ conversation_id: 'conv-1', workspace: '/workspace/demo', type: 'acp' }}>
         <MessageText message={message} />
       </ConversationProvider>
     );
@@ -349,7 +364,7 @@ describe('MessageText attachment paths', () => {
     expect(screen.getByTestId('message-text-content')).toHaveTextContent(content);
     expect(screen.queryByTestId('file-preview')).not.toBeInTheDocument();
     expect(mockFilePreview).not.toHaveBeenCalled();
-    expect(ipcBridge.fs.getFileMetadata.invoke).not.toHaveBeenCalled();
+    expect(ipcBridge.fs.getContentMetadata.invoke).not.toHaveBeenCalled();
   });
 
   it('shows legacy product names as WINK GO in assistant replies while preserving user text', () => {
@@ -379,7 +394,7 @@ describe('MessageText attachment paths', () => {
     expect(messageContent).toHaveTextContent('- 路径引用...模型看不到像素');
     expect(screen.queryByTestId('file-preview')).not.toBeInTheDocument();
     expect(mockFilePreview).not.toHaveBeenCalled();
-    expect(ipcBridge.fs.getFileMetadata.invoke).not.toHaveBeenCalled();
+    expect(ipcBridge.fs.getContentMetadata.invoke).not.toHaveBeenCalled();
   });
 
   it('keeps assistant fenced-code marker text visible without file previews', () => {
@@ -393,7 +408,7 @@ describe('MessageText attachment paths', () => {
     expect(messageContent).toHaveTextContent('uploads/photo.png');
     expect(screen.queryByTestId('file-preview')).not.toBeInTheDocument();
     expect(mockFilePreview).not.toHaveBeenCalled();
-    expect(ipcBridge.fs.getFileMetadata.invoke).not.toHaveBeenCalled();
+    expect(ipcBridge.fs.getContentMetadata.invoke).not.toHaveBeenCalled();
   });
 
   it('keeps teammate marker text visible without file previews', () => {
@@ -412,7 +427,7 @@ describe('MessageText attachment paths', () => {
     expect(screen.getByTestId('message-text-content')).toHaveTextContent(content);
     expect(screen.queryByTestId('file-preview')).not.toBeInTheDocument();
     expect(mockFilePreview).not.toHaveBeenCalled();
-    expect(ipcBridge.fs.getFileMetadata.invoke).not.toHaveBeenCalled();
+    expect(ipcBridge.fs.getContentMetadata.invoke).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -441,7 +456,7 @@ describe('MessageText attachment paths', () => {
     }
     expect(screen.queryByTestId('file-preview')).not.toBeInTheDocument();
     expect(mockFilePreview).not.toHaveBeenCalled();
-    expect(ipcBridge.fs.getFileMetadata.invoke).not.toHaveBeenCalled();
+    expect(ipcBridge.fs.getContentMetadata.invoke).not.toHaveBeenCalled();
   });
 
   it('copies complete assistant marker text', async () => {
@@ -481,7 +496,7 @@ describe('MessageText attachment paths', () => {
   });
 
   it('opens a missing-file preview when a local markdown link no longer exists', async () => {
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockResolvedValue(null);
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockResolvedValue(null);
     localFileLinkMocks.payload = {
       path: '/missing/report.xlsx',
       reference: {
@@ -524,8 +539,8 @@ describe('MessageText attachment paths', () => {
         column: 7,
       },
     };
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
-    vi.mocked(ipcBridge.fs.readFile.invoke).mockResolvedValue('const value = 1;\n');
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
+    vi.mocked(ipcBridge.fs.readContent.invoke).mockResolvedValue('const value = 1;\n');
 
     renderMessageWithLocalLink('[app.ts](/workspace/demo/src/app.ts:42:7)');
 
@@ -560,8 +575,8 @@ describe('MessageText attachment paths', () => {
         endLine: 20,
       },
     };
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
-    vi.mocked(ipcBridge.fs.readFile.invoke).mockResolvedValue('const value = 1;\n');
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
+    vi.mocked(ipcBridge.fs.readContent.invoke).mockResolvedValue('const value = 1;\n');
 
     renderMessageWithLocalLink('[app.ts](/workspace/demo/src/app.ts#L10-L20)');
 
@@ -592,7 +607,7 @@ describe('MessageText attachment paths', () => {
   it('opens office and pdf local markdown links without reading file content', async () => {
     const filePath = '/workspace/demo/reports/q2.pdf';
     localFileLinkMocks.payload = { path: filePath, reference: undefined };
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
 
     renderMessageWithLocalLink('[q2.pdf](/workspace/demo/reports/q2.pdf)');
 
@@ -611,15 +626,14 @@ describe('MessageText attachment paths', () => {
         { replace: true }
       );
     });
-    expect(ipcBridge.fs.readFile.invoke).not.toHaveBeenCalled();
-    expect(ipcBridge.fs.getImageBase64.invoke).not.toHaveBeenCalled();
+    expect(ipcBridge.fs.readContent.invoke).not.toHaveBeenCalled();
   });
 
   it('opens image local markdown links from base64 content without reading text content', async () => {
     const filePath = '/workspace/demo/assets/chart.png';
     localFileLinkMocks.payload = { path: filePath, reference: undefined };
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
-    vi.mocked(ipcBridge.fs.getImageBase64.invoke).mockResolvedValue('data:image/png;base64,abc123');
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
+    vi.mocked(ipcBridge.fs.readContent.invoke).mockResolvedValue('data:image/png;base64,abc123');
 
     renderMessageWithLocalLink('[chart.png](/workspace/demo/assets/chart.png)');
 
@@ -639,15 +653,18 @@ describe('MessageText attachment paths', () => {
         { replace: true }
       );
     });
-    expect(ipcBridge.fs.readFile.invoke).not.toHaveBeenCalled();
+    expect(ipcBridge.fs.readContent.invoke).toHaveBeenCalledWith({
+      file: { kind: 'local', path: filePath },
+      encoding: 'dataurl',
+    });
   });
 
   it('opens large code local markdown links with truncated read content', async () => {
     const filePath = '/workspace/demo/logs/app.log';
     const content = 'a'.repeat(LARGE_TEXT_PREVIEW_THRESHOLD + 1);
     localFileLinkMocks.payload = { path: filePath, reference: undefined };
-    vi.mocked(ipcBridge.fs.getFileMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
-    vi.mocked(ipcBridge.fs.readFile.invoke).mockResolvedValue(content);
+    vi.mocked(ipcBridge.fs.getContentMetadata.invoke).mockResolvedValue(fileMetadata(filePath));
+    vi.mocked(ipcBridge.fs.readContent.invoke).mockResolvedValue(content);
 
     renderMessageWithLocalLink('[app.log](/workspace/demo/logs/app.log)');
 

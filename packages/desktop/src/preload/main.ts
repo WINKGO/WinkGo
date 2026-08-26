@@ -78,6 +78,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     applySettings: (settings: { autoHideFullscreen: boolean; opacity: number; visible: boolean }) =>
       ipcRenderer.invoke('winkgo-desktop-island:apply-settings', settings),
     navigateMain: (route: string) => ipcRenderer.invoke('winkgo-desktop-island:navigate-main', route),
+    onOpenPanel: (callback: (panel: 'browserComputerUse' | 'desktopComputerUse') => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, panel: 'browserComputerUse' | 'desktopComputerUse') =>
+        callback(panel);
+      ipcRenderer.on('winkgo-desktop-island:open-panel', handler);
+      return () => ipcRenderer.off('winkgo-desktop-island:open-panel', handler);
+    },
+    openPanel: (panel: 'browserComputerUse' | 'desktopComputerUse') =>
+      ipcRenderer.invoke('winkgo-desktop-island:open-panel', panel),
     ready: () => ipcRenderer.invoke('winkgo-desktop-island:ready'),
     setFileDragActive: (active: boolean) => ipcRenderer.invoke('winkgo-desktop-island:set-file-drag-active', active),
     setSize: (size: { height: number; width: number }) => ipcRenderer.invoke('winkgo-desktop-island:set-size', size),
@@ -95,6 +103,16 @@ contextBridge.exposeInMainWorld('__initialLanguage', initialLanguage ?? null);
 contextBridge.exposeInMainWorld('__winkgoE2ETest', process.env.WINKGO_E2E_TEST === '1');
 contextBridge.exposeInMainWorld('__backendStartupFailed', backendStartupFailed === true);
 contextBridge.exposeInMainWorld('__backendStartupFailure', backendStartupFailure ?? null);
+contextBridge.exposeInMainWorld('__backendStartupBridge', {
+  getState: () => ipcRenderer.sendSync('get-backend-startup-failure'),
+  subscribe: (callback: (state: unknown) => void) => {
+    const handler = (_event: unknown, value: unknown) => callback(value);
+    ipcRenderer.on('backend-startup-state', handler);
+    return () => {
+      ipcRenderer.off('backend-startup-state', handler);
+    };
+  },
+});
 
 // 托盘事件监听 - 将 IPC 事件转换为 DOM 事件
 // Tray event listeners - convert IPC events to DOM events

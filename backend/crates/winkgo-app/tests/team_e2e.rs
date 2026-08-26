@@ -5,6 +5,7 @@ use axum::http::StatusCode;
 use serde_json::{Value, json};
 use tokio::net::TcpStream;
 use tower::ServiceExt;
+use winkgo_common::now_ms;
 use winkgo_db::{IConversationRepository, MessagePageDirection, MessagePageParams};
 
 use common::{
@@ -258,6 +259,100 @@ async fn tc3_each_agent_has_conversation_id() {
         data["assistants"][0]["conversation_id"],
         data["assistants"][1]["conversation_id"]
     );
+}
+
+#[tokio::test]
+async fn team_activity_endpoints_return_real_mailbox_and_task_rows_with_cursor_paging() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let data = create_team(&mut app, &services, &token, &csrf).await;
+    let team_id = data["id"].as_str().unwrap();
+    let lead_id = data["assistants"][0]["slot_id"].as_str().unwrap();
+    let worker_id = data["assistants"][1]["slot_id"].as_str().unwrap();
+    let created_at = now_ms();
+
+    sqlx::query(
+        "INSERT INTO mailbox \
+            (id, team_id, to_agent_id, from_agent_id, type, content, summary, files, read, created_at) \
+         VALUES (?, ?, ?, ?, 'message', 'handoff ready', NULL, '[]', 0, ?)",
+    )
+    .bind("activity-message")
+    .bind(team_id)
+    .bind(worker_id)
+    .bind(lead_id)
+    .bind(created_at)
+    .execute(services.database.pool())
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "INSERT INTO team_tasks \
+            (id, team_id, subject, description, status, owner, blocked_by, blocks, metadata, created_at, updated_at) \
+         VALUES (?, ?, 'Verify activity', NULL, 'in_progress', ?, '[]', '[]', NULL, ?, ?)",
+    )
+    .bind("activity-task")
+    .bind(team_id)
+    .bind(worker_id)
+    .bind(created_at + 1)
+    .bind(created_at + 1)
+    .execute(services.database.pool())
+    .await
+    .unwrap();
+
+    let mailbox_resp = app
+        .clone()
+        .oneshot(get_with_token(&format!("/api/teams/{team_id}/mailbox"), &token))
+        .await
+        .unwrap();
+    assert_eq!(mailbox_resp.status(), StatusCode::OK);
+    let mailbox = body_json(mailbox_resp).await;
+    assert_eq!(mailbox["data"][0]["id"], "activity-message");
+    assert_eq!(mailbox["data"][0]["to_agent_id"], worker_id);
+
+    let tasks_resp = app
+        .clone()
+        .oneshot(get_with_token(
+            &format!("/api/teams/{team_id}/tasks?ids=activity-task"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(tasks_resp.status(), StatusCode::OK);
+    let tasks = body_json(tasks_resp).await;
+    assert_eq!(tasks["data"][0]["id"], "activity-task");
+    assert_eq!(tasks["data"][0]["status"], "in_progress");
+
+    let first_resp = app
+        .clone()
+        .oneshot(get_with_token(
+            &format!("/api/teams/{team_id}/activity?limit=1&direction=desc&kind=all"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(first_resp.status(), StatusCode::OK);
+    let first = body_json(first_resp).await;
+    assert_eq!(first["data"]["items"][0]["kind"], "task");
+    assert_eq!(first["data"]["items"][0]["id"], "activity-task");
+    assert_eq!(first["data"]["has_more"], true);
+
+    let cursor_ts = first["data"]["next_cursor"]["ts"].as_i64().unwrap();
+    let cursor_id = first["data"]["next_cursor"]["id"].as_str().unwrap();
+    let second_resp = app
+        .clone()
+        .oneshot(get_with_token(
+            &format!(
+                "/api/teams/{team_id}/activity?limit=1&direction=desc&kind=all&cursor_ts={cursor_ts}&cursor_id={cursor_id}"
+            ),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(second_resp.status(), StatusCode::OK);
+    let second = body_json(second_resp).await;
+    assert_eq!(second["data"]["items"][0]["kind"], "message");
+    assert_eq!(second["data"]["items"][0]["id"], "activity-message");
+    assert_eq!(second["data"]["has_more"], false);
 }
 
 #[tokio::test]

@@ -6,6 +6,13 @@ import {
   applyDelta,
   applySnapshot,
   buildRemoveRequest,
+  buildCreateFileRequest,
+  buildMkdirRequest,
+  buildTransferRequest,
+  isTransferAllowed,
+  parsePeRef,
+  resolveTransferOp,
+  serializePeRef,
   buildRenameRequest,
   buildTreeData,
   canRemoveRoot,
@@ -463,6 +470,53 @@ describe('buildRemoveRequest', () => {
     expect(buildRemoveRequest('peY', 'a/b.txt')).toEqual({
       method: 'fs/remove',
       params: { target: { pe_id: 'peY', relative_path: 'a/b.txt' } },
+    });
+  });
+});
+
+describe('new Explorer entry request builders', () => {
+  it('creates files and directories under the selected project directory', () => {
+    expect(buildCreateFileRequest('pe1', 'notes', ' todo.md ')).toEqual({
+      method: 'fs/createFile',
+      params: { file: { pe_id: 'pe1', relative_path: 'notes/todo.md' } },
+    });
+    expect(buildMkdirRequest('pe1', '', 'assets')).toEqual({
+      method: 'fs/mkdir',
+      params: { dir: { pe_id: 'pe1', relative_path: 'assets' } },
+    });
+  });
+
+  it('does not send empty entry names', () => {
+    expect(buildCreateFileRequest('pe1', '', '   ')).toBeNull();
+    expect(buildMkdirRequest('pe1', '', '')).toBeNull();
+  });
+});
+
+describe('Explorer internal drag transfer', () => {
+  const source = { pe_id: 'pe1', relative_path: 'src/report.txt', name: 'report.txt', isDir: false };
+
+  it('round-trips the private drag payload and chooses move/copy by context', () => {
+    expect(parsePeRef(serializePeRef(source))).toEqual(source);
+    expect(parsePeRef('not-json')).toBeNull();
+    expect(resolveTransferOp(true, false)).toBe('move');
+    expect(resolveTransferOp(false, false)).toBe('copy');
+    expect(resolveTransferOp(true, true)).toBe('copy');
+  });
+
+  it('blocks self/subtree and no-op moves', () => {
+    const directory = { ...source, relative_path: 'src', name: 'src', isDir: true };
+    expect(isTransferAllowed(directory, { pe_id: 'pe1', relative_path: 'src/child' }, 'move')).toBe(false);
+    expect(isTransferAllowed(source, { pe_id: 'pe1', relative_path: 'src' }, 'move')).toBe(false);
+    expect(isTransferAllowed(source, { pe_id: 'pe1', relative_path: 'dest' }, 'move')).toBe(true);
+  });
+
+  it('builds an identity-only monitor request', () => {
+    expect(buildTransferRequest('copy', source, { pe_id: 'pe2', relative_path: 'archive' })).toEqual({
+      method: 'fs/copy',
+      params: {
+        from: { pe_id: 'pe1', relative_path: 'src/report.txt' },
+        to_dir: { pe_id: 'pe2', relative_path: 'archive' },
+      },
     });
   });
 });

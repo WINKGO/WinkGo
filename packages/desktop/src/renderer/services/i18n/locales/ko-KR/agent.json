@@ -27,6 +27,9 @@
     "configureFirst": "먼저 설정에서 에이전트를 구성하세요.",
     "switching": "에이전트 전환 중..."
   },
+  "runtime": {
+    "managedByAgent": "에이전트에서 관리"
+  },
   "model": {
     "switchSuccess": "모델이 성공적으로 전환되었습니다",
     "switchFailed": "모델 전환에 실패했습니다",
@@ -47,5 +50,31 @@
     "label": "사고 강도",
     "switchSuccess": "사고 강도가 전환되었습니다",
     "switchFailed": "사고 강도 전환에 실패했습니다"
+  },
+  "speed": {
+    "label": "속도",
+    "switchSuccess": "응답 속도가 업데이트되었습니다",
+    "switchFailed": "응답 속도 업데이트에 실패했습니다"
+  },
+  "voiceTask": {
+    "emptyCommand": "작업 내용이 비어 있어 Agent에게 전송되지 않았습니다.",
+    "noAgent": "사용 가능한 WINK GO Agent가 없거나 지정한 데스크톱 Agent 스킬이 종료되었습니다.",
+    "noModel": "WINK GO CLI에 사용 가능한 모델이 없습니다. 먼저 모델 페이지에서 모델을 구성하고 활성화하세요.",
+    "conversationName": "XiaoZhi: {{command}}",
+    "createFailed": "WINK GO Agent 대화를 만들지 못했습니다.",
+    "queued": "작업이 {{assistant}} 대기열에 추가되었으며 현재 작업이 끝나면 자동으로 실행됩니다.",
+    "accepted": "작업을 {{assistant}}에게 전송했습니다. WINK GO에서 진행 상황을 확인할 수 있습니다.",
+    "none": "현재 관리자 작업이 없습니다.",
+    "waitingConfirmation": "{{assistant}}이(가) 확인을 기다리고 있습니다.",
+    "queuedStatus": "{{assistant}}이(가) 대기 중인 작업을 수신했으며 현재 작업이 끝나면 실행합니다.",
+    "running": "{{assistant}}이(가) 작업을 실행하고 있습니다.",
+    "finishedWithResult": "{{assistant}}이(가) 작업을 완료했습니다: {{result}}",
+    "finishedNoResult": "{{assistant}}이(가) 작업을 완료했지만 최종 응답을 찾지 못했습니다.",
+    "failed": "{{assistant}} 실행 실패: {{error}}",
+    "acceptedStatus": "{{assistant}}이(가) 작업을 수락했습니다.",
+    "noCancelable": "취소할 수 있는 현재 관리자 작업이 없습니다.",
+    "cancelling": "{{assistant}}이(가) 아직 작업을 종료하고 있습니다. 잠시 후 다시 시도하세요.",
+    "cancelled": "{{assistant}}의 현재 작업을 취소했습니다.",
+    "history": "최근 Agent 작업은 {{count}}개입니다: {{tasks}}."
   }
 }

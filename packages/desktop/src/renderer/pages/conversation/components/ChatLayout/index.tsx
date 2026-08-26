@@ -6,7 +6,7 @@ import { useLayoutContext } from '@/renderer/hooks/context/LayoutContext';
 import { useResizableSplit } from '@/renderer/hooks/ui/useResizableSplit';
 import ChatTitleEditor from '@/renderer/pages/conversation/components/ChatTitleEditor';
 import MobileWorkspaceOverlay from './MobileWorkspaceOverlay';
-import WorkspacePanelHeader, { DesktopWorkspaceToggle } from './WorkspacePanelHeader';
+import WorkspacePanelHeader, { DesktopWorkspaceEdgeToggle, DesktopWorkspaceToggle } from './WorkspacePanelHeader';
 import { useContainerWidth } from '@/renderer/pages/conversation/hooks/useContainerWidth';
 import { useLayoutConstraints } from '@/renderer/pages/conversation/hooks/useLayoutConstraints';
 import { useTitleRename } from '@/renderer/pages/conversation/hooks/useTitleRename';
@@ -23,7 +23,6 @@ import {
   calcLayoutMetrics,
 } from '@/renderer/pages/conversation/utils/layoutCalc';
 import { Layout as ArcoLayout } from '@arco-design/web-react';
-import { ExpandLeft, ExpandRight } from '@icon-park/react';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './chat-layout.css';
@@ -76,12 +75,16 @@ const ChatLayout: React.FC<{
   const isMobile = Boolean(layout?.isMobile);
 
   // Preview panel state
-  const { isOpen: isPreviewOpenRaw } = usePreviewContext();
-  const previewHosted = Boolean(props.previewHosted);
+  const { isOpen: isPreviewOpenRaw, tabs: previewTabs } = usePreviewContext();
+  // The global preview host is not rendered on mobile widths. Fall back to the
+  // conversation-local overlay there so project previews do not disappear.
+  const previewHosted = Boolean(props.previewHosted) && !isMobile;
   // For project conversations the preview lives at the Layout host, so this
   // ChatLayout must behave as if there is no preview: chat fills, no split, no
   // preview panel. Everywhere below uses `isPreviewOpen` for that local decision.
   const isPreviewOpen = isPreviewOpenRaw && !previewHosted;
+  const hasLiveBrowserPreview = previewTabs.some((tab) => tab.content_type === 'browser');
+  const shouldMountLocalPreview = !previewHosted && (isPreviewOpenRaw || hasLiveBrowserPreview);
 
   // --- Hook A: workspace collapse ---
   const { rightSiderCollapsed, setRightSiderCollapsed } = useWorkspaceCollapse({
@@ -219,19 +222,7 @@ const ChatLayout: React.FC<{
           }
         />
       </FlexFullContainer>
-      <div className='flex items-center gap-12px shrink-0'>
-        {props.headerExtra}
-        {isWindowsRuntime && workspaceEnabled && (
-          <button
-            type='button'
-            className='workspace-header__toggle'
-            aria-label='Toggle workspace'
-            onClick={() => dispatchWorkspaceToggleEvent()}
-          >
-            {rightSiderCollapsed ? <ExpandRight size={16} /> : <ExpandLeft size={16} />}
-          </button>
-        )}
-      </div>
+      <div className='flex items-center gap-12px shrink-0'>{props.headerExtra}</div>
     </ArcoLayout.Header>
   );
 
@@ -281,31 +272,44 @@ const ChatLayout: React.FC<{
                 {props.children}
               </ArcoLayout.Content>
             </div>
-            {/* Preview panel - conditionally rendered */}
-            {isPreviewOpen && (
+            {/* Keep browser WebViews mounted while the panel is collapsed. */}
+            {shouldMountLocalPreview && (
               <div
                 className={classNames(
                   'preview-panel flex flex-col relative overflow-visible rounded-[15px]',
-                  isDesktop ? 'mb-[12px] mr-[12px] ml-[8px]' : 'm-[8px]'
+                  isPreviewOpen && (isDesktop ? 'mb-[12px] mr-[12px] ml-[8px]' : 'm-[8px]')
                 )}
                 style={{
-                  flexGrow: 1,
-                  flexShrink: 1,
-                  flexBasis: 0,
                   border: '1px solid var(--bg-3)',
-                  minWidth: isDesktop ? '260px' : 0,
-                  maxWidth: isMobile ? 'calc(100% - 16px)' : undefined,
-                  width: isMobile ? 'calc(100% - 16px)' : undefined,
                   boxSizing: 'border-box',
+                  ...(isPreviewOpen
+                    ? {
+                        flexGrow: 1,
+                        flexShrink: 1,
+                        flexBasis: 0,
+                        minWidth: isDesktop ? '260px' : 0,
+                        maxWidth: isMobile ? 'calc(100% - 16px)' : undefined,
+                        width: isMobile ? 'calc(100% - 16px)' : undefined,
+                      }
+                    : {
+                        position: 'fixed',
+                        left: '-10000px',
+                        top: 0,
+                        width: '640px',
+                        height: '720px',
+                        visibility: 'hidden',
+                        pointerEvents: 'none',
+                      }),
                 }}
               >
-                {isDesktop &&
+                {isPreviewOpen &&
+                  isDesktop &&
                   createPreviewDragHandle({
                     className: 'absolute top-0 bottom-0 z-30',
                     style: { width: '20px', left: '-20px' },
                     linePlacement: 'end',
-                    lineClassName: 'opacity-30 group-hover:opacity-100 group-active:opacity-100',
-                    lineStyle: { width: '2px' },
+                    compact: true,
+                    ariaLabel: '调整浏览器面板宽度',
                   })}
                 <div className='h-full w-full overflow-hidden rounded-[15px]'>
                   <PreviewPanel />
@@ -363,6 +367,10 @@ const ChatLayout: React.FC<{
         {/* Desktop expand button when workspace is collapsed */}
         {!isMacRuntime && !isWindowsRuntime && workspaceEnabled && rightSiderCollapsed && !layout?.isMobile && (
           <DesktopWorkspaceToggle />
+        )}
+
+        {isWindowsRuntime && workspaceEnabled && !layout?.isMobile && (
+          <DesktopWorkspaceEdgeToggle collapsed={rightSiderCollapsed} />
         )}
       </div>
     </ArcoLayout>

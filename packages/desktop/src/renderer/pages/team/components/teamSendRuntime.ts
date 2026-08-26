@@ -1,3 +1,4 @@
+// Modified from AionUI by WINK GO contributors in 2026.
 import { ipcBridge } from '@/common';
 import { isBackendHttpError } from '@/common/adapter/httpBridge';
 import type { ConversationCommandQueueRuntimeGate } from '@/renderer/pages/conversation/platforms/useConversationCommandQueue';
@@ -16,6 +17,10 @@ export type TeamSendBoxRuntime = {
    * per-member attach retry (NOT warmupSession/ensure_session).
    */
   onRetryStart?: () => Promise<void>;
+  /** True when this team member owns the selected conversation column. */
+  isActive?: boolean;
+  /** Sync the selected member when this send box receives focus. */
+  onFocus?: () => void;
 };
 
 /**

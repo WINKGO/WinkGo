@@ -71,6 +71,22 @@ describe('buildSendFailureError', () => {
     expect(result.retryable).toBe(true);
   });
 
+  it('classifies a local MCP target miss before the generic BAD_GATEWAY fallback', () => {
+    const message = 'Error in MCP tool execution: target-not-found';
+    const err = httpError(502, 'BAD_GATEWAY', message);
+
+    const result = buildSendFailureError(err, message);
+
+    expect(result).toEqual({
+      message,
+      code: 'USER_AGENT_RESOURCE_NOT_FOUND',
+      ownership: 'user_agent',
+      detail: message,
+      retryable: true,
+      feedback_recommended: false,
+    });
+  });
+
   it('classifies ACP protocol not connected as USER_AGENT_DISCONNECTED', () => {
     const err = httpError(502, 'BAD_GATEWAY', 'Bad gateway: ACP protocol is not connected.');
 

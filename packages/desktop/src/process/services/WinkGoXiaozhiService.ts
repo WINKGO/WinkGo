@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { app } from 'electron';
+import { app, net } from 'electron';
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { isIP } from 'node:net';
 import { networkInterfaces } from 'node:os';
@@ -16,6 +17,8 @@ import type {
   WinkGoXiaozhiActionResult,
   WinkGoXiaozhiConfig,
   WinkGoXiaozhiLocalProbe,
+  WinkGoNeteaseAccountStatus,
+  WinkGoQqMusicAccountStatus,
   WinkGoXiaozhiSaveRequest,
   WinkGoXiaozhiSecretKind,
   WinkGoXiaozhiSnapshot,
@@ -23,7 +26,21 @@ import type {
 } from '@/common/adapter/ipcBridge';
 import { getWinkGoCredentialStatus, readWinkGoCredential, writeWinkGoCredential } from './WinkGoCredentialService';
 import { winkGoCloudAuthService } from './WinkGoCloudAuthService';
-import { WinkGoRemoteGatewayService, type WinkGoRemoteGatewayConfig } from './winkgoRemote';
+import {
+  createWinkGoAgentBridgeRuntimeEnv,
+  winkGoAgentTaskBridgeService,
+  WinkGoRemoteGatewayService,
+  WinkGoRemoteIdentityStore,
+  type WinkGoRemoteGatewayConfig,
+} from './winkgoRemote';
+import { RuntimeMcpClient } from './winkgoRemote/RuntimeMcpClient';
+import {
+  resolvePreferredWinkGoRuntimeExecutable,
+  resolvePreferredWinkGoRuntimeIdentity,
+  shouldRestartWinkGoRuntimeForUpgrade,
+} from './winkGoRuntimeExecutablePolicy';
+import { loadOptionalWinkGoRuntimeGateways } from './winkGoRuntimeGatewayCompatibility';
+import { recoverStaleWinkGoRuntimeLock } from './winkGoRuntimeLockRecovery';
 
 const CONFIG_DIRECTORY = 'com.winkgo.desktop';
 const CONFIG_FILENAME = 'mcp-channels.json';
@@ -48,9 +65,185 @@ const remoteGateway = new WinkGoRemoteGatewayService({
   runtimeToken: null,
 });
 const remoteStatusListeners = new Set<(snapshot: WinkGoXiaozhiSnapshot) => void>();
+const musicAccountIdentityStore = new WinkGoRemoteIdentityStore();
 let cachedSnapshot: WinkGoXiaozhiSnapshot | null = null;
+let localRuntimeToolClient: RuntimeMcpClient | null = null;
+let runtimeAccessTokenPromise: Promise<string> | null = null;
+
+type MusicAccountResponse = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  account?: {
+    configured?: boolean;
+    state?: string;
+    uid?: string;
+    display_name?: string;
+    membership_level?: string;
+    verified_at?: number | null;
+    updated_at?: number | null;
+    last_error_code?: string;
+  };
+};
 
 const credentialTarget = (kind: WinkGoXiaozhiSecretKind | 'runtime'): string => `${CREDENTIAL_PREFIX}.${kind}.token`;
+
+const normalizeMusicAccountStatus = (payload: MusicAccountResponse): WinkGoNeteaseAccountStatus => {
+  const account = payload.account;
+  if (!account || !['unbound', 'active', 'needs_rebind'].includes(account.state || '')) {
+    throw new Error('music_account_response_invalid');
+  }
+  return {
+    configured: account.configured === true,
+    state: account.state as WinkGoNeteaseAccountStatus['state'],
+    uid: bounded(account.uid, 80),
+    displayName: bounded(account.display_name, 120),
+    membershipLevel: bounded(account.membership_level, 80),
+    verifiedAt: Number.isFinite(account.verified_at) ? Number(account.verified_at) : null,
+    updatedAt: Number.isFinite(account.updated_at) ? Number(account.updated_at) : null,
+    lastErrorCode: bounded(account.last_error_code, 120),
+  };
+};
+
+export const normalizeWinkGoNeteaseMusicU = (input: string): string => {
+  let value = input.trim();
+  if (value.includes(';')) throw new Error('netease_music_u_invalid');
+  if (value.startsWith('MUSIC_U=')) value = value.slice('MUSIC_U='.length);
+  value = value.trim();
+  if (
+    value.length < 64 ||
+    value.length > 8 * 1024 ||
+    [...value].some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 33 || code === 127;
+    })
+  ) {
+    throw new Error('netease_music_u_invalid');
+  }
+  return value;
+};
+
+export const normalizeWinkGoQqMusicCookie = (input: string): string => {
+  const raw = input.trim();
+  if (raw.length < 32 || raw.length > 16 * 1024 || raw.includes('\r') || raw.includes('\n') || raw.includes('\0')) {
+    throw new Error('qq_music_cookie_invalid');
+  }
+  const values = new Map<string, string>();
+  for (const part of raw.split(';')) {
+    const separator = part.indexOf('=');
+    if (separator <= 0) continue;
+    const key = part.slice(0, separator).trim().toLowerCase();
+    const value = part.slice(separator + 1).trim();
+    if (value) values.set(key, value);
+  }
+  let uin = values.get('uin') || values.get('qqmusic_uin') || values.get('wxuin') || '';
+  if (uin.toLowerCase().startsWith('o')) uin = uin.slice(1);
+  const musicKey = values.get('qm_keyst') || values.get('qqmusic_key') || '';
+  if (
+    !/^\d{4,20}$/.test(uin) ||
+    musicKey.length < 16 ||
+    musicKey.length > 2048 ||
+    musicKey.includes(';') ||
+    [...musicKey].some((character) => character.charCodeAt(0) < 33 || character.charCodeAt(0) === 127)
+  ) {
+    throw new Error('qq_music_cookie_invalid');
+  }
+  return `uin=o${uin}; qqmusic_uin=${uin}; qm_keyst=${musicKey}; qqmusic_key=${musicKey}`;
+};
+
+const requestNeteaseAccount = async (
+  method: 'GET' | 'POST' | 'DELETE',
+  input?: string
+): Promise<WinkGoNeteaseAccountStatus> => {
+  const authSession = winkGoCloudAuthService.getSession();
+  if (!authSession.authenticated || !authSession.user?.id) throw new Error('winkgo_account_login_required');
+  const config = await loadConfigFile();
+  const relayEndpoint = new URL(config.relayUrl || DEFAULT_RELAY_URL);
+  relayEndpoint.protocol = relayEndpoint.protocol === 'ws:' ? 'http:' : 'https:';
+  relayEndpoint.pathname = '/api/desktop/music/netease';
+  relayEndpoint.search = '';
+  const licenseAssertion = await musicAccountIdentityStore.syncLicenseAssertionFromSession(authSession.user.id);
+  musicAccountIdentityStore.clearCache();
+  const identity = await musicAccountIdentityStore.load();
+  relayEndpoint.searchParams.set('accountId', identity.accountId);
+  relayEndpoint.searchParams.set('installationId', identity.installationId);
+  relayEndpoint.searchParams.set('desktopId', identity.desktopId);
+  relayEndpoint.searchParams.set('agentId', 'winkgo-desktop-agent');
+  const response = await net.fetch(relayEndpoint.toString(), {
+    method,
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${identity.deviceToken}`,
+      'X-Winkgo-License-Assertion': licenseAssertion,
+      'X-Winkgo-Desktop-Id': identity.desktopId,
+      'X-Winkgo-Timestamp': String(Date.now()),
+      'X-Winkgo-Nonce': randomBytes(18).toString('base64url'),
+      ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+    },
+    ...(method === 'POST' ? { body: JSON.stringify({ music_u: normalizeWinkGoNeteaseMusicU(input || '') }) } : {}),
+    signal: AbortSignal.timeout(20_000),
+  });
+  const payload = (await response.json().catch(() => ({}))) as MusicAccountResponse;
+  if (!response.ok || payload.ok !== true) {
+    throw new Error(bounded(payload.error || payload.message, 240) || `music_account_http_${response.status}`);
+  }
+  return normalizeMusicAccountStatus(payload);
+};
+
+const requestQqMusicAccount = async (
+  method: 'GET' | 'POST' | 'DELETE',
+  input?: string
+): Promise<WinkGoQqMusicAccountStatus> => {
+  const authSession = winkGoCloudAuthService.getSession();
+  if (!authSession.authenticated || !authSession.user?.id) throw new Error('winkgo_account_login_required');
+  const config = await loadConfigFile();
+  const relayEndpoint = new URL(config.relayUrl || DEFAULT_RELAY_URL);
+  relayEndpoint.protocol = relayEndpoint.protocol === 'ws:' ? 'http:' : 'https:';
+  relayEndpoint.pathname = '/api/desktop/music/qq';
+  relayEndpoint.search = '';
+  const licenseAssertion = await musicAccountIdentityStore.syncLicenseAssertionFromSession(authSession.user.id);
+  musicAccountIdentityStore.clearCache();
+  const identity = await musicAccountIdentityStore.load();
+  relayEndpoint.searchParams.set('accountId', identity.accountId);
+  relayEndpoint.searchParams.set('installationId', identity.installationId);
+  relayEndpoint.searchParams.set('desktopId', identity.desktopId);
+  relayEndpoint.searchParams.set('agentId', 'winkgo-desktop-agent');
+  const response = await net.fetch(relayEndpoint.toString(), {
+    method,
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${identity.deviceToken}`,
+      'X-Winkgo-License-Assertion': licenseAssertion,
+      'X-Winkgo-Desktop-Id': identity.desktopId,
+      'X-Winkgo-Timestamp': String(Date.now()),
+      'X-Winkgo-Nonce': randomBytes(18).toString('base64url'),
+      ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+    },
+    ...(method === 'POST' ? { body: JSON.stringify({ cookie: normalizeWinkGoQqMusicCookie(input || '') }) } : {}),
+    signal: AbortSignal.timeout(20_000),
+  });
+  const payload = (await response.json().catch(() => ({}))) as MusicAccountResponse;
+  if (!response.ok || payload.ok !== true) {
+    throw new Error(bounded(payload.error || payload.message, 240) || `music_account_http_${response.status}`);
+  }
+  return normalizeMusicAccountStatus(payload);
+};
+
+const ensureRuntimeAccessToken = async (): Promise<string> => {
+  if (runtimeAccessTokenPromise) return runtimeAccessTokenPromise;
+  runtimeAccessTokenPromise = (async () => {
+    const existing = await readWinkGoCredential(credentialTarget('runtime'));
+    if (existing?.trim()) return existing.trim();
+    const generated = randomBytes(32).toString('base64url');
+    await writeWinkGoCredential(credentialTarget('runtime'), generated);
+    return generated;
+  })();
+  try {
+    return await runtimeAccessTokenPromise;
+  } finally {
+    runtimeAccessTokenPromise = null;
+  }
+};
 
 const now = (): number => Date.now();
 const bounded = (value: unknown, max: number): string =>
@@ -309,6 +502,7 @@ const probeRuntime = async (runtimeApi: string): Promise<WinkGoXiaozhiLocalProbe
       running?: boolean;
       version?: string;
       tools_count?: number;
+      build_info?: { built_at_utc?: string };
     };
     if (!['ready', 'ok'].includes(payload.status || '') && payload.running !== true) {
       throw new Error(`Runtime 尚未就绪（${payload.status || 'unknown'}）`);
@@ -320,6 +514,7 @@ const probeRuntime = async (runtimeApi: string): Promise<WinkGoXiaozhiLocalProbe
       label: 'Runtime 8121',
       detail: `Runtime${version ? ` ${version}` : ''} 已就绪${count}`,
       elapsedMs: now() - started,
+      buildTimestampMs: Date.parse(payload.build_info?.built_at_utc || '') || 0,
     };
   } catch (error) {
     return {
@@ -333,9 +528,9 @@ const probeRuntime = async (runtimeApi: string): Promise<WinkGoXiaozhiLocalProbe
 
 const probeTcpPort = async (host: string, port: number): Promise<WinkGoXiaozhiLocalProbe> => {
   const started = now();
-  const net = await import('node:net');
+  const nodeNet = await import('node:net');
   return new Promise((resolve) => {
-    const socket = net.createConnection({ host, port });
+    const socket = nodeNet.createConnection({ host, port });
     let settled = false;
     const finish = (ok: boolean): void => {
       if (settled) return;
@@ -363,6 +558,29 @@ const runHiddenPowerShell = async (args: string[]): Promise<number> =>
     child.once('error', reject);
     child.once('exit', (code) => resolve(code ?? 1));
   });
+
+const stopRunningWinkGoRuntimeForUpgrade = async (): Promise<void> => {
+  if (process.platform !== 'win32') return;
+  const exitCode = await new Promise<number>((resolve, reject) => {
+    const child = spawn('taskkill.exe', ['/F', '/T', '/IM', 'SparkBot-MCP-Hub-v1.1.0.exe'], {
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+    child.once('error', reject);
+    child.once('exit', (code) => resolve(code ?? 1));
+  });
+  if (exitCode !== 0 && exitCode !== 128) {
+    throw new Error(`旧 Runtime 无法停止（taskkill ${exitCode}）。`);
+  }
+};
+
+const waitForWinkGoRuntimeToStop = async (runtimeApi: string, attemptsRemaining = 40): Promise<void> => {
+  const probe = await probeRuntime(runtimeApi);
+  if (!probe.ok) return;
+  if (attemptsRemaining <= 1) throw new Error('旧 Runtime 停止超时，未启动新版。');
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  return waitForWinkGoRuntimeToStop(runtimeApi, attemptsRemaining - 1);
+};
 
 const firewallRulesAuthorized = async (runtimePort: number, bridgePort: number): Promise<boolean> => {
   if (process.platform !== 'win32') return false;
@@ -413,28 +631,28 @@ const ensureFirewallRules = async (runtimePort: number, bridgePort: number): Pro
 };
 
 const findRuntimeExecutable = (): string | null => {
-  const root = process.env.LOCALAPPDATA || '';
-  const executableName = 'SparkBot-MCP-Hub-v1.1.0.exe';
-  const candidates = [
-    path.join(root, 'Wink Go', 'winkgo-runtime', executableName),
-    path.join(process.resourcesPath, 'winkgo-runtime', executableName),
-  ];
-  const releasesRoot = path.join(root, 'Wink Go', 'data', 'runtime', 'xiaozhi');
-  if (existsSync(releasesRoot)) {
-    for (const directory of readdirSync(releasesRoot).toSorted((left, right) => right.localeCompare(left))) {
-      candidates.push(path.join(releasesRoot, directory, executableName));
-    }
-  }
-  return candidates.find(existsSync) ?? null;
+  return resolvePreferredWinkGoRuntimeExecutable({
+    localAppData: process.env.LOCALAPPDATA || '',
+    resourcesPath: process.resourcesPath,
+    explicitRuntimeRoot: process.env.WINKGO_E2E_TEST === '1' ? process.env.WINKGO_BUNDLED_RUNTIME_DIR : undefined,
+  });
 };
 
+const findRuntimeIdentity = () =>
+  resolvePreferredWinkGoRuntimeIdentity({
+    localAppData: process.env.LOCALAPPDATA || '',
+    resourcesPath: process.resourcesPath,
+    explicitRuntimeRoot: process.env.WINKGO_E2E_TEST === '1' ? process.env.WINKGO_BUNDLED_RUNTIME_DIR : undefined,
+  });
+
 export const resolveWinkGoXiaozhiRuntimeLogPath = (): string | null => {
-  const executable = findRuntimeExecutable();
-  return executable ? path.join(path.dirname(executable), 'logs', 'sparkbot.log') : null;
+  const identity = findRuntimeIdentity();
+  return identity.installed ? identity.logPath : null;
 };
 
 const buildSnapshot = async (config: WinkGoXiaozhiConfig): Promise<WinkGoXiaozhiSnapshot> => {
   const runtimePort = resolveRuntimePort(config.runtimeApi);
+  const runtimeIdentity = findRuntimeIdentity();
   const targets = ['runtime', 'bridge', 'hardware', 'mobile'].map((kind) =>
     credentialTarget(kind as WinkGoXiaozhiSecretKind | 'runtime')
   );
@@ -462,7 +680,8 @@ const buildSnapshot = async (config: WinkGoXiaozhiConfig): Promise<WinkGoXiaozhi
     bridgeTokenConfigured: statuses[credentialTarget('bridge')] === true,
     hardwareSecretConfigured: statuses[credentialTarget('hardware')] === true,
     mobileSecretConfigured: statuses[credentialTarget('mobile')] === true,
-    runtimeInstalled: findRuntimeExecutable() !== null,
+    runtimeInstalled: runtimeIdentity.installed,
+    runtimeIdentity,
     configPath: configPath(),
     legacyCompatible: true,
   };
@@ -685,12 +904,35 @@ export const authorizeWinkGoXiaozhiFirewall = async (): Promise<WinkGoXiaozhiSna
 };
 
 export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionResult> => {
+  const runtimeToken = await ensureRuntimeAccessToken();
+  const agentBridgeEndpoint = await winkGoAgentTaskBridgeService.start().catch((error): null => {
+    console.warn('[WINK GO Agent Bridge] Could not start; fixed Runtime skills remain available.', error);
+    return null;
+  });
   const config = await loadConfigFile();
-  const current = await probeRuntime(config.runtimeApi);
+  let current = await probeRuntime(config.runtimeApi);
   if (current.ok) {
-    await syncRemoteGateway(config);
-    const loaded = await reconfigureRuntimeGateways(config);
-    return { snapshot: await buildSnapshot(config), message: [current.detail, ...loaded].join('；') };
+    const preferredRuntime = findRuntimeIdentity();
+    const requiresUpgradeRestart = shouldRestartWinkGoRuntimeForUpgrade({
+      runningBuildAtMs: current.buildTimestampMs || 0,
+      preferredRuntimeModifiedAtMs: preferredRuntime.modifiedAtMs,
+    });
+    if (!requiresUpgradeRestart) {
+      await syncRemoteGateway(config);
+      const loaded = await loadOptionalWinkGoRuntimeGateways(() => reconfigureRuntimeGateways(config));
+      return { snapshot: await buildSnapshot(config), message: [current.detail, ...loaded].join('；') };
+    }
+    console.info('[WINK GO Runtime] Restarting stale Runtime so the packaged upgrade can take effect.');
+    localRuntimeToolClient?.close('Runtime 正在升级重启。');
+    localRuntimeToolClient = null;
+    await stopRunningWinkGoRuntimeForUpgrade();
+    await waitForWinkGoRuntimeToStop(config.runtimeApi);
+    current = {
+      ok: false,
+      label: current.label,
+      detail: '旧 Runtime 已停止，正在启动包内新版。',
+      elapsedMs: current.elapsedMs,
+    };
   }
   const executable = findRuntimeExecutable();
   if (!executable) throw new Error('没有找到已安装的 WINK GO Runtime。');
@@ -703,6 +945,10 @@ export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionRe
   ];
   const runtimeConfig = runtimeConfigCandidates.find(existsSync);
   if (!runtimeConfig) throw new Error('没有找到 Runtime 配置文件。');
+  const lockRecovery = await recoverStaleWinkGoRuntimeLock(executable);
+  if (lockRecovery.removed) {
+    console.warn(`[WINK GO Runtime] Removed stale runtime.lock from exited pid ${lockRecovery.pid}.`);
+  }
   const bridgeToken = (await readWinkGoCredential(credentialTarget('bridge'))) || '';
   const hardwareEndpoint = config.hardwareEnabled
     ? await endpointWithStoredToken('hardware', config.hardwareEndpoint)
@@ -710,7 +956,6 @@ export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionRe
   const mobileEndpoint = config.mobileEnabled
     ? await endpointWithStoredToken('mobile', config.mobileEndpoint)
     : config.mobileEndpoint;
-  const runtimeToken = await readWinkGoCredential(credentialTarget('runtime'));
   const child = spawn(executable, ['--all', '--port', String(port), '--config', runtimeConfig], {
     detached: true,
     windowsHide: true,
@@ -729,9 +974,11 @@ export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionRe
       WINKGO_RUNTIME_ROOT: path.dirname(executable),
       WINKGO_SKILLS_ROOT: path.join(path.dirname(executable), 'skills'),
       SPARKBOT_SKILLS_ROOT: path.join(path.dirname(executable), 'skills'),
+      WINKGO_DESKTOP_SKILLS_ROOT: path.join(app.getPath('userData'), 'winkgo-desktop-skills'),
       PYTHONUTF8: '1',
       PYTHONIOENCODING: 'utf-8',
       ...(runtimeToken ? { WINKGO_RUNTIME_ACCESS_TOKEN: runtimeToken } : {}),
+      ...(agentBridgeEndpoint ? createWinkGoAgentBridgeRuntimeEnv(agentBridgeEndpoint) : {}),
     },
   });
   child.unref();
@@ -743,10 +990,44 @@ export const startWinkGoXiaozhiRuntime = async (): Promise<WinkGoXiaozhiActionRe
   };
   const probe = await waitForRuntime(90);
   if (!probe.ok) throw new Error(`Runtime 启动后仍未就绪：${probe.detail}`);
-  const loaded = await reconfigureRuntimeGateways(config);
+  const loaded = await loadOptionalWinkGoRuntimeGateways(() => reconfigureRuntimeGateways(config));
   await syncRemoteGateway(config);
   return {
     snapshot: await buildSnapshot(config),
     message: [probe.detail, ...loaded].join('；'),
   };
+};
+
+export const getWinkGoNeteaseAccount = async (): Promise<WinkGoNeteaseAccountStatus> => requestNeteaseAccount('GET');
+
+export const bindWinkGoNeteaseAccount = async (musicU: string): Promise<WinkGoNeteaseAccountStatus> =>
+  requestNeteaseAccount('POST', musicU);
+
+export const unbindWinkGoNeteaseAccount = async (): Promise<WinkGoNeteaseAccountStatus> =>
+  requestNeteaseAccount('DELETE');
+
+export const getWinkGoQqMusicAccount = async (): Promise<WinkGoQqMusicAccountStatus> => requestQqMusicAccount('GET');
+
+export const bindWinkGoQqMusicAccount = async (cookie: string): Promise<WinkGoQqMusicAccountStatus> =>
+  requestQqMusicAccount('POST', cookie);
+
+export const unbindWinkGoQqMusicAccount = async (): Promise<WinkGoQqMusicAccountStatus> =>
+  requestQqMusicAccount('DELETE');
+
+/** Exact local Runtime tool boundary used by deterministic desktop automation. */
+export const callWinkGoRuntimeTool = async (
+  name: string,
+  arguments_: Record<string, unknown>,
+  options: { signal?: AbortSignal; timeoutMs?: number } = {}
+): Promise<unknown> => {
+  const token = await ensureRuntimeAccessToken();
+  const config = await loadConfigFile();
+  const current = await probeRuntime(config.runtimeApi);
+  if (!current.ok) await startWinkGoXiaozhiRuntime();
+  if (!localRuntimeToolClient) {
+    localRuntimeToolClient = new RuntimeMcpClient({ runtimeApi: config.runtimeApi, token });
+  } else {
+    localRuntimeToolClient.updateConfig({ runtimeApi: config.runtimeApi, token });
+  }
+  return localRuntimeToolClient.callTool(name, arguments_, options);
 };
