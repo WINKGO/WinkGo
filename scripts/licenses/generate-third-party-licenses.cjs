@@ -44,6 +44,7 @@ function normalizeText(content) {
       .replace(/^\uFEFF/, '')
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n')
+      .replace(/[\t ]+$/gm, '')
       .trim() + '\n'
   );
 }
@@ -668,5 +669,6 @@ module.exports = {
   main,
   normalizeLicense,
   normalizeNpmVersion,
+  normalizeText,
   validateEntries,
 };

@@ -12,7 +12,7 @@
   "generatedFrom": [
     {
       "path": "bun.lock",
-      "sha256": "70cbb611471c83315f772b029a25054b59305cbdadda5dee896e1618c45a77a6"
+      "sha256": "809680de007a0162fae905033a9df947c05ae03948016cd9eaa83128a909cd4f"
     },
     {
       "path": "mobile/bun.lock",
@@ -32,11 +32,11 @@
     }
   ],
   "summary": {
-    "packages": 2878,
-    "npmPackages": 2227,
+    "packages": 2881,
+    "npmPackages": 2230,
     "cargoPackages": 651,
     "lockOnlyNpmPackages": 197,
-    "uniqueLicenseTexts": 1129
+    "uniqueLicenseTexts": 1128
   },
   "packages": [
     {
@@ -292,7 +292,7 @@
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "license": "MIT",
       "licenseTextHashes": [
-        "afb11426e09da40a1ae4f8fa17ddcc6b6a52d14df04c29bc5bcd06eb8730624d"
+        "b35d026cc7aca9d5859a02eb87ddf7a386a24c986838651bd1f283f94e003327"
       ]
     },
     {
@@ -1647,7 +1647,7 @@
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "license": "BSD-3-Clause",
       "licenseTextHashes": [
-        "cca0bd3c4fcdba74145ef9d49c62337e2c9fbf9368288f11d0547f1b0273219f"
+        "6737ef630c5e038c2c1d1f45e25f00e51e9493dab7fbfb6b4a3a178e76c8187b"
       ]
     },
     {
@@ -3967,7 +3967,7 @@
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "license": "MPL-2.0",
       "licenseTextHashes": [
-        "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172"
+        "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
       ]
     },
     {
@@ -4815,8 +4815,8 @@
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "license": "MIT OR Apache-2.0",
       "licenseTextHashes": [
-        "3f1ede5f5dcc5b876ea65877aa67f48651c0b0d2f610259c8f2ac10cd1f059d8",
-        "53b5c498df966daf4ea75d92c047e4d92bc02cffa4315751109596d32a524c87"
+        "1a798a36a5cd060870c5fd309faac5ee0d14f240775c6ef24170203011de955e",
+        "4601ed41ce37a2812102da7363e50e217e72bb39601e85aae94f802b4a460e85"
       ]
     },
     {
@@ -4827,8 +4827,8 @@
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "license": "MIT OR Apache-2.0",
       "licenseTextHashes": [
-        "3f1ede5f5dcc5b876ea65877aa67f48651c0b0d2f610259c8f2ac10cd1f059d8",
-        "53b5c498df966daf4ea75d92c047e4d92bc02cffa4315751109596d32a524c87"
+        "1a798a36a5cd060870c5fd309faac5ee0d14f240775c6ef24170203011de955e",
+        "4601ed41ce37a2812102da7363e50e217e72bb39601e85aae94f802b4a460e85"
       ]
     },
     {
@@ -7548,7 +7548,7 @@
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "license": "Zlib",
       "licenseTextHashes": [
-        "e72111c52b7d96ebe25348dee19f0744f444d3c95ae6b1ecb6ccaecc5bce05ba"
+        "ae078f5c300de75464ac3feafe98111bd27ce41d226d95d30adc280479517ac2"
       ]
     },
     {
@@ -12788,7 +12788,7 @@
       "source": "https://github.com/PeculiarVentures/asn1-schema",
       "license": "MIT",
       "licenseTextHashes": [
-        "1ecdd8e8977af83c07c5f97bec87b47d27059b7ea323ca3160fbfa2314f5d99c"
+        "3ee7c4b649b783688f1186c9aa0da50e331027514c9bfa143f27983e23783c71"
       ]
     },
     {
@@ -12799,7 +12799,7 @@
       "source": "git+https://github.com/PeculiarVentures/json-schema.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "83e4dd21429a91fb7cea67a476032a9641425e5355df2e0f589a738b6ec9fd2c"
+        "9ea8a12deea1b232d639881e35b0540f8678315ebcc27053a9d8359bd78ad040"
       ]
     },
     {
@@ -14112,7 +14112,7 @@
       "source": "https://github.com/sinclairzx81/typebox-legacy",
       "license": "MIT",
       "licenseTextHashes": [
-        "dd7ac0251f0a003a4a724f5f7a2e1bdeb158b651c67e68feb1134ae7641930c9"
+        "528a00f0f41099409abfe1d0c7d83a69ce489ae64af466ba8ba52bd648d2773b"
       ]
     },
     {
@@ -14123,7 +14123,7 @@
       "source": "https://github.com/sinclairzx81/typebox-legacy",
       "license": "MIT",
       "licenseTextHashes": [
-        "9d4e069aeab7351aa16f98a8488b7cf3a53e713bc96cbbbe129f52602f3c7662"
+        "411f1c560755e27b3dec9622c13b8b7a3ec1c83f4ffb8c56a8847528aa96911a"
       ]
     },
     {
@@ -16107,6 +16107,18 @@
       ]
     },
     {
+      "id": "npm:@zone-eu/mailsplit@5.4.15",
+      "ecosystem": "npm",
+      "name": "@zone-eu/mailsplit",
+      "version": "5.4.15",
+      "source": "https://github.com/zone-eu/mailsplit.git",
+      "license": "(MIT OR EUPL-1.1+)",
+      "licenseTextHashes": [
+        "c261d856395a4467e6e04ba968002c69080a981d11d4c98154201c2ece326184",
+        "d1cc09bdab0628b32bd6459357fc81aad6894c535baec7973d1dd8c85596fa08"
+      ]
+    },
+    {
       "id": "npm:abab@2.0.6",
       "ecosystem": "npm",
       "name": "abab",
@@ -16898,7 +16910,7 @@
       "source": "https://github.com/dcodeIO/bcrypt.js.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "31ed2612a6418f57c473fa5350001069297da1208e124ed8cdc05e795de8b1db"
+        "f227438d481a8666767d0915ddfc9a77a5359b0215d2605eacef0ed123f9252f"
       ]
     },
     {
@@ -17072,7 +17084,7 @@
       "source": "https://github.com/nearinfinity/node-bplist-creator.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "d9bacb8be7c3a210dfe531bde8503eb567f51a8fdbfc438fcf7a171d7ab338d8"
+        "8b10f047ad6a877170277973f779e48e64bba8d7e9fdcae01903f1f96592ec65"
       ]
     },
     {
@@ -17187,7 +17199,7 @@
       "source": "git://github.com/brianloveswords/buffer-crc32.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "14895b82e3367b66bdb127fe91505f8615491f2a23eb1c0b7d8f7c54be67f57a"
+        "16618f12b491898e2a40c5e860200cc2dd00389c06c56d5e24e720a0fad47bba"
       ]
     },
     {
@@ -17418,7 +17430,7 @@
       "source": "browserslist/caniuse-lite",
       "license": "CC-BY-4.0",
       "licenseTextHashes": [
-        "fd3a263fe19ed8faa9068b43abaebafc02c77897b0c6fc09abc04bb592e5f16e"
+        "7e7170e3cebf88a9f60c7b8421418323c09304da1af4d5e90f4da1dc1c8a2661"
       ]
     },
     {
@@ -18094,7 +18106,7 @@
       "source": "http://github.com/maxogden/concat-stream.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "e6090a9ef4d46611fe4c5e66f31b33c50245fc4a7b07e1b379694b2b9040e6d2"
+        "21c06ec693f43f209bb76da88656820bd9e8c784bd86245f28a52c03faffa929"
       ]
     },
     {
@@ -18182,7 +18194,7 @@
       "source": "git://github.com/thlorenz/convert-source-map.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "1fa6ee8bb95a81ae3d73a5bd074a3ac380ffec13697051063ca1a601921b91db"
+        "0d22dfefcd138a157d8b68e1056e229ccdece6ca5a7153d38ee289983483c33d"
       ]
     },
     {
@@ -19013,7 +19025,7 @@
       "source": "git://github.com/visionmedia/debug.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "cbb2f5bc337c216a190f569303f44c33b77cbfc16687cb5b6ff0a4bfb1e73ea9"
+        "60d39459b26bab58e93f7f859e9709b5cfc50e7542293a0b94af5fd63fb58bdf"
       ]
     },
     {
@@ -19024,7 +19036,7 @@
       "source": "git://github.com/visionmedia/debug.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "cbb2f5bc337c216a190f569303f44c33b77cbfc16687cb5b6ff0a4bfb1e73ea9"
+        "60d39459b26bab58e93f7f859e9709b5cfc50e7542293a0b94af5fd63fb58bdf"
       ]
     },
     {
@@ -19105,10 +19117,10 @@
       ]
     },
     {
-      "id": "npm:deepmerge-ts@7.1.5",
+      "id": "npm:deepmerge-ts@8.0.2",
       "ecosystem": "npm",
       "name": "deepmerge-ts",
-      "version": "7.1.5",
+      "version": "8.0.2",
       "source": "git+https://github.com/RebeccaStevens/deepmerge-ts.git",
       "license": "BSD-3-Clause",
       "licenseTextHashes": [
@@ -19396,7 +19408,7 @@
       "source": "https://github.com/gliviu/dir-compare",
       "license": "MIT",
       "licenseTextHashes": [
-        "ef52eee327525decf7f55e5e384661ed634a9cc18c86c713681918161b2cd5b4"
+        "3d41013c0aaaa3e2d0f0357213296e7dcaca38eeab04775e9c6c0ffa7bbe8d15"
       ]
     },
     {
@@ -19515,8 +19527,8 @@
       "source": "git://github.com/cure53/DOMPurify.git",
       "license": "(MPL-2.0 OR Apache-2.0)",
       "licenseTextHashes": [
-        "50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a",
-        "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85"
+        "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+        "50e6751797c50dedd75ef1b8a0d9e42f5f8472e9fbce91f34718e9f97b0c780a"
       ]
     },
     {
@@ -19582,7 +19594,7 @@
       "source": "https://github.com/mwilliamson/duck.js.git",
       "license": "BSD",
       "licenseTextHashes": [
-        "6663bbd049205d38a496ccacb412a151980b444627d38de218b3b809aef330f1"
+        "59d0910e3653681cc461f299ceedca65b6b9b82ff695a6cfacde55f7bef02704"
       ]
     },
     {
@@ -19615,7 +19627,7 @@
       "source": "deoxxa/duplexer2",
       "license": "BSD-3-Clause",
       "licenseTextHashes": [
-        "252a200ba7a38686f7954ec4cb09b3ad7788fa099eb724de167d7ab16b1244b9"
+        "a7b5251a0ebd370e5b47efcea548b8b2612ad71090469bc0392115b1f6279882"
       ]
     },
     {
@@ -21884,10 +21896,10 @@
       "licenseTextHashes": []
     },
     {
-      "id": "npm:html-to-text@10.0.0",
+      "id": "npm:html-to-text@10.0.1",
       "ecosystem": "npm",
       "name": "html-to-text",
-      "version": "10.0.0",
+      "version": "10.0.1",
       "source": "git://github.com/html-to-text/node-html-to-text.git",
       "license": "MIT",
       "licenseTextHashes": [
@@ -21935,7 +21947,7 @@
       "source": "git://github.com/fb55/htmlparser2.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "e7ef69b1061a214641f062449491ea54e5ade7a382b52618892b6106eb1eee08"
+        "4a0a45a44970739bd335dd29d149f895cbb97355e8b95da3d2f5346ea014e9c0"
       ]
     },
     {
@@ -21946,7 +21958,7 @@
       "source": "git://github.com/fb55/htmlparser2.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "e7ef69b1061a214641f062449491ea54e5ade7a382b52618892b6106eb1eee08"
+        "4a0a45a44970739bd335dd29d149f895cbb97355e8b95da3d2f5346ea014e9c0"
       ]
     },
     {
@@ -23461,7 +23473,7 @@
       "source": "git://github.com/dominictarr/json-buffer.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "715f1f0f2eb7688e53e4e958acdc7fc9e365ae3eaf26efc2604b93cc65fdc3f5"
+        "730f0dbd825a0a9e01c2fa5976078f68a8e6bab8dfc3d65689d981c760e5279d"
       ]
     },
     {
@@ -23591,7 +23603,7 @@
       "source": "https://github.com/auth0/node-jsonwebtoken",
       "license": "MIT",
       "licenseTextHashes": [
-        "2144eb6894cb440fde6b2b3aaae3b617c8f1dc9bb19813079dcf62ec6c517042"
+        "701fbe0ff1f35cf1355a5e54190fc7a893e828d8e9067fed7f0f091826fe537a"
       ]
     },
     {
@@ -23613,7 +23625,7 @@
       "source": "git://github.com/brianloveswords/node-jwa.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "3320319f8a5f42bc4254e65471eca7a5ea4dc8c883c4c24b4868e36b14890bcf"
+        "62db3a65c206a8baedc6df3903138d78a133916374d720921809d3b7a0f943df"
       ]
     },
     {
@@ -23624,7 +23636,7 @@
       "source": "git://github.com/brianloveswords/node-jws.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "3320319f8a5f42bc4254e65471eca7a5ea4dc8c883c4c24b4868e36b14890bcf"
+        "62db3a65c206a8baedc6df3903138d78a133916374d720921809d3b7a0f943df"
       ]
     },
     {
@@ -23782,6 +23794,17 @@
       "ecosystem": "npm",
       "name": "libmime",
       "version": "5.4.1",
+      "source": "git+https://github.com/nodemailer/libmime.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "0f2482bc852021c3226c1df9d75b610a9b795a5a88032cda51098dce3dae6740"
+      ]
+    },
+    {
+      "id": "npm:libmime@5.4.2",
+      "ecosystem": "npm",
+      "name": "libmime",
+      "version": "5.4.2",
       "source": "git+https://github.com/nodemailer/libmime.git",
       "license": "MIT",
       "licenseTextHashes": [
@@ -24280,7 +24303,7 @@
       "source": "https://github.com/mwilliamson/lop.git",
       "license": "BSD-2-Clause",
       "licenseTextHashes": [
-        "6663bbd049205d38a496ccacb412a151980b444627d38de218b3b809aef330f1"
+        "59d0910e3653681cc461f299ceedca65b6b9b82ff695a6cfacde55f7bef02704"
       ]
     },
     {
@@ -24405,10 +24428,10 @@
       ]
     },
     {
-      "id": "npm:mailparser@3.9.14",
+      "id": "npm:mailparser@3.9.16",
       "ecosystem": "npm",
       "name": "mailparser",
-      "version": "3.9.14",
+      "version": "3.9.16",
       "source": "https://github.com/nodemailer/mailparser.git",
       "license": "MIT",
       "licenseTextHashes": [
@@ -24456,7 +24479,7 @@
       "source": "https://github.com/mwilliamson/mammoth.js.git",
       "license": "BSD-2-Clause",
       "licenseTextHashes": [
-        "6663bbd049205d38a496ccacb412a151980b444627d38de218b3b809aef330f1"
+        "59d0910e3653681cc461f299ceedca65b6b9b82ff695a6cfacde55f7bef02704"
       ]
     },
     {
@@ -25951,10 +25974,10 @@
       ]
     },
     {
-      "id": "npm:nodemailer@9.0.3",
+      "id": "npm:nodemailer@9.0.5",
       "ecosystem": "npm",
       "name": "nodemailer",
-      "version": "9.0.3",
+      "version": "9.0.5",
       "source": "https://github.com/nodemailer/nodemailer.git",
       "license": "MIT-0",
       "licenseTextHashes": [
@@ -26293,7 +26316,7 @@
       "source": "https://github.com/mwilliamson/node-options.git",
       "license": "BSD-2-Clause",
       "licenseTextHashes": [
-        "6663bbd049205d38a496ccacb412a151980b444627d38de218b3b809aef330f1"
+        "59d0910e3653681cc461f299ceedca65b6b9b82ff695a6cfacde55f7bef02704"
       ]
     },
     {
@@ -26865,7 +26888,7 @@
       "source": "git+https://github.com/crouchcd/pkce-challenge.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "feb87a2e0c305de3464cc44077da5393c52d8ca6362d37427157d04ec6f4510d"
+        "da3ece2d2daf5c812c8606d2922094f51818258d4ce0e041b4ee8409ba3b381f"
       ]
     },
     {
@@ -27386,7 +27409,7 @@
       "source": "https://github.com/gtanner/qrcode-terminal",
       "license": "Apache 2.0",
       "licenseTextHashes": [
-        "850ab2456cca7cb57a914fab506db99bf3c9990252690e3ec36c507b3a2e7136"
+        "784d1319135f3b7077d6ea1a691930971323b8c598f8c2f3af58faf2a9fe4c2a"
       ]
     },
     {
@@ -27518,8 +27541,8 @@
       "source": "https://github.com/dominictarr/rc.git",
       "license": "(BSD-2-Clause OR MIT OR Apache-2.0)",
       "licenseTextHashes": [
-        "65e7e4d223688c601f42959defde380f8c4aa677fa4706da3b4a53f129bd78a3",
-        "d72dea1a8cdf3f4dfa2f594253d0c5b37baefc76e806f5ecb0e426393edcd505",
+        "4c1aeb5411ec1b1bf56193876c6d6214f7adfd362bad4a0b8a8df635b82582fe",
+        "c4af2d404e917d9f6e95b8ee0c2fe4b2660f3ff109d28b17b35cc144eda8f62a",
         "e8734448285a2dd773d40136ed5d5e8163a70701dd540cdc796cfca232f67d55"
       ]
     },
@@ -28478,7 +28501,7 @@
       "source": "git+https://github.com/davidmarkclements/rfdc.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "1ce941682a96c7b898ecd125d0f2e22319758ea6f3adbf498a65d649b0f3f7dd"
+        "209a242ec43ee458815174696a3e9db080c8d0eb422b51920a6d4abc8d89a464"
       ]
     },
     {
@@ -28544,7 +28567,7 @@
       "source": "git+https://github.com/rollup/rollup.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "fa1bd040c5bdeefe65b3821cebf474f2733ce65df13089bd151dda1778e62fe8"
+        "ad457a6619017a7f47cdbead25a8ec61907818be3e0834f1885bdf6c3ddfb668"
       ]
     },
     {
@@ -29016,7 +29039,7 @@
       "source": "http://github.com/ljharb/shell-quote.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "20967ab4adf3bb93d8190c19b4f5b37433480965a261092a642c9234b63927cc"
+        "70c16160f829d86ee9d71bd01b7362842f2c098b95e01521ec6b28d4397deccf"
       ]
     },
     {
@@ -30594,7 +30617,7 @@
       "source": "https://github.com/microsoft/TypeScript.git",
       "license": "Apache-2.0",
       "licenseTextHashes": [
-        "a5e9f9b1575301c7a7a03508fdaa2e05a918cc17fd21c6e898096a96d6a34f61"
+        "527adf9d4c760f7367c2aeffed6a89afba8ba40ea1b0efbc8f56496ad30ea9cf"
       ]
     },
     {
@@ -30712,6 +30735,17 @@
       "ecosystem": "npm",
       "name": "undici",
       "version": "6.28.0",
+      "source": "git+https://github.com/nodejs/undici.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27"
+      ]
+    },
+    {
+      "id": "npm:undici@7.29.0",
+      "ecosystem": "npm",
+      "name": "undici",
+      "version": "7.29.0",
       "source": "git+https://github.com/nodejs/undici.git",
       "license": "MIT",
       "licenseTextHashes": [
@@ -31043,7 +31077,7 @@
       "source": "git+https://github.com/parshap/utf8-byte-length.git",
       "license": "(WTFPL OR MIT)",
       "licenseTextHashes": [
-        "7b5fd8be090649911addbff3356495446d0c9a5649ef0dee95d755720983565d",
+        "3442055851c360836b0dc3f499a187762391b9476ac06188b0a03a5b17bb3f2f",
         "bfefe6b48c92732f278120d7a3bf682c3b01e25fdc2e0327544cbb62a2fa9a8e"
       ]
     },
@@ -31198,7 +31232,7 @@
       "source": "git+https://github.com/vitejs/vite.git",
       "license": "MIT",
       "licenseTextHashes": [
-        "008938a3441801ca3960f8e3ccb4c0738e7996442a53063141d57d3769a7344d"
+        "4ac5cbeaa01f1f0fa060608f3b55ac48e98b443a0824b10bb8e3c31cb9d8cf89"
       ]
     },
     {

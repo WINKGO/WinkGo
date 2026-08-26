@@ -80,6 +80,17 @@ describe('WINK GO customer Runtime packaging', () => {
     expect(builderIndex).toBeGreaterThan(prepareIndex);
   });
 
+  it('allows a missing private Runtime only in the explicit pull-request build test', () => {
+    const buildScript = readFileSync('scripts/build-with-builder.js', 'utf8');
+    const prWorkflow = readFileSync('.github/workflows/pr-checks.yml', 'utf8');
+    const releaseWorkflow = readFileSync('.github/workflows/build-and-release.yml', 'utf8');
+
+    expect(buildScript).toContain("process.env.GITHUB_EVENT_NAME === 'pull_request'");
+    expect(buildScript).toContain("process.env.WINKGO_BUILD_TEST_ALLOW_MISSING_RUNTIME === '1'");
+    expect(prWorkflow).toContain("WINKGO_BUILD_TEST_ALLOW_MISSING_RUNTIME: '1'");
+    expect(releaseWorkflow).not.toContain('WINKGO_BUILD_TEST_ALLOW_MISSING_RUNTIME');
+  });
+
   it('rejects unsealed files from the final packaged Runtime', () => {
     const temporaryRoot = mkdtempSync(join(tmpdir(), 'winkgo-runtime-package-extras-'));
     try {

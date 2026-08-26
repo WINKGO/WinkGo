@@ -586,6 +586,10 @@ Module._load = function patchedLoad(request, parent, isMain) {
     return { resolveWinkGoCoreVersion: () => 'v-test' };
   }
 
+  if (request === './prepare-winkgo-runtime-package.cjs' || request.endsWith('/prepare-winkgo-runtime-package.cjs')) {
+    return { readAndValidateIntegrity: () => ({ files: [] }) };
+  }
+
   return originalLoad.call(this, request, parent, isMain);
 };
 
@@ -602,6 +606,7 @@ function ensurePlaceholder(relativePath) {
 
 function mirrorDirectory(source, destination) {
   fs.mkdirSync(destination, { recursive: true });
+  if (!fs.existsSync(source)) return;
   for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
     const from = path.join(source, entry.name);
     const to = path.join(destination, entry.name);

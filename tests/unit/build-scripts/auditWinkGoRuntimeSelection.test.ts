@@ -81,7 +81,7 @@ describe('WINK GO Runtime skill audit selection', () => {
     });
   });
 
-  it('removes a reused-pid lock before starting the selected Runtime', () => {
+  it.skipIf(process.platform !== 'win32')('removes a reused-pid lock before starting the selected Runtime', () => {
     const localAppData = createRoot();
     const runtimeDirectory = path.join(localAppData, 'Wink Go', 'data', 'runtime', 'xiaozhi', 'release-v173');
     createRuntime(runtimeDirectory, 300);

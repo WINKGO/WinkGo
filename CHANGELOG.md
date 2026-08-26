@@ -9,6 +9,9 @@
 - Selected the bundled WINK GO Core platform from the requested Electron Builder target so cross-platform Windows and macOS packaging resolves the correct Core artifact.
 - Added the customer-facing desktop automation Skill bundle and regression coverage for portable actions, bridge selectors, and target-platform packaging.
 - Ignored local stale Runtime backup directories so generated binaries and machine-specific configuration cannot enter source commits.
+- Upgraded the mail parser dependency chain to remove the vulnerable `deepmerge-ts` release and normalized generated license text for CI-safe whitespace.
+- Restored clean macOS and Linux CI installs by allowing jsdom to resolve its required Undici major and made Windows-only Runtime/path tests platform-aware.
+- Kept the private customer Runtime mandatory for releases while allowing an explicit pull-request-only Windows installer build to use a visible omission marker.
 
 ## 2.2.11 (2026-08-02)
 
