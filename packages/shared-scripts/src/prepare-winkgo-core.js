@@ -138,15 +138,16 @@ function resolveGitHubRepository(env = process.env) {
 
 function resolveLocalCargoTargetDir(projectRoot, platform, arch, env = process.env, tempRoot = os.tmpdir()) {
   const explicitTarget = (env.WINKGO_BACKEND_CARGO_TARGET_DIR || '').trim() || (env.CARGO_TARGET_DIR || '').trim();
-  if (explicitTarget) return path.resolve(explicitTarget);
+  const targetPath = platform === 'win32' ? path.win32 : path;
+  if (explicitTarget) return targetPath.resolve(explicitTarget);
 
-  const projectTarget = path.join(projectRoot, 'out', 'cargo-target', 'winkgo-core');
+  const projectTarget = targetPath.join(projectRoot, 'out', 'cargo-target', 'winkgo-core');
   if (platform !== 'win32' || !/[^\p{ASCII}]/u.test(projectTarget)) return projectTarget;
 
-  const systemTemp = path.join(env.SystemRoot || env.WINDIR || 'C:\\Windows', 'Temp');
+  const systemTemp = path.win32.join(env.SystemRoot || env.WINDIR || 'C:\\Windows', 'Temp');
   const asciiTempRoot = !/[^\p{ASCII}]/u.test(tempRoot) ? tempRoot : systemTemp;
-  const projectKey = createHash('sha256').update(path.resolve(projectRoot)).digest('hex').slice(0, 12);
-  return path.join(asciiTempRoot, 'winkgo-cargo-target', projectKey, arch);
+  const projectKey = createHash('sha256').update(targetPath.resolve(projectRoot)).digest('hex').slice(0, 12);
+  return path.win32.join(asciiTempRoot, 'winkgo-cargo-target', projectKey, arch);
 }
 
 function buildLocalWinkGoCore(projectRoot, platform, arch) {

@@ -37659,6 +37659,7 @@ Packages:
 - npm:undici-types@7.16.0
 - npm:undici-types@7.18.2
 - npm:undici@6.28.0
+- npm:undici@7.29.0
 
 MIT License
 

@@ -12,7 +12,7 @@
   "generatedFrom": [
     {
       "path": "bun.lock",
-      "sha256": "eda32df6622e3b927b5cffaae33974dffd2df9f494bbf4d33237fe628e9e9e4c"
+      "sha256": "809680de007a0162fae905033a9df947c05ae03948016cd9eaa83128a909cd4f"
     },
     {
       "path": "mobile/bun.lock",
@@ -32,8 +32,8 @@
     }
   ],
   "summary": {
-    "packages": 2880,
-    "npmPackages": 2229,
+    "packages": 2881,
+    "npmPackages": 2230,
     "cargoPackages": 651,
     "lockOnlyNpmPackages": 197,
     "uniqueLicenseTexts": 1128
@@ -30735,6 +30735,17 @@
       "ecosystem": "npm",
       "name": "undici",
       "version": "6.28.0",
+      "source": "git+https://github.com/nodejs/undici.git",
+      "license": "MIT",
+      "licenseTextHashes": [
+        "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27"
+      ]
+    },
+    {
+      "id": "npm:undici@7.29.0",
+      "ecosystem": "npm",
+      "name": "undici",
+      "version": "7.29.0",
       "source": "git+https://github.com/nodejs/undici.git",
       "license": "MIT",
       "licenseTextHashes": [
