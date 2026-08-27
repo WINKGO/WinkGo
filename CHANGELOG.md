@@ -8,6 +8,7 @@
 - Upgraded the mail-processing dependency chain to `deepmerge-ts` 8.0.2, removing the published high-severity prototype-pollution advisory from release dependencies.
 - Preserved the private customer Runtime as a mandatory production input while keeping pull-request installer validation isolated from private binaries and machine-specific data.
 - Revalidated Windows, macOS, and Linux packaging through the cross-platform CI matrix before publishing replacement installers.
+- Restored the packaged first-launch privacy smoke test so it verifies real signed-out routing and legacy-session cleanup inside an isolated profile.
 
 ## 2.2.22 (2026-08-27)
 

@@ -53,6 +53,9 @@ async function main() {
       WINKGO_DISABLE_AUTO_UPDATE: '1',
       WINKGO_DISABLE_DEVTOOLS: '1',
       WINKGO_E2E_TEST: '1',
+      // Keep the isolated E2E user-data directory while exercising the real
+      // authentication session policy instead of the navigation-test user.
+      WINKGO_E2E_AUTH_BYPASS: '0',
       WINKGO_E2E_USER_DATA_DIR: userDataDirectory,
       WINKGO_CDP_PORT: '0',
       NODE_ENV: 'production',
