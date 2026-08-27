@@ -100,7 +100,13 @@ const backendStartupFailed = ipcRenderer.sendSync('get-backend-startup-failed') 
 const backendStartupFailure = ipcRenderer.sendSync('get-backend-startup-failure') as unknown;
 contextBridge.exposeInMainWorld('__backendPort', backendPort > 0 ? backendPort : 0);
 contextBridge.exposeInMainWorld('__initialLanguage', initialLanguage ?? null);
-contextBridge.exposeInMainWorld('__winkgoE2ETest', process.env.WINKGO_E2E_TEST === '1');
+// Most Electron E2E suites use a synthetic authenticated user so navigation
+// tests do not depend on a cloud account. Privacy/first-launch smoke tests need
+// the same isolated profile without that authentication bypass.
+contextBridge.exposeInMainWorld(
+  '__winkgoE2ETest',
+  process.env.WINKGO_E2E_TEST === '1' && process.env.WINKGO_E2E_AUTH_BYPASS !== '0'
+);
 contextBridge.exposeInMainWorld('__backendStartupFailed', backendStartupFailed === true);
 contextBridge.exposeInMainWorld('__backendStartupFailure', backendStartupFailure ?? null);
 contextBridge.exposeInMainWorld('__backendStartupBridge', {
