@@ -33,7 +33,7 @@ jobs:
       issues: 'read'
     steps:
       - name: 'Checkout repository'
-        uses: 'actions/checkout@v4'
+        uses: 'actions/checkout@v7'
 
       - name: 'Gather PR diff and changed files'
         id: 'gather'
@@ -44,7 +44,7 @@ jobs:
       - name: 'Fetch PR metadata and linked issues'
         id: 'metadata'
         if: steps.gather.outputs.skip != 'true'
-        uses: 'actions/github-script@v7'
+        uses: 'actions/github-script@v9'
         env:
           INPUT_PR_NUMBER: '${{ inputs.pr_number }}'
         with:
@@ -157,7 +157,7 @@ jobs:
 
       - name: 'Construct GPT prompts'
         if: steps.gather.outputs.skip != 'true'
-        uses: 'actions/github-script@v7'
+        uses: 'actions/github-script@v9'
         env:
           FILE_COUNT: '${{ steps.gather.outputs.file_count }}'
           ADDITIONS: '${{ steps.gather.outputs.additions }}'
@@ -345,7 +345,7 @@ jobs:
 
       - name: 'Post or update assessment comment'
         if: steps.gather.outputs.skip != 'true' && success()
-        uses: 'actions/github-script@v7'
+        uses: 'actions/github-script@v9'
         env:
           INPUT_PR_NUMBER: '${{ inputs.pr_number }}'
         with:

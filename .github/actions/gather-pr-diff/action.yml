@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 name: 'Gather PR Diff'
 description: 'Fetch PR diff, changed file list, and statistics via GitHub API'
 
@@ -34,7 +35,7 @@ runs:
   using: 'composite'
   steps:
     - id: 'gather'
-      uses: 'actions/github-script@v7'
+      uses: 'actions/github-script@v9'
       env:
         INPUT_PR_NUMBER: '${{ inputs.pr_number }}'
       with:
