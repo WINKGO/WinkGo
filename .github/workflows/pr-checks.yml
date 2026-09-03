@@ -16,11 +16,6 @@ on:
   pull_request:
     types: [opened, synchronize, edited, closed, ready_for_review]
     branches: [main, dev]
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
-      - '.vscode/**'
-      - '.github/ISSUE_TEMPLATE/**'
 
 concurrency:
   group: pr-checks-${{ github.event.pull_request.number || inputs.pr_number }}
@@ -45,14 +40,55 @@ jobs:
     steps:
       - run: echo "PR closed, cancelling in-progress runs via concurrency."
 
+  classify-changes:
+    name: Classify PR changes
+    if: github.event_name == 'workflow_dispatch' || github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect docs-only pull request
+        id: classify
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = 'workflow_dispatch' ]; then
+            echo 'docs_only=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mapfile -t changed_files < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          docs_only=true
+          if [ "${#changed_files[@]}" -eq 0 ]; then
+            docs_only=false
+          fi
+          for file in "${changed_files[@]}"; do
+            case "$file" in
+              *.md|docs/*|.vscode/*|.github/ISSUE_TEMPLATE/*) ;;
+              *) docs_only=false; break ;;
+            esac
+          done
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "Changed files: ${#changed_files[@]}; docs_only=$docs_only"
+
   dependency-security:
     name: Dependency Security
-    if: github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)
+    needs: classify-changes
+    if: (github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)) && needs.classify-changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -63,15 +99,14 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22.22'
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-          cache: true
+          bun-version: 1.3.11
 
       - name: Install dependencies without lifecycle scripts
         run: bun install --frozen-lockfile --ignore-scripts
@@ -87,7 +122,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -98,15 +133,14 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-          cache: true
+          bun-version: 1.3.11
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -123,7 +157,8 @@ jobs:
   # Job 2: Unit tests across all platforms
   unit-tests:
     name: Unit Tests (${{ matrix.os }})
-    if: github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)
+    needs: classify-changes
+    if: (github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)) && needs.classify-changes.outputs.docs_only != 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -132,7 +167,7 @@ jobs:
         os: [ubuntu-latest, macos-14, windows-2022]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Resolve PR context
         uses: ./.github/actions/checkout-pr
@@ -141,15 +176,14 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-          cache: true
+          bun-version: 1.3.11
 
       - name: Disable Windows Defender (Windows only)
         if: matrix.os == 'windows-2022'
@@ -171,12 +205,13 @@ jobs:
   # Job 3: Coverage test (Linux only)
   coverage-tests:
     name: Coverage Test
-    if: github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)
+    needs: classify-changes
+    if: (github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)) && needs.classify-changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Resolve PR context
         uses: ./.github/actions/checkout-pr
@@ -185,15 +220,14 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-          cache: true
+          bun-version: 1.3.11
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -203,12 +237,11 @@ jobs:
 
       - name: Run coverage tests
         id: coverage
-        continue-on-error: true
         run: bun run test:coverage
 
       - name: Upload coverage to Codecov (Linux coverage only)
         if: always() && hashFiles('coverage/lcov.info') != '' && github.repository == 'WINKGO/wink-go'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           use_oidc: ${{ secrets.CODECOV_TOKEN == '' }}
@@ -226,8 +259,8 @@ jobs:
         shell: bash
         run: |
           if [ "${{ steps.coverage.outcome }}" = "failure" ]; then
-            echo "::warning::Coverage tests failed (non-blocking). Check logs for failed test details."
-            echo "## Coverage check (non-blocking warning)" >> $GITHUB_STEP_SUMMARY
+            echo "::error::Coverage tests failed. Check logs for failed test details."
+            echo "## Coverage check (blocking failure)" >> $GITHUB_STEP_SUMMARY
             echo "Coverage command failed in this run. Please review test failures in logs." >> $GITHUB_STEP_SUMMARY
             if [ -f coverage/lcov.info ]; then
               echo "lcov.info exists, Codecov upload can still run." >> $GITHUB_STEP_SUMMARY
@@ -246,7 +279,7 @@ jobs:
 
       - name: Upload coverage artifacts
         if: always() && hashFiles('coverage/lcov.info') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/
@@ -254,23 +287,23 @@ jobs:
 
   i18n-check:
     name: I18n Check
-    if: github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)
+    needs: classify-changes
+    if: (github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)) && needs.classify-changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-          cache: true
+          bun-version: 1.3.11
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -306,7 +339,8 @@ jobs:
   # Job 4: Build test across representative PR platforms (parallel with code-quality and unit-tests)
   build-test:
     name: Build Test (${{ matrix.platform }})
-    if: github.event.action != 'closed' && github.event.pull_request.draft == false && inputs.skip_build_test != true
+    needs: classify-changes
+    if: (github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)) && needs.classify-changes.outputs.docs_only != 'true' && inputs.skip_build_test != true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -334,21 +368,20 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-          cache: true
+          bun-version: 1.3.11
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -375,7 +408,7 @@ jobs:
       # Restore Electron/Electron-Builder caches before install-app-deps
       - name: Cache Electron artifacts
         id: electron-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ runner.temp }}/.cache/electron
@@ -402,7 +435,7 @@ jobs:
 
       - name: Setup MSBuild (Windows only)
         if: startsWith(matrix.platform, 'windows')
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
         with:
           vs-version: '17.0'
 
@@ -550,12 +583,13 @@ jobs:
   # Job 5: Test release scripts (fast, no build required)
   release-script-test:
     name: Release Script Test
-    if: github.event.action != 'closed' && github.event.pull_request.draft == false
+    needs: classify-changes
+    if: (github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.draft == false)) && needs.classify-changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Create mock build artifacts
         shell: bash

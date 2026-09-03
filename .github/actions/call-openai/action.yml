@@ -1,3 +1,4 @@
+# Modified from AionUI by WINK GO contributors in 2026.
 name: 'Call OpenAI'
 description: 'Call OpenAI Chat Completions API with retry logic. Reads system_prompt.txt and user_prompt.txt from RUNNER_TEMP.'
 
@@ -22,7 +23,7 @@ runs:
   using: 'composite'
   steps:
     - id: 'call'
-      uses: 'actions/github-script@v7'
+      uses: 'actions/github-script@v9'
       env:
         OPENAI_API_KEY: '${{ inputs.openai_api_key }}'
         OUTPUT_FILE: '${{ inputs.output_file }}'

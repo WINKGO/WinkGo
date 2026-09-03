@@ -32,7 +32,7 @@ jobs:
       pull-requests: 'write'
     steps:
       - name: 'Checkout repository'
-        uses: 'actions/checkout@v4'
+        uses: 'actions/checkout@v7'
 
       - name: 'Gather PR diff and changed files'
         id: 'gather'
@@ -48,7 +48,7 @@ jobs:
       - name: 'Construct GPT prompts'
         id: 'prompts'
         if: steps.gather.outputs.skip != 'true'
-        uses: 'actions/github-script@v7'
+        uses: 'actions/github-script@v9'
         env:
           INPUT_PR_NUMBER: '${{ inputs.pr_number }}'
           FILE_COUNT: '${{ steps.gather.outputs.file_count }}'
@@ -256,7 +256,7 @@ jobs:
 
       - name: 'Submit review to PR'
         if: steps.gather.outputs.skip != 'true' && success()
-        uses: 'actions/github-script@v7'
+        uses: 'actions/github-script@v9'
         env:
           INPUT_PR_NUMBER: '${{ inputs.pr_number }}'
         with:

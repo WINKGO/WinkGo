@@ -56,8 +56,8 @@ describe('upstream attribution verification', () => {
   it('covers every mapped modified file and required legal notice', () => {
     expect(verifier.verifyRepository()).toEqual({
       projects: 3,
-      modifiedFiles: 2425,
-      inlineNotices: 2199,
+      modifiedFiles: 2428,
+      inlineNotices: 2202,
       manifestOnly: 226,
     });
   }, 600_000);

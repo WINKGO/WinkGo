@@ -161,7 +161,7 @@ describe('release packaging configuration', () => {
     const workflow = readProjectFile('.github/workflows/build-and-release.yml');
     const preparationScript = readProjectFile('scripts/prepare-release-assets.sh');
     const rejectionIndex = workflow.indexOf('Reject Pro release artifacts');
-    const uploadIndex = workflow.indexOf('softprops/action-gh-release@v2');
+    const uploadIndex = workflow.indexOf('softprops/action-gh-release@v3');
 
     expect(rejectionIndex).toBeGreaterThan(-1);
     expect(rejectionIndex).toBeLessThan(uploadIndex);
@@ -420,6 +420,63 @@ describe('release packaging configuration', () => {
 
     expect(releaseWorkflow).not.toContain('Auto Retry on Build Failure');
     expect(releaseWorkflow).not.toContain('/actions/runs/${{ github.run_id }}/rerun');
+  });
+
+  it('uses Node 24 compatible GitHub Actions without unsupported Bun cache inputs', () => {
+    const workflowDirectory = resolve(projectRoot, '.github/workflows');
+    const workflowFiles = readdirSync(workflowDirectory)
+      .filter((fileName) => /\.ya?ml$/i.test(fileName))
+      .map((fileName) => readProjectFile(`.github/workflows/${fileName}`));
+    const compositeActions = [
+      readProjectFile('.github/actions/call-openai/action.yml'),
+      readProjectFile('.github/actions/gather-pr-diff/action.yml'),
+      readProjectFile('.github/actions/read-file-contents/action.yml'),
+    ];
+    const automation = [...workflowFiles, ...compositeActions].join('\n');
+
+    for (const action of [
+      'actions/checkout@v7',
+      'actions/setup-node@v7',
+      'actions/setup-python@v7',
+      'actions/cache@v6',
+      'actions/upload-artifact@v7',
+      'actions/download-artifact@v8',
+      'actions/github-script@v9',
+      'microsoft/setup-msbuild@v3',
+      'nick-fields/retry@v4',
+      'codecov/codecov-action@v7',
+      'extractions/setup-just@v4',
+      'softprops/action-gh-release@v3',
+    ]) {
+      expect(automation, action).toContain(action);
+    }
+    expect(automation).not.toMatch(/actions\/checkout@v[46]\b/);
+    expect(automation).not.toContain('actions/setup-node@v4');
+    expect(automation).not.toContain('bun-version: latest');
+    expect(automation).not.toMatch(/uses:\s+oven-sh\/setup-bun@v2[\s\S]{0,100}\n\s+cache:\s+true/);
+  });
+
+  it('runs one PR workflow and skips expensive jobs for docs-only changes', () => {
+    const workflows = readdirSync(resolve(projectRoot, '.github/workflows'));
+    const workflow = readProjectFile('.github/workflows/pr-checks.yml');
+
+    expect(workflows).not.toContain('pr-checks-docs.yml');
+    expect(workflow).toContain('name: Classify PR changes');
+    expect(workflow).toContain('*.md|docs/*|.vscode/*|.github/ISSUE_TEMPLATE/*');
+    expect(workflow).toContain('docs_only: ${{ steps.classify.outputs.docs_only }}');
+    expect(workflow).not.toContain('paths-ignore:');
+    expect(workflow.match(/needs: classify-changes/g)).toHaveLength(6);
+  });
+
+  it('blocks a pull request when the coverage test command fails', () => {
+    const workflow = readProjectFile('.github/workflows/pr-checks.yml');
+    const coverageStart = workflow.indexOf('\n  coverage-tests:');
+    const coverageEnd = workflow.indexOf('\n  i18n-check:', coverageStart);
+    const coverageJob = workflow.slice(coverageStart, coverageEnd);
+
+    expect(coverageJob).toContain('run: bun run test:coverage');
+    expect(coverageJob).not.toContain('continue-on-error: true');
+    expect(coverageJob).toContain('Coverage check (blocking failure)');
   });
 
   it('builds Linux x64 release bundles against the Debian 12 glibc baseline', () => {

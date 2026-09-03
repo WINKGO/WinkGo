@@ -23,8 +23,8 @@ const PROJECTS = [
     upstreamEntries: 2033,
     currentRoot: '',
     manifest: 'docs/vendor/aionui-modification-manifest.tsv',
-    rows: 1325,
-    inline: 1123,
+    rows: 1328,
+    inline: 1126,
     manifestOnly: 202,
   },
   {
