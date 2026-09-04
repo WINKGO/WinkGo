@@ -12,11 +12,11 @@
   "generatedFrom": [
     {
       "path": "bun.lock",
-      "sha256": "809680de007a0162fae905033a9df947c05ae03948016cd9eaa83128a909cd4f"
+      "sha256": "5da905432605d7fdf76a89c38572e4c5b67a77d5554814f626eaf15541b02dc5"
     },
     {
       "path": "mobile/bun.lock",
-      "sha256": "5fe03603a0bc8e48511cff1f303569f5af19a836411fa0308e6730b831b51516"
+      "sha256": "d7accce824393b6abedce653fdf8f9bd26a9f0ec6bbd934b97df2ea26835fc7d"
     },
     {
       "path": "backend/Cargo.lock",
@@ -16064,10 +16064,10 @@
       "licenseTextHashes": []
     },
     {
-      "id": "npm:@xmldom/xmldom@0.8.11",
+      "id": "npm:@xmldom/xmldom@0.8.15",
       "ecosystem": "npm",
       "name": "@xmldom/xmldom",
-      "version": "0.8.11",
+      "version": "0.8.15",
       "source": "git://github.com/xmldom/xmldom.git",
       "license": "MIT",
       "licenseTextHashes": [
@@ -16075,10 +16075,10 @@
       ]
     },
     {
-      "id": "npm:@xmldom/xmldom@0.8.13",
+      "id": "npm:@xmldom/xmldom@0.9.12",
       "ecosystem": "npm",
       "name": "@xmldom/xmldom",
-      "version": "0.8.13",
+      "version": "0.9.12",
       "source": "git://github.com/xmldom/xmldom.git",
       "license": "MIT",
       "licenseTextHashes": [
@@ -20715,10 +20715,10 @@
       ]
     },
     {
-      "id": "npm:fast-uri@3.1.5",
+      "id": "npm:fast-uri@3.1.7",
       "ecosystem": "npm",
       "name": "fast-uri",
-      "version": "3.1.5",
+      "version": "3.1.7",
       "source": "git+https://github.com/fastify/fast-uri.git",
       "license": "BSD-3-Clause",
       "licenseTextHashes": [
@@ -27424,10 +27424,10 @@
       ]
     },
     {
-      "id": "npm:qs@6.15.3",
+      "id": "npm:qs@6.16.0",
       "ecosystem": "npm",
       "name": "qs",
-      "version": "6.15.3",
+      "version": "6.16.0",
       "source": "https://github.com/ljharb/qs.git",
       "license": "BSD-3-Clause",
       "licenseTextHashes": [
